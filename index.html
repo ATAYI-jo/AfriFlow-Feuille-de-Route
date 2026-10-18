@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>AfriFloW – Feuille de route</title>
+<script type="text/javascript" src="https://www.dropbox.com/embed.js"></script>
 <link rel="icon" href="logo.png">
 <meta name="description" content="Feuille de route publique d’AfriFloW : ce qui est réalisé, en cours et à venir.">
 <style>
@@ -80,6 +81,8 @@ button:focus-visible{outline:3px solid var(--amber);outline-offset:3px}
 .file-row a:hover{text-decoration:underline}
 .file-row small{display:block;color:var(--muted)}
 .file-row button{padding:6px 12px;font-size:0.85rem}
+.dbx-viewer{width:100%;border-radius:12px;overflow:hidden;display:none;margin-top:8px;border:1px solid var(--line);background:var(--card)}
+.dbx-viewer.on{display:block;height:400px}
 .form-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:24px}
 .form-actions button{flex:1;min-width:120px}
 .x{float:right;border-radius:99px;padding:7px 12px;font-size:0.85rem}
@@ -90,54 +93,53 @@ button:focus-visible{outline:3px solid var(--amber);outline-offset:3px}
   .brand{padding:20px 16px;border-radius:18px;gap:12px}
   .logo{height:54px;width:54px;border-radius:14px}
   h1{font-size:1.45rem}
-  
   .legend{gap:8px;margin:16px 0 10px}
   .legend span{font-size:.8rem;padding:6px 10px}
-  
   .pct{padding:12px 14px;margin:10px 0 16px}
-  .progress-label{display:none} /* Cache le texte pour gagner de la place */
-  
-  /* Outils : boutons empilés pour pouvoir les cliquer facilement */
+  .progress-label{display:none}
   .toolbar{flex-direction:column;align-items:stretch;gap:12px}
   .toolbar-actions{flex-direction:column;width:100%;gap:10px}
   .toolbar-actions button{width:100%;padding:12px;font-size:1rem}
-  .toolbar>div:first-child span{display:block;margin-top:4px}
-  
-  /* Frise chronologique transformée en liste verticale propre */
   .track{flex-direction:column;overflow-x:hidden;padding:8px 0;gap:0}
   .node{flex:none;grid-template-rows:none;grid-template-columns:36px 1fr;padding-bottom:16px}
   .node .cell{grid-column:2;grid-row:1;padding:0 0 0 12px}
   .node .cell:empty{display:none}
   .node .mid{grid-column:1;grid-row:1;align-items:flex-start;padding-top:14px}
-  
-  /* La ligne de connexion verticale */
   .mid:before{left:50%;right:auto;top:0;bottom:-16px;width:3px;height:auto;margin:0 0 0 -1.5px}
   .dotn{width:16px;height:16px;box-shadow:0 0 0 3px var(--bg),0 0 0 4px var(--c)}
-  
-  /* Nettoyage des petites barres de connexion des cartes */
   .top .card, .bot .card{margin:0}
   .top .card:after, .bot .card:after{display:none}
   .top, .bot{align-items:flex-start}
   .card{max-height:none;padding:16px;border-radius:14px}
   .head{flex:none;height:60px;transform:rotate(90deg);width:60px;margin:0 auto}
-  
-  /* Menu d'édition (Modal) adapté aux pouces */
-  #ov{align-items:flex-end} /* Le menu remonte depuis le bas */
+  #ov{align-items:flex-end}
   #pn{height:92%;border-radius:24px 24px 0 0;padding:24px 20px calc(36px + env(safe-area-inset-bottom,0px))}
   .form-actions{flex-direction:column}
   .form-actions button{width:100%;padding:12px;font-size:1rem}
   .file-row{flex-direction:column;align-items:flex-start;gap:8px}
   .file-row button{width:100%}
 }
-
 @media(prefers-reduced-motion:reduce){
   *,*:before,*:after{scroll-behavior:auto!important;transition:none!important;animation:none!important}
 }
 </style>
 </head>
 <body>
+
+<div id="auth-overlay" style="position:fixed;inset:0;background:var(--bg);z-index:9999;display:flex;align-items:center;justify-content:center;flex-direction:column;padding:20px;text-align:center;">
+  <img src="logo.png" style="width:90px;height:90px;object-fit:contain;background:#fff;padding:7px;border-radius:18px;margin-bottom:20px;box-shadow:0 5px 15px rgba(0,0,0,.1)" alt="Logo" onerror="this.style.display='none'">
+  <h2 style="margin:0 0 8px;">Accès restreint</h2>
+  <p style="color:var(--muted);margin:0 0 20px;font-size:0.95rem;">Entrez votre e-mail associé et le code d'accès de l'équipe.</p>
+  <div class="fm" style="max-width:300px;width:100%;align-items:stretch;">
+    <input type="email" id="auth-email" placeholder="Votre e-mail (ex: nom@domaine.com)" style="margin-bottom:10px;padding:12px;font-size:0.95rem;">
+    <input type="password" id="auth-pwd" placeholder="Code d'accès" style="margin-bottom:14px;padding:12px;font-size:0.95rem;">
+    <button id="auth-btn" class="p" style="padding:12px;font-size:1rem;">Déverrouiller</button>
+  </div>
+  <p id="auth-err" style="color:#c0392b;margin-top:16px;display:none;font-size:0.9rem;font-weight:bold;background:#fdecec;padding:8px 16px;border-radius:8px;">Veuillez remplir tous les champs correctement.</p>
+</div>
+
 <div class="wrap">
-  <div class="brand"><img class="logo" src="logo.png" alt="Logo AfriFloW" onerror="this.src='https://placehold.co/78x78/ffffff/1f5d3a?text=A'"><div><h1>Afri<span>FloW</span> · Feuille de route</h1>
+  <div class="brand"><img class="logo" src="logo.png" alt="Logo AfriFloW" onerror="this.style.display='none'"><div><h1>Afri<span>FloW</span> · Feuille de route</h1>
   <p class="sub">Du territoire africain vers le monde<br>Suivez nos avancées, nos priorités et les prochaines étapes.</p></div></div>
   <div class="legend"><span><i style="background:var(--done)"></i>Réalisé</span><span><i style="background:var(--doing)"></i>En cours</span><span><i style="background:var(--todo)"></i>À venir</span></div>
   <div class="pct"><strong id="pct">0 %</strong><span class="progress-label">des étapes réalisées</span><div class="bar"><i id="fill"></i></div></div>
@@ -211,10 +213,38 @@ function openEditor(index){
     docsBox.textContent="";
     if(!it.docs.length){docsBox.appendChild(el("p","empty","Aucun document associé pour le moment."));return}
     it.docs.forEach(function(doc,j){
+      var rowWrap=el("div","");
       var row=el("div","file-row"),info=el("div",""),a=el("a","",doc.name);a.href=doc.url||"#";a.target="_blank";a.rel="noopener noreferrer";
       if(doc.data){a.href=doc.data;a.download=doc.name}
       info.appendChild(a);info.appendChild(el("small","",doc.data?"Fichier joint localement": "Lien externe · Dropbox"));
-      var rm=el("button","danger","Retirer");rm.onclick=function(){it.docs.splice(j,1);drawDocs()};row.appendChild(info);row.appendChild(rm);docsBox.appendChild(row);
+      
+      var actionsWrap=el("div","");
+      var rm=el("button","danger","Retirer");rm.onclick=function(){it.docs.splice(j,1);drawDocs()};
+      
+      if(doc.url && doc.url.toLowerCase().indexOf("dropbox")>-1){
+        var viewBtn=el("button","","Afficher");
+        viewBtn.style.marginRight="8px";
+        var viewer=el("div","dbx-viewer");
+        actionsWrap.appendChild(viewBtn);
+        actionsWrap.appendChild(rm);
+        row.appendChild(info);row.appendChild(actionsWrap);
+        rowWrap.appendChild(row);rowWrap.appendChild(viewer);
+        
+        viewBtn.onclick=function(){
+          if(viewer.classList.contains("on")){
+            viewer.classList.remove("on");viewer.textContent="";viewBtn.textContent="Afficher";
+          }else{
+            viewer.classList.add("on");
+            if(window.Dropbox){Dropbox.embed({link:doc.url},viewer);}
+            viewBtn.textContent="Masquer";
+          }
+        };
+      } else {
+        actionsWrap.appendChild(rm);
+        row.appendChild(info);row.appendChild(actionsWrap);
+        rowWrap.appendChild(row);
+      }
+      docsBox.appendChild(rowWrap);
     });
   }
   addLink.onclick=function(){
@@ -252,6 +282,33 @@ var importBtn=el("button","","Importer une sauvegarde");importBtn.onclick=functi
 $("importFile").onchange=function(e){var f=e.target.files[0];if(!f)return;var r=new FileReader();r.onload=function(){try{var data=JSON.parse(r.result);if(!Array.isArray(data))throw new Error();if(confirm("Remplacer la feuille de route actuelle par cette sauvegarde ?")){ITEMS=data;ITEMS.forEach(function(i){if(!i.docs)i.docs=[]});saveLocal();render()}}catch(err){alert("Fichier de sauvegarde invalide.")}};r.readAsText(f);e.target.value=""};
 $("ov").onclick=function(e){if(e.target===$("ov"))closePanel()};
 document.addEventListener("keydown",function(e){if(e.key==="Escape")closePanel()});
+
+$("auth-btn").onclick = function() {
+  var email = $("auth-email").value.trim();
+  var pwd = $("auth-pwd").value;
+  
+  // ⬇️ VOUS POUVEZ CHANGER LE CODE SECRET DE L'ÉQUIPE ICI ⬇️
+  var codeSecret = "AFRIFLOW2026"; 
+  
+  if (email && pwd === codeSecret) {
+    $("auth-overlay").style.display = "none";
+    sessionStorage.setItem("afriflow_auth", "true");
+    sessionStorage.setItem("afriflow_user", email);
+  } else {
+    $("auth-err").style.display = "inline-block";
+  }
+};
+$("auth-pwd").addEventListener("keydown", function(e) {
+  if (e.key === "Enter") $("auth-btn").click();
+});
+$("auth-email").addEventListener("keydown", function(e) {
+  if (e.key === "Enter") $("auth-btn").click();
+});
+
+if(sessionStorage.getItem("afriflow_auth") === "true"){
+  $("auth-overlay").style.display = "none";
+}
+
 loadLocal();render();
 </script>
 </body>
