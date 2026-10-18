@@ -3,313 +3,457 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>AfriFloW – Feuille de route</title>
-<script type="text/javascript" src="https://www.dropbox.com/embed.js"></script>
+<title>AfriFloW – Feuille de route interactive</title>
 <link rel="icon" href="logo.png">
-<meta name="description" content="Feuille de route publique d’AfriFloW : ce qui est réalisé, en cours et à venir.">
+<meta name="description" content="Feuille de route interactive d’AfriFloW : suivez notre évolution pas à pas le long de la route de la croissance.">
 <style>
-:root{--bg:#ffffff;--card:#ffffff;--ink:#1d2a22;--muted:#66726a;--green:#1f5d3a;--amber:#d98a1b;--line:#e0e0e0;--done:#1f5d3a;--doing:#d98a1b;--todo:#7b8a93;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
-@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){color-scheme:dark;--bg:#121212;--card:#1e1e1e;--ink:#eef2ec;--muted:#9aa89f;--green:#4fa874;--amber:#f0a73a;--line:#333333;--done:#4fa874;--doing:#f0a73a;--todo:#8fa0a9}}
-:root[data-theme="dark"]{color-scheme:dark;--bg:#121212;--card:#1e1e1e;--ink:#eef2ec;--muted:#9aa89f;--green:#4fa874;--amber:#f0a73a;--line:#333333;--done:#4fa874;--doing:#f0a73a;--todo:#8fa0a9}
-
-html{scroll-padding-top:env(safe-area-inset-top,0px);-webkit-text-size-adjust:100%}
-*{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif;letter-spacing:.005em}
-.wrap{max-width:1320px;margin:0 auto;padding:28px 22px 56px}
-
-.brand{position:relative;isolation:isolate;overflow:hidden;padding:30px 32px;border-radius:24px;background:linear-gradient(120deg,#123d2a 0%,#1f5d3a 58%,#28734a 100%);color:#fff;box-shadow:0 16px 38px rgba(20,60,39,.16);display:flex;align-items:center;gap:16px;flex-wrap:wrap}
-.brand:after{content:"";position:absolute;z-index:-1;right:-60px;top:-110px;width:330px;height:330px;border:1px solid rgba(255,255,255,.15);border-radius:50%;box-shadow:0 0 0 32px rgba(255,255,255,.035),0 0 0 72px rgba(255,255,255,.025)}
-.logo{height:78px;width:78px;object-fit:contain;background:#fff;padding:7px;border-radius:18px;box-shadow:0 5px 18px rgba(0,0,0,.15)}
-h1{margin:0;font-size:clamp(1.55rem,3vw,2.25rem);letter-spacing:-.035em;line-height:1.15;color:#fff}
-h1 span{color:#f4b64f}
-.sub{margin:9px 0 0;color:rgba(255,255,255,.78)}
-.brand .sub:after{content:"";display:block;width:48px;height:3px;background:#f4b64f;border-radius:4px;margin-top:15px}
-
-.legend{display:flex;gap:10px;flex-wrap:wrap;margin:22px 0 14px;font-size:.85rem;color:var(--muted)}
-.legend span{display:inline-flex;align-items:center;gap:4px;background:var(--card);border:1px solid var(--line);padding:7px 12px;border-radius:99px;font-weight:600}
-.legend i{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:4px}
-.pct{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:15px 18px;margin:14px 0 24px;box-shadow:0 5px 18px rgba(20,40,25,.035);display:flex;align-items:center;gap:12px}
-#pct{font-size:1.1rem;min-width:52px;color:var(--green);font-weight:bold}
-.progress-label{font-size:.88rem;color:var(--muted);white-space:nowrap}
-.bar{flex:1;height:12px;background:color-mix(in srgb,var(--line) 65%,transparent);border-radius:99px;overflow:hidden}
-.bar i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--green),var(--amber));transition:width .5s;border-radius:99px}
-
-.toolbar{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;margin:18px 0 10px}
-.toolbar>div:first-child{color:var(--ink)}.toolbar>div:first-child span{color:var(--muted);font-size:.9rem}
-.toolbar-actions{display:flex;gap:8px;flex-wrap:wrap}
-button,select,input,textarea{font:inherit;color:var(--ink);background:var(--card);border:1px solid var(--line);border-radius:10px;padding:9px 13px;transition:all .2s}
-button{cursor:pointer;font-weight:650}
-button:hover{filter:brightness(0.95)}
-button.p{background:var(--green);color:#fff;border-color:var(--green)}
-button.p:hover{background:#17472c}
-button.danger{color:#c0392b;border-color:#e2b8b3;background:transparent}
-button:focus-visible{outline:3px solid var(--amber);outline-offset:3px}
-.notice{font-size:.82rem;color:var(--muted);padding:10px 12px;border:1px solid var(--line);background:var(--card);border-radius:10px;margin-bottom:12px}
-
-.track{display:flex;overflow-x:auto;padding:12px 4px 22px;align-items:stretch;scrollbar-color:var(--line) transparent;scrollbar-width:thin}
-.node{flex:0 0 244px;display:grid;grid-template-rows:164px 48px 164px}
-.cell{display:flex;padding:0 8px}
-.top{align-items:flex-end}.bot{align-items:flex-start}
-.mid{position:relative;display:flex;align-items:center;justify-content:center}
-.mid:before{content:"";position:absolute;left:0;right:0;top:50%;height:3px;margin-top:-1.5px;background:var(--line)}
-.node.on .mid:before{background:var(--green)}
-.dotn{position:relative;width:20px;height:20px;border-radius:50%;background:var(--c);box-shadow:0 0 0 3px var(--bg),0 0 0 5px var(--c)}
-
-.card{position:relative;width:100%;background:var(--card);border:1px solid var(--line);border-top:4px solid var(--c);border-radius:16px;padding:14px 14px 12px;text-align:left;cursor:pointer;color:var(--ink);font:inherit;max-height:152px;overflow:hidden;margin:0;box-shadow:0 5px 15px rgba(24,44,29,.045);transition:transform .18s ease,box-shadow .18s ease,border-color .18s ease}
-.top .card{margin-bottom:14px}.bot .card{margin-top:14px}
-.top .card:after,.bot .card:after{content:"";position:absolute;left:50%;width:2px;height:14px;background:var(--c)}
-.top .card:after{bottom:-15px}.bot .card:after{top:-15px}
-.card:hover,.card:focus-visible{transform:translateY(-3px);box-shadow:0 12px 26px rgba(24,44,29,.12);outline:2px solid color-mix(in srgb,var(--c) 50%,transparent);outline-offset:2px}
-.card b{display:block;font-size:.98rem;line-height:1.35;margin-bottom:5px}
-.card small{color:var(--muted);display:block;line-height:1.4}
-.card .t{color:var(--c);font-weight:600;font-size:.78rem;margin-top:8px;letter-spacing:.015em}
-.head{flex:0 0 120px;display:flex;align-items:center}
-.head svg{width:100%;height:46px}
-
-#ov{position:fixed;inset:0;background:rgba(0,0,0,.6);backdrop-filter:blur(5px);display:none;z-index:20;padding:env(safe-area-inset-top,0px) 0 0}
-#ov.on{display:flex;justify-content:flex-end}
-#pn{width:min(640px,100%);height:100%;background:var(--bg);overflow-y:auto;padding:28px 24px calc(36px + env(safe-area-inset-bottom,0px));box-shadow:-18px 0 50px rgba(0,0,0,.15)}
-#pn h2{font-size:1.55rem;letter-spacing:-.025em;margin:12px 0 16px}
-#pn h3{margin-top:24px;margin-bottom:8px}
-.fm{display:flex;flex-direction:column;gap:6px;margin-bottom:16px}
-.fm label{font-size:.84rem;color:var(--muted);font-weight:650;margin-top:3px}
-.fm input,.fm textarea,.fm select{width:100%;padding:10px 12px}
-.fm textarea{min-height:82px;resize:vertical}
-.file-row{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;padding:12px 0;border-bottom:1px solid var(--line)}
-.file-row:last-child{border-bottom:0}
-.file-row a{color:var(--green);font-weight:650;overflow-wrap:anywhere;text-decoration:none}
-.file-row a:hover{text-decoration:underline}
-.file-row small{display:block;color:var(--muted)}
-.file-row button{padding:6px 12px;font-size:0.85rem}
-.dbx-viewer{width:100%;border-radius:12px;overflow:hidden;display:none;margin-top:8px;border:1px solid var(--line);background:var(--card)}
-.dbx-viewer.on{display:block;height:400px}
-.form-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:24px}
-.form-actions button{flex:1;min-width:120px}
-.x{float:right;border-radius:99px;padding:7px 12px;font-size:0.85rem}
-.empty{color:var(--muted);font-style:italic;padding:20px 0}
-
-@media(max-width:760px){
-  .wrap{padding:14px 12px 36px}
-  .brand{padding:20px 16px;border-radius:18px;gap:12px}
-  .logo{height:54px;width:54px;border-radius:14px}
-  h1{font-size:1.45rem}
-  .legend{gap:8px;margin:16px 0 10px}
-  .legend span{font-size:.8rem;padding:6px 10px}
-  .pct{padding:12px 14px;margin:10px 0 16px}
-  .progress-label{display:none}
-  .toolbar{flex-direction:column;align-items:stretch;gap:12px}
-  .toolbar-actions{flex-direction:column;width:100%;gap:10px}
-  .toolbar-actions button{width:100%;padding:12px;font-size:1rem}
-  .track{flex-direction:column;overflow-x:hidden;padding:8px 0;gap:0}
-  .node{flex:none;grid-template-rows:none;grid-template-columns:36px 1fr;padding-bottom:16px}
-  .node .cell{grid-column:2;grid-row:1;padding:0 0 0 12px}
-  .node .cell:empty{display:none}
-  .node .mid{grid-column:1;grid-row:1;align-items:flex-start;padding-top:14px}
-  .mid:before{left:50%;right:auto;top:0;bottom:-16px;width:3px;height:auto;margin:0 0 0 -1.5px}
-  .dotn{width:16px;height:16px;box-shadow:0 0 0 3px var(--bg),0 0 0 4px var(--c)}
-  .top .card, .bot .card{margin:0}
-  .top .card:after, .bot .card:after{display:none}
-  .top, .bot{align-items:flex-start}
-  .card{max-height:none;padding:16px;border-radius:14px}
-  .head{flex:none;height:60px;transform:rotate(90deg);width:60px;margin:0 auto}
-  #ov{align-items:flex-end}
-  #pn{height:92%;border-radius:24px 24px 0 0;padding:24px 20px calc(36px + env(safe-area-inset-bottom,0px))}
-  .form-actions{flex-direction:column}
-  .form-actions button{width:100%;padding:12px;font-size:1rem}
-  .file-row{flex-direction:column;align-items:flex-start;gap:8px}
-  .file-row button{width:100%}
+:root {
+  --bg: #ffffff;
+  --card: #ffffff;
+  --ink: #1d2a22;
+  --muted: #66726a;
+  --green: #1f5d3a;
+  --amber: #d98a1b;
+  --line: #e0e0e0;
+  --done: #1f5d3a;
+  --doing: #d98a1b;
+  --todo: #7b8a93;
+  --road-bg: #1a231e;
+  --road-line: #ffffff;
+  --font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+  box-sizing: border-box;
 }
-@media(prefers-reduced-motion:reduce){
-  *,*:before,*:after{scroll-behavior:auto!important;transition:none!important;animation:none!important}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --bg: #121212;
+    --card: #1e1e1e;
+    --ink: #eef2ec;
+    --muted: #9aa89f;
+    --green: #4fa874;
+    --amber: #f0a73a;
+    --line: #333333;
+    --done: #4fa874;
+    --doing: #f0a73a;
+    --todo: #8fa0a9;
+    --road-bg: #243029;
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #121212;
+  --card: #1e1e1e;
+  --ink: #eef2ec;
+  --muted: #9aa89f;
+  --green: #4fa874;
+  --amber: #f0a73a;
+  --line: #333333;
+  --done: #4fa874;
+  --doing: #f0a73a;
+  --todo: #8fa0a9;
+  --road-bg: #243029;
+}
+
+/* Écran de verrouillage / Sécurité */
+#auth-screen {
+  position: fixed; inset: 0; background: var(--bg); z-index: 9999;
+  display: flex; align-items: center; justify-content: center; padding: 20px;
+}
+.auth-box {
+  background: var(--card); border: 1px solid var(--line); padding: 36px 28px;
+  border-radius: 24px; width: min(420px, 100%); text-align: center;
+  box-shadow: 0 20px 40px rgba(0,0,0,0.12);
+}
+.auth-box img { height: 72px; width: 72px; object-fit: contain; margin-bottom: 16px; background: #fff; padding: 8px; border-radius: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+.auth-box h2 { margin: 0 0 8px; font-size: 1.4rem; color: var(--green); }
+.auth-box p { color: var(--muted); font-size: 0.9rem; margin-bottom: 24px; }
+.auth-box input { width: 100%; padding: 12px 16px; margin-bottom: 14px; border-radius: 12px; border: 1px solid var(--line); background: var(--bg); color: var(--ink); font-size: 1rem; }
+.auth-box button { width: 100%; padding: 12px; border-radius: 12px; background: var(--green); color: #fff; border: none; font-weight: 650; font-size: 1rem; cursor: pointer; }
+
+body { margin: 0; background: var(--bg); color: var(--ink); font: 16px/1.5 var(--font-family); letter-spacing: .005em; transition: background 0.3s, color 0.3s; }
+.wrap { max-width: 1200px; margin: 0 auto; padding: 28px 22px 80px; position: relative; }
+
+/* En-tête */
+.brand { position: relative; padding: 30px 32px; border-radius: 24px; background: linear-gradient(120deg,#123d2a 0%,#1f5d3a 58%,#28734a 100%); color: #fff; box-shadow: 0 16px 38px rgba(20,60,39,.16); display: flex; align-items: center; gap: 20px; flex-wrap: wrap; margin-bottom: 24px; }
+.logo-img { height: 78px; width: 78px; object-fit: contain; background: #fff; padding: 7px; border-radius: 18px; box-shadow: 0 5px 18px rgba(0,0,0,.15); }
+h1 { margin: 0; font-size: clamp(1.6rem, 3vw, 2.2rem); line-height: 1.15; color: #fff; }
+h1 span { color: #f4b64f; }
+.sub { margin: 8px 0 0; color: rgba(255,255,255,.78); }
+
+/* Barre d'outils et Boutons */
+.toolbar { display: flex; align-items: center; justify-content: space-between; gap: 14px; flex-wrap: wrap; margin: 18px 0 24px; background: var(--card); border: 1px solid var(--line); padding: 14px 20px; border-radius: 16px; }
+.toolbar-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+button, select, input, textarea { font: inherit; color: var(--ink); background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 9px 14px; transition: all .2s; }
+button { cursor: pointer; font-weight: 650; }
+button:hover { filter: brightness(0.95); transform: translateY(-1px); }
+button.p { background: var(--green); color: #fff; border-color: var(--green); }
+button.danger { color: #c0392b; border-color: #e2b8b3; background: transparent; }
+
+/* ================= ROADMAP ROUTE DESIGN ================= */
+.road-container { position: relative; width: 100%; max-width: 900px; margin: 40px auto; padding: 40px 0; }
+svg.road-svg { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 1; }
+
+.road-step { position: relative; display: flex; align-items: center; justify-content: space-between; margin: 90px 0; z-index: 2; width: 100%; }
+.road-step:nth-child(odd) { flex-direction: row; }
+.road-step:nth-child(even) { flex-direction: row-reverse; }
+
+.step-card { width: 42%; background: var(--card); border: 1px solid var(--line); border-top: 4px solid var(--c); border-radius: 20px; padding: 22px; cursor: pointer; box-shadow: 0 10px 30px rgba(0,0,0,0.06); transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.3s; }
+.step-card:hover { transform: translateY(-6px) scale(1.02); box-shadow: 0 18px 36px rgba(0,0,0,0.12); }
+.step-card b { display: block; font-size: 1.15rem; margin-bottom: 6px; color: var(--ink); }
+.step-card small { color: var(--muted); display: block; line-height: 1.5; font-size: 0.92rem; }
+.step-card .date-badge { display: inline-block; margin-top: 10px; padding: 4px 10px; border-radius: 99px; background: color-mix(in srgb, var(--c) 15%, transparent); color: var(--c); font-weight: 700; font-size: 0.8rem; }
+
+/* Pastille centrale de la route */
+.road-node-center { position: absolute; left: 50%; transform: translateX(-50%); width: 64px; height: 64px; border-radius: 50%; background: var(--c); display: flex; align-items: center; justify-content: center; color: #fff; font-weight: 800; font-size: 1.3rem; box-shadow: 0 0 0 8px var(--bg), 0 8px 20px rgba(0,0,0,0.2); z-index: 3; transition: transform 0.3s; }
+.road-step:hover .road-node-center { transform: translateX(-50%) scale(1.15) rotate(10deg); }
+
+/* Véhicule animé sur la route */
+#car-marker { position: absolute; width: 50px; height: 50px; background: #fff; border-radius: 50%; box-shadow: 0 5px 20px rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: center; z-index: 10; transform: translate(-50%, -50%); transition: top 0.1s linear, left 0.1s linear; border: 3px solid var(--amber); }
+#car-marker img { width: 34px; height: 34px; object-fit: contain; }
+
+/* Panneau d'édition / Tiroir latéral */
+#ov { position: fixed; inset: 0; background: rgba(0,0,0,0.6); backdrop-filter: blur(5px); display: none; z-index: 1000; justify-content: flex-end; }
+#ov.on { display: flex; }
+#pn { width: min(600px, 100%); height: 100%; background: var(--bg); overflow-y: auto; padding: 32px 24px; box-shadow: -20px 0 50px rgba(0,0,0,0.2); animation: slideIn 0.3s cubic-bezier(0.16, 1, 0.3, 1); }
+@keyframes slideIn { from { transform: translateX(100%); } to { transform: translateX(0); } }
+
+.fm { display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px; }
+.fm label { font-size: 0.85rem; color: var(--muted); font-weight: 700; }
+.fm input, .fm textarea, .fm select { width: 100%; padding: 12px; border-radius: 12px; background: var(--card); color: var(--ink); border: 1px solid var(--line); }
+.file-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 12px 0; border-bottom: 1px solid var(--line); }
+.file-row a { color: var(--green); font-weight: 650; text-decoration: none; }
+.file-row a:hover { text-decoration: underline; }
+
+/* Modal Personnalisation Style */
+#customizer-modal { position: fixed; inset: 0; background: rgba(0,0,0,0.6); backdrop-filter: blur(5px); display: none; z-index: 1000; align-items: center; justify-content: center; padding: 20px; }
+#customizer-modal.on { display: flex; }
+.customizer-box { background: var(--card); border: 1px solid var(--line); padding: 28px; border-radius: 24px; width: min(480px, 100%); box-shadow: 0 20px 50px rgba(0,0,0,0.2); max-height: 90vh; overflow-y: auto; }
+
+@media(max-width: 768px) {
+  .road-step, .road-step:nth-child(even), .road-step:nth-child(odd) { flex-direction: column; align-items: center; gap: 24px; }
+  .step-card { width: 100%; text-align: center; }
+  .road-node-center { position: relative; left: auto; transform: none; margin-bottom: -10px; }
+  svg.road-svg { display: none; } /* Désactive la ligne SVG complexe sur mobile pour éviter les décalages */
 }
 </style>
 </head>
 <body>
 
-<div id="auth-overlay" style="position:fixed;inset:0;background:var(--bg);z-index:9999;display:flex;align-items:center;justify-content:center;flex-direction:column;padding:20px;text-align:center;">
-  <img src="logo.png" style="width:90px;height:90px;object-fit:contain;background:#fff;padding:7px;border-radius:18px;margin-bottom:20px;box-shadow:0 5px 15px rgba(0,0,0,.1)" alt="Logo" onerror="this.style.display='none'">
-  <h2 style="margin:0 0 8px;">Accès restreint</h2>
-  <p style="color:var(--muted);margin:0 0 20px;font-size:0.95rem;">Entrez votre e-mail associé et le code d'accès de l'équipe.</p>
-  <div class="fm" style="max-width:300px;width:100%;align-items:stretch;">
-    <input type="email" id="auth-email" placeholder="Votre e-mail (ex: nom@domaine.com)" style="margin-bottom:10px;padding:12px;font-size:0.95rem;">
-    <input type="password" id="auth-pwd" placeholder="Code d'accès" style="margin-bottom:14px;padding:12px;font-size:0.95rem;">
-    <button id="auth-btn" class="p" style="padding:12px;font-size:1rem;">Déverrouiller</button>
+<!-- ÉCRAN DE SÉCURITÉ -->
+<div id="auth-screen">
+  <div class="auth-box">
+    <img src="logo.png" alt="AfriFloW" onerror="this.src='https://placehold.co/72x72/1f5d3a/ffffff?text=A'">
+    <h2>Accès Sécurisé</h2>
+    <p>Veuillez entrer vos identifiants d'équipe AfriFloW.</p>
+    <input type="email" id="auth-email" placeholder="Votre e-mail Dropbox / Équipe">
+    <input type="password" id="auth-code" placeholder="Code d'accès">
+    <button type="button" onclick="verifyAuth()">Accéder à la feuille de route</button>
   </div>
-  <p id="auth-err" style="color:#c0392b;margin-top:16px;display:none;font-size:0.9rem;font-weight:bold;background:#fdecec;padding:8px 16px;border-radius:8px;">Veuillez remplir tous les champs correctement.</p>
 </div>
 
 <div class="wrap">
-  <div class="brand"><img class="logo" src="logo.png" alt="Logo AfriFloW" onerror="this.style.display='none'"><div><h1>Afri<span>FloW</span> · Feuille de route</h1>
-  <p class="sub">Du territoire africain vers le monde<br>Suivez nos avancées, nos priorités et les prochaines étapes.</p></div></div>
-  <div class="legend"><span><i style="background:var(--done)"></i>Réalisé</span><span><i style="background:var(--doing)"></i>En cours</span><span><i style="background:var(--todo)"></i>À venir</span></div>
-  <div class="pct"><strong id="pct">0 %</strong><span class="progress-label">des étapes réalisées</span><div class="bar"><i id="fill"></i></div></div>
-  <div class="toolbar">
-    <div><strong>Feuille de route</strong><span> · Modifiez les étapes et gérez leurs documents</span></div>
-    <div class="toolbar-actions"><button type="button" id="exportBtn">Exporter la sauvegarde</button><button type="button" class="p" id="addBtn">+ Ajouter une étape</button></div>
+  <div class="brand">
+    <img class="logo-img" src="logo.png" alt="Logo AfriFloW" onerror="this.src='https://placehold.co/78x78/ffffff/1f5d3a?text=A'">
+    <div>
+      <h1>Afri<span>FloW</span> · Feuille de route interactive</h1>
+      <p class="sub">Suivez notre parcours stratégique, de la structure initiale vers l'expansion internationale[cite: 1].</p>
+    </div>
   </div>
-  <div class="notice" id="notice" role="status">Les modifications sont enregistrées dans ce navigateur. Exportez régulièrement une sauvegarde pour conserver vos données.</div>
-  <div class="track" id="track"></div>
+
+  <div class="toolbar">
+    <div><strong>Navigation Route</strong><br><span style="color:var(--muted); font-size:0.88rem;">Faites défiler pour faire avancer le véhicule le long des étapes</span></div>
+    <div class="toolbar-actions">
+      <button type="button" onclick="openCustomizer()">⚙️ Personnaliser le style</button>
+      <button type="button" id="exportBtn">Exporter la sauvegarde</button>
+      <button type="button" class="p" id="addBtn">+ Ajouter une étape</button>
+    </div>
+  </div>
+
+  <div id="notice" style="font-size:0.85rem; color:var(--muted); margin-bottom:20px; padding:12px; background:var(--card); border:1px solid var(--line); border-radius:12px;">
+    Modifications enregistrées localement. Les documents peuvent être liés via Dropbox.
+  </div>
+
+  <!-- ROUTE SINUEUSE INTERACTIVE -->
+  <div class="road-container" id="roadContainer">
+    <div id="car-marker"><img src="logo.png" alt="Car" onerror="this.src='https://placehold.co/34x34/1f5d3a/ffffff?text=🚗'"></div>
+    <svg class="road-svg" id="roadSvg"></svg>
+    <div id="roadStepsList"></div>
+  </div>
 </div>
 
-<div id="ov"><div id="pn"></div></div><input id="importFile" type="file" accept="application/json,.json" hidden>
+<!-- TIROIR D'ÉDITION ÉTAPE -->
+<div id="ov"><div id="pn"></div></div>
+<input id="importFile" type="file" accept="application/json,.json" hidden>
+
+<!-- MODAL PERSONNALISATION STYLE -->
+<div id="customizer-modal">
+  <div class="customizer-box">
+    <h2>Personnaliser l'apparence</h2>
+    <p style="color:var(--muted); font-size:0.9rem;">Ajustez les couleurs et la police de votre interface.</p>
+    <div class="fm"><label>Couleur Principale (Vert AfriFloW)</label><input type="color" id="picker-green" value="#1f5d3a" onchange="applyCustomTheme()"></div>
+    <div class="fm"><label>Couleur Secondaire (Ambre)</label><input type="color" id="picker-amber" value="#d98a1b" onchange="applyCustomTheme()"></div>
+    <div class="fm"><label>Police d'écriture</label>
+      <select id="picker-font" onchange="applyCustomTheme()">
+        <option value="system-ui, -apple-system, sans-serif">Moderne Système</option>
+        <option value="'Segoe UI', Tahoma, Geneva, Verdana, sans-serif">Segoe UI</option>
+        <option value="'Helvetica Neue', Arial, sans-serif">Helvetica / Arial</option>
+        <option value="Georgia, serif">Georgia (Élégante)</option>
+      </select>
+    </div>
+    <div style="margin-top:20px; display:flex; gap:10px;">
+      <button type="button" class="p" onclick="closeCustomizer()" style="flex:1;">Fermer</button>
+    </div>
+  </div>
+</div>
 
 <script>
-var DEFAULT_ITEMS=[{"status": "done", "date": "Juin–juil. 2026", "title": "Identité de marque", "desc": "Logo, animation et visuels de la marque.", "details": "Création de l’identité visuelle d’AfriFloW : logo, animation du logo et supports de communication."}, {"status": "done", "date": "Juin–août 2026", "title": "Structure et gouvernance", "desc": "Organisation des fonctions et réunions hebdomadaires des associés.", "details": "Mise en place de la structure organisationnelle, des fonctions, du règlement intérieur et d’un rythme de réunions chaque samedi avec ordre du jour et compte rendu."}, {"status": "done", "date": "Juil.–août 2026", "title": "Analyses de marché et de prix", "desc": "Coûts, logistique et prix par marché.", "details": "Analyses financières et logistiques, comparaison des prix et factures pro forma pour plusieurs marchés (Togo, Burkina Faso, Sénégal, Tunisie)."}, {"status": "done", "date": "Juil. 2026", "title": "Traçabilité qualité par QR code", "desc": "Un QR code par lot pour suivre la qualité.", "details": "QR codes par lot et par pays, base de données et formulaire de retour client pour suivre la qualité de bout en bout."}, {"status": "done", "date": "Juil. 2026", "title": "Site vitrine", "desc": "Site web AfriFloW en ligne.", "details": "Conception et mise en ligne du site vitrine de l’entreprise."}, {"status": "done", "date": "Juil.–sept. 2026", "title": "Renforcement de l’équipe", "desc": "Recrutement de nouveaux associés.", "details": "Campagne de recrutement d’associés et arrivée de nouveaux membres dans l’équipe."}, {"status": "done", "date": "Août–sept. 2026", "title": "Lancement sur LinkedIn", "desc": "Contenu de lancement publié.", "details": "Production du texte, des visuels et du document de présentation de la campagne de lancement."}, {"status": "done", "date": "Août 2026", "title": "Première commande", "desc": "Commande traitée de bout en bout.", "details": "Première commande réalisée : bon de commande, paiement fournisseur, quittance et suivi comptable."}, {"status": "doing", "date": "Sept. 2026", "title": "Prospection du marché togolais", "desc": "Excellent accueil du goût du produit.", "details": "Les clients apprécient fortement la qualité gustative. Un travail est en cours pour rendre l’emballage plus attractif."}, {"status": "doing", "date": "Sept.–oct. 2026", "title": "Nouvel emballage", "desc": "Design et production du packaging.", "details": "Plusieurs propositions de design ont été soumises aux associés. L’achat d’une machine d’impression pour internaliser la production est à l’étude."}, {"status": "doing", "date": "Sept. 2026", "title": "Qualité du stock et entreposage", "desc": "Renforcement du contrôle qualité et du stockage.", "details": "Mesures en cours pour garantir la qualité du stock actuel et sécuriser les conditions de stockage des prochains arrivages."}, {"status": "doing", "date": "Sept. 2026", "title": "Formalisation de l’entreprise", "desc": "Démarches juridiques en cours.", "details": "Suivi de la procédure de formalisation, définition des apports des associés et du capital social."}, {"status": "doing", "date": "Oct. 2026", "title": "Prospection du marché sénégalais", "desc": "Premiers contacts à Dakar.", "details": "Rencontres avec boutiques, grandes surfaces et grossistes pour tester l’offre, les prix et les formats."}, {"status": "todo", "date": "", "title": "Autorisation de vente au Sénégal", "desc": "Démarche réglementaire à lancer.", "details": "Obtention de l’autorisation nécessaire pour distribuer légalement dans les commerces sénégalais."}, {"status": "todo", "date": "", "title": "Référencement en grandes surfaces", "desc": "Constitution des dossiers fournisseurs.", "details": "Préparation des dossiers de référencement et suivi des rendez-vous avec les enseignes."}, {"status": "todo", "date": "", "title": "Boutique en ligne", "desc": "Stratégie de lancement rédigée.", "details": "Lancement d’une boutique en ligne avec paiement Mobile Money."}, {"status": "todo", "date": "", "title": "Nouveaux marchés", "desc": "Bénin, Tunisie, France/Europe.", "details": "Ouverture progressive de nouveaux marchés d’export et de distribution."}];
-var ITEMS=[];
-var ST={done:["Réalisé","var(--done)"],doing:["En cours","var(--doing)"],todo:["À venir","var(--todo)"]};
-var STORAGE_KEY="afriflow_roadmap_v2";
+var DEFAULT_ITEMS = [
+  {status: "done", date: "Juin–juil. 2026", title: "1. Identité de marque", desc: "Création du logo, animation et visuels de la marque AfriFloW.", details: "Mise en place de l'identité visuelle complète et des supports de communication."},
+  {status: "done", date: "Juin–août 2026", title: "2. Structure et gouvernance", desc: "Organisation des fonctions, règlement intérieur et réunions hebdomadaires.", details: "Définition des rôles des associés et structuration de la gouvernance."},
+  {status: "doing", date: "Sept. 2026", title: "3. Prospection et Marché togolais", desc: "Premiers tests concluants et accueil favorable du goût du produit.", details: "Analyse des retours clients et adaptation de l'emballage pour maximiser l'attractivité."},
+  {status: "todo", date: "Q4 2026", title: "4. Référencement grandes surfaces", desc: "Constitution des dossiers fournisseurs pour les enseignes partenaires.", details: "Préparation des catalogues et négociations commerciales de distribution."},
+  {status: "todo", date: "2027", title: "5. Expansion régionale & Boutique en ligne", desc: "Lancement de la plateforme e-commerce et ouverture nouveaux marchés.", details: "Déploiement des solutions de paiement et logistique d'exportation transfrontalière."}
+];
 
-function $(i){return document.getElementById(i)}
-function el(t,c,x){var e=document.createElement(t);if(c)e.className=c;if(x!==undefined&&x!==null)e.textContent=x;return e}
-function clone(v){return JSON.parse(JSON.stringify(v))}
-function saveLocal(){try{localStorage.setItem(STORAGE_KEY,JSON.stringify(ITEMS));$("notice").textContent="Modifications enregistrées dans ce navigateur. Exportez régulièrement une sauvegarde pour éviter toute perte.";return true}catch(e){$("notice").textContent="Stockage local saturé : exportez une sauvegarde et retirez des fichiers volumineux.";return false}}
-function loadLocal(){try{var v=localStorage.getItem(STORAGE_KEY);ITEMS=v?JSON.parse(v):clone(DEFAULT_ITEMS)}catch(e){ITEMS=clone(DEFAULT_ITEMS)}ITEMS.forEach(function(i){if(!i.docs)i.docs=[]})}
-function updateProgress(){var n=ITEMS.length,d=ITEMS.filter(function(i){return i.status==="done"}).length,p=n?Math.round(d/n*100):0;$("pct").textContent=p+" %";$("fill").style.width=p+"%"}
+var ITEMS = [];
+var ST = { done: ["Réalisé", "var(--done)"], doing: ["En cours", "var(--doing)"], todo: ["À venir", "var(--todo)"] };
+var STORAGE_KEY = "afriflow_roadmap_v3";
 
-function render(){
-  $("track").textContent="";
-  ITEMS.forEach(function(it,k){
-    var c=ST[it.status]||ST.todo,nd=el("div","node"+(it.status==="done"?" on":""));nd.style.setProperty("--c",c[1]);
-    var top=el("div","cell top"),mid=el("div","mid"),bot=el("div","cell bot"),b=el("button","card");b.type="button";
-    b.appendChild(el("b","",it.title||"Étape sans titre"));b.appendChild(el("small","",it.desc||"Cliquez pour afficher les détails."));if(it.date)b.appendChild(el("div","t",it.date));
-    b.onclick=function(){openEditor(k)};(k%2===0?top:bot).appendChild(b);mid.appendChild(el("span","dotn"));nd.appendChild(top);nd.appendChild(mid);nd.appendChild(bot);$("track").appendChild(nd);
+function $(i) { return document.getElementById(i); }
+
+function verifyAuth() {
+  var email = $("auth-email").value.trim();
+  var code = $("auth-code").value.trim();
+  if(!email || code !== "AFRIFLOW2026") {
+    alert("Code d'accès incorrect ou e-mail manquant (Code par défaut: AFRIFLOW2026).");
+    return;
+  }
+  $("auth-screen").style.display = "none";
+  localStorage.setItem("afriflow_auth", "true");
+}
+
+if(localStorage.getItem("afriflow_auth") === "true") {
+  $("auth-screen").style.display = "none";
+}
+
+function loadLocal() {
+  try {
+    var v = localStorage.getItem(STORAGE_KEY);
+    ITEMS = v ? JSON.parse(v) : JSON.parse(JSON.stringify(DEFAULT_ITEMS));
+  } catch(e) {
+    ITEMS = JSON.parse(JSON.stringify(DEFAULT_ITEMS));
+  }
+  ITEMS.forEach(function(i){ if(!i.docs) i.docs = []; });
+}
+
+function saveLocal() {
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(ITEMS)); } catch(e){}
+}
+
+function renderRoadmap() {
+  var container = $("roadStepsList");
+  container.textContent = "";
+
+  ITEMS.forEach(function(it, k) {
+    var statusInfo = ST[it.status] || ST.todo;
+    var stepEl = document.createElement("div");
+    stepEl.className = "road-step";
+    stepEl.style.setProperty("--c", statusInfo[1]);
+
+    var card = document.createElement("div");
+    card.className = "step-card";
+    card.style.setProperty("--c", statusInfo[1]);
+    card.innerHTML = "<b>" + (it.title || "Étape") + "</b>" +
+                     "<small>" + (it.desc || "") + "</small>" +
+                     (it.date ? '<div class="date-badge">' + it.date + " · " + statusInfo[0] + '</div>' : '');
+    card.onclick = function() { openEditor(k); };
+
+    var centerNode = document.createElement("div");
+    centerNode.className = "road-node-center";
+    centerNode.style.setProperty("--c", statusInfo[1]);
+    centerNode.textContent = (k + 1);
+
+    var emptySpace = document.createElement("div");
+    emptySpace.style.width = "42%";
+
+    if(k % 2 === 0) {
+      stepEl.appendChild(card);
+      stepEl.appendChild(centerNode);
+      stepEl.appendChild(emptySpace);
+    } else {
+      stepEl.appendChild(emptySpace);
+      stepEl.appendChild(centerNode);
+      stepEl.appendChild(card);
+    }
+
+    container.appendChild(stepEl);
   });
-  var h=el("div","head");h.innerHTML='<svg viewBox="0 0 120 46" aria-hidden="true"><path d="M0 23H96" stroke="var(--line)" stroke-width="4" fill="none"/><path d="M92 8L118 23L92 38Z" fill="var(--amber)"/></svg>';$("track").appendChild(h);updateProgress();
+
+  updateCarPosition();
 }
 
-function closePanel(){$("ov").classList.remove("on")}
-function field(label,tag,value,placeholder){
-  var wrap=el("div","fm"),lab=el("label","",label),input=el(tag);
-  if(tag==="textarea")input.rows=3;else input.type="text";
-  input.value=value||"";if(placeholder)input.placeholder=placeholder;wrap.appendChild(lab);wrap.appendChild(input);return {wrap:wrap,input:input};
+/* Animation du véhicule / logo le long du défilement */
+function updateCarPosition() {
+  var car = $("car-marker");
+  var container = $("roadContainer");
+  if(!car || !container) return;
+
+  var rect = container.getBoundingClientRect();
+  var scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+  var containerTop = rect.top + scrollTop;
+  var containerHeight = container.offsetHeight;
+  var windowHeight = window.innerHeight;
+
+  var progress = (scrollTop + windowHeight - containerTop) / (containerHeight + windowHeight);
+  progress = Math.max(0, Math.min(1, progress));
+
+  var currentTop = progress * containerHeight;
+  car.style.top = currentTop + "px";
+  car.style.left = "50%";
 }
 
-function openEditor(index){
-  var isNew=index===null,it=isNew?{title:"",desc:"",details:"",date:"",status:"todo",docs:[]}:ITEMS[index];
-  if(!it.docs)it.docs=[];
-  var pn=$("pn");pn.textContent="";pn.style.setProperty("--c",ST[it.status][1]);
-  var close=el("button","x","× Fermer");close.onclick=closePanel;pn.appendChild(close);
-  pn.appendChild(el("h2","",isNew?"Ajouter une étape":"Modifier l’étape"));
-  var form=el("div","fm");
-  var fTitle=field("Titre de l’étape","input",it.title,"Ex. : Prospection commerciale");form.appendChild(fTitle.wrap);
-  var fDesc=field("Résumé","textarea",it.desc,"Résumé court visible sur la carte");form.appendChild(fDesc.wrap);
-  var fDetails=field("Détails","textarea",it.details,"Décrivez les actions réalisées ou à mener");form.appendChild(fDetails.wrap);
-  var fDate=field("Date ou période","input",it.date,"Ex. : Octobre 2026");form.appendChild(fDate.wrap);
+window.addEventListener("scroll", updateCarPosition);
+window.addEventListener("resize", updateCarPosition);
+
+function openEditor(index) {
+  var isNew = index === null, it = isNew ? {title:"", desc:"", details:"", date:"", status:"todo", docs:[]} : ITEMS[index];
+  if(!it.docs) it.docs = [];
+  var pn = $("pn");
+  pn.textContent = "";
   
-  var statusWrap=el("div","fm"),lab=el("label","","Statut"),sel=el("select");
-  [["done","Réalisé"],["doing","En cours"],["todo","À venir"]].forEach(function(o){var opt=el("option","",o[1]);opt.value=o[0];sel.appendChild(opt)});sel.value=it.status||"todo";statusWrap.appendChild(lab);statusWrap.appendChild(sel);form.appendChild(statusWrap);
+  var closeBtn = document.createElement("button");
+  closeBtn.className = "x";
+  closeBtn.textContent = "× Fermer";
+  closeBtn.onclick = function() { $("ov").classList.remove("on"); };
+  pn.appendChild(closeBtn);
+
+  var h2 = document.createElement("h2");
+  h2.textContent = isNew ? "Ajouter une étape" : "Modifier l'étape";
+  pn.appendChild(h2);
+
+  var form = document.createElement("div");
+  form.className = "fm";
+  form.innerHTML = '<label>Titre</label><input type="text" id="edTitle" value="' + (it.title || '') + '">' +
+                   '<label>Résumé court</label><textarea id="edDesc">' + (it.desc || '') + '</textarea>' +
+                   '<label>Détails complets</label><textarea id="edDetails">' + (it.details || '') + '</textarea>' +
+                   '<label>Période / Date</label><input type="text" id="edDate" value="' + (it.date || '') + '">' +
+                   '<label>Statut</label><select id="edStatus"><option value="done"' + (it.status==='done'?' selected':'') + '>Réalisé</option><option value="doing"' + (it.status==='doing'?' selected':'') + '>En cours</option><option value="todo"' + (it.status==='todo'?' selected':'') + '>À venir</option></select>';
   pn.appendChild(form);
-  
-  pn.appendChild(el("h3","","Documents associés"));
-  pn.appendChild(el("p","sub","Sélectionnez un fichier sur votre ordinateur. Il sera conservé localement dans ce navigateur avec cette étape. Vous pouvez aussi ajouter un lien Dropbox partagé."));
-  var upload=el("input");upload.type="file";upload.multiple=true;upload.accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.png,.jpg,.jpeg,.mp4,.zip,.txt";upload.style.width="100%";upload.style.margin="8px 0";
-  var uploadLabel=el("label","","Télécharger des fichiers depuis l’ordinateur");pn.appendChild(uploadLabel);pn.appendChild(upload);
-  var linkName=field("Nom du document (lien Dropbox)","input","","Ex. : Présentation AfriFloW");pn.appendChild(linkName.wrap);
-  var linkUrl=field("Lien partagé Dropbox","input","","https://www.dropbox.com/...");pn.appendChild(linkUrl.wrap);
-  var addLink=el("button","","Ajouter le lien Dropbox");addLink.style.width="100%";addLink.style.margin="4px 0 12px";pn.appendChild(addLink);
-  var docsBox=el("div","");pn.appendChild(docsBox);
-  
-  function drawDocs(){
-    docsBox.textContent="";
-    if(!it.docs.length){docsBox.appendChild(el("p","empty","Aucun document associé pour le moment."));return}
-    it.docs.forEach(function(doc,j){
-      var rowWrap=el("div","");
-      var row=el("div","file-row"),info=el("div",""),a=el("a","",doc.name);a.href=doc.url||"#";a.target="_blank";a.rel="noopener noreferrer";
-      if(doc.data){a.href=doc.data;a.download=doc.name}
-      info.appendChild(a);info.appendChild(el("small","",doc.data?"Fichier joint localement": "Lien externe · Dropbox"));
-      
-      var actionsWrap=el("div","");
-      var rm=el("button","danger","Retirer");rm.onclick=function(){it.docs.splice(j,1);drawDocs()};
-      
-      if(doc.url && doc.url.toLowerCase().indexOf("dropbox")>-1){
-        var viewBtn=el("button","","Afficher");
-        viewBtn.style.marginRight="8px";
-        var viewer=el("div","dbx-viewer");
-        actionsWrap.appendChild(viewBtn);
-        actionsWrap.appendChild(rm);
-        row.appendChild(info);row.appendChild(actionsWrap);
-        rowWrap.appendChild(row);rowWrap.appendChild(viewer);
-        
-        viewBtn.onclick=function(){
-          if(viewer.classList.contains("on")){
-            viewer.classList.remove("on");viewer.textContent="";viewBtn.textContent="Afficher";
-          }else{
-            viewer.classList.add("on");
-            if(window.Dropbox){Dropbox.embed({link:doc.url},viewer);}
-            viewBtn.textContent="Masquer";
-          }
-        };
-      } else {
-        actionsWrap.appendChild(rm);
-        row.appendChild(info);row.appendChild(actionsWrap);
-        rowWrap.appendChild(row);
-      }
-      docsBox.appendChild(rowWrap);
+
+  var docHeader = document.createElement("h3");
+  docHeader.textContent = "Documents & Dropbox";
+  pn.appendChild(docHeader);
+
+  var linkInputName = document.createElement("input");
+  linkInputName.placeholder = "Nom du document";
+  linkInputName.style.margin = "6px 0";
+  var linkInputUrl = document.createElement("input");
+  linkInputUrl.placeholder = "Lien partagé Dropbox (https://www.dropbox.com/...)";
+  linkInputUrl.style.margin = "6px 0";
+
+  var addLinkBtn = document.createElement("button");
+  addLinkBtn.textContent = "Ajouter le lien Dropbox";
+  addLinkBtn.onclick = function() {
+    var name = linkInputName.value.trim(), url = linkInputUrl.value.trim();
+    if(!name || !url) { alert("Veuillez remplir le nom et le lien."); return; }
+    it.docs.push({name: name, url: url});
+    linkInputName.value = ""; linkInputUrl.value = "";
+    drawDocsList();
+  };
+  pn.appendChild(linkInputName);
+  pn.appendChild(linkInputUrl);
+  pn.appendChild(addLinkBtn);
+
+  var docsContainer = document.createElement("div");
+  pn.appendChild(docsContainer);
+
+  function drawDocsList() {
+    docsContainer.textContent = "";
+    it.docs.forEach(function(d, j) {
+      var row = document.createElement("div");
+      row.className = "file-row";
+      row.innerHTML = '<div><a href="' + d.url + '" target="_blank">' + d.name + '</a><small style="display:block;color:var(--muted)">Lien Dropbox</small></div>';
+      var rm = document.createElement("button");
+      rm.className = "danger";
+      rm.textContent = "Retirer";
+      rm.onclick = function() { it.docs.splice(j, 1); drawDocsList(); };
+      row.appendChild(rm);
+      docsContainer.appendChild(row);
     });
   }
-  addLink.onclick=function(){
-    var name=linkName.input.value.trim(),url=linkUrl.input.value.trim();
-    if(!name||!/^https:\/\/(www\.)?(dropbox\.com|dropboxusercontent\.com)\//i.test(url)){alert("Saisissez un nom et un lien Dropbox valide commençant par https://dropbox.com ou https://www.dropbox.com.");return}
-    it.docs.push({name:name,url:url});linkName.input.value="";linkUrl.input.value="";drawDocs();
-  };
-  upload.onchange=function(){
-    var files=Array.from(upload.files||[]);
-    files.forEach(function(file){
-      if(file.size>8*1024*1024){alert(file.name+" dépasse 8 Mo. Ajoutez-le dans Dropbox puis collez son lien partagé.");return}
-      var reader=new FileReader();reader.onload=function(e){it.docs.push({name:file.name,data:e.target.result,type:file.type,size:file.size});drawDocs()};reader.readAsDataURL(file);
-    });upload.value="";
-  };
-  drawDocs();
-  
-  var actions=el("div","form-actions"),save=el("button","p","Enregistrer"),cancel=el("button","","Annuler");save.type="button";cancel.type="button";cancel.onclick=closePanel;
-  save.onclick=function(){
-    var title=fTitle.input.value.trim();if(!title){alert("Le titre de l’étape est obligatoire.");return}
-    var updated={title:title,desc:fDesc.input.value.trim(),details:fDetails.input.value.trim(),date:fDate.input.value.trim(),status:sel.value,docs:it.docs};
-    if(isNew)ITEMS.push(updated);else ITEMS[index]=updated;
-    saveLocal();render();closePanel();
-  };
-  actions.appendChild(save);actions.appendChild(cancel);
-  if(!isNew){var del=el("button","danger","Supprimer l’étape");del.onclick=function(){if(confirm("Supprimer cette étape et ses documents associés ?")){ITEMS.splice(index,1);saveLocal();render();closePanel()}};actions.appendChild(del)}
-  pn.appendChild(actions);$("ov").classList.add("on");
-}
+  drawDocsList();
 
-$("addBtn").onclick=function(){openEditor(null)};
-$("exportBtn").onclick=function(){
-  var blob=new Blob([JSON.stringify(ITEMS,null,2)],{type:"application/json"}),url=URL.createObjectURL(blob),a=el("a");a.href=url;a.download="afriflow-feuille-de-route-sauvegarde.json";document.body.appendChild(a);a.click();a.remove();URL.revokeObjectURL(url);
-  $("notice").textContent="Sauvegarde exportée. Gardez ce fichier en lieu sûr.";
-};
-var importBtn=el("button","","Importer une sauvegarde");importBtn.onclick=function(){$("importFile").click()};$("exportBtn").parentNode.appendChild(importBtn);
-$("importFile").onchange=function(e){var f=e.target.files[0];if(!f)return;var r=new FileReader();r.onload=function(){try{var data=JSON.parse(r.result);if(!Array.isArray(data))throw new Error();if(confirm("Remplacer la feuille de route actuelle par cette sauvegarde ?")){ITEMS=data;ITEMS.forEach(function(i){if(!i.docs)i.docs=[]});saveLocal();render()}}catch(err){alert("Fichier de sauvegarde invalide.")}};r.readAsText(f);e.target.value=""};
-$("ov").onclick=function(e){if(e.target===$("ov"))closePanel()};
-document.addEventListener("keydown",function(e){if(e.key==="Escape")closePanel()});
+  var actions = document.createElement("div");
+  actions.className = "form-actions";
+  actions.style.marginTop = "20px";
+  actions.style.display = "flex";
+  actions.style.gap = "10px";
 
-$("auth-btn").onclick = function() {
-  var email = $("auth-email").value.trim();
-  var pwd = $("auth-pwd").value;
-  
-  // ⬇️ VOUS POUVEZ CHANGER LE CODE SECRET DE L'ÉQUIPE ICI ⬇️
-  var codeSecret = "AFRIFLOW2026"; 
-  
-  if (email && pwd === codeSecret) {
-    $("auth-overlay").style.display = "none";
-    sessionStorage.setItem("afriflow_auth", "true");
-    sessionStorage.setItem("afriflow_user", email);
-  } else {
-    $("auth-err").style.display = "inline-block";
+  var saveBtn = document.createElement("button");
+  saveBtn.className = "p";
+  saveBtn.textContent = "Enregistrer";
+  saveBtn.onclick = function() {
+    it.title = $("edTitle").value.trim();
+    it.desc = $("edDesc").value.trim();
+    it.details = $("edDetails").value.trim();
+    it.date = $("edDate").value.trim();
+    it.status = $("edStatus").value;
+    if(!it.title) { alert("Le titre est obligatoire."); return; }
+    if(isNew) ITEMS.push(it); else ITEMS[index] = it;
+    saveLocal(); renderRoadmap();
+    $("ov").classList.remove("on");
+  };
+
+  var cancelBtn = document.createElement("button");
+  cancelBtn.textContent = "Annuler";
+  cancelBtn.onclick = function() { $("ov").classList.remove("on"); };
+
+  actions.appendChild(saveBtn);
+  actions.appendChild(cancelBtn);
+
+  if(!isNew) {
+    var delBtn = document.createElement("button");
+    delBtn.className = "danger";
+    delBtn.textContent = "Supprimer";
+    delBtn.onclick = function() {
+      if(confirm("Supprimer cette étape ?")) {
+        ITEMS.splice(index, 1);
+        saveLocal(); renderRoadmap();
+        $("ov").classList.remove("on");
+      }
+    };
+    actions.appendChild(delBtn);
   }
-};
-$("auth-pwd").addEventListener("keydown", function(e) {
-  if (e.key === "Enter") $("auth-btn").click();
-});
-$("auth-email").addEventListener("keydown", function(e) {
-  if (e.key === "Enter") $("auth-btn").click();
-});
 
-if(sessionStorage.getItem("afriflow_auth") === "true"){
-  $("auth-overlay").style.display = "none";
+  pn.appendChild(actions);
+  $("ov").classList.add("on");
 }
 
-loadLocal();render();
+$("addBtn").onclick = function() { openEditor(null); };
+
+$("exportBtn").onclick = function() {
+  var blob = new Blob([JSON.stringify(ITEMS, null, 2)], {type: "application/json"});
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement("a");
+  a.href = url; a.download = "afriflow-sauvegarde.json";
+  document.body.appendChild(a); a.click(); a.remove();
+};
+
+function openCustomizer() { $("customizer-modal").classList.add("on"); }
+function closeCustomizer() { $("customizer-modal").classList.remove("on"); }
+
+function applyCustomTheme() {
+  var g = $("picker-green").value;
+  var a = $("picker-amber").value;
+  var f = $("picker-font").value;
+  document.documentElement.style.setProperty("--green", g);
+  document.documentElement.style.setProperty("--amber", a);
+  document.documentElement.style.setProperty("--font-family", f);
+}
+
+loadLocal();
+renderRoadmap();
 </script>
 </body>
 </html>
