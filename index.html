@@ -6,8 +6,6 @@
 <title>AfriFloW – Feuille de route</title>
 <link rel="icon" href="logo.png">
 <meta name="description" content="Feuille de route publique d’AfriFloW : ce qui est réalisé, en cours et à venir.">
-<!-- ... existing code ... -->
-<meta name="description" content="Feuille de route publique d’AfriFloW : ce qui est réalisé, en cours et à venir.">
 <style>
 :root{--bg:#ffffff;--card:#ffffff;--ink:#1d2a22;--muted:#66726a;--green:#1f5d3a;--amber:#d98a1b;--line:#e0e0e0;--done:#1f5d3a;--doing:#d98a1b;--todo:#7b8a93;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){color-scheme:dark;--bg:#121212;--card:#1e1e1e;--ink:#eef2ec;--muted:#9aa89f;--green:#4fa874;--amber:#f0a73a;--line:#333333;--done:#4fa874;--doing:#f0a73a;--todo:#8fa0a9}}
@@ -19,6 +17,7 @@ body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 system-ui,-app
 .wrap{max-width:1320px;margin:0 auto;padding:28px 22px 56px}
 
 .brand{position:relative;isolation:isolate;overflow:hidden;padding:30px 32px;border-radius:24px;background:linear-gradient(120deg,#123d2a 0%,#1f5d3a 58%,#28734a 100%);color:#fff;box-shadow:0 16px 38px rgba(20,60,39,.16);display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+.brand:after{content:"";position:absolute;z-index:-1;right:-60px;top:-110px;width:330px;height:330px;border:1px solid rgba(255,255,255,.15);border-radius:50%;box-shadow:0 0 0 32px rgba(255,255,255,.035),0 0 0 72px rgba(255,255,255,.025)}
 .logo{height:78px;width:78px;object-fit:contain;background:#fff;padding:7px;border-radius:18px;box-shadow:0 5px 18px rgba(0,0,0,.15)}
 h1{margin:0;font-size:clamp(1.55rem,3vw,2.25rem);letter-spacing:-.035em;line-height:1.15;color:#fff}
 h1 span{color:#f4b64f}
@@ -135,7 +134,6 @@ button:focus-visible{outline:3px solid var(--amber);outline-offset:3px}
   *,*:before,*:after{scroll-behavior:auto!important;transition:none!important;animation:none!important}
 }
 </style>
-<!-- ... existing code ... -->
 </head>
 <body>
 <div class="wrap">
