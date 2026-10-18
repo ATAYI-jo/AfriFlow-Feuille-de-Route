@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>AfriFloW – Feuille de route</title>
+<link rel="icon" href="logo.png">
+<meta name="description" content="Feuille de route publique d’AfriFloW : ce qui est réalisé, en cours et à venir.">
+<style>
+:root{--bg:#ffffff;--card:#ffffff;--ink:#1d2a22;--muted:#66726a;--green:#1f5d3a;--amber:#d98a1b;--line:#e0e0e0;--done:#1f5d3a;--doing:#d98a1b;--todo:#7b8a93;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){color-scheme:dark;--bg:#121212;--card:#1e1e1e;--ink:#eef2ec;--muted:#9aa89f;--green:#4fa874;--amber:#f0a73a;--line:#333333;--done:#4fa874;--doing:#f0a73a;--todo:#8fa0a9}}
+:root[data-theme="dark"]{color-scheme:dark;--bg:#121212;--card:#1e1e1e;--ink:#eef2ec;--muted:#9aa89f;--green:#4fa874;--amber:#f0a73a;--line:#333333;--done:#4fa874;--doing:#f0a73a;--todo:#8fa0a9}
+
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif}
+.wrap{max-width:1200px;margin:0 auto;padding:20px 16px 48px}
+.brand{display:flex;align-items:center;gap:16px;flex-wrap:wrap}.logo{height:84px;width:auto;border-radius:10px}
+h1{margin:0;font-size:1.6rem;color:var(--green)}h1 span{color:var(--amber)}
+.sub{margin:4px 0 0;color:var(--muted)}
+.legend{display:flex;gap:16px;flex-wrap:wrap;margin:14px 0;font-size:.85rem;color:var(--muted)}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:6px}
+
+.pct{margin:10px 0 18px;display:flex;align-items:center;gap:12px}
+.progress-label{font-size:.88rem;color:var(--muted);white-space:nowrap}
+.bar{flex:1;height:10px;background:var(--line);border-radius:99px;overflow:hidden}
+.bar i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--green),var(--amber));transition:width .5s}
+
+.track{display:flex;overflow-x:auto;padding:8px 4px 16px;align-items:stretch}
+.node{flex:0 0 230px;display:grid;grid-template-rows:150px 46px 150px}
+.cell{display:flex;padding:0 8px}
+.top{align-items:flex-end}.bot{align-items:flex-start}
+.mid{position:relative;display:flex;align-items:center;justify-content:center}
+.mid:before{content:"";position:absolute;left:0;right:0;top:50%;height:4px;margin-top:-2px;background:var(--line)}
+.node.on .mid:before{background:var(--green)}
+.dotn{position:relative;width:22px;height:22px;border-radius:50%;background:var(--c);border:4px solid var(--bg);box-shadow:0 0 0 2px var(--c)}
+
+.card{position:relative;width:100%;background:var(--card);border:1px solid var(--line);border-top:4px solid var(--c);border-radius:12px;padding:10px 12px;text-align:left;cursor:pointer;color:var(--ink);font:inherit;max-height:140px;overflow:hidden;margin:0 0 0}
+.top .card{margin-bottom:14px}.bot .card{margin-top:14px}
+.top .card:after,.bot .card:after{content:"";position:absolute;left:50%;width:2px;height:14px;background:var(--c)}
+.top .card:after{bottom:-15px}.bot .card:after{top:-15px}
+.card:hover{box-shadow:0 4px 14px rgba(0,0,0,.15)}
+.card b{display:block;font-size:.95rem}
+.card small{color:var(--muted);display:block;margin-top:2px}
+.card .t{color:var(--c);font-weight:600;font-size:.78rem;margin-top:4px}
+.pdfb{font-size:.75rem;color:var(--muted)}
+.head{flex:0 0 120px;display:flex;align-items:center}
+.head svg{width:100%;height:46px}
+.addn{align-self:center;margin-left:8px}
+
+@media(max-width:760px){
+ .track{flex-direction:column;overflow:visible}
+ .node{flex:none;grid-template-rows:none;grid-template-columns:34px 1fr;padding-bottom:12px}
+ .node .cell{grid-column:2;grid-row:1;padding:0 0 0 8px}
+ .node .cell:empty{display:none}
+ .node .mid{grid-column:1;grid-row:1;align-items:flex-start;padding-top:14px}
+ .mid:before{left:50%;right:auto;top:0;bottom:-12px;width:4px;height:auto;margin:0 0 0 -2px}
+ .top .card,.bot .card{margin:0}.top .card:after,.bot .card:after{display:none}
+ .top,.bot{align-items:flex-start}.card{max-height:none}
+ .head{flex:none;height:60px;transform:rotate(90deg);width:80px;margin:0 auto}
+}
+
+button,select,input,textarea{font:inherit;color:var(--ink);background:var(--card);border:1px solid var(--line);border-radius:8px;padding:6px 10px}
+button{cursor:pointer}button.p{background:var(--green);color:#fff;border-color:var(--green)}button.d{color:#c0392b}
+#ov{position:fixed;inset:0;background:rgba(0,0,0,.5);display:none;z-index:20;padding:env(safe-area-inset-top,0px) 0 0}
+#ov.on{display:flex;justify-content:flex-end}
+#pn{width:min(640px,100%);height:100%;background:var(--bg);overflow-y:auto;padding:20px 18px calc(32px + env(safe-area-inset-bottom,0px))}
+#pn h2{margin:6px 0;font-size:1.3rem}
+.bd{display:inline-block;color:#fff;background:var(--c);border-radius:99px;padding:2px 10px;font-size:.78rem}
+.sec{margin-top:16px}.sec h4{margin:0 0 6px;color:var(--green);font-size:.9rem}
+.sec p{margin:0;white-space:pre-wrap}
+.pdf{margin-top:10px;border:1px solid var(--line);border-radius:10px;background:var(--card);padding:10px}
+.pdf .r{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.pdf .r b{flex:1;min-width:120px}
+.pdf iframe{width:100%;height:60vh;border:0;margin-top:8px;border-radius:6px;background:#fff}
+.fm{display:flex;flex-direction:column;gap:8px}.fm input,.fm textarea,.fm select{width:100%}
+.x{float:right}
+#msg{margin:30px 0;text-align:center;color:var(--muted)}
+.empty{color:var(--muted);font-style:italic;padding:30px}
+
+body{
+  /* Application stricte de la variable pour un rendu uni, sans dégradé */
+  background: var(--bg);
+  letter-spacing:.005em;
+}
+.wrap{max-width:1320px;padding:28px 22px 56px}
+.brand{
+  position:relative;isolation:isolate;overflow:hidden;
+  padding:30px 32px;border-radius:24px;
+  background:linear-gradient(120deg,#123d2a 0%,#1f5d3a 58%,#28734a 100%);
+  color:#fff;box-shadow:0 16px 38px rgba(20,60,39,.16);
+}
+.brand:after{
+  content:"";position:absolute;z-index:-1;right:-60px;top:-110px;
+  width:330px;height:330px;border:1px solid rgba(255,255,255,.15);
+  border-radius:50%;box-shadow:0 0 0 32px rgba(255,255,255,.035),0 0 0 72px rgba(255,255,255,.025);
+}
+.logo{height:78px;width:78px;object-fit:contain;background:#fff;padding:7px;border-radius:18px;box-shadow:0 5px 18px rgba(0,0,0,.15)}
+h1{color:#fff;font-size:clamp(1.55rem,3vw,2.25rem);letter-spacing:-.035em;line-height:1.15}
+h1 span{color:#f4b64f}
+
+.sub{color:rgba(255,255,255,.78);margin-top:9px}
+.brand .sub:after{content:"";display:block;width:48px;height:3px;background:#f4b64f;border-radius:4px;margin-top:15px}
+.legend{gap:10px;margin:22px 0 14px}
+.legend span{display:inline-flex;align-items:center;gap:4px;background:var(--card);border:1px solid var(--line);padding:7px 12px;border-radius:99px;font-weight:600}
+.legend i{margin-right:4px}
+.pct{
+  background:var(--card);border:1px solid var(--line);border-radius:16px;
+  padding:15px 18px;margin:14px 0 24px;box-shadow:0 5px 18px rgba(20,40,25,.035)
+}
+#pct{font-size:1.1rem;min-width:52px;color:var(--green)}
+.bar{height:12px;background:color-mix(in srgb,var(--line) 65%,transparent)}
+.bar i{border-radius:99px}
+.track{padding:12px 4px 22px;scrollbar-color:var(--line) transparent;scrollbar-width:thin}
+.node{flex-basis:244px;grid-template-rows:164px 48px 164px}
+
+.card{
+  border:1px solid var(--line);border-top:4px solid var(--c);border-radius:16px;
+  padding:14px 14px 12px;max-height:152px;
+  box-shadow:0 5px 15px rgba(24,44,29,.045);
+  transition:transform .18s ease,box-shadow .18s ease,border-color .18s ease;
+}
+.card:hover,.card:focus-visible{transform:translateY(-3px);box-shadow:0 12px 26px rgba(24,44,29,.12);outline:2px solid color-mix(in srgb,var(--c) 50%,transparent);outline-offset:2px}
+.card b{font-size:.98rem;line-height:1.35;margin-bottom:5px}
+.card small{line-height:1.4}
+.card .t{margin-top:8px;letter-spacing:.015em}
+.dotn{width:20px;height:20px;box-shadow:0 0 0 3px var(--bg),0 0 0 5px var(--c)}
+.mid:before{height:3px}
+#ov{backdrop-filter:blur(5px);background:rgba(0,0,0,.56)}
+#pn{box-shadow:-18px 0 50px rgba(0,0,0,.15);padding:28px 24px calc(36px + env(safe-area-inset-bottom,0px))}
+#pn h2{font-size:1.55rem;letter-spacing:-.025em;margin:12px 0 4px}
+.bd{font-weight:700;letter-spacing:.02em;padding:5px 12px}
+
+.sec{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px;margin-top:14px}
+.sec h4{font-size:.78rem;text-transform:uppercase;letter-spacing:.09em;margin-bottom:8px}
+.sec p{line-height:1.7}
+.x{border-radius:99px;padding:7px 12px}
+button:focus-visible{outline:3px solid var(--amber);outline-offset:3px}
+
+@media(max-width:760px){
+  .progress-label{display:none}
+  .wrap{padding:14px 12px 36px}
+  .brand{padding:24px 20px;border-radius:20px;gap:13px}
+  .logo{height:62px;width:62px;border-radius:14px}
+  h1{font-size:1.55rem}
+  .legend{gap:7px}
+  .legend span{font-size:.8rem;padding:6px 10px}
+  .pct{padding:13px 14px}
+  .track{padding:8px 0}
+  .node{padding-bottom:14px}
+  .node .mid{padding-top:17px}
+  .card{padding:14px;border-radius:14px}
+  #pn{padding:20px 16px calc(28px + env(safe-area-inset-bottom,0px))}
+}
+@media(prefers-reduced-motion:reduce){
+  *,*:before,*:after{scroll-behavior:auto!important;transition:none!important;animation:none!important}
+}
+
+.toolbar{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;margin:18px 0 10px}
+.toolbar>div:first-child{color:var(--ink)}.toolbar>div:first-child span{color:var(--muted);font-size:.9rem}
+.toolbar-actions{display:flex;gap:8px;flex-wrap:wrap}
+.toolbar button{padding:9px 13px;border-radius:10px;font-weight:650}
+.notice{font-size:.82rem;color:var(--muted);padding:10px 12px;border:1px solid var(--line);background:var(--card);border-radius:10px;margin-bottom:12px}
+.fm label{font-size:.84rem;color:var(--muted);font-weight:650;margin-top:3px}
+.fm input,.fm textarea,.fm select{padding:10px 12px;border-radius:10px}
+.fm textarea{min-height:82px;resize:vertical}
+.file-row{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;padding:8px 0;border-bottom:1px solid var(--line)}
+.file-row:last-child{border-bottom:0}
+.file-row a{color:var(--green);font-weight:650;overflow-wrap:anywhere}
+.file-row small{display:block;color:var(--muted)}
+.file-row button{padding:5px 9px}
+.form-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:16px}
+.form-actions button{padding:9px 13px}
+.danger{color:#b42318!important;border-color:#e2b8b3!important;background:transparent!important}
+@media(max-width:760px){.toolbar{align-items:stretch}.toolbar-actions{width:100%}.toolbar-actions button{flex:1}.toolbar>div:first-child span{display:block}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="brand"><img class="logo" src="logo.png" alt="Logo AfriFloW" onerror="this.src='https://placehold.co/78x78/ffffff/1f5d3a?text=A'"><div><h1>Afri<span>FloW</span> · Feuille de route</h1>
+  <p class="sub">Du territoire africain vers le monde<br>Suivez nos avancées, nos priorités et les prochaines étapes.</p></div></div>
+  <div class="legend"><span><i style="background:var(--done)"></i>Réalisé</span><span><i style="background:var(--doing)"></i>En cours</span><span><i style="background:var(--todo)"></i>À venir</span></div>
+  <div class="pct"><strong id="pct">0 %</strong><span class="progress-label">des étapes réalisées</span><div class="bar"><i id="fill"></i></div></div>
+  <div class="toolbar">
+    <div><strong>Feuille de route</strong><span> · Modifiez les étapes et gérez leurs documents</span></div>
+    <div class="toolbar-actions"><button type="button" id="exportBtn">Exporter la sauvegarde</button><button type="button" class="p" id="addBtn">+ Ajouter une étape</button></div>
+  </div>
+  <div class="notice" id="notice" role="status">Les modifications sont enregistrées dans ce navigateur. Exportez régulièrement une sauvegarde pour conserver vos données.</div>
+  <div class="track" id="track"></div>
+</div>
+
+<div id="ov"><div id="pn"></div></div><input id="importFile" type="file" accept="application/json,.json" hidden>
+
+<script>
+var DEFAULT_ITEMS=[{"status": "done", "date": "Juin–juil. 2026", "title": "Identité de marque", "desc": "Logo, animation et visuels de la marque.", "details": "Création de l’identité visuelle d’AfriFloW : logo, animation du logo et supports de communication."}, {"status": "done", "date": "Juin–août 2026", "title": "Structure et gouvernance", "desc": "Organisation des fonctions et réunions hebdomadaires des associés.", "details": "Mise en place de la structure organisationnelle, des fonctions, du règlement intérieur et d’un rythme de réunions chaque samedi avec ordre du jour et compte rendu."}, {"status": "done", "date": "Juil.–août 2026", "title": "Analyses de marché et de prix", "desc": "Coûts, logistique et prix par marché.", "details": "Analyses financières et logistiques, comparaison des prix et factures pro forma pour plusieurs marchés (Togo, Burkina Faso, Sénégal, Tunisie)."}, {"status": "done", "date": "Juil. 2026", "title": "Traçabilité qualité par QR code", "desc": "Un QR code par lot pour suivre la qualité.", "details": "QR codes par lot et par pays, base de données et formulaire de retour client pour suivre la qualité de bout en bout."}, {"status": "done", "date": "Juil. 2026", "title": "Site vitrine", "desc": "Site web AfriFloW en ligne.", "details": "Conception et mise en ligne du site vitrine de l’entreprise."}, {"status": "done", "date": "Juil.–sept. 2026", "title": "Renforcement de l’équipe", "desc": "Recrutement de nouveaux associés.", "details": "Campagne de recrutement d’associés et arrivée de nouveaux membres dans l’équipe."}, {"status": "done", "date": "Août–sept. 2026", "title": "Lancement sur LinkedIn", "desc": "Contenu de lancement publié.", "details": "Production du texte, des visuels et du document de présentation de la campagne de lancement."}, {"status": "done", "date": "Août 2026", "title": "Première commande", "desc": "Commande traitée de bout en bout.", "details": "Première commande réalisée : bon de commande, paiement fournisseur, quittance et suivi comptable."}, {"status": "doing", "date": "Sept. 2026", "title": "Prospection du marché togolais", "desc": "Excellent accueil du goût du produit.", "details": "Les clients apprécient fortement la qualité gustative. Un travail est en cours pour rendre l’emballage plus attractif."}, {"status": "doing", "date": "Sept.–oct. 2026", "title": "Nouvel emballage", "desc": "Design et production du packaging.", "details": "Plusieurs propositions de design ont été soumises aux associés. L’achat d’une machine d’impression pour internaliser la production est à l’étude."}, {"status": "doing", "date": "Sept. 2026", "title": "Qualité du stock et entreposage", "desc": "Renforcement du contrôle qualité et du stockage.", "details": "Mesures en cours pour garantir la qualité du stock actuel et sécuriser les conditions de stockage des prochains arrivages."}, {"status": "doing", "date": "Sept. 2026", "title": "Formalisation de l’entreprise", "desc": "Démarches juridiques en cours.", "details": "Suivi de la procédure de formalisation, définition des apports des associés et du capital social."}, {"status": "doing", "date": "Oct. 2026", "title": "Prospection du marché sénégalais", "desc": "Premiers contacts à Dakar.", "details": "Rencontres avec boutiques, grandes surfaces et grossistes pour tester l’offre, les prix et les formats."}, {"status": "todo", "date": "", "title": "Autorisation de vente au Sénégal", "desc": "Démarche réglementaire à lancer.", "details": "Obtention de l’autorisation nécessaire pour distribuer légalement dans les commerces sénégalais."}, {"status": "todo", "date": "", "title": "Référencement en grandes surfaces", "desc": "Constitution des dossiers fournisseurs.", "details": "Préparation des dossiers de référencement et suivi des rendez-vous avec les enseignes."}, {"status": "todo", "date": "", "title": "Boutique en ligne", "desc": "Stratégie de lancement rédigée.", "details": "Lancement d’une boutique en ligne avec paiement Mobile Money."}, {"status": "todo", "date": "", "title": "Nouveaux marchés", "desc": "Bénin, Tunisie, France/Europe.", "details": "Ouverture progressive de nouveaux marchés d’export et de distribution."}];
+var ITEMS=[];
+var ST={done:["Réalisé","var(--done)"],doing:["En cours","var(--doing)"],todo:["À venir","var(--todo)"]};
+var STORAGE_KEY="afriflow_roadmap_v2";
+
+function $(i){return document.getElementById(i)}
+function el(t,c,x){var e=document.createElement(t);if(c)e.className=c;if(x!==undefined&&x!==null)e.textContent=x;return e}
+function clone(v){return JSON.parse(JSON.stringify(v))}
+function saveLocal(){try{localStorage.setItem(STORAGE_KEY,JSON.stringify(ITEMS));$("notice").textContent="Modifications enregistrées dans ce navigateur. Exportez régulièrement une sauvegarde pour éviter toute perte.";return true}catch(e){$("notice").textContent="Stockage local saturé : exportez une sauvegarde et retirez des fichiers volumineux.";return false}}
+function loadLocal(){try{var v=localStorage.getItem(STORAGE_KEY);ITEMS=v?JSON.parse(v):clone(DEFAULT_ITEMS)}catch(e){ITEMS=clone(DEFAULT_ITEMS)}ITEMS.forEach(function(i){if(!i.docs)i.docs=[]})}
+function updateProgress(){var n=ITEMS.length,d=ITEMS.filter(function(i){return i.status==="done"}).length,p=n?Math.round(d/n*100):0;$("pct").textContent=p+" %";$("fill").style.width=p+"%"}
+
+function render(){
+  $("track").textContent="";
+  ITEMS.forEach(function(it,k){
+    var c=ST[it.status]||ST.todo,nd=el("div","node"+(it.status==="done"?" on":""));nd.style.setProperty("--c",c[1]);
+    var top=el("div","cell top"),mid=el("div","mid"),bot=el("div","cell bot"),b=el("button","card");b.type="button";
+    b.appendChild(el("b","",it.title||"Étape sans titre"));b.appendChild(el("small","",it.desc||"Cliquez pour afficher les détails."));if(it.date)b.appendChild(el("div","t",it.date));
+    b.onclick=function(){openEditor(k)};(k%2===0?top:bot).appendChild(b);mid.appendChild(el("span","dotn"));nd.appendChild(top);nd.appendChild(mid);nd.appendChild(bot);$("track").appendChild(nd);
+  });
+  var h=el("div","head");h.innerHTML='<svg viewBox="0 0 120 46" aria-hidden="true"><path d="M0 23H96" stroke="var(--line)" stroke-width="4" fill="none"/><path d="M92 8L118 23L92 38Z" fill="var(--amber)"/></svg>';$("track").appendChild(h);updateProgress();
+}
+
+function closePanel(){$("ov").classList.remove("on")}
+function field(label,tag,value,placeholder){
+  var wrap=el("div","fm"),lab=el("label","",label),input=el(tag);
+  if(tag==="textarea")input.rows=3;else input.type="text";
+  input.value=value||"";if(placeholder)input.placeholder=placeholder;wrap.appendChild(lab);wrap.appendChild(input);return {wrap:wrap,input:input};
+}
+
+function openEditor(index){
+  var isNew=index===null,it=isNew?{title:"",desc:"",details:"",date:"",status:"todo",docs:[]}:ITEMS[index];
+  if(!it.docs)it.docs=[];
+  var pn=$("pn");pn.textContent="";pn.style.setProperty("--c",ST[it.status][1]);
+  var close=el("button","x","× Fermer");close.onclick=closePanel;pn.appendChild(close);
+  pn.appendChild(el("h2","",isNew?"Ajouter une étape":"Modifier l’étape"));
+  var form=el("div","fm");
+  var fTitle=field("Titre de l’étape","input",it.title,"Ex. : Prospection commerciale");form.appendChild(fTitle.wrap);
+  var fDesc=field("Résumé","textarea",it.desc,"Résumé court visible sur la carte");form.appendChild(fDesc.wrap);
+  var fDetails=field("Détails","textarea",it.details,"Décrivez les actions réalisées ou à mener");form.appendChild(fDetails.wrap);
+  var fDate=field("Date ou période","input",it.date,"Ex. : Octobre 2026");form.appendChild(fDate.wrap);
+  
+  var statusWrap=el("div","fm"),lab=el("label","","Statut"),sel=el("select");
+  [["done","Réalisé"],["doing","En cours"],["todo","À venir"]].forEach(function(o){var opt=el("option","",o[1]);opt.value=o[0];sel.appendChild(opt)});sel.value=it.status||"todo";statusWrap.appendChild(lab);statusWrap.appendChild(sel);form.appendChild(statusWrap);
+  pn.appendChild(form);
+  
+  pn.appendChild(el("h3","","Documents associés"));
+  pn.appendChild(el("p","sub","Sélectionnez un fichier sur votre ordinateur. Il sera conservé localement dans ce navigateur avec cette étape. Vous pouvez aussi ajouter un lien Dropbox partagé."));
+  var upload=el("input");upload.type="file";upload.multiple=true;upload.accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.png,.jpg,.jpeg,.mp4,.zip,.txt";upload.style.width="100%";upload.style.margin="8px 0";
+  var uploadLabel=el("label","","Télécharger des fichiers depuis l’ordinateur");pn.appendChild(uploadLabel);pn.appendChild(upload);
+  var linkName=field("Nom du document (lien Dropbox)","input","","Ex. : Présentation AfriFloW");pn.appendChild(linkName.wrap);
+  var linkUrl=field("Lien partagé Dropbox","input","","https://www.dropbox.com/...");pn.appendChild(linkUrl.wrap);
+  var addLink=el("button","","Ajouter le lien Dropbox");addLink.style.width="100%";addLink.style.margin="4px 0 12px";pn.appendChild(addLink);
+  var docsBox=el("div","");pn.appendChild(docsBox);
+  
+  function drawDocs(){
+    docsBox.textContent="";
+    if(!it.docs.length){docsBox.appendChild(el("p","empty","Aucun document associé pour le moment."));return}
+    it.docs.forEach(function(doc,j){
+      var row=el("div","file-row"),info=el("div",""),a=el("a","",doc.name);a.href=doc.url||"#";a.target="_blank";a.rel="noopener noreferrer";
+      if(doc.data){a.href=doc.data;a.download=doc.name}
+      info.appendChild(a);info.appendChild(el("small","",doc.data?"Fichier joint localement": "Lien externe · Dropbox"));
+      var rm=el("button","danger","Retirer");rm.onclick=function(){it.docs.splice(j,1);drawDocs()};row.appendChild(info);row.appendChild(rm);docsBox.appendChild(row);
+    });
+  }
+  addLink.onclick=function(){
+    var name=linkName.input.value.trim(),url=linkUrl.input.value.trim();
+    if(!name||!/^https:\/\/(www\.)?(dropbox\.com|dropboxusercontent\.com)\//i.test(url)){alert("Saisissez un nom et un lien Dropbox valide commençant par https://dropbox.com ou https://www.dropbox.com.");return}
+    it.docs.push({name:name,url:url});linkName.input.value="";linkUrl.input.value="";drawDocs();
+  };
+  upload.onchange=function(){
+    var files=Array.from(upload.files||[]);
+    files.forEach(function(file){
+      if(file.size>8*1024*1024){alert(file.name+" dépasse 8 Mo. Ajoutez-le dans Dropbox puis collez son lien partagé.");return}
+      var reader=new FileReader();reader.onload=function(e){it.docs.push({name:file.name,data:e.target.result,type:file.type,size:file.size});drawDocs()};reader.readAsDataURL(file);
+    });upload.value="";
+  };
+  drawDocs();
+  
+  var actions=el("div","form-actions"),save=el("button","p","Enregistrer"),cancel=el("button","","Annuler");save.type="button";cancel.type="button";cancel.onclick=closePanel;
+  save.onclick=function(){
+    var title=fTitle.input.value.trim();if(!title){alert("Le titre de l’étape est obligatoire.");return}
+    var updated={title:title,desc:fDesc.input.value.trim(),details:fDetails.input.value.trim(),date:fDate.input.value.trim(),status:sel.value,docs:it.docs};
+    if(isNew)ITEMS.push(updated);else ITEMS[index]=updated;
+    saveLocal();render();closePanel();
+  };
+  actions.appendChild(save);actions.appendChild(cancel);
+  if(!isNew){var del=el("button","danger","Supprimer l’étape");del.onclick=function(){if(confirm("Supprimer cette étape et ses documents associés ?")){ITEMS.splice(index,1);saveLocal();render();closePanel()}};actions.appendChild(del)}
+  pn.appendChild(actions);$("ov").classList.add("on");
+}
+
+$("addBtn").onclick=function(){openEditor(null)};
+$("exportBtn").onclick=function(){
+  var blob=new Blob([JSON.stringify(ITEMS,null,2)],{type:"application/json"}),url=URL.createObjectURL(blob),a=el("a");a.href=url;a.download="afriflow-feuille-de-route-sauvegarde.json";document.body.appendChild(a);a.click();a.remove();URL.revokeObjectURL(url);
+  $("notice").textContent="Sauvegarde exportée. Gardez ce fichier en lieu sûr.";
+};
+var importBtn=el("button","","Importer une sauvegarde");importBtn.onclick=function(){$("importFile").click()};$("exportBtn").parentNode.appendChild(importBtn);
+$("importFile").onchange=function(e){var f=e.target.files[0];if(!f)return;var r=new FileReader();r.onload=function(){try{var data=JSON.parse(r.result);if(!Array.isArray(data))throw new Error();if(confirm("Remplacer la feuille de route actuelle par cette sauvegarde ?")){ITEMS=data;ITEMS.forEach(function(i){if(!i.docs)i.docs=[]});saveLocal();render()}}catch(err){alert("Fichier de sauvegarde invalide.")}};r.readAsText(f);e.target.value=""};
+$("ov").onclick=function(e){if(e.target===$("ov"))closePanel()};
+document.addEventListener("keydown",function(e){if(e.key==="Escape")closePanel()});
+loadLocal();render();
+</script>
+</body>
+</html>
