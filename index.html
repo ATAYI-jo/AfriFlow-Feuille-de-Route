@@ -3,24 +3,25 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>AfriFloW – Feuille de route interactive</title>
+<title>AfriFloW – Journal de Bord & Feuille de Route</title>
 <link rel="icon" href="logo.png">
-<meta name="description" content="Feuille de route interactive d’AfriFloW : suivez notre évolution pas à pas le long de la route de la croissance.">
+<meta name="description" content="Feuille de route interactive d’AfriFloW en mode journal avec archives START et authentification dynamique par année.">
 <style>
 :root {
-  --bg: #ffffff;
+  --bg: #fcfbfa;
   --card: #ffffff;
   --ink: #1d2a22;
   --muted: #66726a;
   --green: #1f5d3a;
   --amber: #d98a1b;
-  --line: #e0e0e0;
+  --line: #e2ded7;
   --done: #1f5d3a;
   --doing: #d98a1b;
   --todo: #7b8a93;
   --road-bg: #1a231e;
   --road-line: #ffffff;
   --font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+  --journal-font: Georgia, "Times New Roman", serif;
   box-sizing: border-box;
 }
 
@@ -55,20 +56,21 @@
   --road-bg: #243029;
 }
 
-/* Écran de verrouillage / Sécurité */
+/* Écran d'authentification global initial */
 #auth-screen {
   position: fixed; inset: 0; background: var(--bg); z-index: 9999;
   display: flex; align-items: center; justify-content: center; padding: 20px;
 }
+#auth-screen.off { display: none; }
 .auth-box {
   background: var(--card); border: 1px solid var(--line); padding: 36px 28px;
   border-radius: 24px; width: min(420px, 100%); text-align: center;
-  box-shadow: 0 20px 40px rgba(0,0,0,0.12);
+  box-shadow: 0 20px 40px rgba(0,0,0,0.15);
 }
 .auth-box img { height: 72px; width: 72px; object-fit: contain; margin-bottom: 16px; background: #fff; padding: 8px; border-radius: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
 .auth-box h2 { margin: 0 0 8px; font-size: 1.4rem; color: var(--green); }
 .auth-box p { color: var(--muted); font-size: 0.9rem; margin-bottom: 24px; }
-.auth-box input { width: 100%; padding: 12px 16px; margin-bottom: 14px; border-radius: 12px; border: 1px solid var(--line); background: var(--bg); color: var(--ink); font-size: 1rem; }
+.auth-box input { width: 100%; padding: 12px 16px; margin-bottom: 14px; border-radius: 12px; border: 1px solid var(--line); background: var(--bg); color: var(--ink); font-size: 1rem; box-sizing: border-box; }
 .auth-box button { width: 100%; padding: 12px; border-radius: 12px; background: var(--green); color: #fff; border: none; font-weight: 650; font-size: 1rem; cursor: pointer; }
 
 body { margin: 0; background: var(--bg); color: var(--ink); font: 16px/1.5 var(--font-family); letter-spacing: .005em; transition: background 0.3s, color 0.3s; }
@@ -83,7 +85,7 @@ h1 span { color: #f4b64f; }
 
 /* Barre d'outils et Boutons */
 .toolbar { display: flex; align-items: center; justify-content: space-between; gap: 14px; flex-wrap: wrap; margin: 18px 0 24px; background: var(--card); border: 1px solid var(--line); padding: 14px 20px; border-radius: 16px; }
-.toolbar-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+.toolbar-actions { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
 button, select, input, textarea { font: inherit; color: var(--ink); background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 9px 14px; transition: all .2s; }
 button { cursor: pointer; font-weight: 650; }
 button:hover { filter: brightness(0.95); transform: translateY(-1px); }
@@ -101,17 +103,19 @@ svg.road-svg { position: absolute; top: 0; left: 0; width: 100%; height: 100%; p
 .road-svg .road-surface { fill: none; stroke: var(--road-bg); stroke-width: 34; stroke-linecap: round; stroke-linejoin: round; }
 .road-svg .road-centerline { fill: none; stroke: var(--road-line); stroke-width: 2; stroke-dasharray: 10 12; stroke-linecap: round; opacity: .9; }
 
+/* Nœud START & Fin + */
+.road-node-special { text-align: center; margin: 30px auto; z-index: 3; position: relative; display: flex; justify-content: center; }
+.start-card, .plus-card { background: var(--card); border: 2px dashed var(--green); border-radius: 20px; padding: 20px 30px; cursor: pointer; box-shadow: 0 10px 30px rgba(0,0,0,0.06); display: inline-flex; align-items: center; gap: 14px; transition: transform 0.3s; }
+.start-card:hover, .plus-card:hover { transform: scale(1.03); background: color-mix(in srgb, var(--green) 5%, var(--card)); }
+.start-card b, .plus-card b { color: var(--green); font-size: 1.2rem; }
+
 .road-step { position: relative; display: flex; align-items: center; justify-content: space-between; margin: 90px 0; z-index: 2; width: 100%; }
-.road-step { flex-direction: row; }
-.road-step.side-right { flex-direction: row; }
+.road-step:nth-child(odd) { flex-direction: row; }
+.road-step:nth-child(even) { flex-direction: row-reverse; }
 
 .step-card { width: 42%; background: var(--card); border: 1px solid var(--line); border-top: 4px solid var(--c); border-radius: 20px; padding: 22px; cursor: pointer; box-shadow: 0 10px 30px rgba(0,0,0,0.06); transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.3s; }
 .step-card:hover { transform: translateY(-6px) scale(1.02); box-shadow: 0 18px 36px rgba(0,0,0,0.12); }
-.step-card { position: relative; }
-.step-card .edit-pencil { position:absolute; top:12px; right:12px; width:34px; height:34px; padding:0; display:grid; place-items:center; border-radius:50%; background:var(--bg); border:1px solid var(--line); color:var(--green); font-size:17px; }
-.step-card .edit-pencil:hover { background:var(--green); color:#fff; }
-.step-card .card-photo { width:100%; max-height:150px; object-fit:cover; border-radius:10px; margin-top:12px; }
-.step-card b { display: block; padding-right:32px; font-size: 1.15rem; margin-bottom: 6px; color: var(--ink); }
+.step-card b { display: block; font-size: 1.15rem; margin-bottom: 6px; color: var(--ink); }
 .step-card small { color: var(--muted); display: block; line-height: 1.5; font-size: 0.92rem; }
 .step-card .date-badge { display: inline-block; margin-top: 10px; padding: 4px 10px; border-radius: 99px; background: color-mix(in srgb, var(--c) 15%, transparent); color: var(--c); font-weight: 700; font-size: 0.8rem; }
 
@@ -123,34 +127,37 @@ svg.road-svg { position: absolute; top: 0; left: 0; width: 100%; height: 100%; p
 #car-marker { position: absolute; width: 50px; height: 50px; background: #fff; border-radius: 50%; box-shadow: 0 5px 20px rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: center; z-index: 10; transform: translate(-50%, -50%); border: 3px solid var(--amber); will-change: top, left; }
 #car-marker img { width: 34px; height: 34px; object-fit: contain; }
 
-/* Panneau d'édition / Tiroir latéral */
-#ov { position: fixed; inset: 0; background: rgba(0,0,0,0.68); backdrop-filter: blur(5px); display: none; z-index: 1000; align-items: flex-start; justify-content: center; overflow-y:auto; padding:24px; }
+/* ================= TIROIR / MODAL STYLE JOURNAL ================= */
+#ov { position: fixed; inset: 0; background: rgba(0,0,0,0.65); backdrop-filter: blur(6px); display: none; z-index: 1000; justify-content: flex-end; }
 #ov.on { display: flex; }
-#pn { position:relative; width: min(900px, 100%); min-height:70vh; background:var(--card); color:var(--ink); overflow:visible; padding:clamp(20px,4vw,48px); box-shadow:0 20px 70px rgba(0,0,0,0.3); border-top:8px solid var(--green); animation: slideIn 0.25s ease-out; }
-#pn .paper-masthead { text-align:center; border-bottom:3px double var(--ink); padding-bottom:14px; margin-bottom:24px; }
-#pn .paper-masthead .paper-brand { font-family:Georgia,serif; font-size:clamp(1.6rem,4vw,2.5rem); font-weight:800; letter-spacing:.04em; }
-#pn .paper-masthead .paper-meta { display:flex; justify-content:space-between; gap:12px; flex-wrap:wrap; border-top:1px solid var(--line); margin-top:10px; padding-top:8px; font-size:.78rem; color:var(--muted); text-transform:uppercase; }
-#pn .paper-title { font-family:Georgia,serif; font-size:clamp(1.5rem,3vw,2.25rem); line-height:1.15; margin:0 0 16px; }
-#pn .paper-grid { display:grid; grid-template-columns:1fr 1fr; gap:18px; }
-#pn .paper-section { border:1px solid var(--line); padding:16px; border-radius:8px; margin-bottom:16px; }
-#pn .paper-section h3 { margin:0 0 12px; font-size:1rem; }
-#pn .paper-section textarea { min-height:120px; resize:vertical; }
-#pn .paper-section input[type=file] { max-width:100%; }
-#pn .paper-close { position:absolute; top:12px; right:12px; }
-#pn .paper-preview { display:grid; grid-template-columns:repeat(auto-fill,minmax(120px,1fr)); gap:12px; margin-top:12px; }
-#pn .paper-preview-item { border:1px solid var(--line); border-radius:8px; padding:8px; min-width:0; }
-#pn .paper-preview-item img { width:100%; height:110px; object-fit:cover; border-radius:5px; }
-#pn .paper-preview-item a { color:var(--green); overflow-wrap:anywhere; font-size:.85rem; }
-#pn .paper-actions { display:flex; flex-wrap:wrap; gap:10px; margin-top:20px; padding-top:18px; border-top:1px solid var(--line); }
-@media(max-width:650px){ #ov{padding:8px;} #pn .paper-grid{grid-template-columns:1fr;} .road-step, .road-step.side-right { flex-direction:column; align-items:center; gap:18px; } .road-step .step-card { width:100%; } .road-node-center { position:relative; left:auto; transform:none; margin:0; } .road-step .spacer-side { display:none; } }
+#pn { width: min(720px, 100%); height: 100%; background: var(--bg); overflow-y: auto; padding: 40px 32px; box-shadow: -20px 0 50px rgba(0,0,0,0.25); animation: slideIn 0.3s cubic-bezier(0.16, 1, 0.3, 1); }
 @keyframes slideIn { from { transform: translateX(100%); } to { transform: translateX(0); } }
 
-.fm { display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px; }
+/* Mise en page style Journal (Le Monde / Presse) */
+.journal-article { font-family: var(--journal-font); color: var(--ink); background: var(--card); padding: 36px; border: 1px solid var(--line); border-radius: 16px; box-shadow: 0 10px 30px rgba(0,0,0,0.04); }
+.journal-header { border-bottom: 2px solid var(--green); padding-bottom: 16px; margin-bottom: 24px; text-align: center; }
+.journal-kicker { font-family: var(--font-family); text-transform: uppercase; letter-spacing: 2px; font-size: 0.75rem; font-weight: 800; color: var(--green); margin-bottom: 6px; }
+.journal-title { font-size: clamp(1.8rem, 3.5vw, 2.4rem); line-height: 1.15; margin: 0 0 10px; font-weight: 700; }
+.journal-date { font-style: italic; color: var(--muted); font-size: 0.95rem; }
+
+.journal-columns { column-count: 2; column-gap: 28px; text-align: justify; font-size: 0.98rem; line-height: 1.65; margin-bottom: 24px; }
+@media(max-width: 600px) { .journal-columns { column-count: 1; } }
+
+.journal-img-container { margin: 20px 0; text-align: center; }
+.journal-img { width: 100%; max-height: 350px; object-fit: cover; border-radius: 8px; border: 1px solid var(--line); box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
+.journal-caption { font-size: 0.8rem; font-style: italic; color: var(--muted); margin-top: 6px; text-align: center; font-family: var(--font-family); }
+
+.journal-docs { margin-top: 24px; border-top: 1px solid var(--line); padding-top: 16px; font-family: var(--font-family); }
+.journal-docs h4 { margin: 0 0 12px; font-size: 1rem; color: var(--green); }
+
+.fm { display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px; font-family: var(--font-family); }
 .fm label { font-size: 0.85rem; color: var(--muted); font-weight: 700; }
-.fm input, .fm textarea, .fm select { width: 100%; padding: 12px; border-radius: 12px; background: var(--card); color: var(--ink); border: 1px solid var(--line); }
-.file-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 12px 0; border-bottom: 1px solid var(--line); }
+.fm input, .fm textarea, .fm select { width: 100%; padding: 12px; border-radius: 12px; background: var(--card); color: var(--ink); border: 1px solid var(--line); font-family: inherit; }
+.file-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--line); font-size: 0.9rem; }
 .file-row a { color: var(--green); font-weight: 650; text-decoration: none; }
 .file-row a:hover { text-decoration: underline; }
+
+.lock-banner { background: color-mix(in srgb, var(--green) 15%, var(--card)); border: 1px solid var(--green); padding: 12px 16px; border-radius: 12px; margin-bottom: 20px; display: flex; align-items: center; justify-content: space-between; gap: 12px; font-family: var(--font-family); font-size: 0.9rem; }
 
 /* Modal Personnalisation Style */
 #customizer-modal { position: fixed; inset: 0; background: rgba(0,0,0,0.6); backdrop-filter: blur(5px); display: none; z-index: 1000; align-items: center; justify-content: center; padding: 20px; }
@@ -158,7 +165,7 @@ svg.road-svg { position: absolute; top: 0; left: 0; width: 100%; height: 100%; p
 .customizer-box { background: var(--card); border: 1px solid var(--line); padding: 28px; border-radius: 24px; width: min(480px, 100%); box-shadow: 0 20px 50px rgba(0,0,0,0.2); max-height: 90vh; overflow-y: auto; }
 
 @media(max-width: 768px) {
-  .road-step, .road-step.side-right { flex-direction: column; align-items: center; gap: 24px; }
+  .road-step, .road-step:nth-child(even), .road-step:nth-child(odd) { flex-direction: column; align-items: center; gap: 24px; }
   .step-card { width: 100%; text-align: center; }
   .road-node-center { position: relative; left: auto; transform: none; margin-bottom: -10px; }
   .road-container { padding-left: 8px; padding-right: 8px; }
@@ -169,63 +176,84 @@ svg.road-svg { position: absolute; top: 0; left: 0; width: 100%; height: 100%; p
 </style>
 </head>
 <body>
+
+<!-- Écran d'authentification globale initial par Email et Mot de passe dynamique -->
 <div id="auth-screen">
   <div class="auth-box">
-    <img src="logo.png" alt="Logo AfriFloW" onerror="this.style.display='none'">
-    <h2>Accès réservé à l’équipe</h2>
-    <p>Entre le code d’accès pour ouvrir la feuille de route AfriFloW.</p>
-    <input type="password" id="auth-code" placeholder="Code d’accès" autocomplete="current-password" aria-label="Code d’accès">
-    <button type="button" id="auth-submit">Accéder à la feuille de route</button>
-    <p style="margin:14px 0 0;font-size:.75rem">Cette vérification dans le navigateur ne remplace pas une authentification sécurisée côté serveur.</p>
+    <img src="logo.png" alt="AfriFloW" onerror="this.src='https://placehold.co/72x72/1f5d3a/ffffff?text=🔒'">
+    <h2>Accès Sécurisé AfriFloW</h2>
+    <p id="auth-subtitle">Veuillez entrer votre adresse email et le mot de passe requis.</p>
+    <input type="email" id="authEmailInput" placeholder="Votre adresse email (ex: contact@afriflow.com)">
+    <input type="password" id="authPasswordInput" placeholder="Mot de passe">
+    <button type="button" onclick="verifyGlobalAuth()">Se connecter</button>
   </div>
 </div>
+
 <div class="wrap">
   <div class="brand">
     <img class="logo-img" src="logo.png" alt="Logo AfriFloW" onerror="this.src='https://placehold.co/78x78/ffffff/1f5d3a?text=A'">
     <div>
-      <h1>Afri<span>FloW</span> · Feuille de route interactive</h1>
-      <p class="sub">Suivez notre parcours stratégique, de la structure initiale vers l’expansion internationale.</p>
+      <h1>Afri<span>FloW</span> · Journal de Bord & Feuille de Route</h1>
+      <p class="sub">Cliquez sur un cadrant pour consulter les articles détaillés au format journal.</p>
     </div>
   </div>
 
   <div class="toolbar">
-    <div><strong>Navigation Route</strong><br><span style="color:var(--muted); font-size:0.88rem;">Faites défiler pour faire avancer le véhicule le long des étapes</span></div>
+    <div id="editStatusIndicator">🔓 <strong>Connecté</strong> — Modification directe active</div>
     <div class="toolbar-actions">
-      <button type="button" onclick="openCustomizer()">⚙️ Personnaliser le style</button>
-      <button type="button" id="exportBtn">Exporter la sauvegarde</button>
-      <button type="button" class="p" id="addBtn">+ Ajouter une étape</button>
+      <button type="button" onclick="openCustomizer()">⚙️ Personnaliser</button>
+      <button type="button" id="exportBtn">Exporter Sauvegarde</button>
+      <button type="button" id="importTriggerBtn">Importer JSON</button>
+      <input id="importFile" type="file" accept="application/json,.json" hidden>
     </div>
   </div>
 
-  <div id="notice" style="font-size:0.85rem; color:var(--muted); margin-bottom:20px; padding:12px; background:var(--card); border:1px solid var(--line); border-radius:12px;">
-    Les modifications et pièces jointes sont enregistrées dans ce navigateur. Exportez régulièrement une sauvegarde JSON. Les fichiers volumineux sont limités pour préserver la capacité de stockage.
-  </div>
-
-  <!-- ROUTE SINUEUSE INTERACTIVE -->
+  <!-- ROUTE SINUEUSE INTERACTIVE AVEC START AU DÉBUT ET + À LA FIN -->
   <div class="road-container" id="roadContainer">
     <div id="car-marker"><img src="logo.png" alt="Car" onerror="this.src='https://placehold.co/34x34/1f5d3a/ffffff?text=🚗'"></div>
     <svg class="road-svg" id="roadSvg"></svg>
+    
+    <!-- POINT DE DÉPART START / ARCHIVES GLOBALES -->
+    <div class="road-node-special">
+      <div class="start-card" onclick="openStartArchives()">
+        <span style="font-size: 1.8rem;">📦</span>
+        <div>
+          <b>START · Coffre d'Archives Globales</b>
+          <small style="color:var(--muted); display:block;">Notes de fond, photos d'archive et documents fondateurs du projet.</small>
+        </div>
+      </div>
+    </div>
+
     <div id="roadStepsList"></div>
+
+    <!-- POINT DE FIN + POUR AJOUTER DE NOUVELLES ÉTAPES -->
+    <div class="road-node-special" id="plusNodeContainer" style="margin-top: 60px;">
+      <div class="plus-card" onclick="openEditor(null)">
+        <span style="font-size: 2rem; color: var(--green);">➕</span>
+        <div>
+          <b>Ajouter un nouveau chapitre / étape</b>
+          <small style="color:var(--muted); display:block;">Étendez la route de la croissance à l'infini.</small>
+        </div>
+      </div>
+    </div>
   </div>
 </div>
 
-<!-- TIROIR D'ÉDITION ÉTAPE -->
-<div id="ov"><div id="pn"></div></div>
-<input id="importFile" type="file" accept="application/json,.json" hidden>
+<!-- TIROIR / ARTICLE DE JOURNAL -->
+<div id="ov" onclick="if(event.target === this) closeDrawer();"><div id="pn"></div></div>
 
 <!-- MODAL PERSONNALISATION STYLE -->
 <div id="customizer-modal">
   <div class="customizer-box">
     <h2>Personnaliser l'apparence</h2>
     <p style="color:var(--muted); font-size:0.9rem;">Ajustez les couleurs et la police de votre interface.</p>
-    <div class="fm"><label>Couleur Principale (Vert AfriFloW)</label><input type="color" id="picker-green" value="#1f5d3a" onchange="applyCustomTheme()"></div>
+    <div class="fm"><label>Couleur Principale (Vert)</label><input type="color" id="picker-green" value="#1f5d3a" onchange="applyCustomTheme()"></div>
     <div class="fm"><label>Couleur Secondaire (Ambre)</label><input type="color" id="picker-amber" value="#d98a1b" onchange="applyCustomTheme()"></div>
-    <div class="fm"><label>Police d'écriture</label>
+    <div class="fm"><label>Police d'écriture générale</label>
       <select id="picker-font" onchange="applyCustomTheme()">
         <option value="system-ui, -apple-system, sans-serif">Moderne Système</option>
         <option value="'Segoe UI', Tahoma, Geneva, Verdana, sans-serif">Segoe UI</option>
         <option value="'Helvetica Neue', Arial, sans-serif">Helvetica / Arial</option>
-        <option value="Georgia, serif">Georgia (Élégante)</option>
       </select>
     </div>
     <div style="margin-top:20px; display:flex; gap:10px;">
@@ -235,70 +263,435 @@ svg.road-svg { position: absolute; top: 0; left: 0; width: 100%; height: 100%; p
 </div>
 
 <script>
+/* Détermination dynamique de l'année en cours et du mot de passe attendu */
+var currentYear = new Date().getFullYear();
+var expectedPassword = "AFRIFLOW" + currentYear;
+
+/* Affichage dynamique de l'aide sur le mot de passe dans l'écran de connexion */
+window.addEventListener('DOMContentLoaded', function() {
+  var sub = document.getElementById('auth-subtitle');
+  if(sub) {
+    sub.textContent = "Entrez votre email et le mot de passe requis (ex: " + expectedPassword + ").";
+  }
+});
+
 var DEFAULT_ITEMS = [
-  {status: "done", date: "Juin–juil. 2026", title: "1. Identité de marque", desc: "Création du logo, animation et visuels de la marque AfriFloW.", details: "Mise en place de l'identité visuelle complète et des supports de communication."},
-  {status: "done", date: "Juin–août 2026", title: "2. Structure et gouvernance", desc: "Organisation des fonctions, règlement intérieur et réunions hebdomadaires.", details: "Définition des rôles des associés et structuration de la gouvernance."},
-  {status: "doing", date: "Sept. 2026", title: "3. Prospection et Marché togolais", desc: "Premiers tests concluants et accueil favorable du goût du produit.", details: "Analyse des retours clients et adaptation de l'emballage pour maximiser l'attractivité."},
-  {status: "todo", date: "Q4 2026", title: "4. Référencement grandes surfaces", desc: "Constitution des dossiers fournisseurs pour les enseignes partenaires.", details: "Préparation des catalogues et négociations commerciales de distribution."},
-  {status: "todo", date: "2027", title: "5. Expansion régionale & Boutique en ligne", desc: "Lancement de la plateforme e-commerce et ouverture nouveaux marchés.", details: "Déploiement des solutions de paiement et logistique d'exportation transfrontalière."}
+  {status: "done", date: "Juin–juil. 2026", title: "1. Identité de marque", desc: "Création du logo, animation et visuels de la marque AfriFloW.", details: "Mise en place de l'identité visuelle complète, des supports de communication et validation de la charte graphique fondatrice. Les premiers retours de terrain confirment l'adéquation parfaite de notre image avec les attentes du marché togolais et ouest-africain."},
+  {status: "done", date: "Juin–août 2026", title: "2. Structure et gouvernance", desc: "Organisation des fonctions, règlement intérieur et réunions hebdomadaires.", details: "Définition rigoureuse des rôles des associés, structuration de la gouvernance exécutive et mise en place des indicateurs clés de performance (KPI) pour le suivi opérationnel."},
+  {status: "doing", date: "Sept. 2026", title: "3. Prospection et Marché togolais", desc: "Premiers tests concluants et accueil favorable du goût du produit.", details: "Analyse approfondie des retours clients, dégustations publiques réussies et adaptation ciblée de l'emballage pour maximiser l'attractivité en rayon."},
+  {status: "todo", date: "Q4 2026", title: "4. Référencement grandes surfaces", desc: "Constitution des dossiers fournisseurs pour les enseignes partenaires.", details: "Préparation active des catalogues produits, mise aux normes des packagings et négociations commerciales avancées pour un référencement national."},
+  {status: "todo", date: "2027", title: "5. Expansion régionale & Boutique en ligne", desc: "Lancement de la plateforme e-commerce et ouverture nouveaux marchés.", details: "Déploiement des passerelles de paiement mobile, optimisation de la logistique d'exportation transfrontalière et campagnes marketing régionales."}
 ];
 
+var DEFAULT_START_ARCHIVES = {
+  title: "START · Coffre d'Archives Globales AfriFloW",
+  date: "Édition Fondatrice",
+  desc: "Dépôt central regroupant toutes les pièces fondatrices, notes stratégiques globales et photos d'archive du projet.",
+  details: "Ce compartiment START regroupe l'ensemble de la documentation fondatrice d'AfriFloW. Il sert de base de référence intemporelle pour tous les porteurs de projet et partenaires stratégiques désireux de consulter les notes originelles.",
+  image: "",
+  docs: [
+    { name: "Note de cadrage stratégique globale (Dropbox)", url: "https://www.dropbox.com" },
+    { name: "Charte graphique originale et logos vectoriels", url: "https://www.dropbox.com" }
+  ]
+};
+
 var ITEMS = [];
+var START_ARCHIVES = {};
 var ST = { done: ["Réalisé", "var(--done)"], doing: ["En cours", "var(--doing)"], todo: ["À venir", "var(--todo)"] };
-var STORAGE_KEY = "afriflow_roadmap_v3";
+var STORAGE_KEY = "afriflow_journal_v6";
 
 function $(i) { return document.getElementById(i); }
-
-var AUTH_CODE = "AFRIFLOW2026";
-function checkAuth(){
-  if(sessionStorage.getItem("afriflow_auth_session")==="true"){$("auth-screen").style.display="none";return;}
-  function submit(){var input=$("auth-code");if(input.value===AUTH_CODE){sessionStorage.setItem("afriflow_auth_session","true");$("auth-screen").style.display="none";}else{alert("Code d’accès incorrect.");input.value="";input.focus();}}
-  $("auth-submit").onclick=submit;$("auth-code").addEventListener("keydown",function(e){if(e.key==="Enter")submit();});
-}
 
 function loadLocal() {
   try {
     var v = localStorage.getItem(STORAGE_KEY);
-    ITEMS = v ? JSON.parse(v) : JSON.parse(JSON.stringify(DEFAULT_ITEMS));
+    if(v) {
+      var data = JSON.parse(v);
+      ITEMS = data.items || DEFAULT_ITEMS;
+      START_ARCHIVES = data.archives || DEFAULT_START_ARCHIVES;
+    } else {
+      ITEMS = JSON.parse(JSON.stringify(DEFAULT_ITEMS));
+      START_ARCHIVES = JSON.parse(JSON.stringify(DEFAULT_START_ARCHIVES));
+    }
   } catch(e) {
     ITEMS = JSON.parse(JSON.stringify(DEFAULT_ITEMS));
+    START_ARCHIVES = JSON.parse(JSON.stringify(DEFAULT_START_ARCHIVES));
   }
-  ITEMS.forEach(function(i){ if(!i.docs) i.docs = []; });
+  ITEMS.forEach(function(i){ if(!i.docs) i.docs = []; if(i.image === undefined) i.image = ""; });
+  if(!START_ARCHIVES.docs) START_ARCHIVES.docs = [];
 }
 
 function saveLocal() {
-  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(ITEMS)); return true; } catch(e) { alert("La sauvegarde locale a échoué : le stockage du navigateur est peut-être plein. Exporte les données et retire quelques fichiers volumineux."); return false; }
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({items: ITEMS, archives: START_ARCHIVES}));
+  } catch(e){}
+}
+
+/* Vérification de l'authentification globale par email et mot de passe dynamique */
+function verifyGlobalAuth() {
+  var email = $("authEmailInput").value.trim();
+  var password = $("authPasswordInput").value.trim();
+
+  var emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+  if(!emailRegex.test(email)) {
+    alert("Veuillez entrer une adresse email valide.");
+    return;
+  }
+
+  if(password === expectedPassword) {
+    $("auth-screen").classList.add("off");
+    loadLocal();
+    renderRoadmap();
+  } else {
+    alert("Mot de passe incorrect. Pour l'année " + currentYear + ", le mot de passe attendu est " + expectedPassword);
+  }
 }
 
 function renderRoadmap() {
   var container = $("roadStepsList");
   container.textContent = "";
+
   ITEMS.forEach(function(it, k) {
     var statusInfo = ST[it.status] || ST.todo;
     var stepEl = document.createElement("div");
-    stepEl.className = "road-step" + (k % 2 === 1 ? " side-right" : "");
+    stepEl.className = "road-step";
     stepEl.style.setProperty("--c", statusInfo[1]);
-    var card = document.createElement("article");
+
+    var card = document.createElement("div");
     card.className = "step-card";
     card.style.setProperty("--c", statusInfo[1]);
-    card.setAttribute("role", "button");
-    card.setAttribute("tabindex", "0");
-    card.setAttribute("aria-label", "Ouvrir le journal : " + (it.title || "Étape"));
-    var title = document.createElement("b"); title.textContent = it.title || "Étape"; card.appendChild(title);
-    var pencil = document.createElement("button"); pencil.type="button"; pencil.className="edit-pencil"; pencil.title="Modifier cette étape"; pencil.setAttribute("aria-label","Modifier cette étape"); pencil.textContent="✎";
-    pencil.onclick=function(ev){ev.stopPropagation();openEditor(k);}; card.appendChild(pencil);
-    var desc = document.createElement("small"); desc.textContent = it.desc || "Cliquez pour compléter cette page du journal."; card.appendChild(desc);
-    if(it.date){var badge=document.createElement("div");badge.className="date-badge";badge.textContent=it.date+" · "+statusInfo[0];card.appendChild(badge);}
-    if(it.images && it.images.length){var img=document.createElement("img");img.className="card-photo";img.src=it.images[0].data;img.alt=it.images[0].name || "Photo de l’étape";card.appendChild(img);}
-    card.onclick=function(){openEditor(k);};
-    card.onkeydown=function(ev){if(ev.key==="Enter"||ev.key===" "){ev.preventDefault();openEditor(k);}};
-    var centerNode=document.createElement("div");centerNode.className="road-node-center";centerNode.style.setProperty("--c",statusInfo[1]);centerNode.textContent=(k+1);
-    var spacer=document.createElement("div");spacer.className="spacer-side";spacer.style.width="42%";
-    if(k%2===0){stepEl.appendChild(card);stepEl.appendChild(centerNode);stepEl.appendChild(spacer);}
-    else {stepEl.appendChild(spacer);stepEl.appendChild(centerNode);stepEl.appendChild(card);}
+    card.innerHTML = "<b>" + (it.title || "Étape") + "</b>" +
+                     "<small>" + (it.desc || "") + "</small>" +
+                     (it.date ? '<div class="date-badge">' + it.date + " · " + statusInfo[0] + '</div>' : '');
+    card.onclick = function() { openJournalView(k); };
+
+    var centerNode = document.createElement("div");
+    centerNode.className = "road-node-center";
+    centerNode.style.setProperty("--c", statusInfo[1]);
+    centerNode.textContent = (k + 1);
+
+    var emptySpace = document.createElement("div");
+    emptySpace.style.width = "42%";
+
+    /* Alternance stricte gauche / droit */
+    if(k % 2 === 0) {
+      stepEl.appendChild(card);
+      stepEl.appendChild(centerNode);
+      stepEl.appendChild(emptySpace);
+    } else {
+      stepEl.appendChild(emptySpace);
+      stepEl.appendChild(centerNode);
+      stepEl.appendChild(card);
+    }
+
     container.appendChild(stepEl);
   });
+
   drawRoad();
+}
+
+/* ================= OUVERTURE EN MODE JOURNAL ================= */
+function openJournalView(index) {
+  var it = ITEMS[index];
+  var pn = $("pn");
+  pn.textContent = "";
+
+  var article = document.createElement("div");
+  article.className = "journal-article";
+
+  var editBannerHtml = '<div class="lock-banner"><span>🔓 <strong>Mode Modification Directe</strong> — Appuyez pour modifier cet article.</span><button type="button" class="p" onclick="openEditor(' + index + ');" style="padding:6px 14px; font-size:0.85rem;">✏️ Modifier</button></div>';
+
+  var imgHtml = it.image ? 
+    '<div class="journal-img-container"><img class="journal-img" src="' + it.image + '" alt="Illustration journal"><div class="journal-caption">Document visuel associé au chapitre ' + (index+1) + '</div></div>' : '';
+
+  var docsHtml = "";
+  if(it.docs && it.docs.length > 0) {
+    docsHtml = '<div class="journal-docs"><h4>Documents & Liens Dropbox associés :</h4>';
+    it.docs.forEach(function(d){
+      docsHtml += '<div class="file-row"><div>📄 <a href="' + d.url + '" target="_blank">' + d.name + '</a></div><small style="color:var(--muted)">Dropbox</small></div>';
+    });
+    docsHtml += '</div>';
+  }
+
+  article.innerHTML = editBannerHtml +
+    '<div class="journal-header">' +
+      '<div class="journal-kicker">AfriFloW · Chronique de Croissance · Chapitre ' + (index + 1) + '</div>' +
+      '<h2 class="journal-title">' + (it.title || '') + '</h2>' +
+      '<div class="journal-date">' + (it.date ? 'Publié le / Période : ' + it.date : '') + ' · Statut : ' + (ST[it.status] ? ST[it.status][0] : '') + '</div>' +
+    '</div>' +
+    '<p style="font-weight:700; font-size:1.1rem; line-height:1.5; margin-bottom:20px;">' + (it.desc || '') + '</p>' +
+    imgHtml +
+    '<div class="journal-columns">' + (it.details ? it.details.replace(/\n/g, '<br>') : 'Aucun détail supplémentaire rédigé pour le moment.') + '</div>' +
+    docsHtml +
+    '<div style="margin-top:30px; text-align:center; display:flex; gap:10px; justify-content:center; flex-wrap:wrap;">' +
+      '<button type="button" class="p" onclick="openEditor(' + index + ')">Modifier l\'article</button>' +
+      '<button type="button" onclick="closeDrawer()">Fermer le journal</button>' +
+    '</div>';
+
+  pn.appendChild(article);
+  $("ov").classList.add("on");
+}
+
+/* OUVERTURE ARCHIVES START */
+function openStartArchives() {
+  var it = START_ARCHIVES;
+  var pn = $("pn");
+  pn.textContent = "";
+
+  var article = document.createElement("div");
+  article.className = "journal-article";
+  article.style.borderColor = "var(--green)";
+
+  var editBannerHtml = '<div class="lock-banner"><span>🔓 <strong>Coffre START (Modification directe)</strong></span><button type="button" class="p" onclick="openStartEditor()" style="padding:6px 14px; font-size:0.85rem;">✏️ Modifier les archives</button></div>';
+
+  var docsHtml = "";
+  if(it.docs && it.docs.length > 0) {
+    docsHtml = '<div class="journal-docs"><h4>Archives & Documents fondateurs :</h4>';
+    it.docs.forEach(function(d){
+      docsHtml += '<div class="file-row"><div>📁 <a href="' + d.url + '" target="_blank">' + d.name + '</a></div><small style="color:var(--muted)">Dropbox / Archive</small></div>';
+    });
+    docsHtml += '</div>';
+  }
+
+  article.innerHTML = editBannerHtml +
+    '<div class="journal-header" style="border-color:var(--green);">' +
+      '<div class="journal-kicker">Point Zéro · Archives Générales AfriFloW</div>' +
+      '<h2 class="journal-title">' + it.title + '</h2>' +
+      '<div class="journal-date">' + it.date + '</div>' +
+    '</div>' +
+    '<p style="font-weight:700; font-size:1.1rem; line-height:1.5; margin-bottom:20px;">' + it.desc + '</p>' +
+    '<div class="journal-columns">' + it.details.replace(/\n/g, '<br>') + '</div>' +
+    docsHtml +
+    '<div style="margin-top:30px; text-align:center; display:flex; gap:10px; justify-content:center;">' +
+      '<button type="button" class="p" onclick="openStartEditor()">Modifier les archives</button>' +
+      '<button type="button" onclick="closeDrawer()">Fermer</button>' +
+    '</div>';
+
+  pn.appendChild(article);
+  $("ov").classList.add("on");
+}
+
+function closeDrawer() { $("ov").classList.remove("on"); }
+
+/* ================= FORMULAIRE D'ÉDITION ÉTAPE (MODE JOURNAL) ================= */
+function openEditor(index) {
+  var isNew = index === null, it = isNew ? {title:"", desc:"", details:"", date:"", status:"todo", image:"", docs:[]} : ITEMS[index];
+  if(!it.docs) it.docs = [];
+  var pn = $("pn");
+  pn.textContent = "";
+  
+  var closeBtn = document.createElement("button");
+  closeBtn.className = "x";
+  closeBtn.textContent = "× Fermer";
+  closeBtn.style.marginBottom = "14px";
+  closeBtn.onclick = function() { closeDrawer(); };
+  pn.appendChild(closeBtn);
+
+  var h2 = document.createElement("h2");
+  h2.textContent = isNew ? "Ajouter un nouveau chapitre" : "Éditer l'article du journal";
+  pn.appendChild(h2);
+
+  var form = document.createElement("div");
+  form.className = "fm";
+  form.innerHTML = '<label>Titre de l\'article</label><input type="text" id="edTitle" value="' + (it.title || '') + '">' +
+                   '<label>Chapeau / Résumé court</label><textarea id="edDesc">' + (it.desc || '') + '</textarea>' +
+                   '<label>Corps de l\'article (Détails complets)</label><textarea id="edDetails" rows="6">' + (it.details || '') + '</textarea>' +
+                   '<label>Période / Date</label><input type="text" id="edDate" value="' + (it.date || '') + '">' +
+                   '<label>Statut</label><select id="edStatus"><option value="done"' + (it.status==='done'?' selected':'') + '>Réalisé</option><option value="doing"' + (it.status==='doing'?' selected':'') + '>En cours</option><option value="todo"' + (it.status==='todo'?' selected':'') + '>À venir</option></select>' +
+                   '<label>Photo d\'illustration (Uploader une image locale)</label>' +
+                   '<input type="file" id="edImageFile" accept="image/*" style="padding:8px;">' +
+                   (it.image ? '<div style="margin-top:6px;"><img src="' + it.image + '" style="max-height:100px; border-radius:8px;"></div>' : '');
+  pn.appendChild(form);
+
+  var docHeader = document.createElement("h3");
+  docHeader.textContent = "Documents & Liens Dropbox";
+  pn.appendChild(docHeader);
+
+  var linkInputName = document.createElement("input");
+  linkInputName.placeholder = "Nom du document";
+  linkInputName.style.margin = "6px 0";
+  var linkInputUrl = document.createElement("input");
+  linkInputUrl.placeholder = "Lien partagé Dropbox (https://www.dropbox.com/...)";
+  linkInputUrl.style.margin = "6px 0";
+
+  var addLinkBtn = document.createElement("button");
+  addLinkBtn.textContent = "Ajouter le lien Dropbox";
+  addLinkBtn.onclick = function() {
+    var name = linkInputName.value.trim(), url = linkInputUrl.value.trim();
+    if(!name || !url) { alert("Veuillez remplir le nom et le lien."); return; }
+    it.docs.push({name: name, url: url});
+    linkInputName.value = ""; linkInputUrl.value = "";
+    drawDocsList();
+  };
+  pn.appendChild(linkInputName);
+  pn.appendChild(linkInputUrl);
+  pn.appendChild(addLinkBtn);
+
+  var docsContainer = document.createElement("div");
+  pn.appendChild(docsContainer);
+
+  function drawDocsList() {
+    docsContainer.textContent = "";
+    it.docs.forEach(function(d, j) {
+      var row = document.createElement("div");
+      row.className = "file-row";
+      row.innerHTML = '<div><a href="' + d.url + '" target="_blank">' + d.name + '</a><small style="display:block;color:var(--muted)">Lien Dropbox</small></div>';
+      var rm = document.createElement("button");
+      rm.className = "danger";
+      rm.textContent = "Retirer";
+      rm.onclick = function() { it.docs.splice(j, 1); drawDocsList(); };
+      row.appendChild(rm);
+      docsContainer.appendChild(row);
+    });
+  }
+  drawDocsList();
+
+  var actions = document.createElement("div");
+  actions.style.marginTop = "24px";
+  actions.style.display = "flex";
+  actions.style.gap = "10px";
+
+  var saveBtn = document.createElement("button");
+  saveBtn.className = "p";
+  saveBtn.textContent = "Enregistrer les modifications";
+  saveBtn.onclick = function() {
+    it.title = $("edTitle").value.trim();
+    it.desc = $("edDesc").value.trim();
+    it.details = $("edDetails").value.trim();
+    it.date = $("edDate").value.trim();
+    it.status = $("edStatus").value;
+
+    if(!it.title) { alert("Le titre de l'article est obligatoire."); return; }
+
+    var imgInput = $("edImageFile");
+    if(imgInput.files && imgInput.files[0]) {
+      var reader = new FileReader();
+      reader.onload = function(e) {
+        it.image = e.target.result;
+        finalizeSave(isNew, it, index);
+      };
+      reader.readAsDataURL(imgInput.files[0]);
+    } else {
+      finalizeSave(isNew, it, index);
+    }
+  };
+
+  var cancelBtn = document.createElement("button");
+  cancelBtn.textContent = "Annuler";
+  cancelBtn.onclick = function() { closeDrawer(); };
+
+  actions.appendChild(saveBtn);
+  actions.appendChild(cancelBtn);
+
+  if(!isNew) {
+    var delBtn = document.createElement("button");
+    delBtn.className = "danger";
+    delBtn.textContent = "Supprimer le chapitre";
+    delBtn.onclick = function() {
+      if(confirm("Êtes-vous sûr de vouloir supprimer cet article du journal ?")) {
+        ITEMS.splice(index, 1);
+        saveLocal(); renderRoadmap();
+        closeDrawer();
+      }
+    };
+    actions.appendChild(delBtn);
+  }
+
+  pn.appendChild(actions);
+  $("ov").classList.add("on");
+}
+
+function finalizeSave(isNew, it, index) {
+  if(isNew) ITEMS.push(it); else ITEMS[index] = it;
+  saveLocal(); renderRoadmap();
+  closeDrawer();
+  openJournalView(isNew ? ITEMS.length - 1 : index);
+}
+
+/* ÉDITION START ARCHIVES */
+function openStartEditor() {
+  var it = START_ARCHIVES;
+  var pn = $("pn");
+  pn.textContent = "";
+
+  var closeBtn = document.createElement("button");
+  closeBtn.className = "x";
+  closeBtn.textContent = "× Fermer";
+  closeBtn.style.marginBottom = "14px";
+  closeBtn.onclick = function() { closeDrawer(); };
+  pn.appendChild(closeBtn);
+
+  var h2 = document.createElement("h2");
+  h2.textContent = "Modifier le coffre START (Archives)";
+  pn.appendChild(h2);
+
+  var form = document.createElement("div");
+  form.className = "fm";
+  form.innerHTML = '<label>Titre</label><input type="text" id="startTitle" value="' + it.title + '">' +
+                   '<label>Description courte</label><textarea id="startDesc">' + it.desc + '</textarea>' +
+                   '<label>Notes d\'archives complètes</label><textarea id="startDetails" rows="6">' + it.details + '</textarea>' +
+                   '<label>Date / Mention</label><input type="text" id="startDate" value="' + it.date + '">';
+  pn.appendChild(form);
+
+  var docHeader = document.createElement("h3");
+  docHeader.textContent = "Documents & Liens START";
+  pn.appendChild(docHeader);
+
+  var linkInputName = document.createElement("input");
+  linkInputName.placeholder = "Nom du document archive";
+  linkInputName.style.margin = "6px 0";
+  var linkInputUrl = document.createElement("input");
+  linkInputUrl.placeholder = "Lien Dropbox";
+  linkInputUrl.style.margin = "6px 0";
+
+  var addLinkBtn = document.createElement("button");
+  addLinkBtn.textContent = "Ajouter le lien";
+  addLinkBtn.onclick = function() {
+    var name = linkInputName.value.trim(), url = linkInputUrl.value.trim();
+    if(!name || !url) return;
+    it.docs.push({name: name, url: url});
+    linkInputName.value = ""; linkInputUrl.value = "";
+    drawStartDocs();
+  };
+  pn.appendChild(linkInputName);
+  pn.appendChild(linkInputUrl);
+  pn.appendChild(addLinkBtn);
+
+  var docsContainer = document.createElement("div");
+  pn.appendChild(docsContainer);
+
+  function drawStartDocs() {
+    docsContainer.textContent = "";
+    it.docs.forEach(function(d, j) {
+      var row = document.createElement("div");
+      row.className = "file-row";
+      row.innerHTML = '<div><a href="' + d.url + '" target="_blank">' + d.name + '</a></div>';
+      var rm = document.createElement("button");
+      rm.className = "danger";
+      rm.textContent = "Retirer";
+      rm.onclick = function() { it.docs.splice(j, 1); drawStartDocs(); };
+      row.appendChild(rm);
+      docsContainer.appendChild(row);
+    });
+  }
+  drawStartDocs();
+
+  var saveBtn = document.createElement("button");
+  saveBtn.className = "p";
+  saveBtn.style.marginTop = "20px";
+  saveBtn.textContent = "Enregistrer les archives";
+  saveBtn.onclick = function() {
+    it.title = $("startTitle").value.trim();
+    it.desc = $("startDesc").value.trim();
+    it.details = $("startDetails").value.trim();
+    it.date = $("startDate").value.trim();
+    saveLocal();
+    closeDrawer();
+    openStartArchives();
+  };
+  pn.appendChild(saveBtn);
+  $("ov").classList.add("on");
 }
 
 /* Tracé SVG sinueux + véhicule synchronisé avec le défilement */
@@ -326,7 +719,6 @@ function drawRoad() {
   nodes.forEach(function(node, index) {
     var nodeRect = node.getBoundingClientRect();
     var y = nodeRect.top - containerRect.top + nodeRect.height / 2;
-    /* La route ondule légèrement autour du centre, près des pastilles d'étape. */
     var amplitude = Math.min(26, width * 0.04);
     var direction = index % 2 === 0 ? -1 : 1;
     points.push({x: width * 0.5 + direction * amplitude, y: y});
@@ -363,7 +755,6 @@ function updateCarPosition() {
   var containerHeight = container.offsetHeight;
   var viewportHeight = window.innerHeight;
 
-  /* La voiture parcourt la route pendant que celle-ci traverse l'écran. */
   var progress = (scrollTop + viewportHeight * 0.45 - containerTop) / Math.max(1, containerHeight);
   progress = Math.max(0, Math.min(1, progress));
   var point = roadPath.getPointAtLength(progress * roadLength);
@@ -385,57 +776,42 @@ window.addEventListener("resize", function() {
   drawRoad();
 });
 
-function escapeHtml(value) {
-  return String(value == null ? "" : value).replace(/[&<>"']/g, function(ch) {
-    return ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"})[ch];
-  });
-}
-function openEditor(index) {
-  var isNew = index === null;
-  var original = isNew ? {title:"",desc:"",details:"",date:"",status:"todo",docs:[],images:[],files:[]} : ITEMS[index];
-  var it = JSON.parse(JSON.stringify(original));
-  it.docs=it.docs||[]; it.images=it.images||[]; it.files=it.files||[];
-  var pn=$("pn"); pn.textContent="";
-  var closeBtn=document.createElement("button"); closeBtn.type="button"; closeBtn.className="paper-close"; closeBtn.textContent="✕ Fermer"; closeBtn.onclick=function(){$("ov").classList.remove("on");}; pn.appendChild(closeBtn);
-  var mast=document.createElement("div"); mast.className="paper-masthead";
-  mast.innerHTML='<div class="paper-brand">AfriFloW</div><div>DU TERRITOIRE AFRICAIN VERS LE MONDE</div><div class="paper-meta"><span>Journal de projet</span><span>Page '+(isNew?ITEMS.length+1:index+1)+'</span><span>Édition interne</span></div>'; pn.appendChild(mast);
-  var headline=document.createElement("h2"); headline.className="paper-title"; headline.textContent=isNew?"Nouvelle page du journal":"Modifier la page du journal"; pn.appendChild(headline);
-  var form=document.createElement("div"); form.className="paper-grid";
-  form.innerHTML='<div class="paper-section"><h3>À la une · Informations</h3><div class="fm"><label for="edTitle">Titre de l’étape</label><input id="edTitle" type="text" maxlength="160" value="'+escapeHtml(it.title)+'" placeholder="Ex. Lancement commercial"></div><div class="fm"><label for="edDate">Date / période</label><input id="edDate" type="text" value="'+escapeHtml(it.date)+'" placeholder="Ex. Novembre 2026"></div><div class="fm"><label for="edStatus">Statut</label><select id="edStatus"><option value="done">Réalisé</option><option value="doing">En cours</option><option value="todo">À venir</option></select></div><div class="fm"><label for="edDesc">Chapô / résumé</label><textarea id="edDesc" placeholder="Un résumé visible sur la feuille de route">'+escapeHtml(it.desc)+'</textarea></div></div><div class="paper-section"><h3>Article · Récit détaillé</h3><div class="fm"><label for="edDetails">Contenu de l’article</label><textarea id="edDetails" style="min-height:290px" placeholder="Décris les objectifs, les actions, les résultats, les prochaines étapes…">'+escapeHtml(it.details)+'</textarea></div></div>';
-  pn.appendChild(form); $("edStatus").value=it.status||"todo";
-  var mediaSection=document.createElement("div"); mediaSection.className="paper-section";
-  mediaSection.innerHTML='<h3>Illustrations et pièces jointes</h3><p style="color:var(--muted);font-size:.88rem">Ajoute des photos, des PDF, des documents ou d’autres fichiers. Les pièces jointes sont conservées dans ce navigateur et peuvent être téléchargées depuis cette page.</p><div class="fm"><label for="imageUpload">Ajouter des photos</label><input type="file" id="imageUpload" accept="image/*" multiple></div><div class="fm"><label for="fileUpload">Ajouter des documents ou autres fichiers</label><input type="file" id="fileUpload" multiple></div><div><strong>Photos</strong><div id="imagePreview" class="paper-preview"></div></div><div style="margin-top:18px"><strong>Fichiers joints</strong><div id="filePreview"></div></div><hr style="border:0;border-top:1px solid var(--line);margin:20px 0"><h3>Liens externes (Dropbox, Drive…)</h3><div class="paper-grid"><input id="linkName" placeholder="Nom du lien"><input id="linkUrl" type="url" placeholder="https://…"></div><button type="button" id="addLink" style="margin-top:10px">＋ Ajouter un lien</button><div id="linkPreview"></div>';
-  pn.appendChild(mediaSection);
-  function renderMedia(){
-    var ip=$("imagePreview");ip.textContent="";
-    it.images.forEach(function(img,j){var box=document.createElement("div");box.className="paper-preview-item";var el=document.createElement("img");el.src=img.data;el.alt=img.name||"Photo";box.appendChild(el);var name=document.createElement("div");name.textContent=img.name||"Photo";name.style.fontSize=".8rem";box.appendChild(name);var rm=document.createElement("button");rm.type="button";rm.className="danger";rm.textContent="Retirer";rm.onclick=function(){it.images.splice(j,1);renderMedia();};box.appendChild(rm);ip.appendChild(box);});
-    var fp=$("filePreview");fp.textContent="";
-    it.files.forEach(function(file,j){var row=document.createElement("div");row.className="file-row";var a=document.createElement("a");a.href=file.data;a.download=file.name;a.textContent="⬇ "+file.name;a.title="Télécharger "+file.name;row.appendChild(a);var size=document.createElement("small");size.textContent=" "+(file.size?Math.max(1,Math.round(file.size/1024))+" Ko":"");row.appendChild(size);var rm=document.createElement("button");rm.type="button";rm.className="danger";rm.textContent="Retirer";rm.onclick=function(){it.files.splice(j,1);renderMedia();};row.appendChild(rm);fp.appendChild(row);});
-    var lp=$("linkPreview");lp.textContent="";it.docs.forEach(function(d,j){var row=document.createElement("div");row.className="file-row";var a=document.createElement("a");a.href=d.url;a.target="_blank";a.rel="noopener noreferrer";a.textContent=d.name;row.appendChild(a);var rm=document.createElement("button");rm.type="button";rm.className="danger";rm.textContent="Retirer";rm.onclick=function(){it.docs.splice(j,1);renderMedia();};row.appendChild(rm);lp.appendChild(row);});
-  }
-  function readFiles(input, target, isImage){var files=Array.from(input.files||[]);if(!files.length)return;var tooBig=files.filter(function(f){return f.size>2*1024*1024;});if(tooBig.length){alert("Pour éviter de saturer la sauvegarde locale, chaque fichier doit faire 2 Mo maximum : "+tooBig.map(function(f){return f.name;}).join(", "));input.value="";return;}
-    var total=files.reduce(function(n,f){return n+f.size;},0);if(total>4*1024*1024){alert("Sélectionne moins de fichiers à la fois (maximum 4 Mo par ajout).");input.value="";return;}
-    Promise.all(files.map(function(f){return new Promise(function(resolve,reject){var r=new FileReader();r.onload=function(){resolve({name:f.name,type:f.type,size:f.size,data:r.result});};r.onerror=reject;r.readAsDataURL(f);});})).then(function(results){results.forEach(function(f){if(isImage)it.images.push(f);else it.files.push(f);});renderMedia();input.value="";}).catch(function(){alert("Impossible de lire un des fichiers sélectionnés.");});
-  }
-  $("imageUpload").onchange=function(){readFiles(this,it.images,true);}; $("fileUpload").onchange=function(){readFiles(this,it.files,false);};
-  $("addLink").onclick=function(){var name=$("linkName").value.trim(),url=$("linkUrl").value.trim();if(!name||!/^https?:\/\//i.test(url)){alert("Indique un nom et une adresse commençant par https:// ou http://.");return;}it.docs.push({name:name,url:url});$("linkName").value="";$("linkUrl").value="";renderMedia();};
-  renderMedia();
-  var actions=document.createElement("div");actions.className="paper-actions";
-  var saveBtn=document.createElement("button");saveBtn.type="button";saveBtn.className="p";saveBtn.textContent="✓ Enregistrer la page";saveBtn.onclick=function(){it.title=$("edTitle").value.trim();it.desc=$("edDesc").value.trim();it.details=$("edDetails").value.trim();it.date=$("edDate").value.trim();it.status=$("edStatus").value;if(!it.title){alert("Le titre est obligatoire.");return;}if(isNew)ITEMS.push(it);else ITEMS[index]=it;if(saveLocal()){renderRoadmap();$("ov").classList.remove("on");}};
-  actions.appendChild(saveBtn);
-  var cancelBtn=document.createElement("button");cancelBtn.type="button";cancelBtn.textContent="Annuler";cancelBtn.onclick=function(){$("ov").classList.remove("on");};actions.appendChild(cancelBtn);
-  if(!isNew){var delBtn=document.createElement("button");delBtn.type="button";delBtn.className="danger";delBtn.textContent="Supprimer cette page";delBtn.onclick=function(){if(confirm("Supprimer cette étape et ses pièces jointes ?")){ITEMS.splice(index,1);saveLocal();renderRoadmap();$("ov").classList.remove("on");}};actions.appendChild(delBtn);}
-  pn.appendChild(actions);$("ov").classList.add("on");
-}
-
-$("addBtn").onclick = function() { openEditor(null); };
-
 $("exportBtn").onclick = function() {
-  var blob = new Blob([JSON.stringify(ITEMS, null, 2)], {type: "application/json"});
+  var blob = new Blob([JSON.stringify({items: ITEMS, archives: START_ARCHIVES}, null, 2)], {type: "application/json"});
   var url = URL.createObjectURL(blob);
   var a = document.createElement("a");
-  a.href = url; a.download = "afriflow-sauvegarde.json";
+  a.href = url; a.download = "afriflow-journal-sauvegarde.json";
   document.body.appendChild(a); a.click(); a.remove();
+};
+
+$("importTriggerBtn").onclick = function() {
+  $("importFile").click();
+};
+
+$("importFile").onchange = function(e) {
+  var f = e.target.files[0];
+  if(!f) return;
+  var reader = new FileReader();
+  reader.onload = function(evt) {
+    try {
+      var data = JSON.parse(evt.target.result);
+      if(data.items) {
+        ITEMS = data.items;
+        if(data.archives) START_ARCHIVES = data.archives;
+        saveLocal();
+        renderRoadmap();
+        alert("Importation réussie !");
+      } else if(Array.isArray(data)) {
+        ITEMS = data;
+        saveLocal();
+        renderRoadmap();
+        alert("Importation réussie !");
+      }
+    } catch(err) {
+      alert("Erreur lors de la lecture du fichier JSON.");
+    }
+  };
+  reader.readAsText(f);
 };
 
 function openCustomizer() { $("customizer-modal").classList.add("on"); }
@@ -449,10 +825,6 @@ function applyCustomTheme() {
   document.documentElement.style.setProperty("--amber", a);
   document.documentElement.style.setProperty("--font-family", f);
 }
-
-checkAuth();
-loadLocal();
-renderRoadmap();
 </script>
 </body>
 </html>
