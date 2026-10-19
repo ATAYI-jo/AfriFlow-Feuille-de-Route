@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>AfriFloW – Journal de Bord & Feuille de Route</title>
 <link rel="icon" href="logo.png">
-<meta name="description" content="Feuille de route interactive d’AfriFloW en mode journal avec archives START et authentification dynamique par année.">
+<meta name="description" content="Feuille de route interactive d’AfriFloW en mode journal avec archives START, journal d'audit des connexions et alternance stricte des cadrans.">
 <style>
 :root {
   --bg: #fcfbfa;
@@ -105,13 +105,16 @@ svg.road-svg { position: absolute; top: 0; left: 0; width: 100%; height: 100%; p
 
 /* Nœud START & Fin + */
 .road-node-special { text-align: center; margin: 30px auto; z-index: 3; position: relative; display: flex; justify-content: center; }
-.start-card, .plus-card { background: var(--card); border: 2px dashed var(--green); border-radius: 20px; padding: 20px 30px; cursor: pointer; box-shadow: 0 10px 30px rgba(0,0,0,0.06); display: inline-flex; align-items: center; gap: 14px; transition: transform 0.3s; }
-.start-card:hover, .plus-card:hover { transform: scale(1.03); background: color-mix(in srgb, var(--green) 5%, var(--card)); }
-.start-card b, .plus-card b { color: var(--green); font-size: 1.2rem; }
+.start-pill, .plus-card { background: var(--card); border: 2px dashed var(--green); border-radius: 99px; padding: 14px 28px; cursor: pointer; box-shadow: 0 10px 30px rgba(0,0,0,0.06); display: inline-flex; align-items: center; gap: 12px; transition: transform 0.3s; }
+.start-pill:hover, .plus-card:hover { transform: scale(1.05); background: color-mix(in srgb, var(--green) 8%, var(--card)); }
+.start-pill b { color: var(--green); font-size: 1.1rem; }
+.plus-card { border-radius: 20px; padding: 20px 30px; }
+.plus-card b { color: var(--green); font-size: 1.15rem; }
 
+/* ALTERNANCE STRICTE DES CADRANS : Étape impaire à GAUCHE, paire à DROITE */
 .road-step { position: relative; display: flex; align-items: center; justify-content: space-between; margin: 90px 0; z-index: 2; width: 100%; }
-.road-step:nth-child(odd) { flex-direction: row; }
-.road-step:nth-child(even) { flex-direction: row-reverse; }
+.road-step.item-odd { flex-direction: row; }
+.road-step.item-even { flex-direction: row-reverse; }
 
 .step-card { width: 42%; background: var(--card); border: 1px solid var(--line); border-top: 4px solid var(--c); border-radius: 20px; padding: 22px; cursor: pointer; box-shadow: 0 10px 30px rgba(0,0,0,0.06); transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.3s; }
 .step-card:hover { transform: translateY(-6px) scale(1.02); box-shadow: 0 18px 36px rgba(0,0,0,0.12); }
@@ -165,7 +168,7 @@ svg.road-svg { position: absolute; top: 0; left: 0; width: 100%; height: 100%; p
 .customizer-box { background: var(--card); border: 1px solid var(--line); padding: 28px; border-radius: 24px; width: min(480px, 100%); box-shadow: 0 20px 50px rgba(0,0,0,0.2); max-height: 90vh; overflow-y: auto; }
 
 @media(max-width: 768px) {
-  .road-step, .road-step:nth-child(even), .road-step:nth-child(odd) { flex-direction: column; align-items: center; gap: 24px; }
+  .road-step, .road-step.item-odd, .road-step.item-even { flex-direction: column; align-items: center; gap: 24px; }
   .step-card { width: 100%; text-align: center; }
   .road-node-center { position: relative; left: auto; transform: none; margin-bottom: -10px; }
   .road-container { padding-left: 8px; padding-right: 8px; }
@@ -177,7 +180,7 @@ svg.road-svg { position: absolute; top: 0; left: 0; width: 100%; height: 100%; p
 </head>
 <body>
 
-<!-- Écran d'authentification globale initial par Email et Mot de passe dynamique -->
+<!-- Écran d'authentification global initial : email et mot de passe dynamique -->
 <div id="auth-screen">
   <div class="auth-box">
     <img src="logo.png" alt="AfriFloW" onerror="this.src='https://placehold.co/72x72/1f5d3a/ffffff?text=🔒'">
@@ -194,7 +197,7 @@ svg.road-svg { position: absolute; top: 0; left: 0; width: 100%; height: 100%; p
     <img class="logo-img" src="logo.png" alt="Logo AfriFloW" onerror="this.src='https://placehold.co/78x78/ffffff/1f5d3a?text=A'">
     <div>
       <h1>Afri<span>FloW</span> · Journal de Bord & Feuille de Route</h1>
-      <p class="sub">Cliquez sur un cadrant pour consulter les articles détaillés au format journal.</p>
+      <p class="sub">Cliquez sur un cadran pour consulter les articles détaillés au format journal.</p>
     </div>
   </div>
 
@@ -208,19 +211,16 @@ svg.road-svg { position: absolute; top: 0; left: 0; width: 100%; height: 100%; p
     </div>
   </div>
 
-  <!-- ROUTE SINUEUSE INTERACTIVE AVEC START AU DÉBUT ET + À LA FIN -->
+  <!-- ROUTE SINUEUSE INTERACTIVE AVEC START AU DÉBUT (SANS CADRAN SUPERFLU) ET + À LA FIN -->
   <div class="road-container" id="roadContainer">
     <div id="car-marker"><img src="logo.png" alt="Car" onerror="this.src='https://placehold.co/34x34/1f5d3a/ffffff?text=🚗'"></div>
     <svg class="road-svg" id="roadSvg"></svg>
     
-    <!-- POINT DE DÉPART START / ARCHIVES GLOBALES -->
+    <!-- POINT DE DÉPART START / HISTORIQUE DES CONNEXIONS ET ACTIONS -->
     <div class="road-node-special">
-      <div class="start-card" onclick="openStartArchives()">
-        <span style="font-size: 1.8rem;">📦</span>
-        <div>
-          <b>START · Coffre d'Archives Globales</b>
-          <small style="color:var(--muted); display:block;">Notes de fond, photos d'archive et documents fondateurs du projet.</small>
-        </div>
+      <div class="start-pill" onclick="openStartArchives()">
+        <span style="font-size: 1.5rem;">📦</span>
+        <b>START · Registre des Connexions & Actions</b>
       </div>
     </div>
 
@@ -263,11 +263,10 @@ svg.road-svg { position: absolute; top: 0; left: 0; width: 100%; height: 100%; p
 </div>
 
 <script>
-/* Détermination dynamique de l'année en cours et du mot de passe attendu */
+/* Détermination dynamique de l'année en cours et du mot de passe attendu (ex: AFRIFLOW2026) */
 var currentYear = new Date().getFullYear();
 var expectedPassword = "AFRIFLOW" + currentYear;
 
-/* Affichage dynamique de l'aide sur le mot de passe dans l'écran de connexion */
 window.addEventListener('DOMContentLoaded', function() {
   var sub = document.getElementById('auth-subtitle');
   if(sub) {
@@ -283,22 +282,22 @@ var DEFAULT_ITEMS = [
   {status: "todo", date: "2027", title: "5. Expansion régionale & Boutique en ligne", desc: "Lancement de la plateforme e-commerce et ouverture nouveaux marchés.", details: "Déploiement des passerelles de paiement mobile, optimisation de la logistique d'exportation transfrontalière et campagnes marketing régionales."}
 ];
 
-var DEFAULT_START_ARCHIVES = {
-  title: "START · Coffre d'Archives Globales AfriFloW",
-  date: "Édition Fondatrice",
-  desc: "Dépôt central regroupant toutes les pièces fondatrices, notes stratégiques globales et photos d'archive du projet.",
-  details: "Ce compartiment START regroupe l'ensemble de la documentation fondatrice d'AfriFloW. Il sert de base de référence intemporelle pour tous les porteurs de projet et partenaires stratégiques désireux de consulter les notes originelles.",
-  image: "",
+var START_ARCHIVES = {
+  title: "START · Registre d'Audit & Historique des Visites",
+  date: "Suivi des Connexions & Actions",
+  desc: "Historique complet de toutes les personnes connectées à la plateforme avec horodatage et actions concrètes réalisées.",
+  logs: [
+    { email: "admin@afriflow.com", date: "19/10/2026 à 01:45", action: "Connexion initiale & Vérification de la feuille de route." }
+  ],
   docs: [
-    { name: "Note de cadrage stratégique globale (Dropbox)", url: "https://www.dropbox.com" },
-    { name: "Charte graphique originale et logos vectoriels", url: "https://www.dropbox.com" }
+    { name: "Note de cadrage stratégique globale (Dropbox)", url: "https://www.dropbox.com" }
   ]
 };
 
 var ITEMS = [];
-var START_ARCHIVES = {};
 var ST = { done: ["Réalisé", "var(--done)"], doing: ["En cours", "var(--doing)"], todo: ["À venir", "var(--todo)"] };
-var STORAGE_KEY = "afriflow_journal_v6";
+var STORAGE_KEY = "afriflow_journal_v7";
+var loggedUserEmail = "";
 
 function $(i) { return document.getElementById(i); }
 
@@ -308,16 +307,15 @@ function loadLocal() {
     if(v) {
       var data = JSON.parse(v);
       ITEMS = data.items || DEFAULT_ITEMS;
-      START_ARCHIVES = data.archives || DEFAULT_START_ARCHIVES;
+      if(data.archives) START_ARCHIVES = data.archives;
     } else {
       ITEMS = JSON.parse(JSON.stringify(DEFAULT_ITEMS));
-      START_ARCHIVES = JSON.parse(JSON.stringify(DEFAULT_START_ARCHIVES));
     }
   } catch(e) {
     ITEMS = JSON.parse(JSON.stringify(DEFAULT_ITEMS));
-    START_ARCHIVES = JSON.parse(JSON.stringify(DEFAULT_START_ARCHIVES));
   }
   ITEMS.forEach(function(i){ if(!i.docs) i.docs = []; if(i.image === undefined) i.image = ""; });
+  if(!START_ARCHIVES.logs) START_ARCHIVES.logs = [];
   if(!START_ARCHIVES.docs) START_ARCHIVES.docs = [];
 }
 
@@ -327,11 +325,10 @@ function saveLocal() {
   } catch(e){}
 }
 
-/* Vérification de l'authentification globale par email et mot de passe dynamique */
+/* Authentification globale avec enregistrement dans l'historique (START) */
 function verifyGlobalAuth() {
   var email = $("authEmailInput").value.trim();
   var password = $("authPasswordInput").value.trim();
-
   var emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
   if(!emailRegex.test(email)) {
@@ -340,12 +337,35 @@ function verifyGlobalAuth() {
   }
 
   if(password === expectedPassword) {
+    loggedUserEmail = email;
+    var now = new Date();
+    var dateStr = now.toLocaleDateString() + " à " + now.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+    
+    START_ARCHIVES.logs.unshift({
+      email: email,
+      date: dateStr,
+      action: "Connexion réussie et consultation de la feuille de route."
+    });
+    saveLocal();
+
     $("auth-screen").classList.add("off");
     loadLocal();
     renderRoadmap();
   } else {
     alert("Mot de passe incorrect. Pour l'année " + currentYear + ", le mot de passe attendu est " + expectedPassword);
   }
+}
+
+function recordUserAction(actionText) {
+  if(!loggedUserEmail) return;
+  var now = new Date();
+  var dateStr = now.toLocaleDateString() + " à " + now.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+  START_ARCHIVES.logs.unshift({
+    email: loggedUserEmail,
+    date: dateStr,
+    action: actionText
+  });
+  saveLocal();
 }
 
 function renderRoadmap() {
@@ -355,7 +375,9 @@ function renderRoadmap() {
   ITEMS.forEach(function(it, k) {
     var statusInfo = ST[it.status] || ST.todo;
     var stepEl = document.createElement("div");
-    stepEl.className = "road-step";
+    /* k=0 -> index 0 (impair visuel 1 -> item-odd / gauche), k=1 -> index 1 (pair visuel 2 -> item-even / droite) */
+    var isOdd = (k % 2 === 0);
+    stepEl.className = "road-step " + (isOdd ? "item-odd" : "item-even");
     stepEl.style.setProperty("--c", statusInfo[1]);
 
     var card = document.createElement("div");
@@ -364,7 +386,10 @@ function renderRoadmap() {
     card.innerHTML = "<b>" + (it.title || "Étape") + "</b>" +
                      "<small>" + (it.desc || "") + "</small>" +
                      (it.date ? '<div class="date-badge">' + it.date + " · " + statusInfo[0] + '</div>' : '');
-    card.onclick = function() { openJournalView(k); };
+    card.onclick = function() { 
+      recordUserAction("Consultation du chapitre journal : " + (it.title || ('Chapitre ' + (k+1))));
+      openJournalView(k); 
+    };
 
     var centerNode = document.createElement("div");
     centerNode.className = "road-node-center";
@@ -374,8 +399,7 @@ function renderRoadmap() {
     var emptySpace = document.createElement("div");
     emptySpace.style.width = "42%";
 
-    /* Alternance stricte gauche / droit */
-    if(k % 2 === 0) {
+    if(isOdd) {
       stepEl.appendChild(card);
       stepEl.appendChild(centerNode);
       stepEl.appendChild(emptySpace);
@@ -433,8 +457,9 @@ function openJournalView(index) {
   $("ov").classList.add("on");
 }
 
-/* OUVERTURE ARCHIVES START */
+/* OUVERTURE START (REGISTRE DES CONNEXIONS ET ACTIONS) */
 function openStartArchives() {
+  recordUserAction("Ouverture du registre START (Historique des connexions)");
   var it = START_ARCHIVES;
   var pn = $("pn");
   pn.textContent = "";
@@ -443,29 +468,41 @@ function openStartArchives() {
   article.className = "journal-article";
   article.style.borderColor = "var(--green)";
 
-  var editBannerHtml = '<div class="lock-banner"><span>🔓 <strong>Coffre START (Modification directe)</strong></span><button type="button" class="p" onclick="openStartEditor()" style="padding:6px 14px; font-size:0.85rem;">✏️ Modifier les archives</button></div>';
+  var logsHtml = '<div style="margin-top:20px;"><h4>Liste des utilisateurs connectés et actions réalisées :</h4>';
+  if(it.logs && it.logs.length > 0) {
+    it.logs.forEach(function(l) {
+      logsHtml += '<div class="file-row" style="flex-direction:column; align-items:flex-start; gap:4px;">' +
+                    '<div style="display:flex; justify-content:space-width; width:100%; justify-content:space-between;">' +
+                      '<strong>📧 ' + l.email + '</strong>' +
+                      '<small style="color:var(--muted)">🕒 ' + l.date + '</small>' +
+                    '</div>' +
+                    '<div style="font-size:0.9rem; color:var(--ink);">👉 <em>Action :</em> ' + l.action + '</div>' +
+                  '</div>';
+    });
+  } else {
+    logsHtml += '<p style="color:var(--muted); font-style:italic;">Aucune connexion enregistrée pour l\'instant.</p>';
+  }
+  logsHtml += '</div>';
 
   var docsHtml = "";
   if(it.docs && it.docs.length > 0) {
-    docsHtml = '<div class="journal-docs"><h4>Archives & Documents fondateurs :</h4>';
+    docsHtml = '<div class="journal-docs"><h4>Documents fondateurs START :</h4>';
     it.docs.forEach(function(d){
-      docsHtml += '<div class="file-row"><div>📁 <a href="' + d.url + '" target="_blank">' + d.name + '</a></div><small style="color:var(--muted)">Dropbox / Archive</small></div>';
+      docsHtml += '<div class="file-row"><div>📁 <a href="' + d.url + '" target="_blank">' + d.name + '</a></div><small style="color:var(--muted)">Dropbox</small></div>';
     });
     docsHtml += '</div>';
   }
 
-  article.innerHTML = editBannerHtml +
-    '<div class="journal-header" style="border-color:var(--green);">' +
-      '<div class="journal-kicker">Point Zéro · Archives Générales AfriFloW</div>' +
+  article.innerHTML = '<div class="journal-header" style="border-color:var(--green);">' +
+      '<div class="journal-kicker">Point Zéro · Registre d\'Audit AfriFloW</div>' +
       '<h2 class="journal-title">' + it.title + '</h2>' +
       '<div class="journal-date">' + it.date + '</div>' +
     '</div>' +
-    '<p style="font-weight:700; font-size:1.1rem; line-height:1.5; margin-bottom:20px;">' + it.desc + '</p>' +
-    '<div class="journal-columns">' + it.details.replace(/\n/g, '<br>') + '</div>' +
+    '<p style="font-weight:700; font-size:1.05rem; line-height:1.5; margin-bottom:20px;">' + it.desc + '</p>' +
+    logsHtml +
     docsHtml +
-    '<div style="margin-top:30px; text-align:center; display:flex; gap:10px; justify-content:center;">' +
-      '<button type="button" class="p" onclick="openStartEditor()">Modifier les archives</button>' +
-      '<button type="button" onclick="closeDrawer()">Fermer</button>' +
+    '<div style="margin-top:30px; text-align:center;">' +
+      '<button type="button" class="p" onclick="closeDrawer()">Fermer le registre</button>' +
     '</div>';
 
   pn.appendChild(article);
@@ -590,6 +627,7 @@ function openEditor(index) {
     delBtn.textContent = "Supprimer le chapitre";
     delBtn.onclick = function() {
       if(confirm("Êtes-vous sûr de vouloir supprimer cet article du journal ?")) {
+        recordUserAction("Suppression du chapitre : " + (it.title || ('Chapitre ' + (index+1))));
         ITEMS.splice(index, 1);
         saveLocal(); renderRoadmap();
         closeDrawer();
@@ -603,95 +641,16 @@ function openEditor(index) {
 }
 
 function finalizeSave(isNew, it, index) {
-  if(isNew) ITEMS.push(it); else ITEMS[index] = it;
+  if(isNew) {
+    ITEMS.push(it);
+    recordUserAction("Ajout d'un nouveau chapitre : " + (it.title || 'Sans titre'));
+  } else {
+    ITEMS[index] = it;
+    recordUserAction("Modification du chapitre : " + (it.title || ('Chapitre ' + (index+1))));
+  }
   saveLocal(); renderRoadmap();
   closeDrawer();
   openJournalView(isNew ? ITEMS.length - 1 : index);
-}
-
-/* ÉDITION START ARCHIVES */
-function openStartEditor() {
-  var it = START_ARCHIVES;
-  var pn = $("pn");
-  pn.textContent = "";
-
-  var closeBtn = document.createElement("button");
-  closeBtn.className = "x";
-  closeBtn.textContent = "× Fermer";
-  closeBtn.style.marginBottom = "14px";
-  closeBtn.onclick = function() { closeDrawer(); };
-  pn.appendChild(closeBtn);
-
-  var h2 = document.createElement("h2");
-  h2.textContent = "Modifier le coffre START (Archives)";
-  pn.appendChild(h2);
-
-  var form = document.createElement("div");
-  form.className = "fm";
-  form.innerHTML = '<label>Titre</label><input type="text" id="startTitle" value="' + it.title + '">' +
-                   '<label>Description courte</label><textarea id="startDesc">' + it.desc + '</textarea>' +
-                   '<label>Notes d\'archives complètes</label><textarea id="startDetails" rows="6">' + it.details + '</textarea>' +
-                   '<label>Date / Mention</label><input type="text" id="startDate" value="' + it.date + '">';
-  pn.appendChild(form);
-
-  var docHeader = document.createElement("h3");
-  docHeader.textContent = "Documents & Liens START";
-  pn.appendChild(docHeader);
-
-  var linkInputName = document.createElement("input");
-  linkInputName.placeholder = "Nom du document archive";
-  linkInputName.style.margin = "6px 0";
-  var linkInputUrl = document.createElement("input");
-  linkInputUrl.placeholder = "Lien Dropbox";
-  linkInputUrl.style.margin = "6px 0";
-
-  var addLinkBtn = document.createElement("button");
-  addLinkBtn.textContent = "Ajouter le lien";
-  addLinkBtn.onclick = function() {
-    var name = linkInputName.value.trim(), url = linkInputUrl.value.trim();
-    if(!name || !url) return;
-    it.docs.push({name: name, url: url});
-    linkInputName.value = ""; linkInputUrl.value = "";
-    drawStartDocs();
-  };
-  pn.appendChild(linkInputName);
-  pn.appendChild(linkInputUrl);
-  pn.appendChild(addLinkBtn);
-
-  var docsContainer = document.createElement("div");
-  pn.appendChild(docsContainer);
-
-  function drawStartDocs() {
-    docsContainer.textContent = "";
-    it.docs.forEach(function(d, j) {
-      var row = document.createElement("div");
-      row.className = "file-row";
-      row.innerHTML = '<div><a href="' + d.url + '" target="_blank">' + d.name + '</a></div>';
-      var rm = document.createElement("button");
-      rm.className = "danger";
-      rm.textContent = "Retirer";
-      rm.onclick = function() { it.docs.splice(j, 1); drawStartDocs(); };
-      row.appendChild(rm);
-      docsContainer.appendChild(row);
-    });
-  }
-  drawStartDocs();
-
-  var saveBtn = document.createElement("button");
-  saveBtn.className = "p";
-  saveBtn.style.marginTop = "20px";
-  saveBtn.textContent = "Enregistrer les archives";
-  saveBtn.onclick = function() {
-    it.title = $("startTitle").value.trim();
-    it.desc = $("startDesc").value.trim();
-    it.details = $("startDetails").value.trim();
-    it.date = $("startDate").value.trim();
-    saveLocal();
-    closeDrawer();
-    openStartArchives();
-  };
-  pn.appendChild(saveBtn);
-  $("ov").classList.add("on");
 }
 
 /* Tracé SVG sinueux + véhicule synchronisé avec le défilement */
@@ -777,6 +736,7 @@ window.addEventListener("resize", function() {
 });
 
 $("exportBtn").onclick = function() {
+  recordUserAction("Exportation d'une sauvegarde JSON");
   var blob = new Blob([JSON.stringify({items: ITEMS, archives: START_ARCHIVES}, null, 2)], {type: "application/json"});
   var url = URL.createObjectURL(blob);
   var a = document.createElement("a");
@@ -800,11 +760,13 @@ $("importFile").onchange = function(e) {
         if(data.archives) START_ARCHIVES = data.archives;
         saveLocal();
         renderRoadmap();
+        recordUserAction("Importation d'une sauvegarde JSON");
         alert("Importation réussie !");
       } else if(Array.isArray(data)) {
         ITEMS = data;
         saveLocal();
         renderRoadmap();
+        recordUserAction("Importation d'une sauvegarde JSON");
         alert("Importation réussie !");
       }
     } catch(err) {
