@@ -41,6 +41,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 @media (prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}}
 button.p{background:var(--green);color:#fff;border-color:var(--green)}
 button.danger{color:#c0392b;border-color:#e2b8b3;background:transparent}
+#logout-btn{background:#e74c3c;color:#fff;border:none;padding:8px 15px;border-radius:5px;cursor:pointer;margin-left:5px}
 
 .road-container{position:relative;width:100%;max-width:900px;margin:40px auto;padding:40px 0}
 svg.road-svg{position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:1;overflow:visible}
@@ -118,7 +119,6 @@ svg.road-svg{position:absolute;top:0;left:0;width:100%;height:100%;pointer-event
 .map-head{display:flex;gap:10px;flex-wrap:wrap;align-items:center;justify-content:space-between;margin-bottom:10px}
 #flowMap{width:100%;height:auto;border-radius:14px;display:block}
 .country{cursor:pointer;transition:opacity .3s}
-.country:hover path{filter:brightness(1.2)}
 .country.dim,.rt.dim{opacity:.25}
 .country{fill:color-mix(in srgb,var(--muted) 22%,var(--card));stroke:var(--card);stroke-width:.5}
 .country:hover{filter:brightness(1.2);stroke:var(--ink)}
@@ -201,7 +201,7 @@ svg.road-svg{position:absolute;top:0;left:0;width:100%;height:100%;pointer-event
       <button type="button" id="customBtn">⚙️ Personnaliser</button>
       <button type="button" id="exportBtn">Exporter sauvegarde</button>
       <button type="button" id="importTriggerBtn">Importer JSON</button>
-      <button id="logout-btn" style="background-color: #e74c3c; color: white; border: none; padding: 8px 15px; border-radius: 5px; cursor: pointer; margin-left: 5px;">Déconnexion</button>
+      <button type="button" id="logout-btn">Déconnexion</button>
       <input id="importFile" type="file" accept="application/json,.json" hidden>
     </div>
   </div>
@@ -555,7 +555,10 @@ function openEditor(index){
     if(!it.title){ alert("Le titre de l'article est obligatoire."); return; }
     it.desc = $("edDesc").value.trim(); it.details = $("edDetails").value.trim();
     it.date = $("edDate").value.trim(); it.status = $("edStatus").value; it.country = $("edCountry").value;
-    if(isNew){ ITEMS.push(it); recordUserAction("Ajout du chapitre : " + it.title); }
+    if(isNew){
+      ITEMS.push(it); recordUserAction("Ajout du chapitre : " + it.title);
+      if(typeof ajouterEtapeRoadmap === "function") ajouterEtapeRoadmap(it); /* envoi au cloud (Supabase) */
+    }
     else { ITEMS[index] = it; recordUserAction("Modification du chapitre : " + it.title); }
     saveLocal(); renderRoadmap();
     openJournalView(isNew ? ITEMS.length - 1 : index);
@@ -688,6 +691,7 @@ $("addBtn").onclick = function(){ openEditor(null); };
 [$("startBtn"), $("addBtn")].forEach(function(el){
   el.addEventListener("keydown", function(e){ if(e.key === "Enter" || e.key === " "){ e.preventDefault(); el.click(); } });
 });
+$("logout-btn").onclick = function(){ recordUserAction("Déconnexion"); logout(); };
 $("ov").addEventListener("click", function(e){ if(e.target === this) closeDrawer(); });
 $("customizer-modal").addEventListener("click", function(e){ if(e.target === this) this.classList.remove("on"); });
 document.addEventListener("keydown", function(e){
@@ -826,7 +830,7 @@ function drawScenery(w, h){
 
   /* Personnages : pieds posés au sol, jambes/bras en contre-phase, léger balancement du buste */
   function person(o){
-    var sk = pick(SK), c1 = pick(CL), c2 = pick(CL), f = o.f, lc = f ? sk : "#34495e", s = "", up, P = '"';
+    var sk = pick(SK), c1 = pick(CL), c2 = pick(CL), f = o.f, lc = f ? sk : "#34495e", s = "", up;
     function leg(x, cl){ return '<g class="lg' + cl + '"><path d="M' + x + ' 30h3.4l-.5 21h-3z" fill="' + lc + '"/><ellipse cx="' + (x + 1.4) + '" cy="52" rx="3" ry="1.5" fill="#1b1b1b"/></g>'; }
     function arm(x1, x2, cl){ return '<g class="am' + cl + '"><path d="M' + x1 + ' 17.8L' + x2 + ' 29" stroke="' + c1 + '" stroke-width="2.6" stroke-linecap="round" fill="none"/><circle cx="' + x2 + '" cy="29.6" r="1.4" fill="' + sk + '"/></g>'; }
     s += o.work ? leg(9.2, " no") + leg(11.6, " no") : leg(9.2, "") + leg(11.6, " l2");
@@ -1098,6 +1102,7 @@ window.addEventListener("pointermove", function(e){
   drag = {x:e.clientX, y:e.clientY}; applyVB();
 });
 window.addEventListener("pointerup", function(){ drag = null; });
+window.addEventListener("pointercancel", function(){ drag = null; moved = false; });
 $("flowMap").addEventListener("click", function(e){
   if(moved){ moved = false; return; }
   var p = e.target.closest(".country"); if(p) openCountry(p.dataset.k);
@@ -1174,52 +1179,58 @@ renderMap();
 resumeSession();
 initIntro();
 </script>
-  <!-- Chargement du client Supabase -->
+
+<!-- Client Supabase -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-  const SUPABASE_URL = 'https://jgvwdpzevghfavmpjbqp.supabase.co';
-  const SUPABASE_ANON_KEY = 'sb_publishable_JpfR1uKxMVZCJPEMMTEllg_j9pRHnwx';
-  
-  const { createClient } = supabase;
-  const _supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  var SUPABASE_URL = 'https://jgvwdpzevghfavmpjbqp.supabase.co';
+  var SUPABASE_ANON_KEY = 'sb_publishable_JpfR1uKxMVZCJPEMMTEllg_j9pRHnwx';
+  var _supabase = window.supabase ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY) : null;
 
-  // 1. Charger la roadmap depuis Supabase au démarrage (au lieu du local)
-  async function chargerRoadmap() {
-    const { data, error } = await _supabase.from('afriflow_roadmap').select('*');
-    if (error) {
-      console.error('Erreur de chargement Supabase :', error);
-    } else if (data && data.length > 0) {
-      // Si Supabase contient des données, on les injecte dans ton tableau ITEMS
-      ITEMS = data.map(row => ({
+  var STATUS_FROM = {'Réalisé':'done','Terminé':'done','En cours':'doing','À venir':'todo'};
+  var STATUS_TO   = {done:'Réalisé', doing:'En cours', todo:'À venir'};
+
+  /* Charge la roadmap depuis Supabase et la FUSIONNE avec les données locales
+     (on garde détails, images, documents et pays saisis localement). */
+  async function chargerRoadmap(){
+    if(!_supabase) return;
+    var res = await _supabase.from('afriflow_roadmap').select('*');
+    if(res.error){ console.error('Erreur de chargement Supabase :', res.error); return; }
+    var rows = res.data;
+    if(!rows || !rows.length) return;
+
+    var local = ITEMS.slice();
+    var cloud = rows.map(function(row){
+      var old = local.find(function(i){ return i.title === row.step_title; }) || {};
+      return Object.assign({}, old, {
         title: row.step_title,
-        desc: row.description,
-        status: row.status === 'Réalisé' ? 'done' : (row.status === 'Terminé' ? 'done' : 'doing'),
-        date: row.due_date || '',
-        details: '',
-        docs: [],
-        image: ''
-      }));
-      renderRoadmap(); // Rafraîchit l'affichage de la route
-    }
+        desc: row.description || old.desc || '',
+        status: STATUS_FROM[row.status] || 'todo',
+        date: row.due_date || old.date || ''
+      });
+    });
+    /* on conserve aussi les chapitres locaux absents du cloud */
+    var extra = local.filter(function(i){
+      return !cloud.some(function(c){ return c.title === i.title; });
+    });
+    ITEMS = cloud.concat(extra);
+    normalize();
+    saveLocal();
+    renderRoadmap();
   }
 
-  // 2. Enregistrer une nouvelle étape directement dans Supabase
-  async function ajouterEtapeRoadmap(titreEtape, descriptionEtape) {
-    const { data, error } = await _supabase
-      .from('afriflow_roadmap')
-      .insert([
-        { step_title: titreEtape, description: descriptionEtape, status: 'En cours' }
-      ]);
-      
-    if (error) {
-      console.error("Erreur lors de l'enregistrement dans le cloud :", error);
-    } else {
-      console.log("Étape enregistrée avec succès dans le cloud !");
-      chargerRoadmap(); // Recharge la liste en temps réel
-    }
+  /* Envoie un nouveau chapitre dans Supabase (appelée depuis l'éditeur) */
+  async function ajouterEtapeRoadmap(item){
+    if(!_supabase) return;
+    var res = await _supabase.from('afriflow_roadmap').insert([{
+      step_title: item.title,
+      description: item.desc,
+      status: STATUS_TO[item.status] || 'À venir',
+      due_date: item.date || null
+    }]);
+    if(res.error) console.error("Erreur d'enregistrement cloud :", res.error);
   }
 
-  // Lancer le chargement Supabase au démarrage de la page
   chargerRoadmap();
 </script>
 </body>
