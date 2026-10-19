@@ -915,7 +915,7 @@ function drawScenery(w, h){
 /* ---------- Carte du monde ---------- */
 var CN_ = {sn:["🇸🇳","Sénégal"], bf:["🇧🇫","Burkina Faso"], tg:["🇹🇬","Togo"]};
 function CN(c){ return CN_[c] ? CN_[c][0] + " " + CN_[c][1] : ""; }
-var ORIGIN = "768"; /* pays de départ des marchandises : Burkina Faso */
+var ORIGIN = "854"; /* pays de départ des marchandises : Burkina Faso */
 var ETAT = {actif:"Nous commercialisons déjà", prosp:"En prospection", prevu:"Prévu"};
 function newRec(){ return {etat:"", stock:0, transit:0, valeur:0, vol:0, notes:"", actionnaires:"", produits:[]}; }
 var MAP = {};
@@ -1177,7 +1177,7 @@ initIntro();
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
   const SUPABASE_URL = 'https://jgvwdpzevghfavmpjbqp.supabase.co';
-  const SUPABASE_ANON_KEY = 'TA_CLE_PUBLISHABLE'; // Remplace par ta clé Publishable
+  const SUPABASE_ANON_KEY = 'sb_publishable_thG-VR-mBxbbYIUGw4x2rA_nnFgwyBo'; // clé Publishable
   
   const { createClient } = supabase;
   const _supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
@@ -1192,5 +1192,19 @@ initIntro();
   }
   chargerRoadmap();
 </script>
+  <script>
+      document.getElementById('logout-btn').addEventListener('click', async () => {
+        const { error } = await _supabase.auth.signOut();
+        if (error) {
+          console.error('Erreur lors de la déconnexion Supabase :', error.message);
+        }
+
+        localStorage.clear();
+        sessionStorage.clear();
+
+        alert('Déconnexion réussie !');
+        window.location.reload();
+      });
+    </script>
 </body>
 </html>
