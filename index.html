@@ -6,6 +6,7 @@
 <title>AfriFloW – Journal de Bord & Feuille de Route</title>
 <link rel="icon" href="logo.png">
 <meta name="description" content="Feuille de route interactive d’AfriFloW en mode journal avec registre START des connexions.">
+<script>try{if(sessionStorage.getItem("afriflow_intro_seen"))document.documentElement.classList.add("no-intro")}catch(e){}</script>
 <style>
 :root{--bg:#fcfbfa;--card:#fff;--ink:#1d2a22;--muted:#66726a;--green:#1f5d3a;--amber:#d98a1b;--line:#e2ded7;--done:#1f5d3a;--doing:#d98a1b;--todo:#7b8a93;--road-bg:#1a231e;--road-line:#fff;--font-family:system-ui,-apple-system,"Segoe UI",sans-serif;--journal-font:Georgia,"Times New Roman",serif}
 *,*::before,*::after{box-sizing:border-box}
@@ -112,7 +113,6 @@ svg.road-svg{position:absolute;top:0;left:0;width:100%;height:100%;pointer-event
 }
 .road-container{background:linear-gradient(color-mix(in srgb,var(--green) 12%,var(--bg)),color-mix(in srgb,var(--green) 28%,var(--bg)));border-radius:28px}
 #scenery{position:absolute;inset:0;z-index:0;pointer-events:none;overflow:hidden;border-radius:28px}
-.tree{position:absolute;line-height:1;transform:translate(-50%,-50%);user-select:none}
 .border-sign{width:max-content;max-width:90%;margin:-30px auto;padding:8px 18px;background:var(--card);border:2px solid var(--amber);border-radius:12px;font-weight:700;font-size:.9rem;position:relative;z-index:3;text-align:center}
 .map-panel{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:18px;margin:0 0 24px}
 .map-head{display:flex;gap:10px;flex-wrap:wrap;align-items:center;justify-content:space-between;margin-bottom:10px}
@@ -136,17 +136,6 @@ svg.road-svg{position:absolute;top:0;left:0;width:100%;height:100%;pointer-event
 .cloud::before{content:"";position:absolute;left:24px;top:-16px;width:56px;height:36px;border-radius:50%;background:inherit}
 @keyframes drift{to{transform:translateX(calc(100vw + 340px))}}
 #mts{position:absolute;left:0;top:calc(26% - 78px);width:200%;height:80px}
-.it{position:absolute}
-.sway{transform-origin:50% 100%;animation:sway var(--d,4s) ease-in-out infinite;animation-delay:var(--dl,0s)}
-@keyframes sway{0%,100%{transform:rotate(-2.2deg)}50%{transform:rotate(2.2deg)}}
-.walk{animation:walkx var(--d,12s) linear infinite}
-@keyframes walkx{0%{transform:translateX(0) scaleX(1)}49%{transform:translateX(70px) scaleX(1)}50%{transform:translateX(70px) scaleX(-1)}99%{transform:translateX(0) scaleX(-1)}100%{transform:translateX(0) scaleX(1)}}
-.leg{transform-box:fill-box;transform-origin:50% 0;animation:step .7s ease-in-out infinite}
-.l2{animation-direction:reverse}
-@keyframes step{0%,100%{transform:rotate(26deg)}50%{transform:rotate(-26deg)}}
-.hoe{transform-box:view-box;transform-origin:19px 14px;animation:hoe 1.6s ease-in-out infinite}
-@keyframes hoe{0%,100%{transform:rotate(-28deg)}50%{transform:rotate(22deg)}}
-.field{position:absolute;border-radius:8px;opacity:.9;background:repeating-linear-gradient(100deg,color-mix(in srgb,#6a9a3a,#0a1030 calc(var(--night,0)*55%)) 0 6px,color-mix(in srgb,#8b6b3b,#0a1030 calc(var(--night,0)*55%)) 6px 12px)}
 #scenery{filter:brightness(calc(1 - var(--night,0)*.5)) saturate(calc(1 - var(--night,0)*.25))}
 #sceneryGlow{position:absolute;inset:0;z-index:0;pointer-events:none;overflow:hidden;border-radius:28px;opacity:var(--night,0)}
 .gl{position:absolute;transform:translate(-50%,-50%);border-radius:50%;background:radial-gradient(circle,rgba(255,214,110,.95) 0,rgba(255,200,90,.35) 45%,transparent 70%)}
@@ -169,9 +158,21 @@ svg.road-svg{position:absolute;top:0;left:0;width:100%;height:100%;pointer-event
 @keyframes st2{0%,100%{transform:rotate(18deg)}50%{transform:rotate(-18deg)}}
 @keyframes bob{50%{transform:translateY(-.8px)}}
 @keyframes hoe2{0%,100%{transform:rotate(-32deg)}50%{transform:rotate(18deg)}}
+#intro{position:fixed;inset:0;z-index:10000;background:#fff;display:flex;align-items:center;justify-content:center;transition:opacity .6s ease}
+#intro.out{opacity:0;pointer-events:none}
+#intro video{width:100%;height:100%;object-fit:contain}
+#intro button{position:absolute;bottom:calc(20px + env(safe-area-inset-bottom,0px));background:rgba(255,255,255,.92);color:#1d2a22;border:1px solid #d8d4cc;border-radius:99px;padding:10px 18px;box-shadow:0 4px 14px rgba(0,0,0,.12)}
+#introSkip{right:calc(16px + env(safe-area-inset-right,0px))}
+#introSound{left:calc(16px + env(safe-area-inset-left,0px))}
+.no-intro #intro{display:none}
 </style>
 </head>
 <body>
+<div id="intro" aria-label="Animation d'ouverture AfriFloW">
+  <video id="introVideo" src="afriflow-intro.mp4" muted playsinline preload="auto"></video>
+  <button type="button" id="introSound" aria-label="Activer ou couper le son">🔇</button>
+  <button type="button" id="introSkip">Passer ›</button>
+</div>
 
 <div id="auth-screen" role="dialog" aria-modal="true" aria-labelledby="authTitle">
   <div class="auth-box">
@@ -334,18 +335,15 @@ function recordUserAction(text){
   saveLocal();
 }
 
-/* ---------- Authentification (simple barrière d'interface, voir remarque) ---------- */
+/* ---------- Authentification (simple barrière d'interface) ---------- */
 function verifyGlobalAuth(){
   var email = $("authEmailInput").value.trim(), pwd = $("authPasswordInput").value.trim();
   var err = $("authError");
   if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){ err.textContent = "Adresse email invalide."; return; }
   if(pwd !== "AFRIFLOW" + new Date().getFullYear()){ err.textContent = "Mot de passe incorrect."; return; }
   err.textContent = "";
-  loggedUserEmail = email;
+  enterApp(email);
   recordUserAction("Connexion réussie et consultation de la feuille de route.");
-  $("auth-screen").classList.add("off");
-  $("editStatusIndicator").textContent = "🔓 Connecté : " + email + " — modification directe active";
-  renderRoadmap();
 }
 
 /* ---------- Route ---------- */
@@ -888,7 +886,7 @@ function drawScenery(w, h){
       if(c === 0){
         if(q < .17) s = acacia(x, y, 70 + r() * 40); else if(q < .27) s = baobab(x, y, 80 + r() * 40);
         else if(q < .45) s = tree(x, y, 50 + r() * 26, "mango"); else if(q < .57) s = palm(x, y, 40 + r() * 22);
-        else if(q < .72) s = hut(x, y, 50 + r() * 20); else if(q < .82 && fc < 8) s = farm(x, y);
+        else if(q < .66) s = hut(x, y, 50 + r() * 20); else if(q < .85 && fc < 8) s = farm(x, y);
         else if(q < .92) s = bush(x, y, 34 + r() * 22); else s = flowers(x, y);
       } else if(c === 1){
         if(q < .35) s = house(x, y, 60 + r() * 30); else if(q < .55) s = tree(x, y, 46 + r() * 26, r() < .4 ? "mango" : "");
@@ -1107,11 +1105,73 @@ $("shSummary").addEventListener("click", function(e){ var c = e.target.closest("
 $("cSel").addEventListener("change", function(){ var k = this.value; this.value = ""; if(k) openCountry(k); });
 $("shSel").addEventListener("change", renderMap);
 
+/* ---------- Session (15 min d'inactivité) + intro vidéo ---------- */
+var SESSION_KEY = "afriflow_session_v1", SESSION_TTL = 15 * 60 * 1000, INTRO_KEY = "afriflow_intro_seen";
+var lastAct = Date.now(), lastSaved = 0;
+
+function saveSession(force){
+  if(!loggedUserEmail) return;
+  var n = Date.now();
+  if(!force && n - lastSaved < 15000) return;
+  lastSaved = n;
+  try { localStorage.setItem(SESSION_KEY, JSON.stringify({e:loggedUserEmail, t:lastAct})); } catch(e){}
+}
+function touch(){ lastAct = Date.now(); saveSession(false); }
+function enterApp(email){
+  loggedUserEmail = email; lastAct = Date.now(); saveSession(true);
+  $("auth-screen").classList.add("off");
+  $("editStatusIndicator").textContent = "🔓 Connecté : " + email + " — modification directe active";
+  renderRoadmap();
+}
+function logout(msg){
+  loggedUserEmail = "";
+  try { localStorage.removeItem(SESSION_KEY); } catch(e){}
+  closeDrawer(); $("customizer-modal").classList.remove("on");
+  $("authPasswordInput").value = ""; $("authError").textContent = msg || "";
+  $("editStatusIndicator").textContent = "";
+  $("auth-screen").classList.remove("off");
+}
+function checkIdle(){ if(loggedUserEmail && Date.now() - lastAct > SESSION_TTL) logout("Session expirée après 15 minutes d'inactivité."); }
+function resumeSession(){
+  try {
+    var s = JSON.parse(localStorage.getItem(SESSION_KEY) || "null");
+    if(s && s.e && Date.now() - s.t < SESSION_TTL){ enterApp(s.e); return; }
+    if(s) localStorage.removeItem(SESSION_KEY);
+  } catch(e){}
+}
+["pointerdown", "keydown", "touchstart", "scroll", "wheel"].forEach(function(ev){ window.addEventListener(ev, touch, {passive:true}); });
+setInterval(checkIdle, 20000);
+document.addEventListener("visibilitychange", function(){ if(document.hidden) saveSession(true); else checkIdle(); });
+window.addEventListener("pagehide", function(){ saveSession(true); });
+
+function initIntro(){
+  var box = $("intro"), v = $("introVideo");
+  if(!box || document.documentElement.classList.contains("no-intro")) return;
+  var done = false;
+  function finish(){
+    if(done) return; done = true;
+    try { sessionStorage.setItem(INTRO_KEY, "1"); } catch(e){}
+    box.classList.add("out"); v.pause();
+    setTimeout(function(){ box.style.display = "none"; }, 700);
+  }
+  $("introSkip").onclick = finish;
+  $("introSound").onclick = function(){
+    v.muted = !v.muted; this.textContent = v.muted ? "🔇" : "🔊";
+    if(!v.muted) v.play().catch(function(){});
+  };
+  v.addEventListener("ended", finish);
+  v.addEventListener("error", finish);
+  var p = v.play(); if(p && p.catch) p.catch(finish);
+  setTimeout(finish, 20000);
+}
+
 /* ---------- Démarrage : on charge AVANT toute écriture ---------- */
 loadLocal();
 restoreTheme();
 buildMts();
 renderMap();
+resumeSession();
+initIntro();
 </script>
 </body>
 </html>
