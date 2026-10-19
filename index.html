@@ -1175,25 +1175,35 @@ resumeSession();
 initIntro();
 </script>
   <!-- Chargement du client Supabase -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
   const SUPABASE_URL = 'https://jgvwdpzevghfavmpjbqp.supabase.co';
-  const SUPABASE_ANON_KEY = 'sb_publishable_JpfR1uKxMVZCJPEMMTEllg_j9pRHnwx'; // Ta clé Publishable
+  const SUPABASE_ANON_KEY = 'sb_publishable_JpfR1uKxMVZCJPEMMTEllg_j9pRHnwx';
   
   const { createClient } = supabase;
   const _supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-  // 1. Charger les données (pour les voir en temps réel)
+  // 1. Charger la roadmap depuis Supabase au démarrage (au lieu du local)
   async function chargerRoadmap() {
     const { data, error } = await _supabase.from('afriflow_roadmap').select('*');
     if (error) {
-      console.error('Erreur de chargement :', error);
-    } else {
-      console.log('Données de la roadmap récupérées avec succès :', data);
+      console.error('Erreur de chargement Supabase :', error);
+    } else if (data && data.length > 0) {
+      // Si Supabase contient des données, on les injecte dans ton tableau ITEMS
+      ITEMS = data.map(row => ({
+        title: row.step_title,
+        desc: row.description,
+        status: row.status === 'Réalisé' ? 'done' : (row.status === 'Terminé' ? 'done' : 'doing'),
+        date: row.due_date || '',
+        details: '',
+        docs: [],
+        image: ''
+      }));
+      renderRoadmap(); // Rafraîchit l'affichage de la route
     }
   }
-  chargerRoadmap();
 
-  // 2. Ajouter une étape (pour enregistrer en temps réel dans le cloud)
+  // 2. Enregistrer une nouvelle étape directement dans Supabase
   async function ajouterEtapeRoadmap(titreEtape, descriptionEtape) {
     const { data, error } = await _supabase
       .from('afriflow_roadmap')
@@ -1202,12 +1212,15 @@ initIntro();
       ]);
       
     if (error) {
-      console.error("Erreur lors de l'enregistrement :", error);
+      console.error("Erreur lors de l'enregistrement dans le cloud :", error);
     } else {
       console.log("Étape enregistrée avec succès dans le cloud !");
-      chargerRoadmap(); // Recharge les données instantanément
+      chargerRoadmap(); // Recharge la liste en temps réel
     }
   }
+
+  // Lancer le chargement Supabase au démarrage de la page
+  chargerRoadmap();
 </script>
 </body>
 </html>
