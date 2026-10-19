@@ -127,6 +127,26 @@ svg.road-svg{position:absolute;top:0;left:0;width:100%;height:100%;pointer-event
 .chip{padding:3px 10px;margin:2px;font-size:.8rem;border-radius:99px}
 .prow{display:grid;grid-template-columns:2fr 2fr 1.4fr auto;gap:6px;margin-bottom:6px}
 @media (max-width:768px){.prow{grid-template-columns:1fr 1fr auto}.prow input:nth-child(3){grid-column:1/3}}
+#sky{position:sticky;top:0;height:100vh;margin-top:-40px;margin-bottom:calc(40px - 100vh);z-index:0;pointer-events:none;overflow:hidden;border-radius:28px;background:linear-gradient(var(--skyT,#5aa9e6) 0,var(--skyB,#cfe9ff) 26%,color-mix(in srgb,#7cc06a,#0a1030 calc(var(--night,0)*60%)) 26%,color-mix(in srgb,#4f9a4a,#0a1030 calc(var(--night,0)*60%)) 100%)}
+#stars{position:absolute;inset:0 0 74% 0;opacity:var(--night,0);background:radial-gradient(1.5px 1.5px at 8% 22%,#fff,transparent),radial-gradient(1.5px 1.5px at 21% 60%,#fff,transparent),radial-gradient(1px 1px at 33% 15%,#fff,transparent),radial-gradient(1.5px 1.5px at 47% 48%,#fff,transparent),radial-gradient(1px 1px at 58% 25%,#fff,transparent),radial-gradient(1.5px 1.5px at 69% 65%,#fff,transparent),radial-gradient(1px 1px at 81% 18%,#fff,transparent),radial-gradient(1.5px 1.5px at 92% 52%,#fff,transparent)}
+#sun,#moon{position:absolute;width:44px;height:44px;border-radius:50%}
+#sun{background:#ffe27a;box-shadow:0 0 40px 14px rgba(255,226,122,.55)}
+#moon{background:#f4f1de;box-shadow:0 0 24px 6px rgba(244,241,222,.4);top:26px;opacity:0}
+.cloud{position:absolute;left:-160px;width:120px;height:32px;border-radius:40px;background:rgba(255,255,255,calc(.9 - var(--night,0)*.75));filter:blur(3px);animation:drift var(--d,70s) linear infinite;animation-delay:var(--dl,0s)}
+.cloud::before{content:"";position:absolute;left:24px;top:-16px;width:56px;height:36px;border-radius:50%;background:inherit}
+@keyframes drift{to{transform:translateX(calc(100vw + 340px))}}
+#mts{position:absolute;left:0;top:calc(26% - 78px);width:200%;height:80px}
+.it{position:absolute}
+.sway{transform-origin:50% 100%;animation:sway var(--d,4s) ease-in-out infinite;animation-delay:var(--dl,0s)}
+@keyframes sway{0%,100%{transform:rotate(-2.2deg)}50%{transform:rotate(2.2deg)}}
+.walk{animation:walkx var(--d,12s) linear infinite}
+@keyframes walkx{0%{transform:translateX(0) scaleX(1)}49%{transform:translateX(70px) scaleX(1)}50%{transform:translateX(70px) scaleX(-1)}99%{transform:translateX(0) scaleX(-1)}100%{transform:translateX(0) scaleX(1)}}
+.leg{transform-box:fill-box;transform-origin:50% 0;animation:step .7s ease-in-out infinite}
+.l2{animation-direction:reverse}
+@keyframes step{0%,100%{transform:rotate(26deg)}50%{transform:rotate(-26deg)}}
+.hoe{transform-box:view-box;transform-origin:19px 14px;animation:hoe 1.6s ease-in-out infinite}
+@keyframes hoe{0%,100%{transform:rotate(-28deg)}50%{transform:rotate(22deg)}}
+.field{position:absolute;border-radius:8px;opacity:.9;background:repeating-linear-gradient(100deg,color-mix(in srgb,#6a9a3a,#0a1030 calc(var(--night,0)*55%)) 0 6px,color-mix(in srgb,#8b6b3b,#0a1030 calc(var(--night,0)*55%)) 6px 12px)}
 </style>
 </head>
 <body>
@@ -179,7 +199,7 @@ svg.road-svg{position:absolute;top:0;left:0;width:100%;height:100%;pointer-event
   </section>
 
   <div class="road-container" id="roadContainer">
-    <div id="scenery"></div><svg class="road-svg" id="roadSvg" aria-hidden="true"></svg>
+    <div id="sky" aria-hidden="true"><div id="stars"></div><div id="sun"></div><div id="moon"></div><div class="cloud" style="top:5%;--d:75s"></div><div class="cloud" style="top:13%;--d:100s;--dl:-40s"></div><svg id="mts" viewBox="0 0 1920 80" preserveAspectRatio="none"></svg></div><div id="scenery"></div><svg class="road-svg" id="roadSvg" aria-hidden="true"></svg>
     <div id="car-marker" aria-hidden="true"><img src="logo.png" alt="" onerror="this.onerror=null;this.src='https://placehold.co/34x34/1f5d3a/ffffff?text=A'"></div>
 
     <div class="road-node-special">
@@ -576,6 +596,7 @@ function updateCarPosition(){
   var rect = container.getBoundingClientRect();
   var progress = (window.innerHeight * 0.45 - rect.top) / Math.max(1, container.offsetHeight);
   progress = Math.max(0, Math.min(1, progress));
+  applyWorld(progress);
   var pt = roadPath.getPointAtLength(progress * roadLength);
   car.style.top = pt.y + "px";
   car.style.left = pt.x + "px";
@@ -652,17 +673,84 @@ document.addEventListener("keydown", function(e){
   if(e.key === "Escape"){ closeDrawer(); $("customizer-modal").classList.remove("on"); }
 });
 
-/* ---------- Verdure autour de la route ---------- */
+/* ---------- Décor évolutif : campagne → village → montagne → ville, du jour à la nuit ---------- */
+var KF = [{p:0,t:[90,169,230],b:[207,233,255],n:0},{p:.35,t:[70,150,225],b:[200,230,250],n:0},{p:.55,t:[245,138,91],b:[251,211,141],n:.3},{p:.75,t:[11,16,48],b:[42,47,90],n:1},{p:1,t:[90,110,190],b:[255,190,150],n:.35}];
+var lastStep = -1;
+function mixv(a, b, t){ return a + (b - a) * t; }
+function applyWorld(p){
+  var sun = $("sun"), moon = $("moon"), i = 0;
+  while(i < KF.length - 2 && p > KF[i + 1].p) i++;
+  var a = KF[i], b = KF[i + 1], t = clamp((p - a.p) / (b.p - a.p), 0, 1), n = mixv(a.n, b.n, t);
+  var step = Math.round(p * 80);
+  if(step !== lastStep){
+    lastStep = step;
+    var col = function(k){ return "rgb(" + [0, 1, 2].map(function(j){ return Math.round(mixv(a[k][j], b[k][j], t)); }).join(",") + ")"; };
+    var st = $("roadContainer").style;
+    st.setProperty("--night", n.toFixed(3)); st.setProperty("--skyT", col("t")); st.setProperty("--skyB", col("b"));
+  }
+  sun.style.left = (8 + p * 84) + "%"; sun.style.top = (10 + (1 - Math.sin(Math.PI * p)) * 80) + "px"; sun.style.opacity = clamp(1 - n * 2.2, 0, 1);
+  moon.style.left = (15 + p * 70) + "%"; moon.style.opacity = clamp(n * 1.4 - .2, 0, 1);
+  $("mts").style.transform = "translateX(" + (-p * 50) + "%)";
+}
+function buildMts(){
+  var s = 3, h = "";
+  [[.55,"#9bb0c4",16,50],[1,"#6f8799",30,66]].forEach(function(L){
+    var pts = "0,80";
+    for(var x = 0; x <= 1920; x += 60){ s = (s * 9301 + 49297) % 233280; pts += " " + x + "," + (80 - (L[2] + (s / 233280) * (L[3] - L[2]))); }
+    h += '<polygon points="' + pts + ' 1920,80" style="fill:color-mix(in srgb,' + L[1] + ',#0a1030 calc(var(--night,0)*65%))" opacity="' + L[0] + '"/>';
+  });
+  $("mts").innerHTML = h;
+}
+
 function drawScenery(w, h){
-  var E = ["🌳","🌴","🌿","🌾","🌲","🌺"], seed = 7, html = "";
+  var seed = 11, back = "", front = "";
   function r(){ seed = (seed * 9301 + 49297) % 233280; return seed / 233280; }
-  for(var y = 20; y < h; y += 38){
+  function pick(a){ return a[Math.floor(r() * a.length)]; }
+  var NC = function(c){ return "color-mix(in srgb," + c + ",#0a1030 calc(var(--night,0)*55%))"; };
+  var F = function(c){ return 'style="fill:' + NC(c) + '"'; };
+  var GR = ["#3f9b4a","#2f7d3a","#5aae4f","#79b94a"], SK = ["#8d5524","#c68642","#e0ac69","#5c3a1e"], CL = ["#c0392b","#2980b9","#f1c40f","#8e44ad","#16a085","#e67e22"];
+  function sw(){ return "--d:" + (3 + r() * 3).toFixed(1) + "s;--dl:-" + (r() * 4).toFixed(1) + "s"; }
+  function U(x, y, wd, ht, vb, cls, inner, ex){ return '<svg class="it ' + cls + '" style="left:' + (x - wd / 2).toFixed(0) + 'px;top:' + (y - ht).toFixed(0) + 'px;' + (ex || "") + '" width="' + wd.toFixed(0) + '" height="' + ht.toFixed(0) + '" viewBox="' + vb + '">' + inner + '</svg>'; }
+  function tree(x, y, s){ var c = pick(GR); return U(x, y, s, s * 1.5, "0 0 40 60", "sway", '<rect x="18" y="34" width="4" height="26" ' + F("#6b4a2b") + '/><circle cx="20" cy="22" r="16" ' + F(c) + '/><circle cx="11" cy="31" r="11" ' + F(c) + '/><circle cx="29" cy="31" r="11" ' + F(c) + '/><circle cx="16" cy="16" r="7" ' + F("#a6dc7a") + ' opacity=".45"/>', sw()); }
+  function pine(x, y, s){ var c = pick(["#2f6b43","#27583a","#3a7d4c"]); return U(x, y, s, s * 1.5, "0 0 40 62", "sway", '<rect x="18" y="52" width="4" height="10" ' + F("#5a3a22") + '/><polygon points="20,2 33,22 7,22" ' + F(c) + '/><polygon points="20,14 36,38 4,38" ' + F(c) + '/><polygon points="20,26 40,54 0,54" ' + F(c) + '/>', sw()); }
+  function palm(x, y, s){ var c = pick(GR); return U(x, y, s, s * 1.6, "0 0 40 64", "sway", '<path d="M20 64Q25 38 20 16" style="stroke:' + NC("#7a5a3a") + ';fill:none;stroke-width:3"/><path d="M20 16Q5 6 0 20Q10 12 20 16Z" ' + F(c) + '/><path d="M20 16Q35 6 40 20Q30 12 20 16Z" ' + F(c) + '/><path d="M20 16Q8 14 4 28Q14 18 20 16Z" ' + F(c) + '/><path d="M20 16Q32 14 36 28Q26 18 20 16Z" ' + F(c) + '/>', sw()); }
+  function tuft(x, y){ return U(x, y, 12, 10, "0 0 12 10", "sway", '<path d="M2 10Q3 4 1 0M6 10Q6 3 7 0M10 10Q9 5 12 2" style="stroke:' + NC("#4f9a3a") + ';fill:none;stroke-width:1.4"/><circle cx="7" cy="1" r="1.6" ' + F(pick(["#f4d03f","#e74c3c","#ffffff","#e67eab"])) + '/>', sw()); }
+  function house(x, y, s){
+    var wc = pick(["#e8d5b0","#d9a066","#c97b63","#f0e6d2"]), rc = pick(["#a8452f","#6b4a2b","#8a3b2a"]);
+    var win = function(wx){ return '<rect x="' + wx + '" y="30" width="8" height="8" ' + F("#9fc3d8") + '/><rect x="' + wx + '" y="30" width="8" height="8" style="fill:#ffd36a;opacity:var(--night,0)"/>'; };
+    return U(x, y, s, s * .85, "0 0 60 50", "", '<rect x="8" y="22" width="44" height="28" ' + F(wc) + '/><polygon points="4,24 30,4 56,24" ' + F(rc) + '/><rect x="26" y="36" width="8" height="14" ' + F("#5a3a22") + '/>' + win(13) + win(39));
+  }
+  function building(x, y, s, ht){
+    var inner = '<rect width="' + s + '" height="' + ht + '" ' + F(pick(["#8d99a6","#a5adb5","#7a8591","#b0a69a"])) + '/>';
+    for(var yy = 10; yy < ht - 18; yy += 16) for(var xx = 8; xx < s - 12; xx += 14){
+      inner += '<rect x="' + xx + '" y="' + yy + '" width="7" height="9" ' + F("#9fc3d8") + '/>';
+      if(r() < .6) inner += '<rect x="' + xx + '" y="' + yy + '" width="7" height="9" style="fill:#ffd36a;opacity:var(--night,0)"/>';
+    }
+    return U(x, y, s, ht, "0 0 " + s + " " + ht, "", inner);
+  }
+  function lamp(x, y){ return U(x, y, 14, 40, "0 0 14 40", "", '<rect x="6" y="8" width="2" height="32" ' + F("#444") + '/><circle cx="7" cy="7" r="9" style="fill:#ffd36a;opacity:calc(var(--night,0)*.4)"/><circle cx="7" cy="7" r="3" style="fill:#ffd36a;opacity:var(--night,0)"/>'); }
+  function mount(x, y, s){ return U(x, y, s, s * .6, "0 0 100 60", "", '<polygon points="0,60 35,8 52,30 68,12 100,60" ' + F("#6f7f8a") + '/><polygon points="35,8 28,20 35,16 41,22" style="fill:#fff;opacity:.9"/><polygon points="68,12 62,24 68,20 74,26" style="fill:#fff;opacity:.9"/>'); }
+  function walker(x, y){
+    return '<span class="it walk" style="left:' + x.toFixed(0) + 'px;top:' + (y - 30).toFixed(0) + 'px;--d:' + (10 + r() * 8).toFixed(1) + 's"><svg width="14" height="30" viewBox="0 0 14 30"><rect class="leg" x="4" y="18" width="2.6" height="11" ' + F("#2c3e50") + '/><rect class="leg l2" x="7.4" y="18" width="2.6" height="11" ' + F("#2c3e50") + '/><rect x="3.5" y="8" width="7" height="12" rx="2.5" ' + F(pick(CL)) + '/><circle cx="7" cy="4.5" r="3.6" ' + F(pick(SK)) + '/></svg></span>';
+  }
+  function farmer(x, y){
+    return '<div class="field" style="left:' + (x - 50).toFixed(0) + 'px;top:' + (y - 34).toFixed(0) + 'px;width:100px;height:40px"></div>' +
+      U(x, y - 4, 36, 30, "0 0 36 30", "", '<rect x="9" y="22" width="3" height="8" ' + F("#5a4a3a") + '/><rect x="14" y="22" width="3" height="8" ' + F("#5a4a3a") + '/><path d="M8 12L18 12L21 24L10 24Z" ' + F(pick(CL)) + '/><circle cx="12" cy="8.5" r="3.4" ' + F(pick(SK)) + '/><ellipse cx="12" cy="6" rx="6" ry="1.6" ' + F("#e6c46a") + '/><g class="hoe"><rect x="18" y="13" width="14" height="1.8" ' + F("#6b4a2b") + '/><polygon points="30,12 36,13 36,21 33,21" ' + F("#8a8f94") + '/></g><circle cx="30" cy="25" r="5" style="fill:#ffd36a;opacity:calc(var(--night,0)*.5)"/>');
+  }
+  var sideX = function(){ var x = r() * w; return Math.abs(x - w / 2) < 60 ? (x < w / 2 ? x - 70 : x + 70) : x; };
+  for(var y0 = 20; y0 < h; y0 += 24) back += tuft(r() * w, y0 + r() * 20);
+  for(var y1 = 60; y1 < h - 20; y1 += 70){ var sd = r() < .5 ? -1 : 1; front += (h * .5 < y1 && y1 < h * .75 ? pine : tree)(w / 2 + sd * (50 + r() * 60), y1 + 20, 30 + r() * 20); }
+  for(var y = 70; y < h - 20; y += 40){
+    var b = y / h < .25 ? 0 : y / h < .5 ? 1 : y / h < .75 ? 2 : 3;
     for(var j = 0; j < 3; j++){
-      var x = r() * w; if(Math.abs(x - w / 2) < 30) x += 60;
-      html += '<span class="tree" style="left:' + x + 'px;top:' + (y + r() * 30) + 'px;font-size:' + Math.floor(16 + r() * 20) + 'px">' + E[Math.floor(r() * E.length)] + '</span>';
+      var x = Math.max(20, Math.min(w - 20, sideX())), q = r(), yy = y + r() * 30;
+      if(b === 0){ if(q < .4) front += tree(x, yy, 36 + r() * 26); else if(q < .55) front += palm(x, yy, 30 + r() * 16); else if(q < .75) front += tuft(x, yy); else if(q < .9) front += farmer(x, yy); else front += tree(x, yy, 24 + r() * 10); }
+      else if(b === 1){ if(q < .35) front += house(x, yy, 60 + r() * 30); else if(q < .55) front += tree(x, yy, 34 + r() * 20); else if(q < .7) front += palm(x, yy, 30 + r() * 14); else if(q < .9) front += walker(x, yy); else front += tuft(x, yy); }
+      else if(b === 2){ if(q < .4) front += pine(x, yy, 34 + r() * 26); else if(q < .55 && (x < w * .25 || x > w * .75)) back += mount(x, yy + 10, 220 + r() * 120); else if(q < .75) front += walker(x, yy); else if(q < .9) front += house(x, yy, 50 + r() * 20); else front += tuft(x, yy); }
+      else { if(q < .4) front += building(x, yy, 50 + Math.floor(r() * 30), 110 + Math.floor(r() * 90)); else if(q < .55) front += lamp(x, yy); else if(q < .75) front += walker(x, yy); else if(q < .9) front += house(x, yy, 56 + r() * 20); else front += tree(x, yy, 28 + r() * 14); }
     }
   }
-  $("scenery").innerHTML = html;
+  $("scenery").innerHTML = back + front;
 }
 
 /* ---------- Carte du monde ---------- */
@@ -861,6 +949,7 @@ $("shSel").addEventListener("change", renderMap);
 /* ---------- Démarrage : on charge AVANT toute écriture ---------- */
 loadLocal();
 restoreTheme();
+buildMts();
 renderMap();
 </script>
 </body>
