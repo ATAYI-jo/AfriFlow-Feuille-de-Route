@@ -201,6 +201,7 @@ svg.road-svg{position:absolute;top:0;left:0;width:100%;height:100%;pointer-event
       <button type="button" id="customBtn">⚙️ Personnaliser</button>
       <button type="button" id="exportBtn">Exporter sauvegarde</button>
       <button type="button" id="importTriggerBtn">Importer JSON</button>
+      <button id="logout-btn" style="background-color: #e74c3c; color: white; border: none; padding: 8px 15px; border-radius: 5px; cursor: pointer; margin-left: 5px;">Déconnexion</button>
       <input id="importFile" type="file" accept="application/json,.json" hidden>
     </div>
   </div>
@@ -1174,14 +1175,14 @@ resumeSession();
 initIntro();
 </script>
   <!-- Chargement du client Supabase -->
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
   const SUPABASE_URL = 'https://jgvwdpzevghfavmpjbqp.supabase.co';
-  const SUPABASE_ANON_KEY = 'sb_publishable_thG-VR-mBxbbYIUGw4x2rA_nnFgwyBo'; // clé Publishable
+  const SUPABASE_ANON_KEY = 'sb_publishable_JpfR1uKxMVZCJPEMMTEllg_j9pRHnwx'; // Ta clé Publishable
   
   const { createClient } = supabase;
   const _supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
+  // 1. Charger les données (pour les voir en temps réel)
   async function chargerRoadmap() {
     const { data, error } = await _supabase.from('afriflow_roadmap').select('*');
     if (error) {
@@ -1191,20 +1192,22 @@ initIntro();
     }
   }
   chargerRoadmap();
+
+  // 2. Ajouter une étape (pour enregistrer en temps réel dans le cloud)
+  async function ajouterEtapeRoadmap(titreEtape, descriptionEtape) {
+    const { data, error } = await _supabase
+      .from('afriflow_roadmap')
+      .insert([
+        { step_title: titreEtape, description: descriptionEtape, status: 'En cours' }
+      ]);
+      
+    if (error) {
+      console.error("Erreur lors de l'enregistrement :", error);
+    } else {
+      console.log("Étape enregistrée avec succès dans le cloud !");
+      chargerRoadmap(); // Recharge les données instantanément
+    }
+  }
 </script>
-  <script>
-      document.getElementById('logout-btn').addEventListener('click', async () => {
-        const { error } = await _supabase.auth.signOut();
-        if (error) {
-          console.error('Erreur lors de la déconnexion Supabase :', error.message);
-        }
-
-        localStorage.clear();
-        sessionStorage.clear();
-
-        alert('Déconnexion réussie !');
-        window.location.reload();
-      });
-    </script>
 </body>
 </html>
