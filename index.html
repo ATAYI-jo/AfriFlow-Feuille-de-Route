@@ -5,196 +5,147 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>AfriFloW – Journal de Bord & Feuille de Route</title>
 <link rel="icon" href="logo.png">
-<meta name="description" content="Feuille de route interactive d’AfriFloW en mode journal avec archives START, journal d'audit des connexions et alternance stricte des cadrans.">
+<meta name="description" content="Feuille de route interactive d’AfriFloW en mode journal avec registre START des connexions.">
 <style>
-:root {
-  --bg: #fcfbfa;
-  --card: #ffffff;
-  --ink: #1d2a22;
-  --muted: #66726a;
-  --green: #1f5d3a;
-  --amber: #d98a1b;
-  --line: #e2ded7;
-  --done: #1f5d3a;
-  --doing: #d98a1b;
-  --todo: #7b8a93;
-  --road-bg: #1a231e;
-  --road-line: #ffffff;
-  --font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
-  --journal-font: Georgia, "Times New Roman", serif;
-  box-sizing: border-box;
+:root{--bg:#fcfbfa;--card:#fff;--ink:#1d2a22;--muted:#66726a;--green:#1f5d3a;--amber:#d98a1b;--line:#e2ded7;--done:#1f5d3a;--doing:#d98a1b;--todo:#7b8a93;--road-bg:#1a231e;--road-line:#fff;--font-family:system-ui,-apple-system,"Segoe UI",sans-serif;--journal-font:Georgia,"Times New Roman",serif}
+*,*::before,*::after{box-sizing:border-box}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){color-scheme:dark;--bg:#121212;--card:#1e1e1e;--ink:#eef2ec;--muted:#9aa89f;--green:#4fa874;--amber:#f0a73a;--line:#333;--done:#4fa874;--doing:#f0a73a;--todo:#8fa0a9;--road-bg:#243029}}
+:root[data-theme="dark"]{color-scheme:dark;--bg:#121212;--card:#1e1e1e;--ink:#eef2ec;--muted:#9aa89f;--green:#4fa874;--amber:#f0a73a;--line:#333;--done:#4fa874;--doing:#f0a73a;--todo:#8fa0a9;--road-bg:#243029}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);background:var(--bg);color:var(--ink);font:16px/1.5 var(--font-family);letter-spacing:.005em;transition:background .3s,color .3s}
+
+#auth-screen{position:fixed;inset:0;background:var(--bg);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px}
+#auth-screen.off{display:none}
+.auth-box{background:var(--card);border:1px solid var(--line);padding:36px 28px;border-radius:24px;width:min(420px,100%);text-align:center;box-shadow:0 20px 40px rgba(0,0,0,.15)}
+.auth-box img{height:72px;width:72px;object-fit:contain;margin-bottom:16px;background:#fff;padding:8px;border-radius:16px;box-shadow:0 4px 12px rgba(0,0,0,.1)}
+.auth-box h2{margin:0 0 8px;font-size:1.4rem;color:var(--green)}
+.auth-box p{color:var(--muted);font-size:.9rem;margin-bottom:24px}
+.auth-box input{width:100%;padding:12px 16px;margin-bottom:14px;font-size:1rem}
+.auth-box button{width:100%;padding:12px;background:var(--green);color:#fff;border-color:var(--green);font-size:1rem}
+#authError{color:#c0392b;font-size:.85rem;min-height:1.2em;margin:-4px 0 10px}
+
+.wrap{max-width:1200px;margin:0 auto;padding:28px 22px 80px;position:relative}
+.brand{padding:30px 32px;border-radius:24px;background:linear-gradient(120deg,#123d2a 0%,#1f5d3a 58%,#28734a 100%);color:#fff;box-shadow:0 16px 38px rgba(20,60,39,.16);display:flex;align-items:center;gap:20px;flex-wrap:wrap;margin-bottom:24px}
+.logo-img{height:78px;width:78px;object-fit:contain;background:#fff;padding:7px;border-radius:18px;box-shadow:0 5px 18px rgba(0,0,0,.15)}
+h1{margin:0;font-size:clamp(1.6rem,3vw,2.2rem);line-height:1.15;color:#fff}
+h1 span{color:#f4b64f}
+.sub{margin:8px 0 0;color:rgba(255,255,255,.78)}
+
+.toolbar{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;margin:18px 0 24px;background:var(--card);border:1px solid var(--line);padding:14px 20px;border-radius:16px}
+.toolbar-actions{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+button,select,input,textarea{font:inherit;color:var(--ink);background:var(--card);border:1px solid var(--line);border-radius:10px;padding:9px 14px;transition:all .2s}
+button{cursor:pointer;font-weight:650}
+button:hover{filter:brightness(.95);transform:translateY(-1px)}
+button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,.step-card:focus-visible,.start-pill:focus-visible,.plus-card:focus-visible{outline:3px solid var(--amber);outline-offset:3px}
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}}
+button.p{background:var(--green);color:#fff;border-color:var(--green)}
+button.danger{color:#c0392b;border-color:#e2b8b3;background:transparent}
+
+.road-container{position:relative;width:100%;max-width:900px;margin:40px auto;padding:40px 0}
+svg.road-svg{position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:1;overflow:visible}
+.road-svg .road-edge{fill:none;stroke:#747a76;stroke-width:42;stroke-linecap:round;stroke-linejoin:round}
+.road-svg .road-surface{fill:none;stroke:var(--road-bg);stroke-width:34;stroke-linecap:round;stroke-linejoin:round}
+.road-svg .road-centerline{fill:none;stroke:var(--road-line);stroke-width:2;stroke-dasharray:10 12;stroke-linecap:round;opacity:.9}
+
+.road-node-special{text-align:center;margin:30px auto;z-index:3;position:relative;display:flex;justify-content:center}
+.start-pill,.plus-card{background:var(--card);border:2px dashed var(--green);border-radius:99px;padding:14px 28px;cursor:pointer;box-shadow:0 10px 30px rgba(0,0,0,.06);display:inline-flex;align-items:center;gap:12px;transition:transform .3s;text-align:left}
+.start-pill:hover,.plus-card:hover{transform:scale(1.05);background:color-mix(in srgb,var(--green) 8%,var(--card))}
+.start-pill b{color:var(--green);font-size:1.1rem}
+.plus-card{border-radius:20px;padding:20px 30px}
+.plus-card b{color:var(--green);font-size:1.15rem}
+
+.road-step{position:relative;display:flex;align-items:center;justify-content:space-between;margin:90px 0;z-index:2;width:100%}
+.road-step.item-odd{flex-direction:row}
+.road-step.item-even{flex-direction:row-reverse}
+.road-spacer{width:42%}
+.step-card{width:42%;background:var(--card);border:1px solid var(--line);border-top:4px solid var(--c);border-radius:20px;padding:22px;cursor:pointer;box-shadow:0 10px 30px rgba(0,0,0,.06);transition:transform .3s cubic-bezier(.34,1.56,.64,1),box-shadow .3s}
+.step-card:hover{transform:translateY(-6px) scale(1.02);box-shadow:0 18px 36px rgba(0,0,0,.12)}
+.step-card b{display:block;font-size:1.15rem;margin-bottom:6px}
+.step-card small{color:var(--muted);display:block;line-height:1.5;font-size:.92rem}
+.step-card .date-badge{display:inline-block;margin-top:10px;padding:4px 10px;border-radius:99px;background:color-mix(in srgb,var(--c) 15%,transparent);color:var(--c);font-weight:700;font-size:.8rem}
+.road-node-center{position:absolute;left:50%;transform:translateX(-50%);width:64px;height:64px;border-radius:50%;background:var(--c);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:1.3rem;box-shadow:0 0 0 8px var(--bg),0 8px 20px rgba(0,0,0,.2);z-index:3;transition:transform .3s}
+@media (min-width:769px){.road-step:hover .road-node-center{transform:translateX(-50%) scale(1.15) rotate(10deg)}}
+
+#car-marker{position:absolute;top:0;left:50%;width:50px;height:50px;background:#fff;border-radius:50%;box-shadow:0 5px 20px rgba(0,0,0,.3);display:flex;align-items:center;justify-content:center;z-index:10;transform:translate(-50%,-50%);border:3px solid var(--amber);will-change:top,left}
+#car-marker img{width:34px;height:34px;object-fit:contain}
+
+#ov{position:fixed;inset:0;background:rgba(0,0,0,.65);backdrop-filter:blur(6px);display:none;z-index:1000;justify-content:flex-end}
+#ov.on{display:flex}
+#pn{width:min(720px,100%);height:100%;background:var(--bg);overflow-y:auto;padding:40px 32px;box-shadow:-20px 0 50px rgba(0,0,0,.25);animation:slideIn .3s cubic-bezier(.16,1,.3,1)}
+@keyframes slideIn{from{transform:translateX(100%)}to{transform:translateX(0)}}
+
+.journal-article{font-family:var(--journal-font);background:var(--card);padding:36px;border:1px solid var(--line);border-radius:16px;box-shadow:0 10px 30px rgba(0,0,0,.04)}
+.journal-header{border-bottom:2px solid var(--green);padding-bottom:16px;margin-bottom:24px;text-align:center}
+.journal-kicker{font-family:var(--font-family);text-transform:uppercase;letter-spacing:2px;font-size:.75rem;font-weight:800;color:var(--green);margin-bottom:6px}
+.journal-title{font-size:clamp(1.8rem,3.5vw,2.4rem);line-height:1.15;margin:0 0 10px;font-weight:700}
+.journal-date{font-style:italic;color:var(--muted);font-size:.95rem}
+.journal-columns{column-count:2;column-gap:28px;text-align:justify;font-size:.98rem;line-height:1.65;margin-bottom:24px}
+.journal-img-container{margin:20px 0;text-align:center}
+.journal-img{width:100%;max-height:350px;object-fit:cover;border-radius:8px;border:1px solid var(--line);box-shadow:0 4px 12px rgba(0,0,0,.08)}
+.journal-caption{font-size:.8rem;font-style:italic;color:var(--muted);margin-top:6px;font-family:var(--font-family)}
+.journal-docs{margin-top:24px;border-top:1px solid var(--line);padding-top:16px;font-family:var(--font-family)}
+.journal-docs h4,.logs h4{margin:0 0 12px;font-size:1rem;color:var(--green);font-family:var(--font-family)}
+.fm{display:flex;flex-direction:column;gap:8px;margin-bottom:16px;font-family:var(--font-family)}
+.fm label{font-size:.85rem;color:var(--muted);font-weight:700}
+.fm input,.fm textarea,.fm select{width:100%;padding:12px;border-radius:12px}
+.file-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 0;border-bottom:1px solid var(--line);font-size:.9rem}
+.file-row a{color:var(--green);font-weight:650;text-decoration:none;overflow-wrap:anywhere}
+.file-row a:hover{text-decoration:underline}
+.lock-banner{background:color-mix(in srgb,var(--green) 15%,var(--card));border:1px solid var(--green);padding:12px 16px;border-radius:12px;margin-bottom:20px;display:flex;align-items:center;justify-content:space-between;gap:12px;font-family:var(--font-family);font-size:.9rem}
+
+#customizer-modal{position:fixed;inset:0;background:rgba(0,0,0,.6);backdrop-filter:blur(5px);display:none;z-index:1000;align-items:center;justify-content:center;padding:20px}
+#customizer-modal.on{display:flex}
+.customizer-box{background:var(--card);border:1px solid var(--line);padding:28px;border-radius:24px;width:min(480px,100%);box-shadow:0 20px 50px rgba(0,0,0,.2);max-height:90vh;overflow-y:auto}
+
+@media (max-width:768px){
+  .journal-columns{column-count:1}
+  .road-step,.road-step.item-odd,.road-step.item-even{flex-direction:column;align-items:center;gap:24px;margin:60px 0}
+  .road-spacer{display:none}
+  .step-card{width:100%;text-align:center}
+  .road-node-center{position:relative;left:auto;transform:none;order:-1}
+  .road-container{padding-left:8px;padding-right:8px}
+  svg.road-svg{opacity:.55}
+  #car-marker{width:42px;height:42px}
+  #car-marker img{width:28px;height:28px}
+  #pn{padding:20px 14px}
+  .journal-article{padding:20px}
 }
-
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
-    color-scheme: dark;
-    --bg: #121212;
-    --card: #1e1e1e;
-    --ink: #eef2ec;
-    --muted: #9aa89f;
-    --green: #4fa874;
-    --amber: #f0a73a;
-    --line: #333333;
-    --done: #4fa874;
-    --doing: #f0a73a;
-    --todo: #8fa0a9;
-    --road-bg: #243029;
-  }
-}
-:root[data-theme="dark"] {
-  color-scheme: dark;
-  --bg: #121212;
-  --card: #1e1e1e;
-  --ink: #eef2ec;
-  --muted: #9aa89f;
-  --green: #4fa874;
-  --amber: #f0a73a;
-  --line: #333333;
-  --done: #4fa874;
-  --doing: #f0a73a;
-  --todo: #8fa0a9;
-  --road-bg: #243029;
-}
-
-/* Écran d'authentification global initial */
-#auth-screen {
-  position: fixed; inset: 0; background: var(--bg); z-index: 9999;
-  display: flex; align-items: center; justify-content: center; padding: 20px;
-}
-#auth-screen.off { display: none; }
-.auth-box {
-  background: var(--card); border: 1px solid var(--line); padding: 36px 28px;
-  border-radius: 24px; width: min(420px, 100%); text-align: center;
-  box-shadow: 0 20px 40px rgba(0,0,0,0.15);
-}
-.auth-box img { height: 72px; width: 72px; object-fit: contain; margin-bottom: 16px; background: #fff; padding: 8px; border-radius: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
-.auth-box h2 { margin: 0 0 8px; font-size: 1.4rem; color: var(--green); }
-.auth-box p { color: var(--muted); font-size: 0.9rem; margin-bottom: 24px; }
-.auth-box input { width: 100%; padding: 12px 16px; margin-bottom: 14px; border-radius: 12px; border: 1px solid var(--line); background: var(--bg); color: var(--ink); font-size: 1rem; box-sizing: border-box; }
-.auth-box button { width: 100%; padding: 12px; border-radius: 12px; background: var(--green); color: #fff; border: none; font-weight: 650; font-size: 1rem; cursor: pointer; }
-
-body { margin: 0; background: var(--bg); color: var(--ink); font: 16px/1.5 var(--font-family); letter-spacing: .005em; transition: background 0.3s, color 0.3s; }
-.wrap { max-width: 1200px; margin: 0 auto; padding: 28px 22px 80px; position: relative; }
-
-/* En-tête */
-.brand { position: relative; padding: 30px 32px; border-radius: 24px; background: linear-gradient(120deg,#123d2a 0%,#1f5d3a 58%,#28734a 100%); color: #fff; box-shadow: 0 16px 38px rgba(20,60,39,.16); display: flex; align-items: center; gap: 20px; flex-wrap: wrap; margin-bottom: 24px; }
-.logo-img { height: 78px; width: 78px; object-fit: contain; background: #fff; padding: 7px; border-radius: 18px; box-shadow: 0 5px 18px rgba(0,0,0,.15); }
-h1 { margin: 0; font-size: clamp(1.6rem, 3vw, 2.2rem); line-height: 1.15; color: #fff; }
-h1 span { color: #f4b64f; }
-.sub { margin: 8px 0 0; color: rgba(255,255,255,.78); }
-
-/* Barre d'outils et Boutons */
-.toolbar { display: flex; align-items: center; justify-content: space-between; gap: 14px; flex-wrap: wrap; margin: 18px 0 24px; background: var(--card); border: 1px solid var(--line); padding: 14px 20px; border-radius: 16px; }
-.toolbar-actions { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
-button, select, input, textarea { font: inherit; color: var(--ink); background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 9px 14px; transition: all .2s; }
-button { cursor: pointer; font-weight: 650; }
-button:hover { filter: brightness(0.95); transform: translateY(-1px); }
-button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible, .step-card:focus-visible { outline: 3px solid var(--amber); outline-offset: 3px; }
-@media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
-}
-button.p { background: var(--green); color: #fff; border-color: var(--green); }
-button.danger { color: #c0392b; border-color: #e2b8b3; background: transparent; }
-
-/* ================= ROADMAP ROUTE DESIGN ================= */
-.road-container { position: relative; width: 100%; max-width: 900px; margin: 40px auto; padding: 40px 0; }
-svg.road-svg { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 1; overflow: visible; }
-.road-svg .road-edge { fill: none; stroke: #747a76; stroke-width: 42; stroke-linecap: round; stroke-linejoin: round; }
-.road-svg .road-surface { fill: none; stroke: var(--road-bg); stroke-width: 34; stroke-linecap: round; stroke-linejoin: round; }
-.road-svg .road-centerline { fill: none; stroke: var(--road-line); stroke-width: 2; stroke-dasharray: 10 12; stroke-linecap: round; opacity: .9; }
-
-/* Nœud START & Fin + */
-.road-node-special { text-align: center; margin: 30px auto; z-index: 3; position: relative; display: flex; justify-content: center; }
-.start-pill, .plus-card { background: var(--card); border: 2px dashed var(--green); border-radius: 99px; padding: 14px 28px; cursor: pointer; box-shadow: 0 10px 30px rgba(0,0,0,0.06); display: inline-flex; align-items: center; gap: 12px; transition: transform 0.3s; }
-.start-pill:hover, .plus-card:hover { transform: scale(1.05); background: color-mix(in srgb, var(--green) 8%, var(--card)); }
-.start-pill b { color: var(--green); font-size: 1.1rem; }
-.plus-card { border-radius: 20px; padding: 20px 30px; }
-.plus-card b { color: var(--green); font-size: 1.15rem; }
-
-/* ALTERNANCE STRICTE DES CADRANS : Étape impaire à GAUCHE, paire à DROITE */
-.road-step { position: relative; display: flex; align-items: center; justify-content: space-between; margin: 90px 0; z-index: 2; width: 100%; }
-.road-step.item-odd { flex-direction: row; }
-.road-step.item-even { flex-direction: row-reverse; }
-
-.step-card { width: 42%; background: var(--card); border: 1px solid var(--line); border-top: 4px solid var(--c); border-radius: 20px; padding: 22px; cursor: pointer; box-shadow: 0 10px 30px rgba(0,0,0,0.06); transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.3s; }
-.step-card:hover { transform: translateY(-6px) scale(1.02); box-shadow: 0 18px 36px rgba(0,0,0,0.12); }
-.step-card b { display: block; font-size: 1.15rem; margin-bottom: 6px; color: var(--ink); }
-.step-card small { color: var(--muted); display: block; line-height: 1.5; font-size: 0.92rem; }
-.step-card .date-badge { display: inline-block; margin-top: 10px; padding: 4px 10px; border-radius: 99px; background: color-mix(in srgb, var(--c) 15%, transparent); color: var(--c); font-weight: 700; font-size: 0.8rem; }
-
-/* Pastille centrale de la route */
-.road-node-center { position: absolute; left: 50%; transform: translateX(-50%); width: 64px; height: 64px; border-radius: 50%; background: var(--c); display: flex; align-items: center; justify-content: center; color: #fff; font-weight: 800; font-size: 1.3rem; box-shadow: 0 0 0 8px var(--bg), 0 8px 20px rgba(0,0,0,0.2); z-index: 3; transition: transform 0.3s; }
-.road-step:hover .road-node-center { transform: translateX(-50%) scale(1.15) rotate(10deg); }
-
-/* Véhicule animé sur la route */
-#car-marker { position: absolute; width: 50px; height: 50px; background: #fff; border-radius: 50%; box-shadow: 0 5px 20px rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: center; z-index: 10; transform: translate(-50%, -50%); border: 3px solid var(--amber); will-change: top, left; }
-#car-marker img { width: 34px; height: 34px; object-fit: contain; }
-
-/* ================= TIROIR / MODAL STYLE JOURNAL ================= */
-#ov { position: fixed; inset: 0; background: rgba(0,0,0,0.65); backdrop-filter: blur(6px); display: none; z-index: 1000; justify-content: flex-end; }
-#ov.on { display: flex; }
-#pn { width: min(720px, 100%); height: 100%; background: var(--bg); overflow-y: auto; padding: 40px 32px; box-shadow: -20px 0 50px rgba(0,0,0,0.25); animation: slideIn 0.3s cubic-bezier(0.16, 1, 0.3, 1); }
-@keyframes slideIn { from { transform: translateX(100%); } to { transform: translateX(0); } }
-
-/* Mise en page style Journal (Le Monde / Presse) */
-.journal-article { font-family: var(--journal-font); color: var(--ink); background: var(--card); padding: 36px; border: 1px solid var(--line); border-radius: 16px; box-shadow: 0 10px 30px rgba(0,0,0,0.04); }
-.journal-header { border-bottom: 2px solid var(--green); padding-bottom: 16px; margin-bottom: 24px; text-align: center; }
-.journal-kicker { font-family: var(--font-family); text-transform: uppercase; letter-spacing: 2px; font-size: 0.75rem; font-weight: 800; color: var(--green); margin-bottom: 6px; }
-.journal-title { font-size: clamp(1.8rem, 3.5vw, 2.4rem); line-height: 1.15; margin: 0 0 10px; font-weight: 700; }
-.journal-date { font-style: italic; color: var(--muted); font-size: 0.95rem; }
-
-.journal-columns { column-count: 2; column-gap: 28px; text-align: justify; font-size: 0.98rem; line-height: 1.65; margin-bottom: 24px; }
-@media(max-width: 600px) { .journal-columns { column-count: 1; } }
-
-.journal-img-container { margin: 20px 0; text-align: center; }
-.journal-img { width: 100%; max-height: 350px; object-fit: cover; border-radius: 8px; border: 1px solid var(--line); box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
-.journal-caption { font-size: 0.8rem; font-style: italic; color: var(--muted); margin-top: 6px; text-align: center; font-family: var(--font-family); }
-
-.journal-docs { margin-top: 24px; border-top: 1px solid var(--line); padding-top: 16px; font-family: var(--font-family); }
-.journal-docs h4 { margin: 0 0 12px; font-size: 1rem; color: var(--green); }
-
-.fm { display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px; font-family: var(--font-family); }
-.fm label { font-size: 0.85rem; color: var(--muted); font-weight: 700; }
-.fm input, .fm textarea, .fm select { width: 100%; padding: 12px; border-radius: 12px; background: var(--card); color: var(--ink); border: 1px solid var(--line); font-family: inherit; }
-.file-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--line); font-size: 0.9rem; }
-.file-row a { color: var(--green); font-weight: 650; text-decoration: none; }
-.file-row a:hover { text-decoration: underline; }
-
-.lock-banner { background: color-mix(in srgb, var(--green) 15%, var(--card)); border: 1px solid var(--green); padding: 12px 16px; border-radius: 12px; margin-bottom: 20px; display: flex; align-items: center; justify-content: space-between; gap: 12px; font-family: var(--font-family); font-size: 0.9rem; }
-
-/* Modal Personnalisation Style */
-#customizer-modal { position: fixed; inset: 0; background: rgba(0,0,0,0.6); backdrop-filter: blur(5px); display: none; z-index: 1000; align-items: center; justify-content: center; padding: 20px; }
-#customizer-modal.on { display: flex; }
-.customizer-box { background: var(--card); border: 1px solid var(--line); padding: 28px; border-radius: 24px; width: min(480px, 100%); box-shadow: 0 20px 50px rgba(0,0,0,0.2); max-height: 90vh; overflow-y: auto; }
-
-@media(max-width: 768px) {
-  .road-step, .road-step.item-odd, .road-step.item-even { flex-direction: column; align-items: center; gap: 24px; }
-  .step-card { width: 100%; text-align: center; }
-  .road-node-center { position: relative; left: auto; transform: none; margin-bottom: -10px; }
-  .road-container { padding-left: 8px; padding-right: 8px; }
-  svg.road-svg { opacity: .55; }
-  #car-marker { width: 42px; height: 42px; }
-  #car-marker img { width: 28px; height: 28px; }
-}
+.road-container{background:linear-gradient(color-mix(in srgb,var(--green) 12%,var(--bg)),color-mix(in srgb,var(--green) 28%,var(--bg)));border-radius:28px}
+#scenery{position:absolute;inset:0;z-index:0;pointer-events:none;overflow:hidden;border-radius:28px}
+.tree{position:absolute;line-height:1;transform:translate(-50%,-50%);user-select:none}
+.border-sign{width:max-content;max-width:90%;margin:-30px auto;padding:8px 18px;background:var(--card);border:2px solid var(--amber);border-radius:12px;font-weight:700;font-size:.9rem;position:relative;z-index:3;text-align:center}
+.map-panel{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:18px;margin:0 0 24px}
+.map-head{display:flex;gap:10px;flex-wrap:wrap;align-items:center;justify-content:space-between;margin-bottom:10px}
+#flowMap{width:100%;height:auto;border-radius:14px;display:block}
+.country{cursor:pointer;transition:opacity .3s}
+.country:hover path{filter:brightness(1.2)}
+.country.dim,.rt.dim{opacity:.25}
+.country{fill:color-mix(in srgb,var(--muted) 22%,var(--card));stroke:var(--card);stroke-width:.5}
+.country:hover{filter:brightness(1.2);stroke:var(--ink)}
+.st-actif{fill:var(--green)}.st-prosp{fill:var(--amber)}.st-prevu{fill:#4a90c2}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:.85rem;margin:8px 0}.legend i{display:inline-block;width:12px;height:12px;border-radius:3px;margin-right:6px;vertical-align:-1px}
+.chip{padding:3px 10px;margin:2px;font-size:.8rem;border-radius:99px}
+.prow{display:grid;grid-template-columns:2fr 2fr 1.4fr auto;gap:6px;margin-bottom:6px}
+@media (max-width:768px){.prow{grid-template-columns:1fr 1fr auto}.prow input:nth-child(3){grid-column:1/3}}
 </style>
 </head>
 <body>
 
-<!-- Écran d'authentification global initial : email et mot de passe dynamique -->
-<div id="auth-screen">
+<div id="auth-screen" role="dialog" aria-modal="true" aria-labelledby="authTitle">
   <div class="auth-box">
-    <img src="logo.png" alt="AfriFloW" onerror="this.src='https://placehold.co/72x72/1f5d3a/ffffff?text=🔒'">
-    <h2>Accès Sécurisé AfriFloW</h2>
-    <p id="auth-subtitle">Veuillez entrer votre adresse email et le mot de passe requis.</p>
-    <input type="email" id="authEmailInput" placeholder="Votre adresse email (ex: contact@afriflow.com)">
-    <input type="password" id="authPasswordInput" placeholder="Mot de passe">
-    <button type="button" onclick="verifyGlobalAuth()">Se connecter</button>
+    <img src="logo.png" alt="AfriFloW" onerror="this.onerror=null;this.src='https://placehold.co/72x72/1f5d3a/ffffff?text=A'">
+    <h2 id="authTitle">Accès AfriFloW</h2>
+    <p>Entrez votre adresse email et le mot de passe d’accès.</p>
+    <input type="email" id="authEmailInput" placeholder="Votre adresse email" autocomplete="email">
+    <input type="password" id="authPasswordInput" placeholder="Mot de passe" autocomplete="current-password">
+    <div id="authError" role="alert"></div>
+    <button type="button" id="authBtn">Se connecter</button>
   </div>
 </div>
 
 <div class="wrap">
   <div class="brand">
-    <img class="logo-img" src="logo.png" alt="Logo AfriFloW" onerror="this.src='https://placehold.co/78x78/ffffff/1f5d3a?text=A'">
+    <img class="logo-img" src="logo.png" alt="Logo AfriFloW" onerror="this.onerror=null;this.src='https://placehold.co/78x78/ffffff/1f5d3a?text=A'">
     <div>
       <h1>Afri<span>FloW</span> · Journal de Bord & Feuille de Route</h1>
       <p class="sub">Cliquez sur un cadran pour consulter les articles détaillés au format journal.</p>
@@ -202,327 +153,297 @@ svg.road-svg { position: absolute; top: 0; left: 0; width: 100%; height: 100%; p
   </div>
 
   <div class="toolbar">
-    <div id="editStatusIndicator">🔓 <strong>Connecté</strong> — Modification directe active</div>
+    <div id="editStatusIndicator"></div>
     <div class="toolbar-actions">
-      <button type="button" onclick="openCustomizer()">⚙️ Personnaliser</button>
-      <button type="button" id="exportBtn">Exporter Sauvegarde</button>
+      <button type="button" id="customBtn">⚙️ Personnaliser</button>
+      <button type="button" id="exportBtn">Exporter sauvegarde</button>
       <button type="button" id="importTriggerBtn">Importer JSON</button>
       <input id="importFile" type="file" accept="application/json,.json" hidden>
     </div>
   </div>
 
-  <!-- ROUTE SINUEUSE INTERACTIVE AVEC START AU DÉBUT (SANS CADRAN SUPERFLU) ET + À LA FIN -->
+  <section class="map-panel" aria-label="Carte du monde des marchés">
+    <div class="map-head"><b>🌍 Carte du monde · cliquez sur un pays pour renseigner sa situation</b>
+      <span style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+        <select id="cSel" aria-label="Choisir un pays"><option value="">Choisir un pays…</option></select>
+        <label>Actionnaire : <select id="shSel"><option value="">Tous</option></select></label>
+      </span></div>
+    <div class="legend"><span><i style="background:var(--green)"></i>Nous commercialisons déjà</span><span><i style="background:var(--amber)"></i>En prospection</span><span><i style="background:#4a90c2"></i>Prévu</span><span><i style="background:color-mix(in srgb,var(--muted) 22%,var(--card))"></i>Aucune activité</span></div>
+    <div style="position:relative">
+      <svg id="flowMap" viewBox="0 0 960 500" role="img" aria-label="Carte du monde" style="touch-action:pan-y pinch-zoom"></svg>
+      <div style="position:absolute;right:8px;top:8px;display:flex;flex-direction:column;gap:4px">
+        <button type="button" id="zIn" aria-label="Zoom avant">+</button><button type="button" id="zOut" aria-label="Zoom arrière">−</button><button type="button" id="zRst" aria-label="Réinitialiser">⟲</button>
+      </div>
+    </div>
+    <div id="shSummary" style="font-size:.9rem;color:var(--muted);margin-top:8px"></div>
+  </section>
+
   <div class="road-container" id="roadContainer">
-    <div id="car-marker"><img src="logo.png" alt="Car" onerror="this.src='https://placehold.co/34x34/1f5d3a/ffffff?text=🚗'"></div>
-    <svg class="road-svg" id="roadSvg"></svg>
-    
-    <!-- POINT DE DÉPART START / HISTORIQUE DES CONNEXIONS ET ACTIONS -->
+    <div id="scenery"></div><svg class="road-svg" id="roadSvg" aria-hidden="true"></svg>
+    <div id="car-marker" aria-hidden="true"><img src="logo.png" alt="" onerror="this.onerror=null;this.src='https://placehold.co/34x34/1f5d3a/ffffff?text=A'"></div>
+
     <div class="road-node-special">
-      <div class="start-pill" onclick="openStartArchives()">
-        <span style="font-size: 1.5rem;">📦</span>
-        <b>START · Registre des Connexions & Actions</b>
+      <div class="start-pill" id="startBtn" role="button" tabindex="0">
+        <span style="font-size:1.5rem">📦</span>
+        <b>START · Registre des connexions & actions</b>
       </div>
     </div>
 
     <div id="roadStepsList"></div>
 
-    <!-- POINT DE FIN + POUR AJOUTER DE NOUVELLES ÉTAPES -->
-    <div class="road-node-special" id="plusNodeContainer" style="margin-top: 60px;">
-      <div class="plus-card" onclick="openEditor(null)">
-        <span style="font-size: 2rem; color: var(--green);">➕</span>
+    <div class="road-node-special" style="margin-top:60px">
+      <div class="plus-card" id="addBtn" role="button" tabindex="0">
+        <span style="font-size:2rem">➕</span>
         <div>
           <b>Ajouter un nouveau chapitre / étape</b>
-          <small style="color:var(--muted); display:block;">Étendez la route de la croissance à l'infini.</small>
+          <small style="color:var(--muted);display:block">Étendez la route de la croissance.</small>
         </div>
       </div>
     </div>
   </div>
 </div>
 
-<!-- TIROIR / ARTICLE DE JOURNAL -->
-<div id="ov" onclick="if(event.target === this) closeDrawer();"><div id="pn"></div></div>
+<div id="ov"><div id="pn" role="dialog" aria-modal="true"></div></div>
 
-<!-- MODAL PERSONNALISATION STYLE -->
 <div id="customizer-modal">
   <div class="customizer-box">
-    <h2>Personnaliser l'apparence</h2>
-    <p style="color:var(--muted); font-size:0.9rem;">Ajustez les couleurs et la police de votre interface.</p>
-    <div class="fm"><label>Couleur Principale (Vert)</label><input type="color" id="picker-green" value="#1f5d3a" onchange="applyCustomTheme()"></div>
-    <div class="fm"><label>Couleur Secondaire (Ambre)</label><input type="color" id="picker-amber" value="#d98a1b" onchange="applyCustomTheme()"></div>
-    <div class="fm"><label>Police d'écriture générale</label>
-      <select id="picker-font" onchange="applyCustomTheme()">
-        <option value="system-ui, -apple-system, sans-serif">Moderne Système</option>
+    <h2>Personnaliser l’apparence</h2>
+    <p style="color:var(--muted);font-size:.9rem">Ajustez les couleurs et la police de l’interface.</p>
+    <div class="fm"><label for="picker-green">Couleur principale</label><input type="color" id="picker-green" value="#1f5d3a"></div>
+    <div class="fm"><label for="picker-amber">Couleur secondaire</label><input type="color" id="picker-amber" value="#d98a1b"></div>
+    <div class="fm"><label for="picker-font">Police générale</label>
+      <select id="picker-font">
+        <option value="system-ui, -apple-system, sans-serif">Moderne système</option>
         <option value="'Segoe UI', Tahoma, Geneva, Verdana, sans-serif">Segoe UI</option>
         <option value="'Helvetica Neue', Arial, sans-serif">Helvetica / Arial</option>
       </select>
     </div>
-    <div style="margin-top:20px; display:flex; gap:10px;">
-      <button type="button" class="p" onclick="closeCustomizer()" style="flex:1;">Fermer</button>
+    <div style="margin-top:20px;display:flex;gap:10px">
+      <button type="button" class="p" id="closeCustomBtn" style="flex:1">Fermer</button>
     </div>
   </div>
 </div>
 
 <script>
-/* Détermination dynamique de l'année en cours et du mot de passe attendu (ex: AFRIFLOW2026) */
-var currentYear = new Date().getFullYear();
-var expectedPassword = "AFRIFLOW" + currentYear;
-
-window.addEventListener('DOMContentLoaded', function() {
-  var sub = document.getElementById('auth-subtitle');
-  if(sub) {
-    sub.textContent = "Entrez votre email et le mot de passe requis (ex: " + expectedPassword + ").";
-  }
-});
+var STORAGE_KEY = "afriflow_journal_v8", THEME_KEY = "afriflow_theme_v1", MAX_LOGS = 300;
 
 var DEFAULT_ITEMS = [
-  {status: "done", date: "Juin–juil. 2026", title: "1. Identité de marque", desc: "Création du logo, animation et visuels de la marque AfriFloW.", details: "Mise en place de l'identité visuelle complète, des supports de communication et validation de la charte graphique fondatrice. Les premiers retours de terrain confirment l'adéquation parfaite de notre image avec les attentes du marché togolais et ouest-africain."},
-  {status: "done", date: "Juin–août 2026", title: "2. Structure et gouvernance", desc: "Organisation des fonctions, règlement intérieur et réunions hebdomadaires.", details: "Définition rigoureuse des rôles des associés, structuration de la gouvernance exécutive et mise en place des indicateurs clés de performance (KPI) pour le suivi opérationnel."},
-  {status: "doing", date: "Sept. 2026", title: "3. Prospection et Marché togolais", desc: "Premiers tests concluants et accueil favorable du goût du produit.", details: "Analyse approfondie des retours clients, dégustations publiques réussies et adaptation ciblée de l'emballage pour maximiser l'attractivité en rayon."},
-  {status: "todo", date: "Q4 2026", title: "4. Référencement grandes surfaces", desc: "Constitution des dossiers fournisseurs pour les enseignes partenaires.", details: "Préparation active des catalogues produits, mise aux normes des packagings et négociations commerciales avancées pour un référencement national."},
-  {status: "todo", date: "2027", title: "5. Expansion régionale & Boutique en ligne", desc: "Lancement de la plateforme e-commerce et ouverture nouveaux marchés.", details: "Déploiement des passerelles de paiement mobile, optimisation de la logistique d'exportation transfrontalière et campagnes marketing régionales."}
+  {country:"tg",status:"done",date:"Juin–juil. 2026",title:"1. Identité de marque",desc:"Création du logo, animation et visuels de la marque AfriFloW.",details:"Mise en place de l'identité visuelle complète, des supports de communication et validation de la charte graphique fondatrice. Les premiers retours de terrain confirment l'adéquation de notre image avec les attentes du marché togolais et ouest-africain."},
+  {country:"tg",status:"done",date:"Juin–août 2026",title:"2. Structure et gouvernance",desc:"Organisation des fonctions, règlement intérieur et réunions hebdomadaires.",details:"Définition des rôles des associés, structuration de la gouvernance exécutive et mise en place des indicateurs clés de performance (KPI) pour le suivi opérationnel."},
+  {country:"tg",status:"doing",date:"Sept. 2026",title:"3. Prospection et marché togolais",desc:"Premiers tests concluants et accueil favorable du goût du produit.",details:"Analyse approfondie des retours clients, dégustations publiques réussies et adaptation ciblée de l'emballage pour maximiser l'attractivité en rayon."},
+  {country:"bf",status:"todo",date:"Q4 2026",title:"4. Référencement grandes surfaces",desc:"Constitution des dossiers fournisseurs pour les enseignes partenaires.",details:"Préparation des catalogues produits, mise aux normes des packagings et négociations commerciales avancées pour un référencement national."},
+  {country:"sn",status:"todo",date:"2027",title:"5. Expansion régionale & boutique en ligne",desc:"Lancement de la plateforme e-commerce et ouverture de nouveaux marchés.",details:"Déploiement des passerelles de paiement mobile, optimisation de la logistique d'exportation transfrontalière et campagnes marketing régionales."}
 ];
 
 var START_ARCHIVES = {
-  title: "START · Registre d'Audit & Historique des Visites",
-  date: "Suivi des Connexions & Actions",
-  desc: "Historique complet de toutes les personnes connectées à la plateforme avec horodatage et actions concrètes réalisées.",
-  logs: [
-    { email: "admin@afriflow.com", date: "19/10/2026 à 01:45", action: "Connexion initiale & Vérification de la feuille de route." }
-  ],
-  docs: [
-    { name: "Note de cadrage stratégique globale (Dropbox)", url: "https://www.dropbox.com" }
-  ]
+  title: "START · Registre d'audit & historique des visites",
+  date: "Suivi des connexions & actions",
+  desc: "Historique des connexions et actions effectuées depuis ce navigateur, avec horodatage.",
+  logs: [],
+  docs: [{name:"Note de cadrage stratégique globale (Dropbox)", url:"https://www.dropbox.com"}]
 };
 
 var ITEMS = [];
-var ST = { done: ["Réalisé", "var(--done)"], doing: ["En cours", "var(--doing)"], todo: ["À venir", "var(--todo)"] };
-var STORAGE_KEY = "afriflow_journal_v7";
+var ST = {done:["Réalisé","var(--done)"], doing:["En cours","var(--doing)"], todo:["À venir","var(--todo)"]};
 var loggedUserEmail = "";
+var roadPath = null, roadLength = 0, scrollTicking = false;
 
-function $(i) { return document.getElementById(i); }
+function $(i){ return document.getElementById(i); }
+function esc(s){ return String(s == null ? "" : s).replace(/[&<>"']/g, function(c){ return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]; }); }
+function safeUrl(u){ try { var x = new URL(u); return (x.protocol === "https:" || x.protocol === "http:") ? x.href : "#"; } catch(e){ return "#"; } }
+function safeImg(s){ return (typeof s === "string" && /^data:image\/(png|jpe?g|gif|webp);base64,/.test(s)) ? s : ""; }
+function nowStr(){ return new Date().toLocaleString("fr-FR", {dateStyle:"short", timeStyle:"short"}); }
+function clone(o){ return JSON.parse(JSON.stringify(o)); }
 
-function loadLocal() {
+/* ---------- Données ---------- */
+function normalize(){
+  if(!Array.isArray(ITEMS)) ITEMS = [];
+  ITEMS = ITEMS.filter(function(i){ return i && typeof i === "object"; });
+  ITEMS.forEach(function(i){
+    if(!ST[i.status]) i.status = "todo";
+    if(!Array.isArray(i.docs)) i.docs = [];
+    if(typeof i.image !== "string") i.image = "";
+  });
+  if(!Array.isArray(START_ARCHIVES.logs)) START_ARCHIVES.logs = [];
+  if(!Array.isArray(START_ARCHIVES.docs)) START_ARCHIVES.docs = [];
+  if(START_ARCHIVES.logs.length > MAX_LOGS) START_ARCHIVES.logs.length = MAX_LOGS;
+}
+function loadLocal(){
+  ITEMS = clone(DEFAULT_ITEMS);
   try {
     var v = localStorage.getItem(STORAGE_KEY);
-    if(v) {
+    if(v){
       var data = JSON.parse(v);
-      ITEMS = data.items || DEFAULT_ITEMS;
-      if(data.archives) START_ARCHIVES = data.archives;
-    } else {
-      ITEMS = JSON.parse(JSON.stringify(DEFAULT_ITEMS));
+      if(Array.isArray(data.items)) ITEMS = data.items;
+      MAP = mergeMap(data.map);
+      if(data.archives && typeof data.archives === "object") START_ARCHIVES = Object.assign(START_ARCHIVES, data.archives);
     }
-  } catch(e) {
-    ITEMS = JSON.parse(JSON.stringify(DEFAULT_ITEMS));
-  }
-  ITEMS.forEach(function(i){ if(!i.docs) i.docs = []; if(i.image === undefined) i.image = ""; });
-  if(!START_ARCHIVES.logs) START_ARCHIVES.logs = [];
-  if(!START_ARCHIVES.docs) START_ARCHIVES.docs = [];
-}
-
-function saveLocal() {
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify({items: ITEMS, archives: START_ARCHIVES}));
   } catch(e){}
+  normalize();
 }
-
-/* Authentification globale avec enregistrement dans l'historique (START) */
-function verifyGlobalAuth() {
-  var email = $("authEmailInput").value.trim();
-  var password = $("authPasswordInput").value.trim();
-  var emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
-  if(!emailRegex.test(email)) {
-    alert("Veuillez entrer une adresse email valide.");
-    return;
-  }
-
-  if(password === expectedPassword) {
-    loggedUserEmail = email;
-    var now = new Date();
-    var dateStr = now.toLocaleDateString() + " à " + now.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
-    
-    START_ARCHIVES.logs.unshift({
-      email: email,
-      date: dateStr,
-      action: "Connexion réussie et consultation de la feuille de route."
-    });
-    saveLocal();
-
-    $("auth-screen").classList.add("off");
-    loadLocal();
-    renderRoadmap();
-  } else {
-    alert("Mot de passe incorrect. Pour l'année " + currentYear + ", le mot de passe attendu est " + expectedPassword);
-  }
+function saveLocal(){
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify({items:ITEMS, archives:START_ARCHIVES, map:MAP})); return true; }
+  catch(e){ alert("Sauvegarde impossible : l'espace de stockage du navigateur est plein (images trop lourdes ?). Exportez une sauvegarde JSON."); return false; }
 }
-
-function recordUserAction(actionText) {
+function recordUserAction(text){
   if(!loggedUserEmail) return;
-  var now = new Date();
-  var dateStr = now.toLocaleDateString() + " à " + now.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
-  START_ARCHIVES.logs.unshift({
-    email: loggedUserEmail,
-    date: dateStr,
-    action: actionText
-  });
+  START_ARCHIVES.logs.unshift({email:loggedUserEmail, date:nowStr(), action:text});
+  if(START_ARCHIVES.logs.length > MAX_LOGS) START_ARCHIVES.logs.length = MAX_LOGS;
   saveLocal();
 }
 
-function renderRoadmap() {
+/* ---------- Authentification (simple barrière d'interface, voir remarque) ---------- */
+function verifyGlobalAuth(){
+  var email = $("authEmailInput").value.trim(), pwd = $("authPasswordInput").value.trim();
+  var err = $("authError");
+  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){ err.textContent = "Adresse email invalide."; return; }
+  if(pwd !== "AFRIFLOW" + new Date().getFullYear()){ err.textContent = "Mot de passe incorrect."; return; }
+  err.textContent = "";
+  loggedUserEmail = email;
+  recordUserAction("Connexion réussie et consultation de la feuille de route.");
+  $("auth-screen").classList.add("off");
+  $("editStatusIndicator").textContent = "🔓 Connecté : " + email + " — modification directe active";
+  renderRoadmap();
+}
+
+/* ---------- Route ---------- */
+function renderRoadmap(){
   var container = $("roadStepsList");
   container.textContent = "";
-
-  ITEMS.forEach(function(it, k) {
-    var statusInfo = ST[it.status] || ST.todo;
+  ITEMS.forEach(function(it, k){
+    var info = ST[it.status] || ST.todo;
     var stepEl = document.createElement("div");
-    /* k=0 -> index 0 (impair visuel 1 -> item-odd / gauche), k=1 -> index 1 (pair visuel 2 -> item-even / droite) */
-    var isOdd = (k % 2 === 0);
-    stepEl.className = "road-step " + (isOdd ? "item-odd" : "item-even");
-    stepEl.style.setProperty("--c", statusInfo[1]);
+    var pc = k && ITEMS[k - 1].country;
+    if(it.country && pc && pc !== it.country){
+      var bs = document.createElement("div"); bs.className = "border-sign";
+      bs.textContent = "🛂 Frontière : " + CN(pc) + " → " + CN(it.country);
+      container.appendChild(bs);
+    }
+    var left = (k % 2 === 0);
+    stepEl.className = "road-step " + (left ? "item-odd" : "item-even");
+    stepEl.style.setProperty("--c", info[1]);
 
     var card = document.createElement("div");
     card.className = "step-card";
-    card.style.setProperty("--c", statusInfo[1]);
-    card.innerHTML = "<b>" + (it.title || "Étape") + "</b>" +
-                     "<small>" + (it.desc || "") + "</small>" +
-                     (it.date ? '<div class="date-badge">' + it.date + " · " + statusInfo[0] + '</div>' : '');
-    card.onclick = function() { 
-      recordUserAction("Consultation du chapitre journal : " + (it.title || ('Chapitre ' + (k+1))));
-      openJournalView(k); 
-    };
-
-    var centerNode = document.createElement("div");
-    centerNode.className = "road-node-center";
-    centerNode.style.setProperty("--c", statusInfo[1]);
-    centerNode.textContent = (k + 1);
-
-    var emptySpace = document.createElement("div");
-    emptySpace.style.width = "42%";
-
-    if(isOdd) {
-      stepEl.appendChild(card);
-      stepEl.appendChild(centerNode);
-      stepEl.appendChild(emptySpace);
-    } else {
-      stepEl.appendChild(emptySpace);
-      stepEl.appendChild(centerNode);
-      stepEl.appendChild(card);
+    card.tabIndex = 0;
+    card.setAttribute("role", "button");
+    card.style.setProperty("--c", info[1]);
+    var b = document.createElement("b"); b.textContent = it.title || "Étape";
+    var s = document.createElement("small"); s.textContent = it.desc || "";
+    card.appendChild(b); card.appendChild(s);
+    if(it.date){
+      var badge = document.createElement("div");
+      badge.className = "date-badge";
+      badge.textContent = it.date + " · " + info[0];
+      card.appendChild(badge);
     }
+    var open = function(){
+      recordUserAction("Consultation du chapitre : " + (it.title || ("Chapitre " + (k + 1))));
+      openJournalView(k);
+    };
+    card.onclick = open;
+    card.onkeydown = function(e){ if(e.key === "Enter" || e.key === " "){ e.preventDefault(); open(); } };
 
+    var node = document.createElement("div");
+    node.className = "road-node-center";
+    node.style.setProperty("--c", info[1]);
+    node.textContent = k + 1;
+
+    var spacer = document.createElement("div");
+    spacer.className = "road-spacer";
+
+    stepEl.appendChild(card); stepEl.appendChild(node); stepEl.appendChild(spacer);
     container.appendChild(stepEl);
   });
-
   drawRoad();
 }
 
-/* ================= OUVERTURE EN MODE JOURNAL ================= */
-function openJournalView(index) {
-  var it = ITEMS[index];
-  var pn = $("pn");
-  pn.textContent = "";
+/* ---------- Vue journal ---------- */
+function showDrawer(){ $("ov").classList.add("on"); }
+function closeDrawer(){ $("ov").classList.remove("on"); }
 
-  var article = document.createElement("div");
-  article.className = "journal-article";
-
-  var editBannerHtml = '<div class="lock-banner"><span>🔓 <strong>Mode Modification Directe</strong> — Appuyez pour modifier cet article.</span><button type="button" class="p" onclick="openEditor(' + index + ');" style="padding:6px 14px; font-size:0.85rem;">✏️ Modifier</button></div>';
-
-  var imgHtml = it.image ? 
-    '<div class="journal-img-container"><img class="journal-img" src="' + it.image + '" alt="Illustration journal"><div class="journal-caption">Document visuel associé au chapitre ' + (index+1) + '</div></div>' : '';
-
-  var docsHtml = "";
-  if(it.docs && it.docs.length > 0) {
-    docsHtml = '<div class="journal-docs"><h4>Documents & Liens Dropbox associés :</h4>';
-    it.docs.forEach(function(d){
-      docsHtml += '<div class="file-row"><div>📄 <a href="' + d.url + '" target="_blank">' + d.name + '</a></div><small style="color:var(--muted)">Dropbox</small></div>';
-    });
-    docsHtml += '</div>';
-  }
-
-  article.innerHTML = editBannerHtml +
-    '<div class="journal-header">' +
-      '<div class="journal-kicker">AfriFloW · Chronique de Croissance · Chapitre ' + (index + 1) + '</div>' +
-      '<h2 class="journal-title">' + (it.title || '') + '</h2>' +
-      '<div class="journal-date">' + (it.date ? 'Publié le / Période : ' + it.date : '') + ' · Statut : ' + (ST[it.status] ? ST[it.status][0] : '') + '</div>' +
-    '</div>' +
-    '<p style="font-weight:700; font-size:1.1rem; line-height:1.5; margin-bottom:20px;">' + (it.desc || '') + '</p>' +
-    imgHtml +
-    '<div class="journal-columns">' + (it.details ? it.details.replace(/\n/g, '<br>') : 'Aucun détail supplémentaire rédigé pour le moment.') + '</div>' +
-    docsHtml +
-    '<div style="margin-top:30px; text-align:center; display:flex; gap:10px; justify-content:center; flex-wrap:wrap;">' +
-      '<button type="button" class="p" onclick="openEditor(' + index + ')">Modifier l\'article</button>' +
-      '<button type="button" onclick="closeDrawer()">Fermer le journal</button>' +
-    '</div>';
-
-  pn.appendChild(article);
-  $("ov").classList.add("on");
+function docsBlock(title, icon, docs){
+  if(!docs || !docs.length) return "";
+  return '<div class="journal-docs"><h4>' + title + '</h4>' + docs.map(function(d){
+    return '<div class="file-row"><div>' + icon + ' <a href="' + esc(safeUrl(d.url)) + '" target="_blank" rel="noopener noreferrer">' + esc(d.name) + '</a></div><small style="color:var(--muted)">Dropbox</small></div>';
+  }).join("") + '</div>';
 }
 
-/* OUVERTURE START (REGISTRE DES CONNEXIONS ET ACTIONS) */
-function openStartArchives() {
-  recordUserAction("Ouverture du registre START (Historique des connexions)");
-  var it = START_ARCHIVES;
-  var pn = $("pn");
+function openJournalView(index){
+  var it = ITEMS[index], pn = $("pn");
   pn.textContent = "";
+  var article = document.createElement("div");
+  article.className = "journal-article";
+  var img = safeImg(it.image);
+  var imgHtml = img ? '<div class="journal-img-container"><img class="journal-img" src="' + img + '" alt="Illustration du chapitre ' + (index + 1) + '"><div class="journal-caption">Document visuel associé au chapitre ' + (index + 1) + '</div></div>' : "";
+  var details = it.details ? esc(it.details).replace(/\n/g, "<br>") : "Aucun détail supplémentaire rédigé pour le moment.";
+  article.innerHTML =
+    '<div class="lock-banner"><span>🔓 <strong>Modification directe</strong></span><button type="button" class="p" data-act="edit" style="padding:6px 14px;font-size:.85rem">✏️ Modifier</button></div>' +
+    '<div class="journal-header"><div class="journal-kicker">AfriFloW · Chronique de croissance · Chapitre ' + (index + 1) + '</div>' +
+    '<h2 class="journal-title">' + esc(it.title) + '</h2>' +
+    '<div class="journal-date">' + (it.date ? "Période : " + esc(it.date) + " · " : "") + "Statut : " + esc(ST[it.status][0]) + '</div></div>' +
+    '<p style="font-weight:700;font-size:1.1rem;line-height:1.5;margin-bottom:20px">' + esc(it.desc) + '</p>' +
+    imgHtml + '<div class="journal-columns">' + details + '</div>' +
+    docsBlock("Documents & liens Dropbox associés :", "📄", it.docs) +
+    '<div style="margin-top:30px;text-align:center;display:flex;gap:10px;justify-content:center;flex-wrap:wrap"><button type="button" class="p" data-act="edit">Modifier l\'article</button><button type="button" data-act="close">Fermer le journal</button></div>';
+  article.addEventListener("click", function(e){
+    var a = e.target.closest("[data-act]"); if(!a) return;
+    if(a.dataset.act === "edit") openEditor(index); else closeDrawer();
+  });
+  pn.appendChild(article);
+  showDrawer();
+}
 
+function openStartArchives(){
+  recordUserAction("Ouverture du registre START");
+  var it = START_ARCHIVES, pn = $("pn");
+  pn.textContent = "";
   var article = document.createElement("div");
   article.className = "journal-article";
   article.style.borderColor = "var(--green)";
-
-  var logsHtml = '<div style="margin-top:20px;"><h4>Liste des utilisateurs connectés et actions réalisées :</h4>';
-  if(it.logs && it.logs.length > 0) {
-    it.logs.forEach(function(l) {
-      logsHtml += '<div class="file-row" style="flex-direction:column; align-items:flex-start; gap:4px;">' +
-                    '<div style="display:flex; justify-content:space-width; width:100%; justify-content:space-between;">' +
-                      '<strong>📧 ' + l.email + '</strong>' +
-                      '<small style="color:var(--muted)">🕒 ' + l.date + '</small>' +
-                    '</div>' +
-                    '<div style="font-size:0.9rem; color:var(--ink);">👉 <em>Action :</em> ' + l.action + '</div>' +
-                  '</div>';
-    });
-  } else {
-    logsHtml += '<p style="color:var(--muted); font-style:italic;">Aucune connexion enregistrée pour l\'instant.</p>';
-  }
-  logsHtml += '</div>';
-
-  var docsHtml = "";
-  if(it.docs && it.docs.length > 0) {
-    docsHtml = '<div class="journal-docs"><h4>Documents fondateurs START :</h4>';
-    it.docs.forEach(function(d){
-      docsHtml += '<div class="file-row"><div>📁 <a href="' + d.url + '" target="_blank">' + d.name + '</a></div><small style="color:var(--muted)">Dropbox</small></div>';
-    });
-    docsHtml += '</div>';
-  }
-
-  article.innerHTML = '<div class="journal-header" style="border-color:var(--green);">' +
-      '<div class="journal-kicker">Point Zéro · Registre d\'Audit AfriFloW</div>' +
-      '<h2 class="journal-title">' + it.title + '</h2>' +
-      '<div class="journal-date">' + it.date + '</div>' +
-    '</div>' +
-    '<p style="font-weight:700; font-size:1.05rem; line-height:1.5; margin-bottom:20px;">' + it.desc + '</p>' +
-    logsHtml +
-    docsHtml +
-    '<div style="margin-top:30px; text-align:center;">' +
-      '<button type="button" class="p" onclick="closeDrawer()">Fermer le registre</button>' +
-    '</div>';
-
+  var logs = '<div class="logs" style="margin-top:20px"><h4>Connexions et actions enregistrées :</h4>';
+  logs += it.logs.length ? it.logs.map(function(l){
+    return '<div class="file-row" style="flex-direction:column;align-items:flex-start;gap:4px"><div style="display:flex;justify-content:space-between;gap:8px;width:100%;flex-wrap:wrap"><strong>📧 ' + esc(l.email) + '</strong><small style="color:var(--muted)">🕒 ' + esc(l.date) + '</small></div><div style="font-size:.9rem">👉 <em>Action :</em> ' + esc(l.action) + '</div></div>';
+  }).join("") : '<p style="color:var(--muted);font-style:italic">Aucune connexion enregistrée pour l\'instant.</p>';
+  logs += "</div>";
+  article.innerHTML =
+    '<div class="journal-header"><div class="journal-kicker">Point zéro · Registre d\'audit AfriFloW</div><h2 class="journal-title">' + esc(it.title) + '</h2><div class="journal-date">' + esc(it.date) + '</div></div>' +
+    '<p style="font-weight:700;font-size:1.05rem;line-height:1.5;margin-bottom:20px">' + esc(it.desc) + '</p>' + logs +
+    docsBlock("Documents fondateurs START :", "📁", it.docs) +
+    '<div style="margin-top:30px;text-align:center"><button type="button" class="p" data-act="close">Fermer le registre</button></div>';
+  article.addEventListener("click", function(e){ if(e.target.closest("[data-act]")) closeDrawer(); });
   pn.appendChild(article);
-  $("ov").classList.add("on");
+  showDrawer();
 }
 
-function closeDrawer() { $("ov").classList.remove("on"); }
+/* ---------- Éditeur (travaille sur une copie : « Annuler » n'altère rien) ---------- */
+function compressImage(file, cb){
+  var reader = new FileReader();
+  reader.onload = function(e){
+    var img = new Image();
+    img.onload = function(){
+      var max = 1000, r = Math.min(1, max / Math.max(img.width, img.height));
+      var c = document.createElement("canvas");
+      c.width = Math.round(img.width * r); c.height = Math.round(img.height * r);
+      c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
+      cb(c.toDataURL("image/jpeg", 0.8));
+    };
+    img.onerror = function(){ alert("Image illisible."); };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
 
-/* ================= FORMULAIRE D'ÉDITION ÉTAPE (MODE JOURNAL) ================= */
-function openEditor(index) {
-  var isNew = index === null, it = isNew ? {title:"", desc:"", details:"", date:"", status:"todo", image:"", docs:[]} : ITEMS[index];
-  if(!it.docs) it.docs = [];
+function openEditor(index){
+  var isNew = index === null;
+  var it = isNew ? {title:"", desc:"", details:"", date:"", status:"todo", image:"", docs:[]} : clone(ITEMS[index]);
   var pn = $("pn");
   pn.textContent = "";
-  
+
   var closeBtn = document.createElement("button");
-  closeBtn.className = "x";
   closeBtn.textContent = "× Fermer";
   closeBtn.style.marginBottom = "14px";
-  closeBtn.onclick = function() { closeDrawer(); };
+  closeBtn.onclick = closeDrawer;
   pn.appendChild(closeBtn);
 
   var h2 = document.createElement("h2");
@@ -531,262 +452,416 @@ function openEditor(index) {
 
   var form = document.createElement("div");
   form.className = "fm";
-  form.innerHTML = '<label>Titre de l\'article</label><input type="text" id="edTitle" value="' + (it.title || '') + '">' +
-                   '<label>Chapeau / Résumé court</label><textarea id="edDesc">' + (it.desc || '') + '</textarea>' +
-                   '<label>Corps de l\'article (Détails complets)</label><textarea id="edDetails" rows="6">' + (it.details || '') + '</textarea>' +
-                   '<label>Période / Date</label><input type="text" id="edDate" value="' + (it.date || '') + '">' +
-                   '<label>Statut</label><select id="edStatus"><option value="done"' + (it.status==='done'?' selected':'') + '>Réalisé</option><option value="doing"' + (it.status==='doing'?' selected':'') + '>En cours</option><option value="todo"' + (it.status==='todo'?' selected':'') + '>À venir</option></select>' +
-                   '<label>Photo d\'illustration (Uploader une image locale)</label>' +
-                   '<input type="file" id="edImageFile" accept="image/*" style="padding:8px;">' +
-                   (it.image ? '<div style="margin-top:6px;"><img src="' + it.image + '" style="max-height:100px; border-radius:8px;"></div>' : '');
+  form.innerHTML =
+    '<label for="edTitle">Titre de l\'article</label><input type="text" id="edTitle">' +
+    '<label for="edDesc">Chapeau / résumé court</label><textarea id="edDesc"></textarea>' +
+    '<label for="edDetails">Corps de l\'article</label><textarea id="edDetails" rows="6"></textarea>' +
+    '<label for="edDate">Période / date</label><input type="text" id="edDate">' +
+    '<label for="edStatus">Statut</label><select id="edStatus"><option value="done">Réalisé</option><option value="doing">En cours</option><option value="todo">À venir</option></select>' +
+    '<label for="edCountry">Pays du chapitre</label><select id="edCountry"><option value="">—</option><option value="sn">🇸🇳 Sénégal</option><option value="bf">🇧🇫 Burkina Faso</option><option value="tg">🇹🇬 Togo</option></select>' +
+    '<label for="edImageFile">Photo d\'illustration</label><input type="file" id="edImageFile" accept="image/*"><div id="edImgPreview"></div>';
   pn.appendChild(form);
-
-  var docHeader = document.createElement("h3");
-  docHeader.textContent = "Documents & Liens Dropbox";
-  pn.appendChild(docHeader);
-
-  var linkInputName = document.createElement("input");
-  linkInputName.placeholder = "Nom du document";
-  linkInputName.style.margin = "6px 0";
-  var linkInputUrl = document.createElement("input");
-  linkInputUrl.placeholder = "Lien partagé Dropbox (https://www.dropbox.com/...)";
-  linkInputUrl.style.margin = "6px 0";
-
-  var addLinkBtn = document.createElement("button");
-  addLinkBtn.textContent = "Ajouter le lien Dropbox";
-  addLinkBtn.onclick = function() {
-    var name = linkInputName.value.trim(), url = linkInputUrl.value.trim();
-    if(!name || !url) { alert("Veuillez remplir le nom et le lien."); return; }
-    it.docs.push({name: name, url: url});
-    linkInputName.value = ""; linkInputUrl.value = "";
-    drawDocsList();
+  $("edTitle").value = it.title || ""; $("edDesc").value = it.desc || "";
+  $("edDetails").value = it.details || ""; $("edDate").value = it.date || ""; $("edStatus").value = it.status; $("edCountry").value = it.country || "";
+  function drawPreview(){
+    var box = $("edImgPreview"); box.textContent = "";
+    var src = safeImg(it.image);
+    if(src){
+      var im = document.createElement("img"); im.src = src; im.alt = ""; im.style.cssText = "max-height:100px;border-radius:8px;margin-right:10px";
+      var rm = document.createElement("button"); rm.type = "button"; rm.className = "danger"; rm.textContent = "Retirer l'image";
+      rm.onclick = function(){ it.image = ""; drawPreview(); };
+      box.appendChild(im); box.appendChild(rm);
+    }
+  }
+  drawPreview();
+  $("edImageFile").onchange = function(){
+    var f = this.files && this.files[0]; if(!f) return;
+    compressImage(f, function(data){ it.image = data; drawPreview(); });
   };
-  pn.appendChild(linkInputName);
-  pn.appendChild(linkInputUrl);
-  pn.appendChild(addLinkBtn);
 
-  var docsContainer = document.createElement("div");
-  pn.appendChild(docsContainer);
-
-  function drawDocsList() {
-    docsContainer.textContent = "";
-    it.docs.forEach(function(d, j) {
-      var row = document.createElement("div");
-      row.className = "file-row";
-      row.innerHTML = '<div><a href="' + d.url + '" target="_blank">' + d.name + '</a><small style="display:block;color:var(--muted)">Lien Dropbox</small></div>';
-      var rm = document.createElement("button");
-      rm.className = "danger";
-      rm.textContent = "Retirer";
-      rm.onclick = function() { it.docs.splice(j, 1); drawDocsList(); };
-      row.appendChild(rm);
-      docsContainer.appendChild(row);
+  var h3 = document.createElement("h3"); h3.textContent = "Documents & liens Dropbox"; pn.appendChild(h3);
+  var nameIn = document.createElement("input"); nameIn.placeholder = "Nom du document"; nameIn.style.cssText = "margin:6px 0;width:100%";
+  var urlIn = document.createElement("input"); urlIn.placeholder = "Lien partagé (https://www.dropbox.com/...)"; urlIn.style.cssText = "margin:6px 0;width:100%";
+  var addLink = document.createElement("button");
+  addLink.type = "button"; addLink.textContent = "Ajouter le lien";
+  var docsBox = document.createElement("div");
+  addLink.onclick = function(){
+    var name = nameIn.value.trim(), url = urlIn.value.trim();
+    if(!name || !url){ alert("Veuillez remplir le nom et le lien."); return; }
+    if(safeUrl(url) === "#"){ alert("Le lien doit commencer par https:// ou http://"); return; }
+    it.docs.push({name:name, url:safeUrl(url)});
+    nameIn.value = ""; urlIn.value = ""; drawDocs();
+  };
+  pn.appendChild(nameIn); pn.appendChild(urlIn); pn.appendChild(addLink); pn.appendChild(docsBox);
+  function drawDocs(){
+    docsBox.textContent = "";
+    it.docs.forEach(function(d, j){
+      var row = document.createElement("div"); row.className = "file-row";
+      var a = document.createElement("a"); a.href = safeUrl(d.url); a.target = "_blank"; a.rel = "noopener noreferrer"; a.textContent = d.name;
+      var rm = document.createElement("button"); rm.type = "button"; rm.className = "danger"; rm.textContent = "Retirer";
+      rm.onclick = function(){ it.docs.splice(j, 1); drawDocs(); };
+      row.appendChild(a); row.appendChild(rm); docsBox.appendChild(row);
     });
   }
-  drawDocsList();
+  drawDocs();
 
   var actions = document.createElement("div");
-  actions.style.marginTop = "24px";
-  actions.style.display = "flex";
-  actions.style.gap = "10px";
-
-  var saveBtn = document.createElement("button");
-  saveBtn.className = "p";
-  saveBtn.textContent = "Enregistrer les modifications";
-  saveBtn.onclick = function() {
+  actions.style.cssText = "margin-top:24px;display:flex;gap:10px;flex-wrap:wrap";
+  var save = document.createElement("button");
+  save.className = "p"; save.textContent = "Enregistrer";
+  save.onclick = function(){
     it.title = $("edTitle").value.trim();
-    it.desc = $("edDesc").value.trim();
-    it.details = $("edDetails").value.trim();
-    it.date = $("edDate").value.trim();
-    it.status = $("edStatus").value;
-
-    if(!it.title) { alert("Le titre de l'article est obligatoire."); return; }
-
-    var imgInput = $("edImageFile");
-    if(imgInput.files && imgInput.files[0]) {
-      var reader = new FileReader();
-      reader.onload = function(e) {
-        it.image = e.target.result;
-        finalizeSave(isNew, it, index);
-      };
-      reader.readAsDataURL(imgInput.files[0]);
-    } else {
-      finalizeSave(isNew, it, index);
-    }
+    if(!it.title){ alert("Le titre de l'article est obligatoire."); return; }
+    it.desc = $("edDesc").value.trim(); it.details = $("edDetails").value.trim();
+    it.date = $("edDate").value.trim(); it.status = $("edStatus").value; it.country = $("edCountry").value;
+    if(isNew){ ITEMS.push(it); recordUserAction("Ajout du chapitre : " + it.title); }
+    else { ITEMS[index] = it; recordUserAction("Modification du chapitre : " + it.title); }
+    saveLocal(); renderRoadmap();
+    openJournalView(isNew ? ITEMS.length - 1 : index);
   };
-
-  var cancelBtn = document.createElement("button");
-  cancelBtn.textContent = "Annuler";
-  cancelBtn.onclick = function() { closeDrawer(); };
-
-  actions.appendChild(saveBtn);
-  actions.appendChild(cancelBtn);
-
-  if(!isNew) {
-    var delBtn = document.createElement("button");
-    delBtn.className = "danger";
-    delBtn.textContent = "Supprimer le chapitre";
-    delBtn.onclick = function() {
-      if(confirm("Êtes-vous sûr de vouloir supprimer cet article du journal ?")) {
-        recordUserAction("Suppression du chapitre : " + (it.title || ('Chapitre ' + (index+1))));
-        ITEMS.splice(index, 1);
-        saveLocal(); renderRoadmap();
-        closeDrawer();
-      }
+  var cancel = document.createElement("button");
+  cancel.textContent = "Annuler"; cancel.onclick = closeDrawer;
+  actions.appendChild(save); actions.appendChild(cancel);
+  if(!isNew){
+    var del = document.createElement("button");
+    del.className = "danger"; del.textContent = "Supprimer le chapitre";
+    del.onclick = function(){
+      if(!confirm("Supprimer définitivement ce chapitre ?")) return;
+      recordUserAction("Suppression du chapitre : " + (ITEMS[index].title || ("Chapitre " + (index + 1))));
+      ITEMS.splice(index, 1); saveLocal(); renderRoadmap(); closeDrawer();
     };
-    actions.appendChild(delBtn);
+    actions.appendChild(del);
   }
-
   pn.appendChild(actions);
-  $("ov").classList.add("on");
+  showDrawer();
 }
 
-function finalizeSave(isNew, it, index) {
-  if(isNew) {
-    ITEMS.push(it);
-    recordUserAction("Ajout d'un nouveau chapitre : " + (it.title || 'Sans titre'));
-  } else {
-    ITEMS[index] = it;
-    recordUserAction("Modification du chapitre : " + (it.title || ('Chapitre ' + (index+1))));
-  }
-  saveLocal(); renderRoadmap();
-  closeDrawer();
-  openJournalView(isNew ? ITEMS.length - 1 : index);
-}
-
-/* Tracé SVG sinueux + véhicule synchronisé avec le défilement */
-var roadPath = null;
-var roadLength = 0;
-var scrollTicking = false;
-
-function drawRoad() {
-  var container = $("roadContainer");
-  var svg = $("roadSvg");
-  if(!container || !svg) return;
-
-  var width = container.clientWidth;
-  var height = container.offsetHeight;
+/* ---------- Tracé SVG + véhicule ---------- */
+function drawRoad(){
+  var container = $("roadContainer"), svg = $("roadSvg");
+  var width = container.clientWidth, height = container.offsetHeight;
   if(width < 1 || height < 1) return;
-
   svg.setAttribute("viewBox", "0 0 " + width + " " + height);
   svg.setAttribute("preserveAspectRatio", "none");
   svg.textContent = "";
 
   var nodes = Array.prototype.slice.call(container.querySelectorAll(".road-node-center"));
-  var containerRect = container.getBoundingClientRect();
-  var points = [{x: width * 0.5, y: 8}];
-
-  nodes.forEach(function(node, index) {
-    var nodeRect = node.getBoundingClientRect();
-    var y = nodeRect.top - containerRect.top + nodeRect.height / 2;
-    var amplitude = Math.min(26, width * 0.04);
-    var direction = index % 2 === 0 ? -1 : 1;
-    points.push({x: width * 0.5 + direction * amplitude, y: y});
+  var cr = container.getBoundingClientRect();
+  var amp = Math.min(26, width * 0.04);
+  var pts = [{x:width / 2, y:8}];
+  nodes.forEach(function(n, i){
+    var r = n.getBoundingClientRect();
+    pts.push({x:width / 2 + (i % 2 === 0 ? -1 : 1) * amp, y:r.top - cr.top + r.height / 2});
   });
-  points.push({x: width * 0.5, y: Math.max(height - 8, points[points.length - 1].y + 40)});
+  pts.push({x:width / 2, y:Math.max(height - 8, pts[pts.length - 1].y + 40)});
 
-  var d = "M " + points[0].x + " " + points[0].y;
-  for(var i = 1; i < points.length; i++) {
-    var prev = points[i - 1], cur = points[i];
-    var midY = (prev.y + cur.y) / 2;
-    d += " C " + prev.x + " " + midY + ", " + cur.x + " " + midY + ", " + cur.x + " " + cur.y;
+  var d = "M " + pts[0].x + " " + pts[0].y;
+  for(var i = 1; i < pts.length; i++){
+    var p = pts[i - 1], c = pts[i], my = (p.y + c.y) / 2;
+    d += " C " + p.x + " " + my + ", " + c.x + " " + my + ", " + c.x + " " + c.y;
   }
-
-  ["road-edge", "road-surface", "road-centerline"].forEach(function(cls) {
+  ["road-edge", "road-surface", "road-centerline"].forEach(function(cls){
     var path = document.createElementNS("http://www.w3.org/2000/svg", "path");
-    path.setAttribute("d", d);
-    path.setAttribute("class", cls);
-    svg.appendChild(path);
+    path.setAttribute("d", d); path.setAttribute("class", cls); svg.appendChild(path);
   });
-
   roadPath = svg.querySelector(".road-centerline");
-  roadLength = roadPath ? roadPath.getTotalLength() : 0;
+  roadLength = roadPath.getTotalLength();
+  drawScenery(width, height);
   updateCarPosition();
 }
 
-function updateCarPosition() {
-  var car = $("car-marker");
-  var container = $("roadContainer");
-  if(!car || !container || !roadPath || !roadLength) return;
-
+function updateCarPosition(){
+  var car = $("car-marker"), container = $("roadContainer");
+  if(!roadPath || !roadLength) return;
   var rect = container.getBoundingClientRect();
-  var scrollTop = window.pageYOffset || document.documentElement.scrollTop;
-  var containerTop = rect.top + scrollTop;
-  var containerHeight = container.offsetHeight;
-  var viewportHeight = window.innerHeight;
-
-  var progress = (scrollTop + viewportHeight * 0.45 - containerTop) / Math.max(1, containerHeight);
+  var progress = (window.innerHeight * 0.45 - rect.top) / Math.max(1, container.offsetHeight);
   progress = Math.max(0, Math.min(1, progress));
-  var point = roadPath.getPointAtLength(progress * roadLength);
-
-  car.style.top = point.y + "px";
-  car.style.left = point.x + "px";
+  var pt = roadPath.getPointAtLength(progress * roadLength);
+  car.style.top = pt.y + "px";
+  car.style.left = pt.x + "px";
 }
 
-window.addEventListener("scroll", function() {
+window.addEventListener("scroll", function(){
   if(scrollTicking) return;
   scrollTicking = true;
-  window.requestAnimationFrame(function() {
-    updateCarPosition();
-    scrollTicking = false;
-  });
-}, {passive: true});
+  requestAnimationFrame(function(){ updateCarPosition(); scrollTicking = false; });
+}, {passive:true});
+window.addEventListener("load", drawRoad);
+if(window.ResizeObserver) new ResizeObserver(function(){ drawRoad(); }).observe($("roadContainer"));
+else window.addEventListener("resize", drawRoad);
 
-window.addEventListener("resize", function() {
-  drawRoad();
-});
-
-$("exportBtn").onclick = function() {
+/* ---------- Export / import ---------- */
+$("exportBtn").onclick = function(){
   recordUserAction("Exportation d'une sauvegarde JSON");
-  var blob = new Blob([JSON.stringify({items: ITEMS, archives: START_ARCHIVES}, null, 2)], {type: "application/json"});
-  var url = URL.createObjectURL(blob);
-  var a = document.createElement("a");
+  var blob = new Blob([JSON.stringify({items:ITEMS, archives:START_ARCHIVES, map:MAP}, null, 2)], {type:"application/json"});
+  var url = URL.createObjectURL(blob), a = document.createElement("a");
   a.href = url; a.download = "afriflow-journal-sauvegarde.json";
   document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(function(){ URL.revokeObjectURL(url); }, 1000);
 };
-
-$("importTriggerBtn").onclick = function() {
-  $("importFile").click();
-};
-
-$("importFile").onchange = function(e) {
-  var f = e.target.files[0];
-  if(!f) return;
+$("importTriggerBtn").onclick = function(){ $("importFile").click(); };
+$("importFile").onchange = function(e){
+  var f = e.target.files[0]; if(!f) return;
   var reader = new FileReader();
-  reader.onload = function(evt) {
+  reader.onload = function(evt){
     try {
       var data = JSON.parse(evt.target.result);
-      if(data.items) {
-        ITEMS = data.items;
-        if(data.archives) START_ARCHIVES = data.archives;
-        saveLocal();
-        renderRoadmap();
-        recordUserAction("Importation d'une sauvegarde JSON");
-        alert("Importation réussie !");
-      } else if(Array.isArray(data)) {
-        ITEMS = data;
-        saveLocal();
-        renderRoadmap();
-        recordUserAction("Importation d'une sauvegarde JSON");
-        alert("Importation réussie !");
-      }
-    } catch(err) {
-      alert("Erreur lors de la lecture du fichier JSON.");
-    }
+      var items = Array.isArray(data) ? data : data.items;
+      if(!Array.isArray(items)) throw new Error("format");
+      ITEMS = items;
+      if(!Array.isArray(data) && data.archives && typeof data.archives === "object") START_ARCHIVES = Object.assign(START_ARCHIVES, data.archives);
+      if(!Array.isArray(data) && data.map) MAP = mergeMap(data.map);
+      normalize(); saveLocal(); renderRoadmap(); renderMap();
+      recordUserAction("Importation d'une sauvegarde JSON");
+      alert("Importation réussie !");
+    } catch(err){ alert("Erreur lors de la lecture du fichier JSON."); }
+    $("importFile").value = "";
   };
   reader.readAsText(f);
 };
 
-function openCustomizer() { $("customizer-modal").classList.add("on"); }
-function closeCustomizer() { $("customizer-modal").classList.remove("on"); }
-
-function applyCustomTheme() {
-  var g = $("picker-green").value;
-  var a = $("picker-amber").value;
-  var f = $("picker-font").value;
-  document.documentElement.style.setProperty("--green", g);
-  document.documentElement.style.setProperty("--amber", a);
-  document.documentElement.style.setProperty("--font-family", f);
+/* ---------- Thème ---------- */
+function applyCustomTheme(save){
+  var g = $("picker-green").value, a = $("picker-amber").value, f = $("picker-font").value;
+  var s = document.documentElement.style;
+  s.setProperty("--green", g); s.setProperty("--amber", a); s.setProperty("--font-family", f);
+  if(save){ try { localStorage.setItem(THEME_KEY, JSON.stringify({g:g, a:a, f:f})); } catch(e){} }
 }
+function restoreTheme(){
+  try {
+    var t = JSON.parse(localStorage.getItem(THEME_KEY) || "null");
+    if(t){ $("picker-green").value = t.g; $("picker-amber").value = t.a; $("picker-font").value = t.f; applyCustomTheme(false); }
+  } catch(e){}
+}
+["picker-green", "picker-amber", "picker-font"].forEach(function(id){ $(id).addEventListener("change", function(){ applyCustomTheme(true); }); });
+$("customBtn").onclick = function(){ $("customizer-modal").classList.add("on"); };
+$("closeCustomBtn").onclick = function(){ $("customizer-modal").classList.remove("on"); };
+
+/* ---------- Événements globaux ---------- */
+$("authBtn").onclick = verifyGlobalAuth;
+$("authPasswordInput").addEventListener("keydown", function(e){ if(e.key === "Enter") verifyGlobalAuth(); });
+$("authEmailInput").addEventListener("keydown", function(e){ if(e.key === "Enter") $("authPasswordInput").focus(); });
+$("startBtn").onclick = openStartArchives;
+$("addBtn").onclick = function(){ openEditor(null); };
+[$("startBtn"), $("addBtn")].forEach(function(el){
+  el.addEventListener("keydown", function(e){ if(e.key === "Enter" || e.key === " "){ e.preventDefault(); el.click(); } });
+});
+$("ov").addEventListener("click", function(e){ if(e.target === this) closeDrawer(); });
+$("customizer-modal").addEventListener("click", function(e){ if(e.target === this) this.classList.remove("on"); });
+document.addEventListener("keydown", function(e){
+  if(e.key === "Escape"){ closeDrawer(); $("customizer-modal").classList.remove("on"); }
+});
+
+/* ---------- Verdure autour de la route ---------- */
+function drawScenery(w, h){
+  var E = ["🌳","🌴","🌿","🌾","🌲","🌺"], seed = 7, html = "";
+  function r(){ seed = (seed * 9301 + 49297) % 233280; return seed / 233280; }
+  for(var y = 20; y < h; y += 38){
+    for(var j = 0; j < 3; j++){
+      var x = r() * w; if(Math.abs(x - w / 2) < 30) x += 60;
+      html += '<span class="tree" style="left:' + x + 'px;top:' + (y + r() * 30) + 'px;font-size:' + Math.floor(16 + r() * 20) + 'px">' + E[Math.floor(r() * E.length)] + '</span>';
+    }
+  }
+  $("scenery").innerHTML = html;
+}
+
+/* ---------- Carte du monde ---------- */
+var CN_ = {sn:["🇸🇳","Sénégal"], bf:["🇧🇫","Burkina Faso"], tg:["🇹🇬","Togo"]};
+function CN(c){ return CN_[c] ? CN_[c][0] + " " + CN_[c][1] : ""; }
+var ORIGIN = "768"; /* pays de départ des marchandises : Togo */
+var ETAT = {actif:"Nous commercialisons déjà", prosp:"En prospection", prevu:"Prévu"};
+function newRec(){ return {etat:"", stock:0, transit:0, valeur:0, vol:0, notes:"", actionnaires:"", produits:[]}; }
+var MAP = {};
+function rec(k){ return MAP[k] || newRec(); }
+function mergeMap(s){
+  var m = {}, mig = {sn:"686", bf:"854", tg:"768"};
+  if(s && typeof s === "object") Object.keys(s).forEach(function(k){
+    var v = s[k]; if(!v || typeof v !== "object") return;
+    var nk = mig[k] || k; if(mig[k] && s[nk]) return;
+    var r = Object.assign(newRec(), v);
+    if(!Array.isArray(r.produits)) r.produits = [];
+    if(!ETAT[r.etat]) r.etat = "";
+    delete r.out; delete r.statut; m[nk] = r;
+  });
+  return m;
+}
+var WORLD = null, WMAP = {}, loadingWorld = false, VEH = [], loopOn = false;
+var VB = {x:0, y:0, w:960, h:500}, drag = null, moved = false;
+var ALIAS = {"United States of America":"US","Dem. Rep. Congo":"CD","Congo":"CG","Central African Rep.":"CF","Dominican Rep.":"DO","Bosnia and Herz.":"BA","S. Sudan":"SS","Eq. Guinea":"GQ","eSwatini":"SZ","N. Macedonia":"MK","W. Sahara":"EH","Falkland Is.":"FK","Solomon Is.":"SB","Fr. S. Antarctic Lands":"TF","Kosovo":"XK","Czechia":"CZ","Palestine":"PS","Côte d'Ivoire":"CI"};
+var fmt = function(n){ return Number(n || 0).toLocaleString("fr-FR"); };
+function parseSh(k){
+  return String(rec(k).actionnaires || "").split("\n").map(function(l){ var p = l.split(":"); return {name:p[0].trim(), part:(p[1] || "").trim()}; }).filter(function(x){ return x.name; });
+}
+function nm(k){ return WMAP[k] ? WMAP[k].name : k; }
+function loadJs(u){ return new Promise(function(ok, ko){ var s = document.createElement("script"); s.src = u; s.onload = ok; s.onerror = ko; document.head.appendChild(s); }); }
+function loadWorld(){
+  if(WORLD || loadingWorld) return;
+  loadingWorld = true;
+  $("shSummary").textContent = "Chargement de la carte du monde…";
+  Promise.all([
+    loadJs("https://cdn.jsdelivr.net/npm/d3@7.9.0/dist/d3.min.js"),
+    loadJs("https://cdn.jsdelivr.net/npm/topojson-client@3.1.0/dist/topojson-client.min.js"),
+    fetch("https://cdn.jsdelivr.net/npm/world-atlas@2.0.2/countries-110m.json").then(function(r){ return r.json(); })
+  ]).then(function(res){ buildWorld(res[2]); renderMap(); })
+    .catch(function(){ loadingWorld = false; $("shSummary").textContent = "Carte indisponible : une connexion internet est nécessaire pour charger le fond de carte. Rechargez la page en ligne."; });
+}
+function buildWorld(topo){
+  var fc = topojson.feature(topo, topo.objects.countries).features.filter(function(f){ return f.id !== "010"; });
+  var gp = d3.geoPath(d3.geoNaturalEarth1().fitSize([960, 500], {type:"FeatureCollection", features:fc}));
+  var DE = new Intl.DisplayNames(["en"], {type:"region"}), DF = new Intl.DisplayNames(["fr"], {type:"region"}), E2C = {};
+  for(var a = 65; a < 91; a++) for(var b = 65; b < 91; b++){
+    var c = String.fromCharCode(a, b);
+    try { var n = DE.of(c); if(n && n !== c) E2C[n] = c; } catch(e){}
+  }
+  WORLD = [];
+  fc.forEach(function(f){
+    var en = f.properties.name, code = ALIAS[en] || E2C[en], g = f.geometry, d = gp(f), cp;
+    if(!d) return;
+    if(g.type === "MultiPolygon"){
+      var ba = -1, bp = null;
+      g.coordinates.forEach(function(p){ var ft = {type:"Polygon", coordinates:p}, ar = gp.area(ft); if(ar > ba){ ba = ar; bp = ft; } });
+      cp = gp.centroid(bp);
+    } else cp = gp.centroid(f);
+    var fr = en, flag = "";
+    if(code){ try { fr = DF.of(code); } catch(e){} flag = String.fromCodePoint.apply(null, code.split("").map(function(ch){ return 127397 + ch.charCodeAt(0); })) + " "; }
+    WORLD.push({k:String(f.id || en), nm:fr, name:flag + fr, d:d, c:cp});
+  });
+  WORLD.forEach(function(w){ WMAP[w.k] = w; });
+}
+
+function renderMap(){
+  if(!WORLD){ loadWorld(); return; }
+  var svg = $("flowMap"), s = $("shSel"), sel = s.value, cs = $("cSel");
+  var names = [];
+  Object.keys(MAP).forEach(function(k){ parseSh(k).forEach(function(x){ if(names.indexOf(x.name) < 0) names.push(x.name); }); });
+  s.textContent = "";
+  var o0 = document.createElement("option"); o0.value = ""; o0.textContent = "Tous"; s.appendChild(o0);
+  names.forEach(function(n){ var o = document.createElement("option"); o.value = n; o.textContent = n; s.appendChild(o); });
+  s.value = names.indexOf(sel) < 0 ? "" : sel; sel = s.value;
+  if(cs.options.length < 2) WORLD.slice().sort(function(x, y){ return x.nm.localeCompare(y.nm, "fr"); }).forEach(function(w){ var o = document.createElement("option"); o.value = w.k; o.textContent = w.name; cs.appendChild(o); });
+  var conc = function(k){ return !sel || parseSh(k).some(function(x){ return x.name === sel; }); };
+
+  var h = '<rect width="960" height="500" style="fill:color-mix(in srgb,#2b7bb9 22%,var(--card))"/>', ah = "", vh = "";
+  WORLD.forEach(function(w){
+    var m = rec(w.k);
+    h += '<path class="country' + (m.etat ? " st-" + m.etat : "") + (conc(w.k) ? "" : " dim") + '" data-k="' + esc(w.k) + '" d="' + w.d + '"><title>' + esc(w.name) + (m.etat ? " · " + ETAT[m.etat] : "") + (m.stock ? " · stock " + fmt(m.stock) : "") + (m.produits.length ? " · " + m.produits.length + " produit(s)" : "") + '</title></path>';
+  });
+  var o = WMAP[ORIGIN];
+  if(o) WORLD.forEach(function(w, i){
+    var m = rec(w.k);
+    if(w.k === ORIGIN || m.etat !== "actif") return;
+    var dist = Math.hypot(w.c[0] - o.c[0], w.c[1] - o.c[1]), on = conc(w.k);
+    ah += '<path class="rt' + (on ? "" : " dim") + '" id="ar' + i + '" d="M' + o.c[0] + " " + o.c[1] + "Q" + (o.c[0] + w.c[0]) / 2 + " " + ((o.c[1] + w.c[1]) / 2 - dist * 0.25) + " " + w.c[0] + " " + w.c[1] + '" fill="none" stroke-width="1.5" stroke-dasharray="4 5" stroke="#d98a1b" pointer-events="none"/>';
+    var n = m.vol > 0 ? Math.min(5, 1 + Math.floor(m.vol / 100)) : 0;
+    for(var j = 0; j < n; j++) vh += '<text class="veh" data-r="' + i + '" data-j="' + j + '" data-n="' + n + '" data-s="' + (dist > 300 ? 1 : 0) + '" font-size="12" text-anchor="middle" dy="4" pointer-events="none" opacity="' + (on ? 1 : .25) + '">' + (dist > 300 ? "🚢" : "🚚") + '</text>';
+  });
+  h += ah + (o ? '<circle cx="' + o.c[0] + '" cy="' + o.c[1] + '" r="4" fill="#fff" stroke="#000" pointer-events="none"/>' : "") + vh;
+  svg.innerHTML = h;
+  VEH = [];
+  Array.prototype.forEach.call(svg.querySelectorAll(".veh"), function(el){
+    var p = $("ar" + el.dataset.r);
+    VEH.push({el:el, path:p, len:p.getTotalLength(), off:+el.dataset.j / +el.dataset.n, dur:9000 + (+el.dataset.r % 5) * 1500, dir:(+el.dataset.j % 2 === 0)});
+  });
+
+  var sm = $("shSummary"), ks = Object.keys(MAP), tot = {s:0, t:0};
+  ks.forEach(function(k){ tot.s += +MAP[k].stock || 0; tot.t += +MAP[k].transit || 0; });
+  if(sel){
+    sm.innerHTML = "<strong>" + esc(sel) + "</strong> : " + (ks.filter(conc).map(function(k){
+      var x = parseSh(k).filter(function(y){ return y.name === sel; })[0];
+      return esc(nm(k)) + " (" + esc(x.part || "part non précisée") + ") — stock " + fmt(MAP[k].stock) + ", en transit " + fmt(MAP[k].transit);
+    }).join(" · ") || "aucun pays renseigné");
+  } else {
+    var act = WORLD.filter(function(w){ return rec(w.k).etat === "actif"; });
+    sm.innerHTML = "Total : " + fmt(tot.s) + " unités en stock · " + fmt(tot.t) + " en transit. " +
+      (act.length ? "Pays où nous commercialisons (" + act.length + ") : " + act.map(function(w){ return '<button type="button" class="chip" data-k="' + esc(w.k) + '">' + esc(w.name) + '</button>'; }).join("") : "Aucun pays marqué « commercialisé » : cliquez sur un pays pour renseigner sa situation.") +
+      " Base de départ des flux : " + esc(nm(ORIGIN)) + ".";
+  }
+  if(!loopOn){ loopOn = true; requestAnimationFrame(tick); }
+}
+function tick(t){
+  VEH.forEach(function(v){
+    var f = ((t / v.dur) + v.off) % 1, pt = v.path.getPointAtLength((v.dir ? f : 1 - f) * v.len);
+    v.el.setAttribute("x", pt.x); v.el.setAttribute("y", pt.y);
+  });
+  if(window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches){ loopOn = false; return; }
+  requestAnimationFrame(tick);
+}
+
+function openCountry(k){
+  var m = Object.assign(newRec(), MAP[k] || {}), pn = $("pn"); pn.textContent = "";
+  var prod = (m.produits || []).map(function(p){ return Object.assign({nom:"", prix:"", source:""}, p); });
+  var box = document.createElement("div"); box.className = "journal-article";
+  box.innerHTML = '<div class="journal-header"><div class="journal-kicker">Situation pays</div><h2 class="journal-title">' + esc(nm(k)) + '</h2></div><div class="fm">' +
+    '<label for="mcEtat">Statut commercial (détermine la couleur sur la carte)</label><select id="mcEtat"><option value="">Aucune activité</option><option value="actif">Nous commercialisons déjà</option><option value="prosp">En prospection</option><option value="prevu">Prévu</option></select>' +
+    '<label for="mcStock">Marchandises en stock (unités)</label><input id="mcStock" type="number" min="0">' +
+    '<label for="mcTransit">Marchandises en transit (unités)</label><input id="mcTransit" type="number" min="0">' +
+    '<label for="mcValeur">Valeur estimée (€)</label><input id="mcValeur" type="number" min="0">' +
+    '<label for="mcVol">Envois depuis ' + esc(nm(ORIGIN)) + ' (unités / mois) — règle le nombre de véhicules animés</label><input id="mcVol" type="number" min="0">' +
+    '<label for="mcSh">Actionnaires concernés (une ligne : Nom : part %)</label><textarea id="mcSh" rows="3"></textarea>' +
+    '<label for="mcNotes">Notes</label><textarea id="mcNotes" rows="3"></textarea>' +
+    '<label>Produits naturels les moins chers dans ce pays (saisie manuelle)</label><div id="mcProd"></div><button type="button" id="mcAdd">+ Ajouter un produit</button></div>' +
+    '<div style="display:flex;gap:10px;flex-wrap:wrap"><button type="button" class="p" data-act="save">Enregistrer</button><button type="button" data-act="close">Fermer</button></div>';
+  pn.appendChild(box);
+  $("mcEtat").value = m.etat; $("mcStock").value = m.stock || 0; $("mcTransit").value = m.transit || 0; $("mcValeur").value = m.valeur || 0; $("mcVol").value = m.vol || 0;
+  $("mcSh").value = m.actionnaires || ""; $("mcNotes").value = m.notes || "";
+  function drawRows(){
+    var rb = $("mcProd"); rb.textContent = "";
+    prod.forEach(function(p, i){
+      var r = document.createElement("div"); r.className = "prow";
+      [["nom","Produit (ex : karité)"],["prix","Prix + unité (ex : 1 200 FCFA/kg)"],["source","Source / date"]].forEach(function(f){
+        var inp = document.createElement("input"); inp.value = p[f[0]] || ""; inp.placeholder = f[1]; inp.setAttribute("aria-label", f[1]);
+        inp.oninput = function(){ p[f[0]] = inp.value; }; r.appendChild(inp);
+      });
+      var rm = document.createElement("button"); rm.type = "button"; rm.className = "danger"; rm.textContent = "×"; rm.setAttribute("aria-label", "Retirer");
+      rm.onclick = function(){ prod.splice(i, 1); drawRows(); }; r.appendChild(rm); rb.appendChild(r);
+    });
+  }
+  drawRows();
+  $("mcAdd").onclick = function(){ prod.push({nom:"", prix:"", source:""}); drawRows(); };
+  box.addEventListener("click", function(e){
+    var a = e.target.closest("[data-act]"); if(!a) return;
+    if(a.dataset.act === "close") return closeDrawer();
+    var num = function(id){ return Math.max(0, Number($(id).value) || 0); };
+    MAP[k] = {etat:$("mcEtat").value, stock:num("mcStock"), transit:num("mcTransit"), valeur:num("mcValeur"), vol:num("mcVol"),
+      actionnaires:$("mcSh").value.trim(), notes:$("mcNotes").value.trim(),
+      produits:prod.filter(function(p){ return (p.nom || "").trim(); }).map(function(p){ return {nom:p.nom.trim(), prix:(p.prix || "").trim(), source:(p.source || "").trim()}; })};
+    recordUserAction("Mise à jour de la situation : " + (WMAP[k] ? WMAP[k].nm : k));
+    saveLocal(); renderMap(); closeDrawer();
+  });
+  showDrawer();
+}
+
+function applyVB(){ $("flowMap").setAttribute("viewBox", VB.x + " " + VB.y + " " + VB.w + " " + VB.h); }
+function clamp(v, a, b){ return Math.max(a, Math.min(b, v)); }
+function zoomBy(f){
+  var nw = clamp(VB.w * f, 60, 960), nh = nw * 500 / 960, cx = VB.x + VB.w / 2, cy = VB.y + VB.h / 2;
+  VB.x = clamp(cx - nw / 2, 0, 960 - nw); VB.y = clamp(cy - nh / 2, 0, 500 - nh); VB.w = nw; VB.h = nh; applyVB();
+}
+$("zIn").onclick = function(){ zoomBy(.6); };
+$("zOut").onclick = function(){ zoomBy(1 / .6); };
+$("zRst").onclick = function(){ VB = {x:0, y:0, w:960, h:500}; applyVB(); };
+$("flowMap").addEventListener("pointerdown", function(e){ drag = {x:e.clientX, y:e.clientY}; moved = false; });
+window.addEventListener("pointermove", function(e){
+  if(!drag) return;
+  var r = $("flowMap").getBoundingClientRect(), dx = e.clientX - drag.x, dy = e.clientY - drag.y;
+  if(!moved && Math.abs(dx) + Math.abs(dy) < 4) return;
+  moved = true;
+  VB.x = clamp(VB.x - dx / r.width * VB.w, 0, 960 - VB.w); VB.y = clamp(VB.y - dy / r.height * VB.h, 0, 500 - VB.h);
+  drag = {x:e.clientX, y:e.clientY}; applyVB();
+});
+window.addEventListener("pointerup", function(){ drag = null; });
+$("flowMap").addEventListener("click", function(e){
+  if(moved){ moved = false; return; }
+  var p = e.target.closest(".country"); if(p) openCountry(p.dataset.k);
+});
+$("shSummary").addEventListener("click", function(e){ var c = e.target.closest(".chip"); if(c) openCountry(c.dataset.k); });
+$("cSel").addEventListener("change", function(){ var k = this.value; this.value = ""; if(k) openCountry(k); });
+$("shSel").addEventListener("change", renderMap);
+
+/* ---------- Démarrage : on charge AVANT toute écriture ---------- */
+loadLocal();
+restoreTheme();
+renderMap();
 </script>
 </body>
 </html>
