@@ -915,7 +915,7 @@ function drawScenery(w, h){
 /* ---------- Carte du monde ---------- */
 var CN_ = {sn:["🇸🇳","Sénégal"], bf:["🇧🇫","Burkina Faso"], tg:["🇹🇬","Togo"]};
 function CN(c){ return CN_[c] ? CN_[c][0] + " " + CN_[c][1] : ""; }
-var ORIGIN = "768"; /* pays de départ des marchandises : Togo */
+var ORIGIN = "768"; /* pays de départ des marchandises : Burkina Faso */
 var ETAT = {actif:"Nous commercialisons déjà", prosp:"En prospection", prevu:"Prévu"};
 function newRec(){ return {etat:"", stock:0, transit:0, valeur:0, vol:0, notes:"", actionnaires:"", produits:[]}; }
 var MAP = {};
@@ -1172,6 +1172,25 @@ buildMts();
 renderMap();
 resumeSession();
 initIntro();
+</script>
+  <!-- Chargement du client Supabase -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+  const SUPABASE_URL = 'https://jgvwdpzevghfavmpjbqp.supabase.co';
+  const SUPABASE_ANON_KEY = 'TA_CLE_PUBLISHABLE'; // Remplace par ta clé Publishable
+  
+  const { createClient } = supabase;
+  const _supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+  async function chargerRoadmap() {
+    const { data, error } = await _supabase.from('afriflow_roadmap').select('*');
+    if (error) {
+      console.error('Erreur de chargement :', error);
+    } else {
+      console.log('Données de la roadmap récupérées avec succès :', data);
+    }
+  }
+  chargerRoadmap();
 </script>
 </body>
 </html>
