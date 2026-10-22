@@ -165,9 +165,58 @@ svg.road-svg{position:absolute;top:0;left:0;width:100%;height:100%;pointer-event
 #introSkip{right:calc(16px + env(safe-area-inset-right,0px))}
 #introSound{left:calc(16px + env(safe-area-inset-left,0px))}
 .no-intro #intro{display:none}
+
+/* ===== Menu latéral, Trésorerie, Direction ===== */
+.wrap{padding-top:72px}
+#menuBtn{position:fixed;top:calc(env(safe-area-inset-top,0px) + 12px);left:12px;z-index:900;width:46px;height:46px;padding:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;border-radius:14px;box-shadow:0 4px 14px rgba(0,0,0,.18)}
+#menuBtn i{display:block;width:22px;height:3px;border-radius:2px;background:var(--green)}
+#scrim{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:950;display:none}
+#scrim.on{display:block}
+#side{position:fixed;top:0;left:0;bottom:0;width:min(300px,86vw);background:var(--card);border-right:1px solid var(--line);z-index:960;transform:translateX(-102%);transition:transform .25s;display:flex;flex-direction:column;padding:calc(env(safe-area-inset-top,0px) + 16px) 14px 14px;overflow-y:auto;visibility:hidden}
+#side.on{transform:none;visibility:visible}
+.side-h{display:flex;align-items:center;gap:10px;margin-bottom:18px}
+.side-h img{height:42px;width:42px;object-fit:contain;border-radius:10px;background:#fff;padding:3px}
+.side-h b{flex:1;font-size:1.1rem;color:var(--green)}
+.nvr{display:flex;gap:4px;align-items:center;margin-bottom:4px}
+.nv{flex:1;display:flex;gap:10px;align-items:center;text-align:left;border:0;background:transparent;padding:12px 14px;border-radius:12px}
+.nv.on{background:color-mix(in srgb,var(--green) 14%,var(--card));color:var(--green)}
+.nx{padding:6px 10px;border-color:transparent;background:transparent;color:#c0392b}
+#admBox{margin-top:auto;padding-top:16px}
+#admBox button{width:100%}
+#xm{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;z-index:1100;align-items:center;justify-content:center;padding:20px}
+#xm.on{display:flex}
+.stm{background:var(--card);border:1px solid var(--line);border-radius:16px;overflow:hidden;margin-bottom:20px}
+.stm-head{display:flex;gap:18px;align-items:center;padding:22px 26px;border-bottom:3px solid var(--green);flex-wrap:wrap}
+.stm-head img{height:64px;width:64px;object-fit:contain;background:#fff;border-radius:12px;padding:4px}
+.stm-head h2{margin:0;color:var(--green)}
+.stm-head p{margin:4px 0 0;color:var(--muted);font-size:.9rem}
+.stm-sum{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:1px;background:var(--line);border-bottom:1px solid var(--line)}
+.stm-sum div{background:var(--card);padding:14px 18px}
+.stm-sum small{display:block;color:var(--muted);font-size:.8rem}
+.stm-sum b{font-size:1.15rem}
+.stm-sum input,.stm-sum select{width:100%;padding:6px 8px;margin-top:2px}
+table.t{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums;min-width:640px}
+table.t th,table.t td{padding:10px 12px;border-bottom:1px solid var(--line);text-align:left}
+table.t th{background:color-mix(in srgb,var(--green) 10%,var(--card));font-size:.85rem}
+table.t .n{text-align:right;white-space:nowrap}
+.in{color:var(--done)}.out{color:#c0392b}
+.addrow{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px}
+.addrow label{font-size:.8rem;color:var(--muted);font-weight:700;display:flex;flex-direction:column;gap:4px}
+.ed-bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;background:var(--card);border:1px solid var(--line);padding:10px;border-radius:14px;margin-bottom:12px;position:sticky;top:calc(env(safe-area-inset-top,0px) + 4px);z-index:20}
+.ed-bar label{font-size:.8rem;color:var(--muted);display:flex;align-items:center;gap:4px}
+.ed-bar input[type=color]{padding:0;width:34px;height:30px}
+.ed-bar .sep{width:1px;height:26px;background:var(--line)}
+.ed-scroll{overflow:auto;border:1px solid var(--line);border-radius:12px;background:color-mix(in srgb,var(--ink) 7%,var(--bg));padding:16px}
+.board{position:relative;width:960px;height:560px;margin:0 auto;box-shadow:0 8px 30px rgba(0,0,0,.18);overflow:hidden}
+.el{position:absolute;touch-action:none;cursor:move;user-select:none;white-space:pre-wrap;overflow-wrap:anywhere}
+.el img{width:100%;height:100%;object-fit:cover;pointer-events:none;display:block}
+.el.sel{outline:2px solid #4a90c2}
+.el[contenteditable=true]{cursor:text;user-select:text;outline:2px dashed var(--amber)}
+.hd{position:absolute;right:-8px;bottom:-8px;width:16px;height:16px;background:#4a90c2;border:2px solid #fff;border-radius:50%;cursor:nwse-resize}
+.ro #addBtn,.ro #importTriggerBtn,.ro .lock-banner,.ro [data-act="edit"],.ro #mcAdd,.ro [data-act="save"],.ro .prow .danger,.ro .road-node-special:has(#addBtn){display:none}
 </style>
 </head>
-<body>
+<body class="ro">
 <div id="intro" aria-label="Animation d'ouverture AfriFloW">
   <video id="introVideo" src="afriflow-intro.mp4" muted playsinline preload="auto"></video>
   <button type="button" id="introSound" aria-label="Activer ou couper le son">🔇</button>
@@ -186,7 +235,7 @@ svg.road-svg{position:absolute;top:0;left:0;width:100%;height:100%;pointer-event
   </div>
 </div>
 
-<div class="wrap">
+<div class="wrap" id="view-home">
   <div class="brand">
     <img class="logo-img" src="logo.png" alt="Logo AfriFloW" onerror="this.onerror=null;this.src='https://placehold.co/78x78/ffffff/1f5d3a?text=A'">
     <div>
@@ -246,6 +295,16 @@ svg.road-svg{position:absolute;top:0;left:0;width:100%;height:100%;pointer-event
     </div>
   </div>
 </div>
+
+<button type="button" id="menuBtn" aria-label="Ouvrir le menu" aria-expanded="false"><i></i><i></i><i></i></button>
+<div id="scrim"></div>
+<nav id="side" aria-label="Menu principal">
+  <div class="side-h"><img src="logo.png" alt="" onerror="this.onerror=null;this.src='https://placehold.co/42x42/1f5d3a/ffffff?text=A'"><b>AfriFloW</b><button type="button" id="sideClose" aria-label="Fermer le menu">✕</button></div>
+  <div id="navList"></div>
+  <div id="admBox"></div>
+</nav>
+<div id="viewHost" class="wrap" style="display:none"></div>
+<div id="xm"><div class="customizer-box" id="xmBox"></div></div>
 
 <div id="ov"><div id="pn" role="dialog" aria-modal="true"></div></div>
 
@@ -341,10 +400,12 @@ function verifyGlobalAuth(){
   var email = $("authEmailInput").value.trim(), pwd = $("authPasswordInput").value.trim();
   var err = $("authError");
   if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){ err.textContent = "Adresse email invalide."; return; }
-  if(pwd !== "AFRIFLOW" + new Date().getFullYear()){ err.textContent = "Mot de passe incorrect."; return; }
+  var yr = new Date().getFullYear(), pw = pwd.replace(/\s/g, "").toUpperCase();
+  var role = pw === "AFRIFLOWAD" + yr ? "admin" : (pw === "AFRIFLOW" + yr ? "reader" : "");
+  if(!role){ err.textContent = "Mot de passe incorrect."; return; }
   err.textContent = "";
-  enterApp(email);
-  recordUserAction("Connexion réussie et consultation de la feuille de route.");
+  enterApp(email, role);
+  recordUserAction("Connexion réussie (" + (role === "admin" ? "administrateur" : "lecture seule") + ") et consultation de la feuille de route.");
 }
 
 /* ---------- Route ---------- */
@@ -476,6 +537,7 @@ function compressImage(file, cb){
 }
 
 function openEditor(index){
+  if(USER_ROLE !== "admin") return;
   var isNew = index === null;
   var it = isNew ? {title:"", desc:"", details:"", date:"", status:"todo", image:"", docs:[]} : clone(ITEMS[index]);
   var pn = $("pn");
@@ -645,7 +707,7 @@ $("exportBtn").onclick = function(){
 };
 $("importTriggerBtn").onclick = function(){ $("importFile").click(); };
 $("importFile").onchange = function(e){
-  var f = e.target.files[0]; if(!f) return;
+  var f = e.target.files[0]; if(!f || USER_ROLE !== "admin") return;
   var reader = new FileReader();
   reader.onload = function(evt){
     try {
@@ -686,7 +748,7 @@ $("authBtn").onclick = verifyGlobalAuth;
 $("authPasswordInput").addEventListener("keydown", function(e){ if(e.key === "Enter") verifyGlobalAuth(); });
 $("authEmailInput").addEventListener("keydown", function(e){ if(e.key === "Enter") $("authPasswordInput").focus(); });
 $("startBtn").onclick = openStartArchives;
-$("addBtn").onclick = function(){ openEditor(null); };
+$("addBtn").onclick = function(){ if(USER_ROLE === "admin") openEditor(null); };
 [$("startBtn"), $("addBtn")].forEach(function(el){
   el.addEventListener("keydown", function(e){ if(e.key === "Enter" || e.key === " "){ e.preventDefault(); el.click(); } });
 });
@@ -1072,6 +1134,7 @@ function openCountry(k){
   box.addEventListener("click", function(e){
     var a = e.target.closest("[data-act]"); if(!a) return;
     if(a.dataset.act === "close") return closeDrawer();
+    if(USER_ROLE !== "admin") return;
     var num = function(id){ return Math.max(0, Number($(id).value) || 0); };
     MAP[k] = {etat:$("mcEtat").value, stock:num("mcStock"), transit:num("mcTransit"), valeur:num("mcValeur"), vol:num("mcVol"),
       actionnaires:$("mcSh").value.trim(), notes:$("mcNotes").value.trim(),
@@ -1079,6 +1142,7 @@ function openCountry(k){
     recordUserAction("Mise à jour de la situation : " + (WMAP[k] ? WMAP[k].nm : k));
     saveLocal(); renderMap(); closeDrawer(); cloudSave("map");
   });
+  if(USER_ROLE !== "admin"){ box.querySelectorAll("input,select,textarea").forEach(function(x){ x.disabled = true; }); }
   showDrawer();
 }
 
@@ -1111,6 +1175,7 @@ $("cSel").addEventListener("change", function(){ var k = this.value; this.value 
 $("shSel").addEventListener("change", renderMap);
 
 /* ---------- Session (15 min d'inactivité) + intro vidéo ---------- */
+var USER_ROLE = "reader";
 var SESSION_KEY = "afriflow_session_v1", SESSION_TTL = 15 * 60 * 1000, INTRO_KEY = "afriflow_intro_seen";
 var lastAct = Date.now(), lastSaved = 0;
 
@@ -1119,17 +1184,19 @@ function saveSession(force){
   var n = Date.now();
   if(!force && n - lastSaved < 15000) return;
   lastSaved = n;
-  try { localStorage.setItem(SESSION_KEY, JSON.stringify({e:loggedUserEmail, t:lastAct})); } catch(e){}
+  try { localStorage.setItem(SESSION_KEY, JSON.stringify({e:loggedUserEmail, t:lastAct, r:USER_ROLE})); } catch(e){}
 }
 function touch(){ lastAct = Date.now(); saveSession(false); }
-function enterApp(email){
-  loggedUserEmail = email; lastAct = Date.now(); saveSession(true);
+function enterApp(email, role){
+  loggedUserEmail = email; USER_ROLE = role === "admin" ? "admin" : "reader"; lastAct = Date.now(); saveSession(true);
+  document.body.classList.toggle("ro", USER_ROLE !== "admin");
   $("auth-screen").classList.add("off");
-  $("editStatusIndicator").textContent = "🔓 Connecté : " + email + " — modification directe active";
+  $("editStatusIndicator").textContent = (USER_ROLE === "admin" ? "🔓 Connecté : " : "🔒 Connecté : ") + email + (USER_ROLE === "admin" ? " — modification directe active" : " — lecture seule");
   renderRoadmap();
+  if(window.onRole) window.onRole();
 }
 function logout(msg){
-  loggedUserEmail = "";
+  loggedUserEmail = ""; USER_ROLE = "reader"; document.body.classList.add("ro");
   try { localStorage.removeItem(SESSION_KEY); } catch(e){}
   closeDrawer(); $("customizer-modal").classList.remove("on");
   $("authPasswordInput").value = ""; $("authError").textContent = msg || "";
@@ -1140,7 +1207,7 @@ function checkIdle(){ if(loggedUserEmail && Date.now() - lastAct > SESSION_TTL) 
 function resumeSession(){
   try {
     var s = JSON.parse(localStorage.getItem(SESSION_KEY) || "null");
-    if(s && s.e && Date.now() - s.t < SESSION_TTL){ enterApp(s.e); return; }
+    if(s && s.e && Date.now() - s.t < SESSION_TTL){ enterApp(s.e, s.r); return; }
     if(s) localStorage.removeItem(SESSION_KEY);
   } catch(e){}
 }
@@ -1179,6 +1246,245 @@ resumeSession();
 initIntro();
 </script>
 
+<script>
+/* ===== Menu latéral · Trésorerie · Direction ===== */
+(function(){
+var KEY="afriflow_extra_v1", $=function(i){return document.getElementById(i)};
+var X={nav:[],tre:{open:0,cur:"XOF",rows:[]},pages:{}}; window.EXTRA=X;
+var BASE=[{id:"home",n:"Accueil",e:"🏠"},{id:"treasury",n:"Trésorerie",e:"💰"},{id:"direction",n:"Direction",e:"🧭"}];
+var CURW={XOF:"francs CFA",EUR:"euros",USD:"dollars"}, CUR={XOF:"FCFA",EUR:"EUR",USD:"USD"}, admin=false, cur="home", sel=null, tm;
+function merge(s){ if(Array.isArray(s.nav))X.nav=s.nav; if(s.tre)X.tre=s.tre; if(s.pages)X.pages=s.pages; }
+try{ var s0=JSON.parse(localStorage.getItem(KEY)||"null"); if(s0)merge(s0); }catch(e){}
+function esc(s){return String(s==null?"":s).replace(/[&<>"']/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]})}
+function editing(){var a=document.activeElement;return !!(a&&a.isContentEditable)}
+function save(){
+  try{localStorage.setItem(KEY,JSON.stringify(X))}catch(e){alert("Stockage du navigateur plein : image trop lourde ? Supprimez-en ou utilisez des images plus petites.")}
+  clearTimeout(tm); tm=setTimeout(function(){ if(window.cloudSave) window.cloudSave("extra") },900);
+}
+window.hasExtra=function(){return !!(X.nav.length||X.tre.rows.length||Object.keys(X.pages).length)};
+window.applyExtra=function(v){ if(editing())return; merge(v); try{localStorage.setItem(KEY,JSON.stringify(X))}catch(e){} buildNav(); if(cur!=="home")show(cur); };
+
+/* ---------- Dialogue ---------- */
+function ask(title,fields,ok){
+  var b=$("xmBox");
+  b.innerHTML='<h2 style="margin-top:0">'+title+'</h2>'+fields.map(function(f){return '<div class="fm"><label for="xf_'+f.id+'">'+f.l+'</label><input id="xf_'+f.id+'" type="'+(f.t||"text")+'" autocomplete="'+(f.t==="password"?"new-password":"off")+'" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="'+(f.p||"")+'"></div>'}).join("")+(fields.some(function(f){return f.t==="password"})?'<label style="font-size:.85rem;color:var(--muted);display:flex;gap:8px;align-items:center"><input type="checkbox" id="xshow" style="width:auto"> Afficher le mot de passe</label>':'')+'<div id="xerr" role="alert" style="color:#c0392b;min-height:1.2em;font-size:.85rem"></div><div style="display:flex;gap:10px;margin-top:10px"><button type="button" class="p" id="xok" style="flex:1">Valider</button><button type="button" id="xno">Annuler</button></div>';
+  $("xm").classList.add("on"); b.querySelector("input").focus();
+  var pw=b.querySelector("input[type=password]");
+  if(pw){ pw.addEventListener("keydown",function(){pw.dataset.t="1"}); [60,250].forEach(function(t){setTimeout(function(){if(!pw.dataset.t)pw.value=""},t)}); $("xshow").onchange=function(){pw.type=this.checked?"text":"password"}; }
+  function close(){$("xm").classList.remove("on")}
+  $("xno").onclick=close;
+  $("xok").onclick=function(){var v={};fields.forEach(function(f){v[f.id]=$("xf_"+f.id).value.trim()});var e=ok(v);if(e)$("xerr").textContent=e;else close()};
+  b.onkeydown=function(e){if(e.key==="Enter")$("xok").click()};
+}
+
+/* ---------- Navigation ---------- */
+function isAdmin(){return window.USER_ROLE==="admin"}
+function buildNav(){
+  var h=""; BASE.concat(X.nav).forEach(function(it,i){
+    h+='<div class="nvr"><button type="button" class="nv'+(it.id===cur?' on':'')+'" data-id="'+esc(it.id)+'">'+esc(it.n)+'</button>'+(i>2&&isAdmin()?'<button type="button" class="nx" data-del="'+esc(it.id)+'" aria-label="Supprimer '+esc(it.n)+'">✕</button>':'')+'</div>';
+  });
+  $("navList").innerHTML=h;
+  $("admBox").innerHTML=isAdmin()?'<button type="button" class="p" id="addNav">＋ Ajouter un élément</button>':'';
+}
+function openNav(){$("side").classList.add("on");$("scrim").classList.add("on");$("menuBtn").setAttribute("aria-expanded","true")}
+function closeNav(){$("side").classList.remove("on");$("scrim").classList.remove("on");$("menuBtn").setAttribute("aria-expanded","false")}
+function show(id){
+  cur=id; sel=null;
+  $("view-home").style.display=id==="home"?"":"none";
+  $("viewHost").style.display=id==="home"?"none":"";
+  if(id==="treasury")renTre(); else if(id!=="home")renEd(id);
+  buildNav(); closeNav(); window.scrollTo(0,0);
+}
+$("menuBtn").onclick=openNav; $("scrim").onclick=closeNav; $("sideClose").onclick=closeNav;
+document.addEventListener("keydown",function(e){
+  if(e.key==="Escape"){closeNav();$("xm").classList.remove("on")}
+  if((e.key==="Delete")&&sel&&cur!=="home"&&cur!=="treasury"&&!editing()&&!/INPUT|SELECT|TEXTAREA/.test(document.activeElement.tagName)) delSel();
+});
+$("side").addEventListener("click",function(e){
+  var b=e.target.closest("button"); if(!b)return;
+  if(b.dataset.id) show(b.dataset.id);
+  else if(b.dataset.del){ if(isAdmin()&&confirm("Supprimer cet élément du menu et son contenu ?")){ var id=b.dataset.del; X.nav=X.nav.filter(function(n){return n.id!==id}); delete X.pages[id]; save(); if(cur===id)show("home"); else buildNav(); } }
+  else if(b.id==="addNav"&&isAdmin()) ask("Nouvel élément du menu",[{id:"n",l:"Nom"}],function(v){ if(!v.n)return "Donnez un nom à l'élément."; X.nav.push({id:"p"+Date.now().toString(36),n:v.n,e:""}); save(); buildNav(); });
+});
+var _lo=window.logout; if(typeof _lo==="function") window.logout=function(m){show("home");_lo(m)};
+
+/* ---------- Trésorerie ---------- */
+function fd(d){return d?d.split("-").reverse().join("/"):""}
+function fmt(n,pdf){var d=X.tre.cur==="XOF"?0:2,s=new Intl.NumberFormat("fr-FR",{minimumFractionDigits:d,maximumFractionDigits:d}).format(n);return pdf?s.replace(/[\u202f\u00a0]/g," "):s}
+function calc(){
+  var bal=Number(X.tre.open)||0,ti=0,to=0;
+  var rows=X.tre.rows.map(function(r){return Object.assign({},r)}).sort(function(a,b){return a.date<b.date?-1:a.date>b.date?1:a.id-b.id});
+  rows.forEach(function(r){ if(r.type==="in"){bal+=r.amount;ti+=r.amount}else{bal-=r.amount;to+=r.amount} r.bal=bal });
+  return {rows:rows,ti:ti,to:to,bal:bal};
+}
+function renTre(){
+  var C=calc(),T=X.tre,cu=CUR[T.cur],rs=C.rows;
+  var per=rs.length?fd(rs[0].date)+" au "+fd(rs[rs.length-1].date):"—";
+  var body='<tr><td>—</td><td><b>Solde initial</b></td><td></td><td></td><td></td><td class="n"><b>'+fmt(T.open)+'</b></td><td></td></tr>';
+  rs.forEach(function(r){body+='<tr><td>'+fd(r.date)+'</td><td>'+esc(r.label)+'</td><td>'+esc(r.ref||"")+'</td><td class="n in">'+(r.type==="in"?fmt(r.amount):"")+'</td><td class="n out">'+(r.type==="out"?fmt(r.amount):"")+'</td><td class="n">'+fmt(r.bal)+'</td><td><button type="button" class="danger" data-rm="'+r.id+'" aria-label="Supprimer la ligne">✕</button></td></tr>'});
+  if(!rs.length)body+='<tr><td colspan="7" style="color:var(--muted)">Aucune opération. Ajoutez une entrée ou une sortie ci-dessous.</td></tr>';
+  var today=new Date().toISOString().slice(0,10);
+  $("viewHost").innerHTML='<div class="toolbar"><b>Trésorerie · entrées et sorties de fonds</b><div class="toolbar-actions"><button type="button" class="p" id="pdfBtn">⬇ Télécharger le relevé (PDF)</button></div></div>'
+  +'<div class="stm"><div class="stm-head"><img src="logo.png" alt="Logo AfriFloW" onerror="this.onerror=null;this.src=\'https://placehold.co/64x64/ffffff/1f5d3a?text=A\'"><div><h2>Relevé de compte</h2><p>AfriFloW · Compte de trésorerie<br>Période : '+per+' · Devise : '+cu+'</p></div></div>'
+  +'<div class="stm-sum"><div><small>Solde initial</small><input type="number" step="any" id="tOpen" value="'+(Number(T.open)||0)+'" aria-label="Solde initial"></div><div><small>Total des entrées</small><b class="in">+ '+fmt(C.ti)+' '+cu+'</b></div><div><small>Total des sorties</small><b class="out">− '+fmt(C.to)+' '+cu+'</b></div><div><small>Solde final</small><b'+(C.bal<0?' class="out"':'')+'>'+fmt(C.bal)+' '+cu+'</b></div><div><small>Titulaire (en-tête du PDF)</small><textarea id="tHol" rows="2" style="width:100%" aria-label="Titulaire"></textarea></div><div><small>Devise</small><select id="tCur"><option value="XOF">FCFA</option><option value="EUR">Euro</option><option value="USD">Dollar US</option></select></div></div>'
+  +'<div style="overflow-x:auto"><table class="t"><thead><tr><th>Date</th><th>Libellé</th><th>Réf.</th><th class="n">Entrée</th><th class="n">Sortie</th><th class="n">Solde</th><th></th></tr></thead><tbody>'+body+'</tbody></table></div></div>'
+  +'<div class="addrow"><label>Date<input type="date" id="aD" value="'+today+'"></label><label>Libellé<input id="aL" placeholder="Ex. Vente de karité"></label><label>Référence<input id="aR" placeholder="Facultatif"></label><label>Type<select id="aT"><option value="in">Entrée de fonds</option><option value="out">Sortie de fonds</option></select></label><label>Montant ('+cu+')<input type="number" step="any" min="0" id="aM"></label><label>&nbsp;<button type="button" class="p" id="aB">Ajouter la ligne</button></label><div id="aErr" role="alert" style="grid-column:1/-1;color:#c0392b;font-size:.85rem"></div></div>';
+  if(!isAdmin()){var ar=document.querySelector("#viewHost .addrow");if(ar)ar.remove();document.querySelectorAll("#viewHost [data-rm]").forEach(function(x){x.remove()});["tOpen","tCur","tHol"].forEach(function(i){$(i).disabled=true})}
+  $("tCur").value=T.cur; $("tHol").value=T.holder||"AfriFloW"; $("tHol").onchange=function(){T.holder=this.value;save()};
+  $("tCur").onchange=function(){T.cur=this.value;save();renTre()};
+  $("tOpen").onchange=function(){T.open=parseFloat(this.value)||0;save();renTre()};
+  $("pdfBtn").onclick=pdf;
+  if($("aB"))$("aB").onclick=function(){
+    var d=$("aD").value,l=$("aL").value.trim(),m=parseFloat(String($("aM").value).replace(",","."));
+    if(!d||!l||!(m>0)){$("aErr").textContent="Renseignez la date, le libellé et un montant supérieur à 0.";return}
+    T.rows.push({id:Date.now()*1000+Math.floor(Math.random()*1000),date:d,label:l,ref:$("aR").value.trim(),type:$("aT").value,amount:m}); save(); renTre();
+  };
+  $("viewHost").querySelectorAll("[data-rm]").forEach(function(b){b.onclick=function(){ if(confirm("Supprimer cette ligne ?")){T.rows=T.rows.filter(function(r){return String(r.id)!==b.dataset.rm});save();renTre()} }});
+}
+function loadJs(u){return new Promise(function(ok,ko){var s=document.createElement("script");s.src=u;s.onload=ok;s.onerror=ko;document.head.appendChild(s)})}
+function logoData(){return new Promise(function(ok){var i=new Image();i.onload=function(){try{var c=document.createElement("canvas");c.width=i.naturalWidth;c.height=i.naturalHeight;c.getContext("2d").drawImage(i,0,0);ok({d:c.toDataURL("image/png"),w:i.naturalWidth,h:i.naturalHeight})}catch(e){ok(null)}};i.onerror=function(){ok(null)};i.src="logo.png"})}
+async function pdf(){
+  try{ if(!window.jspdf){ await loadJs("https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"); await loadJs("https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.2/dist/jspdf.plugin.autotable.min.js"); } }
+  catch(e){ alert("Module PDF indisponible (connexion ?). Dans la fenêtre d'impression, choisissez « Enregistrer au format PDF »."); window.print(); return; }
+  var C=calc(),T=X.tre,cu=CUR[T.cur],cw=CURW[T.cur],rs=C.rows,L=14,R=196;
+  var d=new window.jspdf.jsPDF({unit:"mm",format:"a4"}),lg=await logoData();
+  var t0=new Date(),now=t0.toLocaleDateString("fr-FR"),iso=t0.toISOString().slice(0,10);
+  var first=rs.length?rs[0].date:iso,last=rs.length?rs[rs.length-1].date:iso;
+  var pv=new Date(first+"T00:00:00");pv.setDate(pv.getDate()-1);
+  var prevIso=pv.getFullYear()+"-"+String(pv.getMonth()+1).padStart(2,"0")+"-"+String(pv.getDate()).padStart(2,"0");
+  var open=Number(T.open)||0,bal=C.bal;
+  d.setTextColor(0).setDrawColor(0);
+  /* bloc gauche */
+  d.setFont("helvetica","bold").setFontSize(12).text("INFORMATIONS DU COMPTE",L,56);
+  d.setLineWidth(.6).line(L,58.5,100,58.5);
+  d.setFontSize(9.5).text("Titulaire du compte",L,65);
+  d.setFont("helvetica","normal").setFontSize(8.5).text(["AfriFloW","Compte de trésorerie - "+cu,rs.length+" opération"+(rs.length>1?"s":"")+" sur la période"],L,69.5);
+  /* adresse (police machine, comme sur un relevé bancaire) */
+  d.setFont("courier","normal").setFontSize(9).text((T.holder||"AfriFloW").toUpperCase().split("\n"),112,58);
+  /* phrase solde */
+  var y=90; d.setFillColor(0).triangle(L,y-2.6,L,y+.2,L+1.8,y-1.2,"F");
+  d.setFont("helvetica","normal").setFontSize(9).text("Nous vous informons qu'au "+fd(last)+", votre solde est "+(bal<0?"débiteur de - ":"créditeur de ")+fmt(Math.abs(bal),1)+" "+cw+".",L+4,y);
+  d.setFont("helvetica","bold").setFontSize(11).text("RELEVÉ DES OPÉRATIONS",L,102);
+  /* tableau */
+  var B=function(c){return {content:c,styles:{fontStyle:"bold",halign:"right"}}};
+  var body=[[{content:"SOLDE PRÉCÉDENT AU "+fd(prevIso),colSpan:3,styles:{halign:"right",fontStyle:"bold"}},B(open<0?fmt(-open,1):""),B(open>=0?fmt(open,1):"")]];
+  rs.forEach(function(r){body.push([fd(r.date),r.ref||"",r.label,r.type==="out"?fmt(r.amount,1):"",r.type==="in"?fmt(r.amount,1):""])});
+  body.push([{content:"TOTAUX DES MOUVEMENTS",colSpan:3,styles:{halign:"right",fontStyle:"bold"}},B(fmt(C.to,1)),B(fmt(C.ti,1))]);
+  body.push([{content:"NOUVEAU SOLDE AU "+fd(last),colSpan:3,styles:{halign:"right",fontStyle:"bold",fontSize:9.5}},B(bal<0?"- "+fmt(-bal,1):""),B(bal>=0?fmt(bal,1):"")]);
+  d.autoTable({startY:104,margin:{top:50,bottom:26,left:L,right:14},theme:"grid",
+    head:[["Date","Réf.","Nature de l'opération",{content:"Débit",styles:{halign:"right"}},{content:"Crédit",styles:{halign:"right"}}]],body:body,
+    styles:{font:"helvetica",fontSize:8.5,cellPadding:1.8,lineColor:[110,110,110],lineWidth:.2,textColor:0,valign:"middle"},
+    headStyles:{fillColor:255,textColor:0,fontStyle:"bold",fontSize:9.5,lineWidth:0},
+    columnStyles:{0:{cellWidth:26},1:{cellWidth:26},3:{cellWidth:30},4:{cellWidth:30}}});
+  var tp=d.internal.getCurrentPageInfo().pageNumber,fy=d.lastAutoTable.finalY; y=fy+8;
+  function note(t){
+    var ls=d.splitTextToSize(t,R-L-5);
+    if(y+ls.length*4+4>268){d.addPage();y=54}
+    d.setFillColor(0).triangle(L,y-2.6,L,y+.2,L+1.8,y-1.2,"F");
+    d.setFont("helvetica","normal").setFontSize(8.5).setTextColor(0).text(ls,L+4,y); y+=ls.length*4+3;
+  }
+  note("Sur la période du "+fd(first)+" au "+fd(last)+", le total des sorties de fonds est de "+fmt(C.to,1)+" "+cw+" et celui des entrées de fonds est de "+fmt(C.ti,1)+" "+cw+".");
+  note("Relevé établi à partir des opérations enregistrées dans l'espace Trésorerie d'AfriFloW.");
+  /* filets épais du tableau */
+  d.setPage(1); d.setDrawColor(0).setLineWidth(.8).line(L,104,R,104);
+  d.setPage(tp); d.setDrawColor(0).setLineWidth(.8).line(L,fy,R,fy);
+  /* en-tête et pied de chaque page */
+  var n=d.getNumberOfPages();
+  for(var i=1;i<=n;i++){
+    d.setPage(i);
+    if(lg){var hh=17;d.addImage(lg.d,"PNG",L,10,hh*lg.w/lg.h,hh)}else{d.setFont("helvetica","bold").setFontSize(18).setTextColor(0).text("AfriFloW",L,20)}
+    d.setTextColor(0).setFont("helvetica","bold").setFontSize(15).text("RELEVÉ DE COMPTE",R,17,{align:"right"});
+    var eb="en "+cw; d.setFontSize(10); var wb=d.getTextWidth(eb);
+    d.text(eb,R,23,{align:"right"}); d.setFont("helvetica","normal").text("COMPTE DE TRÉSORERIE - ",R-wb,23,{align:"right"});
+    d.setDrawColor(0).setLineWidth(.9).line(L,31,R,31);
+    d.setFont("helvetica","bold").setFontSize(9.5).text("du "+fd(first)+" au "+fd(last),R,37,{align:"right"}).text("Page "+i+"/"+n,R,42,{align:"right"});
+    d.setLineWidth(.6).line(L,282,R,282);
+    d.setFont("helvetica","normal").setFontSize(6.5).setTextColor(60).text(["AfriFloW - Compte de trésorerie","Relevé édité le "+now],L,286);
+  }
+  d.save("releve-afriflow-"+iso+".pdf");
+}
+
+/* ---------- Éditeur type Canva (Direction + pages ajoutées) ---------- */
+var FONTS=[["Sans","system-ui,-apple-system,sans-serif"],["Serif","Georgia,'Times New Roman',serif"],["Machine","'Courier New',monospace"],["Impact","Impact,Haettenschweiler,sans-serif"],["Trebuchet","'Trebuchet MS',sans-serif"],["Manuscrit","'Comic Sans MS',cursive"]];
+function pg(id){return X.pages[id]||(X.pages[id]={bg:"#ffffff",els:[]})}
+function nodeOf(e){return $("board").querySelector('[data-id="'+e.id+'"]')}
+function paint(n,e){
+  var s=n.style; s.left=e.x+"px";s.top=e.y+"px";s.width=e.w+"px";s.height=e.h+"px";
+  if(e.t==="img")return;
+  s.background=e.fill||"transparent"; s.borderRadius=e.t==="ellipse"?"50%":"0";
+  if(e.t==="text"){s.color=e.color;s.fontSize=e.fs+"px";s.fontFamily=e.ff;s.fontWeight=e.b?"700":"400";s.fontStyle=e.i?"italic":"normal";s.lineHeight="1.2";s.padding="4px"}
+}
+function mk(e){
+  var n=document.createElement("div"); n.className="el"; n.dataset.id=e.id;
+  if(e.t==="text")n.textContent=e.text; if(e.t==="img"){var im=document.createElement("img");im.src=e.src;im.alt="";n.appendChild(im)}
+  paint(n,e); return n;
+}
+function select(e){
+  var b=$("board"); b.querySelectorAll(".el").forEach(function(n){n.classList.remove("sel")}); b.querySelectorAll(".hd").forEach(function(h){h.remove()});
+  sel=e; if(!e)return;
+  var n=nodeOf(e); n.classList.add("sel"); var h=document.createElement("div"); h.className="hd"; n.appendChild(h);
+  if(e.t!=="img"){$("cFill").value=/^#/.test(e.fill||"")?e.fill:"#ffffff"}
+  if(e.t==="text"){$("cTxt").value=e.color;$("nFs").value=e.fs;$("sFf").value=e.ff}
+}
+function upd(fn){if(!sel)return;fn(sel);paint(nodeOf(sel),sel);save()}
+function delSel(){var P=pg(cur);P.els=P.els.filter(function(e){return e!==sel});var n=nodeOf(sel);n&&n.remove();sel=null;save()}
+function add(e){var P=pg(cur);e.id="e"+Date.now().toString(36)+Math.floor(Math.random()*999);P.els.push(e);$("board").appendChild(mk(e));select(e);save()}
+function renEd(id){
+  var P=pg(id),it=BASE.concat(X.nav).filter(function(x){return x.id===id})[0]||{n:"",e:""};
+  $("viewHost").innerHTML='<div class="toolbar"><b>'+esc(it.n)+'</b><span style="color:var(--muted);font-size:.85rem">Glissez pour déplacer · coin bleu pour redimensionner · double-clic sur un texte pour l\'écrire</span></div>'
+  +'<div class="ed-bar"><button type="button" id="bT">T Texte</button><button type="button" id="bH">Titre</button><button type="button" id="bR">▭ Rectangle</button><button type="button" id="bC">◯ Cercle</button><button type="button" id="bI">🖼 Image</button><input type="file" id="fI" accept="image/*" hidden><span class="sep"></span>'
+  +'<label>Fond<input type="color" id="cFill" value="#ffffff"></label><label>Texte<input type="color" id="cTxt" value="#1d2a22"></label><input type="number" id="nFs" min="8" max="200" value="24" style="width:66px" aria-label="Taille du texte"><select id="sFf" aria-label="Police">'+FONTS.map(function(f){return '<option value="'+esc(f[1])+'">'+f[0]+'</option>'}).join("")+'</select><button type="button" id="bB"><b>G</b></button><button type="button" id="bIt"><i>I</i></button><span class="sep"></span>'
+  +'<button type="button" id="bFr">Premier plan</button><button type="button" id="bBk">Arrière-plan</button><button type="button" id="bDp">Dupliquer</button><button type="button" class="danger" id="bDl">🗑 Supprimer</button><span class="sep"></span><label>Fond de page<input type="color" id="cBg" value="'+P.bg+'"></label></div>'
+  +'<div class="ed-scroll"><div class="board" id="board" style="background:'+P.bg+'"></div></div>';
+  if(!isAdmin()){document.querySelector("#viewHost .ed-bar").style.display="none";var hs=document.querySelector("#viewHost .toolbar span");if(hs)hs.remove()}
+  var b=$("board"); P.els.forEach(function(e){b.appendChild(mk(e))});
+  $("bT").onclick=function(){add({t:"text",x:80,y:80,w:320,h:50,text:"Votre texte",color:"#1d2a22",fs:24,ff:FONTS[0][1]})};
+  $("bH").onclick=function(){add({t:"text",x:60,y:50,w:680,h:80,text:"Votre titre",color:"#1f5d3a",fs:52,b:1,ff:FONTS[1][1]})};
+  $("bR").onclick=function(){add({t:"rect",x:120,y:160,w:220,h:130,fill:"#1f5d3a"})};
+  $("bC").onclick=function(){add({t:"ellipse",x:420,y:160,w:150,h:150,fill:"#d98a1b"})};
+  $("bI").onclick=function(){$("fI").click()};
+  $("fI").onchange=function(){
+    var f=this.files[0]; if(!f)return; var r=new FileReader();
+    r.onload=function(){var i=new Image();i.onload=function(){var k=Math.min(1,800/Math.max(i.width,i.height)),c=document.createElement("canvas");c.width=Math.round(i.width*k);c.height=Math.round(i.height*k);c.getContext("2d").drawImage(i,0,0,c.width,c.height);var w=Math.min(360,c.width);add({t:"img",x:100,y:100,w:w,h:Math.round(w*c.height/c.width),src:c.toDataURL("image/jpeg",.82)})};i.src=r.result};
+    r.readAsDataURL(f); this.value="";
+  };
+  $("cFill").oninput=function(){var v=this.value;upd(function(e){if(e.t!=="img")e.fill=v})};
+  $("cTxt").oninput=function(){var v=this.value;upd(function(e){if(e.t==="text")e.color=v})};
+  $("nFs").oninput=function(){var v=Math.max(8,parseInt(this.value)||24);upd(function(e){if(e.t==="text")e.fs=v})};
+  $("sFf").onchange=function(){var v=this.value;upd(function(e){if(e.t==="text")e.ff=v})};
+  $("bB").onclick=function(){upd(function(e){if(e.t==="text")e.b=e.b?0:1})};
+  $("bIt").onclick=function(){upd(function(e){if(e.t==="text")e.i=e.i?0:1})};
+  $("bFr").onclick=function(){if(!sel)return;var a=P.els;a.splice(a.indexOf(sel),1);a.push(sel);var n=nodeOf(sel);b.appendChild(n);save()};
+  $("bBk").onclick=function(){if(!sel)return;var a=P.els;a.splice(a.indexOf(sel),1);a.unshift(sel);var n=nodeOf(sel);b.insertBefore(n,b.firstChild);save()};
+  $("bDp").onclick=function(){if(!sel)return;var c=Object.assign({},sel);c.x+=20;c.y+=20;add(c)};
+  $("bDl").onclick=function(){if(sel)delSel()};
+  $("cBg").oninput=function(){P.bg=this.value;b.style.background=this.value;save()};
+  b.addEventListener("pointerdown",function(ev){
+    if(!isAdmin())return;
+    var n=ev.target.closest(".el"); if(!n){select(null);return}
+    if(n.isContentEditable)return;
+    var e=P.els.filter(function(x){return x.id===n.dataset.id})[0]; if(!e)return; select(e);
+    var rs=ev.target.classList.contains("hd"),sx=ev.clientX,sy=ev.clientY,ox=e.x,oy=e.y,ow=e.w,oh=e.h;
+    try{n.setPointerCapture(ev.pointerId)}catch(x){}
+    function mv(m){var dx=m.clientX-sx,dy=m.clientY-sy;if(rs){e.w=Math.max(20,ow+dx);e.h=Math.max(20,oh+dy)}else{e.x=ox+dx;e.y=oy+dy}paint(n,e)}
+    function up(){n.removeEventListener("pointermove",mv);n.removeEventListener("pointerup",up);n.removeEventListener("pointercancel",up);save()}
+    n.addEventListener("pointermove",mv);n.addEventListener("pointerup",up);n.addEventListener("pointercancel",up);
+  });
+  b.addEventListener("dblclick",function(ev){
+    if(!isAdmin())return;
+    var n=ev.target.closest(".el"); if(!n)return;
+    var e=P.els.filter(function(x){return x.id===n.dataset.id})[0]; if(!e||e.t!=="text")return;
+    n.querySelectorAll(".hd").forEach(function(h){h.remove()});
+    n.contentEditable="true"; n.focus(); document.getSelection().selectAllChildren(n);
+    n.onblur=function(){e.text=n.innerText;n.contentEditable="false";n.onblur=null;save();select(e)};
+  });
+}
+
+window.onRole=function(){buildNav();if(cur!=="home")show(cur)};
+buildNav();
+})();
+</script>
+
 <!-- Synchronisation cloud (Supabase) : table afriflow_state -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
@@ -1201,6 +1507,7 @@ initIntro();
   /* Applique une ligne du cloud à l'état local */
   function apply(row){
     if(row.key === 'items' && Array.isArray(row.value)){ ITEMS = row.value; normalize(); saveLocal(); renderRoadmap(); }
+    if(row.key === 'extra' && row.value && typeof row.value === 'object' && window.applyExtra){ window.applyExtra(row.value); }
     if(row.key === 'map' && row.value && typeof row.value === 'object'){ MAP = mergeMap(row.value); saveLocal(); renderMap(); }
   }
 
@@ -1220,13 +1527,14 @@ initIntro();
     /* Première utilisation : la table est vide, on y dépose les données actuelles */
     if(!have.items) cloudSave('items');
     if(!have.map && Object.keys(MAP).length) cloudSave('map');
+    if(!have.extra && window.hasExtra && window.hasExtra()) cloudSave('extra');
     setBadge(true, 'Synchronisé');
   }
 
   /* Envoie l'état local vers le cloud ('items' ou 'map') */
   window.cloudSave = async function(key){
     if(!sb) return;
-    var value = key === 'items' ? ITEMS : MAP;
+    var value = key === 'items' ? ITEMS : (key === 'extra' ? window.EXTRA : MAP);
     var stamp = new Date().toISOString();
     var res = await sb.from(TABLE).upsert({key:key, value:value, updated_at:stamp});
     if(res.error){
