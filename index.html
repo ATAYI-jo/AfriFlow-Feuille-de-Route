@@ -178,7 +178,7 @@ svg.road-svg{position:absolute;top:0;left:0;width:100%;height:100%;pointer-event
 #menuBtn i{display:block;width:22px;height:3px;border-radius:2px;background:var(--green)}
 #scrim{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:950;display:none}
 #scrim.on{display:block}
-#side{position:fixed;top:0;left:0;bottom:0;width:min(300px,86vw);background:var(--card);border-right:1px solid var(--line);z-index:960;transform:translateX(-102%);transition:transform .25s;display:flex;flex-direction:column;padding:calc(env(safe-area-inset-top,0px) + 16px) 14px 14px;overflow-y:auto;visibility:hidden}
+#side{position:fixed;top:0;left:0;bottom:0;width:min(300px,86vw);background:var(--card);border-right:1px solid var(--line);z-index:960;transform:translateX(-102%);transition:transform .25s,visibility .25s;display:flex;flex-direction:column;padding:calc(env(safe-area-inset-top,0px) + 16px) 14px 14px;overflow-y:auto;visibility:hidden}
 #side.on{transform:none;visibility:visible}
 .side-h{display:flex;align-items:center;gap:10px;margin-bottom:18px}
 .side-h img{height:42px;width:42px;object-fit:contain;border-radius:10px;background:#fff;padding:3px}
@@ -1360,7 +1360,7 @@ function save(){
   clearTimeout(tm); tm=setTimeout(pushExtra,900);
 }
 window.hasExtra=function(){return !!(X.nav.length||X.tre.rows.length||Object.keys(X.pages).length||Object.keys(X.docs).length)};
-window.applyExtra=function(v){ if(editing()||W.open)return; merge(v); setTimeout(syncPending,800); try{localStorage.setItem(KEY,JSON.stringify(X))}catch(e){} buildNav(); if(cur!=="home")show(cur); };
+window.applyExtra=function(v){ if(editing()||W.open)return false; merge(v); setTimeout(syncPending,800); try{localStorage.setItem(KEY,JSON.stringify(X))}catch(e){} buildNav(); if(cur!=="home")show(cur); return true; };
 
 /* ---------- Dialogue ---------- */
 function ask(title,fields,ok){
@@ -1425,7 +1425,7 @@ function renTre(){
   var C=calc(),T=TD(),cu=CUR[T.cur],rs=C.rows;
   var per=rs.length?fd(rs[0].date)+" au "+fd(rs[rs.length-1].date):"—";
   var body='<tr><td>—</td><td><b>Solde initial</b></td><td></td><td></td><td></td><td class="n"><b>'+fmt(T.open)+'</b></td><td></td></tr>';
-  rs.forEach(function(r){body+='<tr><td>'+fd(r.date)+'</td><td>'+esc(r.label)+'</td><td>'+esc(r.ref||"")+'</td><td class="n in">'+(r.type==="in"?fmt(r.amount):"")+'</td><td class="n out">'+(r.type==="out"?fmt(r.amount):"")+'</td><td class="n">'+fmt(r.bal)+'</td><td><button type="button" class="danger" data-rm="'+r.id+'" aria-label="Supprimer la ligne">✕</button></td></tr>'});
+  rs.forEach(function(r){body+='<tr><td>'+fd(r.date)+'</td><td>'+esc(r.label)+'</td><td>'+esc(r.ref||"")+'</td><td class="n in">'+(r.type==="in"?fmt(r.amount):"")+'</td><td class="n out">'+(r.type==="out"?fmt(r.amount):"")+'</td><td class="n">'+fmt(r.bal)+'</td><td><button type="button" class="danger" data-rm="'+esc(r.id)+'" aria-label="Supprimer la ligne">✕</button></td></tr>'});
   if(!rs.length)body+='<tr><td colspan="7" style="color:var(--muted)">Aucune opération. Ajoutez une entrée ou une sortie ci-dessous.</td></tr>';
   var today=new Date().toISOString().slice(0,10);
   $("viewHost").innerHTML='<div class="toolbar"><b>Trésorerie · entrées et sorties de fonds</b><div class="toolbar-actions"><button type="button" class="p" id="pdfBtn">⬇ Télécharger le relevé (PDF)</button></div></div>'+pubBar("treasury")
@@ -1523,7 +1523,7 @@ function docs(){return W.pv?W.pv.docs:(X.docs[W.page]||(X.docs[W.page]=[]))}
 function getDoc(id){return docs().filter(function(x){return x.id===id})[0]}
 function clean(html){
   var t=document.createElement("template"); t.innerHTML=html;
-  t.content.querySelectorAll("script,iframe,object,embed,link,meta,style,form").forEach(function(n){n.remove()});
+  t.content.querySelectorAll("script,iframe,object,embed,link,meta,style,form,base").forEach(function(n){n.remove()});
   t.content.querySelectorAll("*").forEach(function(el){Array.prototype.slice.call(el.attributes).forEach(function(a){if(/^on/i.test(a.name)||(/^(href|src|xlink:href)$/i.test(a.name)&&/^\s*javascript:/i.test(a.value)))el.removeAttribute(a.name)})});
   return t.innerHTML;
 }
@@ -1623,7 +1623,7 @@ function renEd(id){
   wkClean(); W.page=id; W.id=null;
   var L=docs(),ad=cep(id);
   var cards=L.slice().sort(function(a,b){return b.at-a.at}).map(function(d){
-    return '<div class="dcard"><div class="dtype">'+typeLabel(d)+'</div><b>'+esc(d.name)+'</b><small>Modifié le '+fdt(d.at)+'</small>'+(ad?'<small>'+(d.dbx?'Envoyé dans Dropbox le '+fdt(d.dbx):(d.dbxPending?'En attente d\'envoi dans Dropbox':'Pas encore envoyé dans Dropbox'))+'</small>':'')+'<div class="dact"><button type="button" class="p" data-o="'+d.id+'">Ouvrir</button><button type="button" data-dl="'+d.id+'">Télécharger</button>'+(ad?'<button type="button" class="danger" data-x="'+d.id+'">Supprimer</button>':'')+'</div></div>';
+    return '<div class="dcard"><div class="dtype">'+typeLabel(d)+'</div><b>'+esc(d.name)+'</b><small>Modifié le '+fdt(d.at)+'</small>'+(ad?'<small>'+(d.dbx?'Envoyé dans Dropbox le '+fdt(d.dbx):(d.dbxPending?'En attente d\'envoi dans Dropbox':'Pas encore envoyé dans Dropbox'))+'</small>':'')+'<div class="dact"><button type="button" class="p" data-o="'+esc(d.id)+'">Ouvrir</button><button type="button" data-dl="'+esc(d.id)+'">Télécharger</button>'+(ad?'<button type="button" class="danger" data-x="'+esc(d.id)+'">Supprimer</button>':'')+'</div></div>';
   }).join("");
   $("viewHost").innerHTML='<div class="toolbar"><b>'+esc(pageName(id))+'</b><div class="toolbar-actions">'+(ad?'<button type="button" class="p" id="nDoc">+ Document Word</button><button type="button" id="nSh">+ Tableur Excel</button><button type="button" id="nDs">+ Design</button><button type="button" id="nImp">Importer un fichier</button><input type="file" id="nFile" accept=".docx,.xlsx,.xls,.csv" hidden>'+(isAdmin()?'<button type="button" id="nDbx">Dropbox : '+(dbxReady()?"connecté":"à connecter")+'</button>':'')+'':'')+'</div></div>'
   +pubBar(id)+(cards?'<div class="dgrid">'+cards+'</div>':'<p style="color:var(--muted)">'+(ad?'Aucun fichier. Créez un document Word ou un tableur Excel, ou importez-en un.':'Aucun fichier pour le moment.')+'</p>');
@@ -1976,7 +1976,7 @@ buildNav();
   /* Applique une ligne du cloud à l'état local */
   function apply(row){
     if(row.key === 'items' && Array.isArray(row.value)){ ITEMS = row.value; normalize(); saveLocal(); renderRoadmap(); }
-    if(row.key === 'extra' && row.value && typeof row.value === 'object' && window.applyExtra){ window.applyExtra(row.value); }
+    if(row.key === 'extra' && row.value && typeof row.value === 'object' && window.applyExtra){ return window.applyExtra(row.value); }
     if(row.key === 'map' && row.value && typeof row.value === 'object'){ MAP = mergeMap(row.value); saveLocal(); renderMap(); }
   }
 
@@ -1991,7 +1991,7 @@ buildNav();
       if(seen[row.key] === row.updated_at) return;      /* rien de nouveau */
       if(drawerOpen()){ return; }                        /* ne pas casser une édition en cours */
       seen[row.key] = row.updated_at;
-      apply(row);
+      if(apply(row) === false) delete seen[row.key];
     });
     /* Première utilisation : la table est vide, on y dépose les données actuelles */
     if(!have.items) cloudSave('items');
@@ -2021,7 +2021,11 @@ buildNav();
   cloudLoad();
   /* Temps réel : à chaque changement, on relit la table */
   sb.channel('afriflow-state')
-    .on('postgres_changes', {event:'*', schema:'public', table:TABLE}, function(){ cloudLoad(); })
+    .on('postgres_changes', {event:'*', schema:'public', table:TABLE}, function(p){
+      var k = (p.new && p.new.key) || (p.old && p.old.key) || '';
+      if(/^(log|user|req|pub):/.test(k)) return;
+      cloudLoad();
+    })
     .subscribe();
   /* Filet de sécurité si le temps réel est coupé */
   setInterval(cloudLoad, POLL_MS);
