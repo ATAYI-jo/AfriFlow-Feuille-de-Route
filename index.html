@@ -1,9 +1,12 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
+  <script>
+      window.__oauthReturn = location.hash;
+  </script>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>AfriFloW – Journal de Bord & Feuille de Route</title>
+<title>AfriFloW – Accueil </title>
 <link rel="icon" href="logo.png">
 <meta name="description" content="Feuille de route interactive d’AfriFloW en mode journal avec registre START des connexions.">
 <script>try{if(sessionStorage.getItem("afriflow_intro_seen"))document.documentElement.classList.add("no-intro")}catch(e){}</script>
@@ -24,6 +27,9 @@ body{margin:0;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-a
 .auth-box input{width:100%;padding:12px 16px;margin-bottom:14px;font-size:1rem}
 .auth-box button{width:100%;padding:12px;background:var(--green);color:#fff;border-color:var(--green);font-size:1rem}
 #authError{color:#c0392b;font-size:.85rem;min-height:1.2em;margin:-4px 0 10px}
+.auth-box .oauth{background:var(--card);color:var(--ink);border:1px solid var(--ink);margin-bottom:10px;font-weight:600}
+.auth-box .or{display:flex;align-items:center;gap:10px;color:var(--muted);font-size:.85rem;margin:6px 0 14px}
+.auth-box .or::before,.auth-box .or::after{content:"";flex:1;height:1px;background:var(--line)}
 
 .wrap{max-width:1200px;margin:0 auto;padding:28px 22px 80px;position:relative}
 .brand{padding:30px 32px;border-radius:24px;background:linear-gradient(120deg,#123d2a 0%,#1f5d3a 58%,#28734a 100%);color:#fff;box-shadow:0 16px 38px rgba(20,60,39,.16);display:flex;align-items:center;gap:20px;flex-wrap:wrap;margin-bottom:24px}
@@ -262,6 +268,10 @@ table.xl input:focus{outline:2px solid var(--green);outline-offset:-2px;backgrou
     <h2 id="authTitle">Accès AfriFloW</h2>
     <div class="auth-tabs"><button type="button" id="tabLogin" class="on">Se connecter</button><button type="button" id="tabReg">S'inscrire</button></div>
     <p id="authHint">Connectez-vous avec votre email et votre mot de passe personnel.</p>
+    <button type="button" class="oauth" data-p="google">Continuer avec Google</button>
+    <button type="button" class="oauth" data-p="facebook">Continuer avec Facebook</button>
+    <button type="button" class="oauth" data-p="apple">Continuer avec Apple</button>
+    <div class="or"><span>ou</span></div>
     <input type="text" id="authName" placeholder="Nom complet" autocomplete="name" style="display:none">
     <input type="email" id="authEmailInput" placeholder="Votre adresse email" autocomplete="email">
     <input type="password" id="authPasswordInput" placeholder="Mot de passe" autocomplete="current-password">
@@ -1294,29 +1304,37 @@ window.addEventListener("pagehide", function(){ saveSession(true); });
 function initIntro(){
   var box = $("intro"), v = $("introVideo");
   if(!box || document.documentElement.classList.contains("no-intro")) return;
-  var done = false;
+  var done = false, fs = setTimeout(finish, 30000);
+  var gestures = ["pointerdown","keydown","touchstart","wheel"];
+  function unmute(){
+    v.muted = false; v.volume = 1;
+    var b = $("introSnd"); if(b) b.remove();
+    gestures.forEach(function(ev){ window.removeEventListener(ev, unmute, true); });
+  }
   function finish(){
-    if(done) return; done = true;
+    if(done) return; done = true; clearTimeout(fs);
+    gestures.forEach(function(ev){ window.removeEventListener(ev, unmute, true); });
     try { sessionStorage.setItem(INTRO_KEY, "1"); } catch(e){}
     box.classList.add("out"); v.pause();
     setTimeout(function(){ box.style.display = "none"; }, 700);
   }
-  $("introSkip").onclick = finish;
+  $("introSkip").onclick = function(e){ e.stopPropagation(); finish(); };
   v.addEventListener("ended", finish);
   v.addEventListener("error", finish);
+
   v.muted = false; v.volume = 1;
-  var fs = setTimeout(finish, 20000);
   var p = v.play();
   if(p && p.catch) p.catch(function(){
-    clearTimeout(fs);
-    /* Le navigateur bloque le son tant qu'on n'a pas touché la page : un appui lance la vidéo AVEC le son */
-    var b = document.createElement("button"); b.type = "button"; b.id = "introStart";
-    b.textContent = "▶ Appuyer pour lancer l'ouverture (avec le son)";
+    /* son refusé : lecture muette automatique + activation au 1er geste */
+    v.muted = true;
+    v.play().catch(finish);
+    var b = document.createElement("button");
+    b.type = "button"; b.id = "introSnd"; b.textContent = "🔊 Activer le son";
+    b.style.cssText = "position:absolute;top:calc(16px + env(safe-area-inset-top,0px));left:16px";
     box.appendChild(b);
-    b.onclick = function(){ b.remove(); v.muted = false; v.volume = 1; fs = setTimeout(finish, 60000); v.play().catch(finish); };
+    gestures.forEach(function(ev){ window.addEventListener(ev, unmute, true); });
   });
 }
-
 /* ---------- Démarrage : on charge AVANT toute écriture ---------- */
 loadLocal();
 restoreTheme();
@@ -2036,6 +2054,7 @@ AFRI.login=async function(email,pwd){
   try{
     if(!SB())return {ok:false,error:"Service de comptes indisponible."};
     var u=await getRow(ukey(email)); if(!u)return {ok:false,error:"Aucun compte avec cet email. Cliquez sur « S'inscrire »."};
+    if(!u.hash) return {ok:false,error:"Ce compte a été créé avec Google/Facebook/Apple : utilisez le bouton correspondant."};
     if(await hashPw(pwd,u.salt)!==u.hash)return {ok:false,error:"Mot de passe incorrect."};
     var g=u.grants||[]; return {ok:true,name:u.name,grants:g,role:g.length?"editor":"reader"};
   }catch(e){return {ok:false,error:fail(e)}}
@@ -2139,6 +2158,37 @@ function openReq(){
 }
 var prev=window.onRole;
 window.onRole=function(){if(prev)prev();if(loggedUserEmail)AFRI.start(loggedUserEmail,USER_ROLE,USER_NAME);reqUI()};
+  /* --- Connexion via fournisseur externe --- */
+AFRI.oauthUser = async function(email, name){
+  var u = await getRow(ukey(email));
+  if(!u){
+    u = {email:email, name:name, salt:"", hash:"", grants:[], created:iso(), oauth:true};
+    await putRow(ukey(email), u);
+  }
+  return u;
+};
+document.querySelectorAll(".oauth").forEach(function(b){
+  b.onclick = function(){
+    if(!SB()){ document.getElementById("authError").textContent = "Service indisponible."; return; }
+    SB().auth.signInWithOAuth({provider:b.dataset.p, options:{redirectTo:location.origin+location.pathname}});
+  };
+});
+(async function oauthResume(){
+  var h = window.__oauthReturn || "", err = document.getElementById("authError");
+  if(/error_description=/.test(h)){ err.textContent = "Connexion refusée ou annulée."; history.replaceState(null,"",location.pathname); return; }
+  if(!/access_token=/.test(h) || !SB()) return;
+  try{
+    var r = await SB().auth.getSession(), us = r.data && r.data.session && r.data.session.user;
+    if(!us || !us.email) return;
+    var email = us.email.toLowerCase(), md = us.user_metadata || {},
+        name = md.full_name || md.name || email.split("@")[0],
+        u = await AFRI.oauthUser(email, name), g = u.grants || [];
+    history.replaceState(null,"",location.pathname);
+    enterApp(email, g.length ? "editor" : "reader", u.name, g);
+    recordUserAction("Connexion via " + (us.app_metadata.provider || "fournisseur externe"));
+    await SB().auth.signOut({scope:"local"}); /* la session de 15 min du site prend le relais */
+  }catch(e){ err.textContent = fail(e); }
+})();
 window.AFRI=AFRI;
 if(loggedUserEmail)window.onRole();
 })();
