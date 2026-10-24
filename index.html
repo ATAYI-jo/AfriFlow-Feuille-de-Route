@@ -18,9 +18,9 @@
 html{scroll-padding-top:env(safe-area-inset-top,0px)}
 body{margin:0;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);background:var(--bg);color:var(--ink);font:16px/1.5 var(--font-family);letter-spacing:.005em;transition:background .3s,color .3s}
 
-#auth-screen{position:fixed;inset:0;background:var(--bg);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px}
+#auth-screen{position:fixed;inset:0;background:var(--bg);z-index:9999;display:flex;align-items:flex-start;justify-content:center;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:calc(20px + env(safe-area-inset-top,0px)) 16px calc(20px + env(safe-area-inset-bottom,0px))}
 #auth-screen.off{display:none}
-.auth-box{background:var(--card);border:1px solid var(--line);padding:36px 28px;border-radius:24px;width:min(420px,100%);text-align:center;box-shadow:0 20px 40px rgba(0,0,0,.15)}
+.auth-box{margin:auto;background:var(--card);border:1px solid var(--line);padding:36px 28px;border-radius:24px;width:min(420px,100%);text-align:center;box-shadow:0 20px 40px rgba(0,0,0,.15)}
 .auth-box img{height:72px;width:72px;object-fit:contain;margin-bottom:16px;background:#fff;padding:8px;border-radius:16px;box-shadow:0 4px 12px rgba(0,0,0,.1)}
 .auth-box h2{margin:0 0 8px;font-size:1.4rem;color:var(--green)}
 .auth-box p{color:var(--muted);font-size:.9rem;margin-bottom:24px}
@@ -178,7 +178,7 @@ svg.road-svg{position:absolute;top:0;left:0;width:100%;height:100%;pointer-event
 #menuBtn i{display:block;width:22px;height:3px;border-radius:2px;background:var(--green)}
 #scrim{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:950;display:none}
 #scrim.on{display:block}
-#side{position:fixed;top:0;left:0;bottom:0;width:min(300px,86vw);background:var(--card);border-right:1px solid var(--line);z-index:960;transform:translateX(-102%);transition:transform .25s;display:flex;flex-direction:column;padding:calc(env(safe-area-inset-top,0px) + 16px) 14px 14px;overflow-y:auto;visibility:hidden}
+#side{position:fixed;top:0;left:0;bottom:0;width:min(300px,86vw);background:var(--card);border-right:1px solid var(--line);z-index:960;transform:translateX(-102%);transition:transform .25s,visibility .25s;display:flex;flex-direction:column;padding:calc(env(safe-area-inset-top,0px) + 16px) 14px 14px;overflow-y:auto;visibility:hidden}
 #side.on{transform:none;visibility:visible}
 .side-h{display:flex;align-items:center;gap:10px;margin-bottom:18px}
 .side-h img{height:42px;width:42px;object-fit:contain;border-radius:10px;background:#fff;padding:3px}
@@ -254,6 +254,7 @@ table.xl input:focus{outline:2px solid var(--green);outline-offset:-2px;backgrou
 .rq{display:flex;gap:8px;align-items:center;padding:6px 0}
 .rq input{width:auto}
 #reqBtn{margin-right:5px}
+@media (max-width:480px){.auth-box{padding:24px 18px}.auth-box img{height:56px;width:56px;margin-bottom:8px}}
 </style>
 </head>
 <body class="ro">
@@ -273,9 +274,9 @@ table.xl input:focus{outline:2px solid var(--green);outline-offset:-2px;backgrou
     <button type="button" class="oauth" data-p="apple">Continuer avec Apple</button>
     <div class="or"><span>ou</span></div>
     <input type="text" id="authName" placeholder="Nom complet" autocomplete="name" style="display:none">
-    <input type="email" id="authEmailInput" placeholder="Votre adresse email" autocomplete="email">
-    <input type="password" id="authPasswordInput" placeholder="Mot de passe" autocomplete="current-password">
-    <input type="password" id="authPassword2" placeholder="Confirmez le mot de passe" autocomplete="new-password" style="display:none">
+    <input type="email" id="authEmailInput" placeholder="Votre adresse email" autocomplete="email" inputmode="email" autocapitalize="off" autocorrect="off" spellcheck="false">
+    <input type="password" id="authPasswordInput" placeholder="Mot de passe" autocomplete="current-password" autocapitalize="off" autocorrect="off" spellcheck="false">
+    <input type="password" id="authPassword2" placeholder="Confirmez le mot de passe" autocomplete="new-password" autocapitalize="off" autocorrect="off" spellcheck="false" style="display:none">
     <div id="authError" role="alert"></div>
     <button type="button" id="authBtn">Se connecter</button>
   </div>
@@ -1360,7 +1361,7 @@ function save(){
   clearTimeout(tm); tm=setTimeout(pushExtra,900);
 }
 window.hasExtra=function(){return !!(X.nav.length||X.tre.rows.length||Object.keys(X.pages).length||Object.keys(X.docs).length)};
-window.applyExtra=function(v){ if(editing()||W.open)return; merge(v); setTimeout(syncPending,800); try{localStorage.setItem(KEY,JSON.stringify(X))}catch(e){} buildNav(); if(cur!=="home")show(cur); };
+window.applyExtra=function(v){ if(editing()||W.open)return false; merge(v); setTimeout(syncPending,800); try{localStorage.setItem(KEY,JSON.stringify(X))}catch(e){} buildNav(); if(cur!=="home")show(cur); return true; };
 
 /* ---------- Dialogue ---------- */
 function ask(title,fields,ok){
@@ -1378,9 +1379,9 @@ function ask(title,fields,ok){
 /* ---------- Navigation ---------- */
 function isAdmin(){return window.USER_ROLE==="admin"}
 function buildNav(){
-  var base=BASE.slice(); if(isAdmin())base.push({id:"admin",n:"Administration"});
+  var base=BASE.slice(); base.push({id:"messages",n:"Messagerie"}); if(isAdmin())base.push({id:"admin",n:"Administration"});
   var nb=base.length,h=""; base.concat(X.nav).forEach(function(it,i){
-    var badge=(it.id==="admin"&&AF_PEND)?' ('+AF_PEND+')':'';
+    var badge=(it.id==="admin"&&AF_PEND)?' ('+AF_PEND+')':''; if(it.id==="messages"&&window.MSG_UNREAD)badge=' ('+window.MSG_UNREAD+')';
     h+='<div class="nvr"><button type="button" class="nv'+(it.id===cur?' on':'')+'" data-id="'+esc(it.id)+'">'+esc(it.n)+badge+'</button>'+(i>=nb&&isAdmin()?'<button type="button" class="nx" data-del="'+esc(it.id)+'" aria-label="Supprimer '+esc(it.n)+'">✕</button>':'')+'</div>';
   });
   $("navList").innerHTML=h;
@@ -1393,7 +1394,7 @@ function show(id){
   if(id==="admin"&&!isAdmin())cur=id="home";
   $("view-home").style.display=id==="home"?"":"none";
   $("viewHost").style.display=id==="home"?"none":"";
-  if(id==="admin")renAdmin();
+  if(id==="admin")renAdmin();else if(id==="messages"){if(window.renMsg)window.renMsg()}
   else if(id!=="home"){
     var run=function(){ if(id==="treasury")renTre(); else renEd(id) };
     if(cep(id))run(); else viewPub(id,function(p){ W.tvAt=p.at; if(id==="treasury")W.tv=p.tre; else W.pv=p; run() });
@@ -1425,7 +1426,7 @@ function renTre(){
   var C=calc(),T=TD(),cu=CUR[T.cur],rs=C.rows;
   var per=rs.length?fd(rs[0].date)+" au "+fd(rs[rs.length-1].date):"—";
   var body='<tr><td>—</td><td><b>Solde initial</b></td><td></td><td></td><td></td><td class="n"><b>'+fmt(T.open)+'</b></td><td></td></tr>';
-  rs.forEach(function(r){body+='<tr><td>'+fd(r.date)+'</td><td>'+esc(r.label)+'</td><td>'+esc(r.ref||"")+'</td><td class="n in">'+(r.type==="in"?fmt(r.amount):"")+'</td><td class="n out">'+(r.type==="out"?fmt(r.amount):"")+'</td><td class="n">'+fmt(r.bal)+'</td><td><button type="button" class="danger" data-rm="'+r.id+'" aria-label="Supprimer la ligne">✕</button></td></tr>'});
+  rs.forEach(function(r){body+='<tr><td>'+fd(r.date)+'</td><td>'+esc(r.label)+'</td><td>'+esc(r.ref||"")+'</td><td class="n in">'+(r.type==="in"?fmt(r.amount):"")+'</td><td class="n out">'+(r.type==="out"?fmt(r.amount):"")+'</td><td class="n">'+fmt(r.bal)+'</td><td><button type="button" class="danger" data-rm="'+esc(r.id)+'" aria-label="Supprimer la ligne">✕</button></td></tr>'});
   if(!rs.length)body+='<tr><td colspan="7" style="color:var(--muted)">Aucune opération. Ajoutez une entrée ou une sortie ci-dessous.</td></tr>';
   var today=new Date().toISOString().slice(0,10);
   $("viewHost").innerHTML='<div class="toolbar"><b>Trésorerie · entrées et sorties de fonds</b><div class="toolbar-actions"><button type="button" class="p" id="pdfBtn">⬇ Télécharger le relevé (PDF)</button></div></div>'+pubBar("treasury")
@@ -1515,7 +1516,7 @@ var W={open:false,id:null,page:null,sl:null,S:null,D:null,kd:null,tv:null,pv:nul
   mammoth:["https://cdn.jsdelivr.net/npm/mammoth@1.6.0/mammoth.browser.min.js",function(){return window.mammoth}]};
 function lib(n){ var l=LIBS[n]; if(l[1]())return Promise.resolve(); return libs[n]||(libs[n]=loadJs(l[0]).catch(function(e){delete libs[n];throw new Error("Module "+n+" indisponible (connexion ?)")})); }
 function toast(m){var t=document.createElement("div");t.textContent=m;t.setAttribute("role","status");t.style.cssText="position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:var(--green);color:#fff;padding:10px 18px;border-radius:12px;z-index:1200;max-width:90vw;box-shadow:0 8px 24px rgba(0,0,0,.25)";document.body.appendChild(t);setTimeout(function(){t.remove()},5000)}
-function pageName(id){return (BASE.concat(X.nav,[{id:"admin",n:"Administration"}]).filter(function(x){return x.id===id})[0]||{n:"Direction"}).n}
+function pageName(id){return (BASE.concat(X.nav,[{id:"admin",n:"Administration"},{id:"messages",n:"Messagerie"}]).filter(function(x){return x.id===id})[0]||{n:"Direction"}).n}
 function safeName(s){return String(s||"").replace(/[<>:"\/\\|?*\u0000-\u001f]/g,"-").trim().slice(0,80)||"Sans titre"}
 function fdt(t){return new Date(t).toLocaleString("fr-FR",{dateStyle:"short",timeStyle:"short"})}
 function uid(){return "d"+Date.now().toString(36)+Math.floor(Math.random()*1e4).toString(36)}
@@ -1523,7 +1524,7 @@ function docs(){return W.pv?W.pv.docs:(X.docs[W.page]||(X.docs[W.page]=[]))}
 function getDoc(id){return docs().filter(function(x){return x.id===id})[0]}
 function clean(html){
   var t=document.createElement("template"); t.innerHTML=html;
-  t.content.querySelectorAll("script,iframe,object,embed,link,meta,style,form").forEach(function(n){n.remove()});
+  t.content.querySelectorAll("script,iframe,object,embed,link,meta,style,form,base").forEach(function(n){n.remove()});
   t.content.querySelectorAll("*").forEach(function(el){Array.prototype.slice.call(el.attributes).forEach(function(a){if(/^on/i.test(a.name)||(/^(href|src|xlink:href)$/i.test(a.name)&&/^\s*javascript:/i.test(a.value)))el.removeAttribute(a.name)})});
   return t.innerHTML;
 }
@@ -1623,7 +1624,7 @@ function renEd(id){
   wkClean(); W.page=id; W.id=null;
   var L=docs(),ad=cep(id);
   var cards=L.slice().sort(function(a,b){return b.at-a.at}).map(function(d){
-    return '<div class="dcard"><div class="dtype">'+typeLabel(d)+'</div><b>'+esc(d.name)+'</b><small>Modifié le '+fdt(d.at)+'</small>'+(ad?'<small>'+(d.dbx?'Envoyé dans Dropbox le '+fdt(d.dbx):(d.dbxPending?'En attente d\'envoi dans Dropbox':'Pas encore envoyé dans Dropbox'))+'</small>':'')+'<div class="dact"><button type="button" class="p" data-o="'+d.id+'">Ouvrir</button><button type="button" data-dl="'+d.id+'">Télécharger</button>'+(ad?'<button type="button" class="danger" data-x="'+d.id+'">Supprimer</button>':'')+'</div></div>';
+    return '<div class="dcard"><div class="dtype">'+typeLabel(d)+'</div><b>'+esc(d.name)+'</b><small>Modifié le '+fdt(d.at)+'</small>'+(ad?'<small>'+(d.dbx?'Envoyé dans Dropbox le '+fdt(d.dbx):(d.dbxPending?'En attente d\'envoi dans Dropbox':'Pas encore envoyé dans Dropbox'))+'</small>':'')+'<div class="dact"><button type="button" class="p" data-o="'+esc(d.id)+'">Ouvrir</button><button type="button" data-dl="'+esc(d.id)+'">Télécharger</button>'+(ad?'<button type="button" class="danger" data-x="'+esc(d.id)+'">Supprimer</button>':'')+'</div></div>';
   }).join("");
   $("viewHost").innerHTML='<div class="toolbar"><b>'+esc(pageName(id))+'</b><div class="toolbar-actions">'+(ad?'<button type="button" class="p" id="nDoc">+ Document Word</button><button type="button" id="nSh">+ Tableur Excel</button><button type="button" id="nDs">+ Design</button><button type="button" id="nImp">Importer un fichier</button><input type="file" id="nFile" accept=".docx,.xlsx,.xls,.csv" hidden>'+(isAdmin()?'<button type="button" id="nDbx">Dropbox : '+(dbxReady()?"connecté":"à connecter")+'</button>':'')+'':'')+'</div></div>'
   +pubBar(id)+(cards?'<div class="dgrid">'+cards+'</div>':'<p style="color:var(--muted)">'+(ad?'Aucun fichier. Créez un document Word ou un tableur Excel, ou importez-en un.':'Aucun fichier pour le moment.')+'</p>');
@@ -1976,14 +1977,14 @@ buildNav();
   /* Applique une ligne du cloud à l'état local */
   function apply(row){
     if(row.key === 'items' && Array.isArray(row.value)){ ITEMS = row.value; normalize(); saveLocal(); renderRoadmap(); }
-    if(row.key === 'extra' && row.value && typeof row.value === 'object' && window.applyExtra){ window.applyExtra(row.value); }
+    if(row.key === 'extra' && row.value && typeof row.value === 'object' && window.applyExtra){ return window.applyExtra(row.value); }
     if(row.key === 'map' && row.value && typeof row.value === 'object'){ MAP = mergeMap(row.value); saveLocal(); renderMap(); }
   }
 
   /* Lit le cloud. Le cloud est la référence : il écrase la copie locale. */
   async function cloudLoad(){
     if(!sb) return;
-    var res = await sb.from(TABLE).select('key,value,updated_at').not('key','like','log:%').not('key','like','user:%').not('key','like','req:%').not('key','like','pub:%');
+    var res = await sb.from(TABLE).select('key,value,updated_at').not('key','like','log:%').not('key','like','user:%').not('key','like','req:%').not('key','like','pub:%').not('key','like','msg:%').not('key','like','sent:%');
     if(res.error){ console.error('Lecture cloud :', res.error); setBadge(false, 'Hors ligne (lecture impossible)'); return; }
     var have = {};
     res.data.forEach(function(row){
@@ -1991,7 +1992,7 @@ buildNav();
       if(seen[row.key] === row.updated_at) return;      /* rien de nouveau */
       if(drawerOpen()){ return; }                        /* ne pas casser une édition en cours */
       seen[row.key] = row.updated_at;
-      apply(row);
+      if(apply(row) === false) delete seen[row.key];
     });
     /* Première utilisation : la table est vide, on y dépose les données actuelles */
     if(!have.items) cloudSave('items');
@@ -2021,7 +2022,11 @@ buildNav();
   cloudLoad();
   /* Temps réel : à chaque changement, on relit la table */
   sb.channel('afriflow-state')
-    .on('postgres_changes', {event:'*', schema:'public', table:TABLE}, function(){ cloudLoad(); })
+    .on('postgres_changes', {event:'*', schema:'public', table:TABLE}, function(p){
+      var k = (p.new && p.new.key) || (p.old && p.old.key) || '';
+      if(/^(log|user|req|pub|msg|sent):/.test(k)) return;
+      cloudLoad();
+    })
     .subscribe();
   /* Filet de sécurité si le temps réel est coupé */
   setInterval(cloudLoad, POLL_MS);
@@ -2191,6 +2196,79 @@ document.querySelectorAll(".oauth").forEach(function(b){
 })();
 window.AFRI=AFRI;
 if(loggedUserEmail)window.onRole();
+})();
+</script>
+
+<script>
+/* ===== Messagerie interne + notification e-mail ===== */
+(function(){
+var tab="in",unread=0,first=true,W=[],$=function(i){return document.getElementById(i)};
+function T(){return window.__TABLE||"afriflow_state"} function S(){return window.__sb}
+function me(){return String(loggedUserEmail||"").toLowerCase()}
+function esc(s){return String(s==null?"":s).replace(/[&<>"']/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]})}
+function fdt(t){return new Date(t).toLocaleString("fr-FR",{dateStyle:"short",timeStyle:"short"})}
+async function rows(p){
+  var r=await S().from(T()).select("key,value").like("key",p+me()+":%").order("key",{ascending:false}).limit(200);
+  if(r.error)throw r.error;
+  return (r.data||[]).filter(function(x){return x.value&&(p==="msg:"?x.value.to===me():x.value.from===me())});
+}
+async function poll(){
+  if(!me()||!S()){first=true;unread=0;return}
+  try{
+    var n=(await rows("msg:")).filter(function(x){return !x.value.read}).length;
+    if(n>unread&&!first&&window.toast)toast("Nouveau message reçu");
+    first=false;unread=n;window.MSG_UNREAD=n;
+    var b=document.querySelector('.nv[data-id="messages"]');if(b)b.textContent="Messagerie"+(n?" ("+n+")":"");
+    if($("msgList"))window.renMsg(true);
+  }catch(e){}
+}
+function shell(){
+  var h=$("viewHost");
+  h.innerHTML='<div class="toolbar"><b>Messagerie</b><div class="toolbar-actions"><button type="button" class="p" id="mNew">+ Nouveau message</button></div></div><div class="auth-tabs" style="max-width:380px"><button type="button" id="mIn" class="'+(tab==="in"?"on":"")+'">Réception</button><button type="button" id="mOut" class="'+(tab==="out"?"on":"")+'">Envoyés</button></div><div class="dgrid" id="msgList"><p style="color:var(--muted)">Chargement…</p></div>';
+  h.onclick=function(e){
+    var b=e.target.closest("button"),c=e.target.closest(".dcard");
+    if(b&&b.id==="mNew")compose();
+    else if(b&&(b.id==="mIn"||b.id==="mOut")){tab=b.id==="mIn"?"in":"out";window.renMsg()}
+    else if(c&&$("msgList"))openMsg(+c.dataset.i);
+  };
+}
+async function fill(){
+  var L;
+  try{L=await rows(tab==="in"?"msg:":"sent:")}catch(e){if($("msgList"))$("msgList").textContent="Lecture impossible : "+(e.message||e);return}
+  var box=$("msgList");if(!box)return;W=L;
+  box.innerHTML=L.length?L.map(function(x,i){var v=x.value,who=tab==="in"?(v.fromName||v.from):v.to;
+    return '<div class="dcard" data-i="'+i+'" style="cursor:pointer"><b>'+(tab==="in"&&!v.read?"● ":"")+esc(v.subject||"(sans objet)")+'</b><small>'+(tab==="in"?"De : ":"À : ")+esc(who)+' · '+fdt(v.ts)+'</small><small>'+esc(String(v.body||"").slice(0,90))+'</small></div>'}).join(""):'<p style="color:var(--muted)">Aucun message.</p>';
+}
+window.renMsg=function(silent){if(!silent||!$("msgList"))shell();fill()};
+function openMsg(i){
+  var x=W[i];if(!x)return;var v=x.value,h=$("viewHost");
+  h.innerHTML='<div class="toolbar"><b>'+esc(v.subject||"(sans objet)")+'</b><div class="toolbar-actions"><button type="button" id="mBack">← Retour</button>'+(tab==="in"?'<button type="button" class="p" id="mRep">Répondre</button>':'')+'</div></div><div class="journal-article" id="mRead"><p style="color:var(--muted);margin-top:0">'+(tab==="in"?"De : "+esc(v.fromName||v.from)+" ("+esc(v.from)+")":"À : "+esc(v.to))+' · '+fdt(v.ts)+'</p><div style="white-space:pre-wrap;overflow-wrap:anywhere">'+esc(v.body)+'</div></div>';
+  $("mBack").onclick=function(){window.renMsg()};
+  if($("mRep"))$("mRep").onclick=function(){compose(v.from,"Re : "+String(v.subject||"").replace(/^Re : /,""))};
+  if(tab==="in"&&!v.read){v.read=true;S().from(T()).update({value:v}).eq("key",x.key).then(function(){poll()})}
+}
+async function compose(to,subj){
+  var h=$("viewHost"),U=[];
+  try{U=await AFRI.listUsers()}catch(e){}
+  U=U.filter(function(u){return u.email&&u.email!==me()});
+  h.innerHTML='<div class="toolbar"><b>Nouveau message</b><div class="toolbar-actions"><button type="button" id="mBack">← Annuler</button></div></div><div class="journal-article"><div class="fm"><label for="mTo">Destinataire</label><select id="mTo">'+U.map(function(u){return '<option value="'+esc(u.email)+'">'+esc(u.name||u.email)+' · '+esc(u.email)+'</option>'}).join("")+'</select><label for="mSubj">Objet</label><input id="mSubj" maxlength="120"><label for="mBody">Message</label><textarea id="mBody" rows="8" maxlength="5000"></textarea><div id="mErr" role="alert" style="color:#c0392b;min-height:1.2em"></div><button type="button" class="p" id="mSend">Envoyer</button></div></div>';
+  if(to)$("mTo").value=to;if(subj)$("mSubj").value=subj;
+  $("mBack").onclick=function(){window.renMsg()};
+  $("mSend").onclick=async function(){
+    var t=$("mTo").value,s=$("mSubj").value.trim().slice(0,120),b=$("mBody").value.trim().slice(0,5000),btn=this;
+    if(!t||!b){$("mErr").textContent="Choisissez un destinataire et écrivez un message.";return}
+    btn.disabled=true;
+    var ts=Date.now(),k=ts+":"+Math.random().toString(36).slice(2,6),now=new Date().toISOString(),
+        v={from:me(),fromName:USER_NAME||me(),to:t,subject:s,body:b,ts:ts,read:false};
+    var r=await S().from(T()).insert([{key:"sent:"+me()+":"+k,value:v,updated_at:now},{key:"msg:"+t+":"+k,value:v,updated_at:now}]);
+    if(r.error){btn.disabled=false;$("mErr").textContent="Envoi impossible : "+r.error.message;return}
+    if(window.toast)toast("Message envoyé");tab="out";window.renMsg();
+  };
+}
+var prev=window.onRole;
+window.onRole=function(){if(prev)prev();setTimeout(poll,1500)};
+setInterval(poll,25000);
+if(loggedUserEmail)setTimeout(poll,1500);
 })();
 </script>
 
