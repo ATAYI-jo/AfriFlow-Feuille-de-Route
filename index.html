@@ -169,8 +169,10 @@ svg.road-svg{position:absolute;top:0;left:0;width:100%;height:100%;pointer-event
 #intro video{width:100%;height:100%;object-fit:contain}
 #intro button{position:absolute;bottom:calc(20px + env(safe-area-inset-bottom,0px));background:rgba(255,255,255,.92);color:#1d2a22;border:1px solid #d8d4cc;border-radius:99px;padding:10px 18px;box-shadow:0 4px 14px rgba(0,0,0,.12)}
 #introSkip{right:calc(16px + env(safe-area-inset-right,0px))}
-#intro #introStart{top:50%;left:50%;bottom:auto;right:auto;transform:translate(-50%,-50%);font-size:1.05rem;font-weight:700;padding:16px 26px;background:#1f5d3a;color:#fff;border:0;max-width:86vw}
+#intro #introSnd{top:calc(14px + env(safe-area-inset-top,0px));left:14px;bottom:auto;right:auto;width:34px;height:34px;padding:0;display:flex;align-items:center;justify-content:center;font-size:.9rem;line-height:1;border-radius:50%;opacity:.5;box-shadow:none;transition:opacity .2s}
+#intro #introSnd:hover,#intro #introSnd:focus-visible{opacity:1}
 .no-intro #intro{display:none}
+#bgLayer{position:fixed;inset:0;z-index:-1;pointer-events:none;background-size:cover;background-position:center;background-repeat:no-repeat}
 
 /* ===== Menu latéral, Trésorerie, Direction ===== */
 .wrap{padding-top:72px}
@@ -258,8 +260,10 @@ table.xl input:focus{outline:2px solid var(--green);outline-offset:-2px;backgrou
 </style>
 </head>
 <body class="ro">
+<div id="bgLayer" aria-hidden="true"></div>
 <div id="intro" aria-label="Animation d'ouverture AfriFloW">
   <video id="introVideo" src="afriflow-intro.mp4" playsinline preload="auto"></video>
+  <button type="button" id="introSnd" title="Couper le son" aria-label="Couper le son">🔊</button>
   <button type="button" id="introSkip">Passer ›</button>
 </div>
 
@@ -368,6 +372,10 @@ table.xl input:focus{outline:2px solid var(--green);outline-offset:-2px;backgrou
         <option value="'Helvetica Neue', Arial, sans-serif">Helvetica / Arial</option>
       </select>
     </div>
+    <div class="fm"><label for="picker-bg">Couleur de fond</label><input type="color" id="picker-bg" value="#fcfbfa"></div>
+    <div class="fm"><label for="bg-file">Image de fond</label><input type="file" id="bg-file" accept="image/*"><small style="color:var(--muted)">Réduite automatiquement et enregistrée sur cet appareil.</small></div>
+    <div class="fm"><label for="bg-dim">Voile sur l’image (lisibilité)</label><input type="range" id="bg-dim" min="0" max="85" value="35"></div>
+    <div style="margin-top:6px"><button type="button" id="bg-reset">Réinitialiser le fond</button></div>
     <div style="margin-top:20px;display:flex;gap:10px">
       <button type="button" class="p" id="closeCustomBtn" style="flex:1">Fermer</button>
     </div>
@@ -812,10 +820,56 @@ function restoreTheme(){
     var t = JSON.parse(localStorage.getItem(THEME_KEY) || "null");
     if(t){ $("picker-green").value = t.g; $("picker-amber").value = t.a; $("picker-font").value = t.f; applyCustomTheme(false); }
   } catch(e){}
+  restoreBg();
 }
 ["picker-green", "picker-amber", "picker-font"].forEach(function(id){ $(id).addEventListener("change", function(){ applyCustomTheme(true); }); });
 $("customBtn").onclick = function(){ $("customizer-modal").classList.add("on"); };
 $("closeCustomBtn").onclick = function(){ $("customizer-modal").classList.remove("on"); };
+
+/* ---------- Fond personnalisé (couleur ou image, enregistré sur cet appareil) ---------- */
+var BG_KEY = "afriflow_bg_v1";
+function bgLoad(){ try { return JSON.parse(localStorage.getItem(BG_KEY) || "null") || {}; } catch(e){ return {}; } }
+function bgSave(o){ try { localStorage.setItem(BG_KEY, JSON.stringify(o)); return true; } catch(e){ (window.toast || alert)("Stockage de l’appareil plein : choisissez une image plus petite."); return false; } }
+function hexRgb(h){ var m = /^#?([0-9a-f]{6})$/i.exec(h || ""); if(!m) return [252,251,250]; var n = parseInt(m[1], 16); return [(n >> 16) & 255, (n >> 8) & 255, n & 255]; }
+function bgApply(o){
+  var s = document.documentElement.style, L = $("bgLayer");
+  if(!o || !o.on){ ["--bg","--card","--ink","--muted","--line"].forEach(function(p){ s.removeProperty(p); }); L.style.backgroundImage = "none"; return; }
+  var rgb = hexRgb(o.c), dark = (0.299 * rgb[0] + 0.587 * rgb[1] + 0.114 * rgb[2]) / 255 < 0.5;
+  s.setProperty("--bg", o.c);
+  s.setProperty("--card", dark ? "#1e1e1e" : "#ffffff"); s.setProperty("--ink", dark ? "#eef2ec" : "#1d2a22");
+  s.setProperty("--muted", dark ? "#9aa89f" : "#66726a"); s.setProperty("--line", dark ? "#333333" : "#e2ded7");
+  if(o.i){
+    var a = (o.v == null ? 35 : o.v) / 100, c = "rgba(" + rgb.join(",") + "," + a + ")";
+    L.style.backgroundImage = "linear-gradient(" + c + "," + c + "),url(\"" + o.i + "\")";
+  } else L.style.backgroundImage = "none";
+}
+function restoreBg(){
+  var o = bgLoad(); if(o.c) $("picker-bg").value = o.c; if(o.v != null) $("bg-dim").value = o.v;
+  bgApply(o);
+}
+$("picker-bg").addEventListener("input", function(){ var o = bgLoad(); o.on = 1; o.c = this.value; if(bgSave(o)) bgApply(o); });
+$("bg-dim").addEventListener("input", function(){ var o = bgLoad(); if(!o.i) return; o.on = 1; o.c = o.c || $("picker-bg").value; o.v = +this.value; if(bgSave(o)) bgApply(o); });
+$("bg-reset").onclick = function(){ try { localStorage.removeItem(BG_KEY); } catch(e){} $("picker-bg").value = "#fcfbfa"; $("bg-dim").value = 35; bgApply(null); };
+$("bg-file").addEventListener("change", function(){
+  var f = this.files[0]; this.value = ""; if(!f) return;
+  if(!/^image\//.test(f.type)){ (window.toast || alert)("Choisissez un fichier image (JPG, PNG, WebP…)."); return; }
+  var r = new FileReader();
+  r.onload = function(){
+    var img = new Image();
+    img.onload = function(){
+      var k = Math.min(1, 1600 / Math.max(img.width, img.height)), cv = document.createElement("canvas");
+      cv.width = Math.round(img.width * k); cv.height = Math.round(img.height * k);
+      cv.getContext("2d").drawImage(img, 0, 0, cv.width, cv.height);
+      var q = 0.8, d = cv.toDataURL("image/jpeg", q);
+      while(d.length > 900000 && q > 0.35){ q -= 0.1; d = cv.toDataURL("image/jpeg", q); }
+      var o = bgLoad(); o.on = 1; o.c = o.c || $("picker-bg").value; o.i = d; if(o.v == null) o.v = +$("bg-dim").value;
+      if(bgSave(o)) bgApply(o);
+    };
+    img.onerror = function(){ (window.toast || alert)("Image illisible."); };
+    img.src = r.result;
+  };
+  r.readAsDataURL(f);
+});
 
 /* ---------- Événements globaux ---------- */
 $("authBtn").onclick = verifyGlobalAuth;
@@ -1303,37 +1357,37 @@ document.addEventListener("visibilitychange", function(){ if(document.hidden) sa
 window.addEventListener("pagehide", function(){ saveSession(true); });
 
 function initIntro(){
-  var box = $("intro"), v = $("introVideo");
+  var box = $("intro"), v = $("introVideo"), snd = $("introSnd");
   if(!box || document.documentElement.classList.contains("no-intro")) return;
   var done = false, fs = setTimeout(finish, 30000);
   var gestures = ["pointerdown","keydown","touchstart","wheel"];
-  function unmute(){
-    v.muted = false; v.volume = 1;
-    var b = $("introSnd"); if(b) b.remove();
-    gestures.forEach(function(ev){ window.removeEventListener(ev, unmute, true); });
+  function paint(){
+    var l = v.muted ? "Activer le son" : "Couper le son";
+    snd.textContent = v.muted ? "🔇" : "🔊"; snd.title = l; snd.setAttribute("aria-label", l);
+  }
+  function stopGestures(){ gestures.forEach(function(ev){ window.removeEventListener(ev, onGesture, true); }); }
+  function onGesture(e){
+    if(snd.contains(e.target)) return;
+    stopGestures(); v.muted = false; v.volume = 1; paint();
   }
   function finish(){
-    if(done) return; done = true; clearTimeout(fs);
-    gestures.forEach(function(ev){ window.removeEventListener(ev, unmute, true); });
+    if(done) return; done = true; clearTimeout(fs); stopGestures();
     try { sessionStorage.setItem(INTRO_KEY, "1"); } catch(e){}
     box.classList.add("out"); v.pause();
     setTimeout(function(){ box.style.display = "none"; }, 700);
   }
   $("introSkip").onclick = function(e){ e.stopPropagation(); finish(); };
+  snd.onclick = function(e){ e.stopPropagation(); stopGestures(); v.muted = !v.muted; if(!v.muted) v.volume = 1; paint(); };
   v.addEventListener("ended", finish);
   v.addEventListener("error", finish);
 
-  v.muted = false; v.volume = 1;
+  v.muted = false; v.volume = 1; paint();
   var p = v.play();
   if(p && p.catch) p.catch(function(){
-    /* son refusé : lecture muette automatique + activation au 1er geste */
-    v.muted = true;
+    /* son refusé par le navigateur : lecture muette, le son s'active au 1er geste ou via le petit bouton */
+    v.muted = true; paint();
     v.play().catch(finish);
-    var b = document.createElement("button");
-    b.type = "button"; b.id = "introSnd"; b.textContent = "🔊 Activer le son";
-    b.style.cssText = "position:absolute;top:calc(16px + env(safe-area-inset-top,0px));left:16px";
-    box.appendChild(b);
-    gestures.forEach(function(ev){ window.addEventListener(ev, unmute, true); });
+    gestures.forEach(function(ev){ window.addEventListener(ev, onGesture, true); });
   });
 }
 /* ---------- Démarrage : on charge AVANT toute écriture ---------- */
@@ -1573,8 +1627,9 @@ function dbxDialog(){
   $("xno").onclick=function(){$("xm").classList.remove("on")};
   $("dkFol").onchange=function(){var k=dbxCfg();k.folder=this.value.trim()||"/AfriFloW";dbxSet(k)};
   $("dkGo").onclick=function(){var k=$("dkKey").value.trim();if(!k){$("xerr").textContent="Collez l'App key de votre application Dropbox.";return}dbxConnect(k,$("dkFol").value.trim()||"/AfriFloW").catch(function(e){$("xerr").textContent="Erreur : "+e.message})};
-  if($("dkOut"))$("dkOut").onclick=function(){var k=dbxCfg();dbxSet({key:k.key,folder:k.folder});$("xm").classList.remove("on");renEd(W.page)};
+  if($("dkOut"))$("dkOut").onclick=function(){var k=dbxCfg();dbxSet({key:k.key,folder:k.folder});$("xm").classList.remove("on");if(W.page)renEd(W.page)};
 }
+window.DBX={ready:dbxReady,dialog:dbxDialog,upload:async function(sub,name,blob){var f=(dbxCfg().folder||"/AfriFloW").replace(/\\/g,"/").replace(/\/+$/,"");if(f[0]!=="/")f="/"+f;await dbxUpload(f+"/"+String(sub).split("/").map(safeName).join("/")+"/"+safeName(name),blob)}};
 
 /* ----- Tableur : formules simples ----- */
 function colName(i){var s="";i++;while(i>0){var m=(i-1)%26;s=String.fromCharCode(65+m)+s;i=Math.floor((i-1)/26)}return s}
@@ -2024,7 +2079,7 @@ buildNav();
   sb.channel('afriflow-state')
     .on('postgres_changes', {event:'*', schema:'public', table:TABLE}, function(p){
       var k = (p.new && p.new.key) || (p.old && p.old.key) || '';
-      if(/^(log|user|req|pub|msg|sent):/.test(k)) return;
+      if(/^(log|user|req|pub|msg|sent|att):/.test(k)) return;
       cloudLoad();
     })
     .subscribe();
@@ -2076,7 +2131,14 @@ AFRI.register=async function(email,name,pwd){
 AFRI.listUsers=async function(){return (await listRows("user:",500)).map(function(r){return r.value})};
 AFRI.listRequests=async function(){return (await listRows("req:",300)).map(function(r){return r.value})};
 AFRI.setGrants=async function(email,g){var u=await getRow(ukey(email));if(!u)throw new Error("Compte introuvable");u.grants=g;await putRow(ukey(email),u)};
-AFRI.deleteUser=async function(email){var r=await SB().from(TB()).delete().in("key",[ukey(email),"req:"+String(email).toLowerCase()]);if(r.error)throw r.error};
+AFRI.deleteUser=async function(email){
+  var e=String(email).toLowerCase(),keys=[ukey(e),"req:"+e];
+  var r=await SB().from(TB()).delete().in("key",keys).select("key");
+  if(r.error)throw r.error;
+  if(!r.data||!r.data.some(function(x){return x.key===keys[0]}))throw new Error("Suppression refusée par Supabase (0 ligne supprimée) : il manque la règle DELETE sur la table afriflow_state.");
+  /* ménage best-effort : messages de ce compte */
+  try{await SB().from(TB()).delete().like("key","msg:"+e+":%");await SB().from(TB()).delete().like("key","sent:"+e+":%")}catch(x){}
+};
 AFRI.sendRequest=async function(pages,msg){var e=loggedUserEmail.toLowerCase();await putRow("req:"+e,{email:e,name:USER_NAME,pages:pages,msg:msg,at:iso(),status:"pending"})};
 AFRI.myRequest=function(){return getRow("req:"+loggedUserEmail.toLowerCase())};
 AFRI.resolve=async function(email,ok){
@@ -2200,13 +2262,18 @@ if(loggedUserEmail)window.onRole();
 </script>
 
 <script>
-/* ===== Messagerie interne + notification e-mail ===== */
+/* ===== Messagerie interne : envoi groupé, pièces jointes, archivage Dropbox ===== */
 (function(){
 var tab="in",unread=0,first=true,W=[],$=function(i){return document.getElementById(i)};
+var MAX_FILES=5,MAX_TOTAL=2.5*1024*1024;
 function T(){return window.__TABLE||"afriflow_state"} function S(){return window.__sb}
 function me(){return String(loggedUserEmail||"").toLowerCase()}
+function isAdm(){return window.USER_ROLE==="admin"}
 function esc(s){return String(s==null?"":s).replace(/[&<>"']/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]})}
 function fdt(t){return new Date(t).toLocaleString("fr-FR",{dateStyle:"short",timeStyle:"short"})}
+function fsz(n){return n>=1048576?(n/1048576).toFixed(1).replace(".",",")+" Mo":Math.max(1,Math.round(n/1024))+" Ko"}
+function dataBlob(d){var p=d.split(","),m=/data:([^;]*)/.exec(p[0]),b=atob(p[1]),a=new Uint8Array(b.length);for(var i=0;i<b.length;i++)a[i]=b.charCodeAt(i);return new Blob([a],{type:(m&&m[1])||"application/octet-stream"})}
+function readFile(f){return new Promise(function(ok,ko){var r=new FileReader();r.onload=function(){ok({n:f.name,t:f.type||"application/octet-stream",s:f.size,d:r.result})};r.onerror=function(){ko(new Error("Lecture impossible : "+f.name))};r.readAsDataURL(f)})}
 async function rows(p){
   var r=await S().from(T()).select("key,value").like("key",p+me()+":%").order("key",{ascending:false}).limit(200);
   if(r.error)throw r.error;
@@ -2224,10 +2291,11 @@ async function poll(){
 }
 function shell(){
   var h=$("viewHost");
-  h.innerHTML='<div class="toolbar"><b>Messagerie</b><div class="toolbar-actions"><button type="button" class="p" id="mNew">+ Nouveau message</button></div></div><div class="auth-tabs" style="max-width:380px"><button type="button" id="mIn" class="'+(tab==="in"?"on":"")+'">Réception</button><button type="button" id="mOut" class="'+(tab==="out"?"on":"")+'">Envoyés</button></div><div class="dgrid" id="msgList"><p style="color:var(--muted)">Chargement…</p></div>';
+  h.innerHTML='<div class="toolbar"><b>Messagerie</b><div class="toolbar-actions">'+(isAdm()&&window.DBX?'<button type="button" id="mDbx">☁ Dropbox : '+(DBX.ready()?"connecté":"à connecter")+'</button>':'')+'<button type="button" class="p" id="mNew">+ Nouveau message</button></div></div><div class="auth-tabs" style="max-width:380px"><button type="button" id="mIn" class="'+(tab==="in"?"on":"")+'">Réception</button><button type="button" id="mOut" class="'+(tab==="out"?"on":"")+'">Envoyés</button></div><div class="dgrid" id="msgList"><p style="color:var(--muted)">Chargement…</p></div>';
   h.onclick=function(e){
     var b=e.target.closest("button"),c=e.target.closest(".dcard");
     if(b&&b.id==="mNew")compose();
+    else if(b&&b.id==="mDbx"&&window.DBX)DBX.dialog();
     else if(b&&(b.id==="mIn"||b.id==="mOut")){tab=b.id==="mIn"?"in":"out";window.renMsg()}
     else if(c&&$("msgList"))openMsg(+c.dataset.i);
   };
@@ -2237,32 +2305,100 @@ async function fill(){
   try{L=await rows(tab==="in"?"msg:":"sent:")}catch(e){if($("msgList"))$("msgList").textContent="Lecture impossible : "+(e.message||e);return}
   var box=$("msgList");if(!box)return;W=L;
   box.innerHTML=L.length?L.map(function(x,i){var v=x.value,who=tab==="in"?(v.fromName||v.from):v.to;
-    return '<div class="dcard" data-i="'+i+'" style="cursor:pointer"><b>'+(tab==="in"&&!v.read?"● ":"")+esc(v.subject||"(sans objet)")+'</b><small>'+(tab==="in"?"De : ":"À : ")+esc(who)+' · '+fdt(v.ts)+'</small><small>'+esc(String(v.body||"").slice(0,90))+'</small></div>'}).join(""):'<p style="color:var(--muted)">Aucun message.</p>';
+    return '<div class="dcard" data-i="'+i+'" style="cursor:pointer"><b>'+(tab==="in"&&!v.read?"● ":"")+(v.nf?"📎 ":"")+esc(v.subject||"(sans objet)")+'</b><small>'+(tab==="in"?"De : ":"À : ")+esc(who)+' · '+fdt(v.ts)+'</small><small>'+esc(String(v.body||"").slice(0,90))+'</small></div>'}).join(""):'<p style="color:var(--muted)">Aucun message.</p>';
 }
 window.renMsg=function(silent){if(!silent||!$("msgList"))shell();fill()};
+
+async function showAtt(v,x){
+  var box=$("mAtt");if(!box||!v.att)return;
+  var r=await S().from(T()).select("value").eq("key","att:"+v.att).maybeSingle();
+  box=$("mAtt");if(!box)return;
+  var fs=(r.data&&r.data.value&&r.data.value.files)||[];
+  if(r.error||!fs.length){box.innerHTML='<small style="color:var(--muted)">Pièces jointes indisponibles.</small>';return}
+  box.innerHTML='<h4 style="margin:14px 0 6px;font-family:var(--font-family)">Pièces jointes ('+fs.length+')</h4>'+fs.map(function(f){return '<div class="file-row"><div>📎 <a href="'+f.d+'" download="'+esc(f.n)+'">'+esc(f.n)+'</a></div><small style="color:var(--muted)">'+fsz(f.s)+'</small></div>'}).join("")+'<div id="mDbxNote" style="font-size:.85rem;color:var(--muted);margin-top:6px"></div>';
+  if(tab==="in"&&isAdm()&&window.DBX){
+    var nt=$("mDbxNote");
+    if(!DBX.ready()){nt.textContent="Dropbox non connecté : utilisez le bouton « ☁ Dropbox » pour archiver automatiquement les pièces jointes.";return}
+    if(v.dbxAt){nt.textContent="✔ Déjà archivées dans Dropbox ("+fdt(v.dbxAt)+").";return}
+    try{
+      nt.textContent="Envoi dans Dropbox…";
+      for(var i=0;i<fs.length;i++)await DBX.upload("Messagerie/"+(v.fromName||v.from),fs[i].n,dataBlob(fs[i].d));
+      v.dbxAt=Date.now();S().from(T()).update({value:v}).eq("key",x.key);
+      if($("mDbxNote"))$("mDbxNote").textContent="✔ Archivées dans Dropbox (dossier Messagerie).";
+    }catch(e){if($("mDbxNote"))$("mDbxNote").textContent="Archivage Dropbox impossible : "+(e.message||e)}
+  }
+}
 function openMsg(i){
   var x=W[i];if(!x)return;var v=x.value,h=$("viewHost");
-  h.innerHTML='<div class="toolbar"><b>'+esc(v.subject||"(sans objet)")+'</b><div class="toolbar-actions"><button type="button" id="mBack">← Retour</button>'+(tab==="in"?'<button type="button" class="p" id="mRep">Répondre</button>':'')+'</div></div><div class="journal-article" id="mRead"><p style="color:var(--muted);margin-top:0">'+(tab==="in"?"De : "+esc(v.fromName||v.from)+" ("+esc(v.from)+")":"À : "+esc(v.to))+' · '+fdt(v.ts)+'</p><div style="white-space:pre-wrap;overflow-wrap:anywhere">'+esc(v.body)+'</div></div>';
+  var grp=v.group&&v.group.length>1?'<p style="color:var(--muted);margin:0 0 8px;font-size:.9rem">Envoyé à '+v.group.length+' personnes : '+esc(v.group.join(", "))+'</p>':'';
+  h.innerHTML='<div class="toolbar"><b>'+esc(v.subject||"(sans objet)")+'</b><div class="toolbar-actions"><button type="button" id="mBack">← Retour</button>'+(tab==="in"?'<button type="button" class="p" id="mRep">Répondre</button>':'')+'</div></div><div class="journal-article" id="mRead"><p style="color:var(--muted);margin-top:0">'+(tab==="in"?"De : "+esc(v.fromName||v.from)+" ("+esc(v.from)+")":"À : "+esc(v.to))+' · '+fdt(v.ts)+'</p>'+grp+'<div style="white-space:pre-wrap;overflow-wrap:anywhere">'+esc(v.body)+'</div>'+(v.att?'<div id="mAtt"><small style="color:var(--muted)">Chargement des pièces jointes…</small></div>':'')+'</div>';
   $("mBack").onclick=function(){window.renMsg()};
   if($("mRep"))$("mRep").onclick=function(){compose(v.from,"Re : "+String(v.subject||"").replace(/^Re : /,""))};
   if(tab==="in"&&!v.read){v.read=true;S().from(T()).update({value:v}).eq("key",x.key).then(function(){poll()})}
+  if(v.att)showAtt(v,x).catch(function(){if($("mAtt"))$("mAtt").textContent="Pièces jointes indisponibles."});
 }
 async function compose(to,subj){
-  var h=$("viewHost"),U=[];
+  var h=$("viewHost"),U=[],F=[],sel={};
   try{U=await AFRI.listUsers()}catch(e){}
   U=U.filter(function(u){return u.email&&u.email!==me()});
-  h.innerHTML='<div class="toolbar"><b>Nouveau message</b><div class="toolbar-actions"><button type="button" id="mBack">← Annuler</button></div></div><div class="journal-article"><div class="fm"><label for="mTo">Destinataire</label><select id="mTo">'+U.map(function(u){return '<option value="'+esc(u.email)+'">'+esc(u.name||u.email)+' · '+esc(u.email)+'</option>'}).join("")+'</select><label for="mSubj">Objet</label><input id="mSubj" maxlength="120"><label for="mBody">Message</label><textarea id="mBody" rows="8" maxlength="5000"></textarea><div id="mErr" role="alert" style="color:#c0392b;min-height:1.2em"></div><button type="button" class="p" id="mSend">Envoyer</button></div></div>';
-  if(to)$("mTo").value=to;if(subj)$("mSubj").value=subj;
+  if(to)sel[to]=1;
+  h.innerHTML='<div class="toolbar"><b>Nouveau message</b><div class="toolbar-actions"><button type="button" id="mBack">← Annuler</button></div></div><div class="journal-article"><div class="fm">'
+  +'<label>Destinataires <span id="mCnt" style="font-weight:400"></span></label>'
+  +'<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:6px"><input id="mQ" placeholder="Rechercher un nom ou un email…" style="flex:1;min-width:160px" autocomplete="off"><button type="button" id="mAll">Tout sélectionner</button><button type="button" id="mNone">Aucun</button></div>'
+  +'<div id="mList" style="max-height:210px;overflow:auto;border:1px solid var(--line);border-radius:10px;padding:8px"></div>'
+  +'<label for="mSubj">Objet</label><input id="mSubj" maxlength="120">'
+  +'<label for="mBody">Message</label><textarea id="mBody" rows="8" maxlength="5000"></textarea>'
+  +'<label for="mFiles">Pièces jointes <span style="font-weight:400">(5 max · 2,5 Mo au total)</span></label><input type="file" id="mFiles" multiple><div id="mFl" style="margin-top:6px"></div>'
+  +'<div id="mErr" role="alert" style="color:#c0392b;min-height:1.2em"></div><button type="button" class="p" id="mSend">Envoyer</button></div></div>';
+  if(subj)$("mSubj").value=subj;
+  function drawList(){
+    var q=$("mQ").value.trim().toLowerCase();
+    var L=U.filter(function(u){return !q||(String(u.name||"")+" "+u.email).toLowerCase().indexOf(q)>-1});
+    $("mList").innerHTML=L.length?L.map(function(u){return '<label class="rq"><input type="checkbox" value="'+esc(u.email)+'"'+(sel[u.email]?' checked':'')+'> '+esc(u.name||u.email)+' · '+esc(u.email)+'</label>'}).join(""):'<small style="color:var(--muted)">'+(U.length?"Aucun résultat.":"Aucun autre compte inscrit pour le moment.")+'</small>';
+    cnt();
+  }
+  function cnt(){var n=Object.keys(sel).length;$("mCnt").textContent=n?"· "+n+" sélectionné"+(n>1?"s":""):""}
+  $("mList").onchange=function(e){var c=e.target;if(c.type!=="checkbox")return;if(c.checked)sel[c.value]=1;else delete sel[c.value];cnt()};
+  $("mQ").oninput=drawList;
+  $("mAll").onclick=function(){var q=$("mQ").value.trim().toLowerCase();U.forEach(function(u){if(!q||(String(u.name||"")+" "+u.email).toLowerCase().indexOf(q)>-1)sel[u.email]=1});drawList()};
+  $("mNone").onclick=function(){sel={};drawList()};
+  drawList();
+  function drawFiles(){
+    var tot=F.reduce(function(a,f){return a+f.size},0);
+    $("mFl").innerHTML=F.map(function(f,i){return '<div class="file-row"><div>📎 '+esc(f.name)+' <small style="color:var(--muted)">'+fsz(f.size)+'</small></div><button type="button" class="danger" data-rf="'+i+'">Retirer</button></div>'}).join("")+(F.length?'<small style="color:var(--muted)">Total : '+fsz(tot)+' / 2,5 Mo</small>':'');
+  }
+  $("mFl").onclick=function(e){var b=e.target.closest("button[data-rf]");if(b){F.splice(+b.dataset.rf,1);drawFiles()}};
+  $("mFiles").onchange=function(){
+    var err="";
+    Array.prototype.slice.call(this.files).forEach(function(f){
+      var tot=F.reduce(function(a,g){return a+g.size},0);
+      if(F.length>=MAX_FILES)err="5 fichiers maximum par message.";
+      else if(tot+f.size>MAX_TOTAL)err="« "+f.name+" » dépasse la limite de 2,5 Mo au total. Pour un gros fichier, déposez-le dans Dropbox et collez le lien dans le message.";
+      else F.push(f);
+    });
+    this.value="";$("mErr").textContent=err;drawFiles();
+  };
   $("mBack").onclick=function(){window.renMsg()};
   $("mSend").onclick=async function(){
-    var t=$("mTo").value,s=$("mSubj").value.trim().slice(0,120),b=$("mBody").value.trim().slice(0,5000),btn=this;
-    if(!t||!b){$("mErr").textContent="Choisissez un destinataire et écrivez un message.";return}
-    btn.disabled=true;
-    var ts=Date.now(),k=ts+":"+Math.random().toString(36).slice(2,6),now=new Date().toISOString(),
-        v={from:me(),fromName:USER_NAME||me(),to:t,subject:s,body:b,ts:ts,read:false};
-    var r=await S().from(T()).insert([{key:"sent:"+me()+":"+k,value:v,updated_at:now},{key:"msg:"+t+":"+k,value:v,updated_at:now}]);
-    if(r.error){btn.disabled=false;$("mErr").textContent="Envoi impossible : "+r.error.message;return}
-    if(window.toast)toast("Message envoyé");tab="out";window.renMsg();
+    var rec=Object.keys(sel),s=$("mSubj").value.trim().slice(0,120),b=$("mBody").value.trim().slice(0,5000),btn=this;
+    if(!rec.length||!b){$("mErr").textContent="Choisissez au moins un destinataire et écrivez un message.";return}
+    btn.disabled=true;$("mErr").textContent="";
+    try{
+      var files=await Promise.all(F.map(readFile));
+      var ts=Date.now(),k=ts+":"+Math.random().toString(36).slice(2,6),now=new Date().toISOString();
+      var base={from:me(),fromName:USER_NAME||me(),subject:s,body:b,ts:ts,read:false};
+      if(files.length){base.att=k;base.nf=files.length}
+      var out=[{key:"sent:"+me()+":"+k,value:Object.assign({},base,{to:rec.join(", "),read:true,group:rec.length>1?rec:undefined}),updated_at:now}];
+      rec.forEach(function(t){out.push({key:"msg:"+t+":"+k,value:Object.assign({},base,{to:t,group:rec.length>1?rec:undefined}),updated_at:now})});
+      if(files.length)out.push({key:"att:"+k,value:{files:files,from:me(),ts:ts},updated_at:now});
+      var r=await S().from(T()).insert(out);
+      if(r.error)throw r.error;
+      if(files.length&&isAdm()&&window.DBX&&DBX.ready()){
+        try{for(var i=0;i<files.length;i++)await DBX.upload("Messagerie/Envoyés",files[i].n,dataBlob(files[i].d));if(window.toast)toast("Pièces jointes archivées dans Dropbox")}catch(e){if(window.toast)toast("Archivage Dropbox impossible : "+(e.message||e))}
+      }
+      if(window.toast)toast(rec.length>1?"Message envoyé à "+rec.length+" personnes":"Message envoyé");
+      tab="out";window.renMsg();
+    }catch(e){btn.disabled=false;$("mErr").textContent="Envoi impossible : "+(e.message||e)}
   };
 }
 var prev=window.onRole;
