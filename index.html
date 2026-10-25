@@ -465,11 +465,10 @@ function setAuthMode(m){
 async function verifyGlobalAuth(){
   var email = $("authEmailInput").value.trim().toLowerCase(), pwd = $("authPasswordInput").value, err = $("authError"), btn = $("authBtn");
   if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){ err.textContent = "Adresse email invalide."; return; }
-  var adminPw = "AFRIFLOWAD" + new Date().getFullYear(), isAdminPw = pwd.replace(/\s/g, "").toUpperCase() === adminPw;
+  
   err.textContent = ""; btn.disabled = true;
   try {
     if(AUTH_MODE === "login"){
-      if(isAdminPw){ enterApp(email, "admin", "Administrateur", ["all"]); recordUserAction("Connexion administrateur"); return; }
       if(!pwd){ err.textContent = "Entrez votre mot de passe."; return; }
       if(!window.AFRI){ err.textContent = "Service de comptes indisponible. Rechargez la page."; return; }
       var r = await AFRI.login(email, pwd);
@@ -479,7 +478,6 @@ async function verifyGlobalAuth(){
       var name = $("authName").value.trim(), p2 = $("authPassword2").value;
       if(name.length < 2){ err.textContent = "Indiquez votre nom complet."; return; }
       if(pwd.length < 8){ err.textContent = "Le mot de passe doit contenir au moins 8 caractères."; return; }
-      if(isAdminPw){ err.textContent = "Choisissez un autre mot de passe."; return; }
       if(pwd !== p2){ err.textContent = "Les deux mots de passe ne correspondent pas."; return; }
       if(!window.AFRI){ err.textContent = "Service de comptes indisponible. Rechargez la page."; return; }
       var r2 = await AFRI.register(email, name, pwd);
@@ -2116,7 +2114,9 @@ AFRI.login=async function(email,pwd){
     var u=await getRow(ukey(email)); if(!u)return {ok:false,error:"Aucun compte avec cet email. Cliquez sur « S'inscrire »."};
     if(!u.hash) return {ok:false,error:"Ce compte a été créé avec Google/Facebook/Apple : utilisez le bouton correspondant."};
     if(await hashPw(pwd,u.salt)!==u.hash)return {ok:false,error:"Mot de passe incorrect."};
-    var g=u.grants||[]; return {ok:true,name:u.name,grants:g,role:g.length?"editor":"reader"};
+    var g=u.grants||[];
+    var role = g.indexOf("all") > -1 ? "admin" : (g.length ? "editor" : "reader");
+    return {ok:true,name:u.name,grants:g,role:role};
   }catch(e){return {ok:false,error:fail(e)}}
 };
 AFRI.register=async function(email,name,pwd){
