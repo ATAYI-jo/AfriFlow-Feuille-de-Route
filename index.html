@@ -451,7 +451,7 @@ function recordUserAction(text){
   if(window.AFRI) AFRI.log(text);
 }
 
-/* ---------- Authentification (simple barrière d'interface) ---------- */
+/* ---------- Authentification (comptes Supabase Auth, droits contrôlés côté serveur) ---------- */
 var AUTH_MODE = "login";
 function setAuthMode(m){
   AUTH_MODE = m; var reg = m === "register";
@@ -464,25 +464,25 @@ function setAuthMode(m){
 }
 async function verifyGlobalAuth(){
   var email = $("authEmailInput").value.trim().toLowerCase(), pwd = $("authPasswordInput").value, err = $("authError"), btn = $("authBtn");
+  err.style.color = "";
   if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){ err.textContent = "Adresse email invalide."; return; }
-  
   err.textContent = ""; btn.disabled = true;
   try {
+    if(!window.AFRI){ err.textContent = "Service de comptes indisponible. Rechargez la page."; return; }
     if(AUTH_MODE === "login"){
       if(!pwd){ err.textContent = "Entrez votre mot de passe."; return; }
-      if(!window.AFRI){ err.textContent = "Service de comptes indisponible. Rechargez la page."; return; }
       var r = await AFRI.login(email, pwd);
       if(!r.ok){ err.textContent = r.error; return; }
-      enterApp(email, r.role, r.name, r.grants); recordUserAction("Connexion réussie");
+      enterApp(r.email, r.role, r.name, r.grants); recordUserAction(r.role === "admin" ? "Connexion administrateur" : "Connexion réussie");
     } else {
       var name = $("authName").value.trim(), p2 = $("authPassword2").value;
       if(name.length < 2){ err.textContent = "Indiquez votre nom complet."; return; }
       if(pwd.length < 8){ err.textContent = "Le mot de passe doit contenir au moins 8 caractères."; return; }
       if(pwd !== p2){ err.textContent = "Les deux mots de passe ne correspondent pas."; return; }
-      if(!window.AFRI){ err.textContent = "Service de comptes indisponible. Rechargez la page."; return; }
       var r2 = await AFRI.register(email, name, pwd);
       if(!r2.ok){ err.textContent = r2.error; return; }
-      enterApp(email, "reader", name, []); recordUserAction("Inscription et première connexion");
+      if(r2.confirm){ setAuthMode("login"); err.style.color = "#1f5d3a"; err.textContent = "Compte créé. Cliquez sur le lien reçu par email pour le confirmer, puis connectez-vous."; return; }
+      enterApp(r2.email, r2.role, r2.name, r2.grants); recordUserAction("Inscription et première connexion");
     }
   } finally { btn.disabled = false; }
 }
@@ -1333,7 +1333,7 @@ function enterApp(email, role, name, grants){
   if(window.onRole) window.onRole();
 }
 function logout(msg){
-  if(window.AFRI) AFRI.stop();
+  if(window.AFRI){ AFRI.stop(); AFRI.signOut(); }
   loggedUserEmail = ""; USER_ROLE = "reader"; USER_NAME = ""; USER_GRANTS = []; document.body.classList.add("ro");
   try { localStorage.removeItem(SESSION_KEY); } catch(e){}
   closeDrawer(); $("customizer-modal").classList.remove("on");
@@ -1343,11 +1343,10 @@ function logout(msg){
 }
 function checkIdle(){ if(loggedUserEmail && Date.now() - lastAct > SESSION_TTL) logout("Session expirée après 15 minutes d'inactivité."); }
 function resumeSession(){
-  try {
-    var s = JSON.parse(localStorage.getItem(SESSION_KEY) || "null");
-    if(s && s.e && Date.now() - s.t < SESSION_TTL){ enterApp(s.e, s.r, s.n, s.g); return; }
-    if(s) localStorage.removeItem(SESSION_KEY);
-  } catch(e){}
+  var s = null;
+  try { s = JSON.parse(localStorage.getItem(SESSION_KEY) || "null"); } catch(e){}
+  window.__resume = !!(s && s.e && Date.now() - s.t < SESSION_TTL);   /* repris par le module comptes, après vérification serveur */
+  if(s && !window.__resume){ try { localStorage.removeItem(SESSION_KEY); } catch(e){} }
 }
 ["pointerdown", "keydown", "touchstart", "scroll", "wheel"].forEach(function(ev){ window.addEventListener(ev, touch, {passive:true}); });
 setInterval(checkIdle, 20000);
@@ -2037,7 +2036,9 @@ buildNav();
   /* Lit le cloud. Le cloud est la référence : il écrase la copie locale. */
   async function cloudLoad(){
     if(!sb) return;
-    var res = await sb.from(TABLE).select('key,value,updated_at').not('key','like','log:%').not('key','like','user:%').not('key','like','req:%').not('key','like','pub:%').not('key','like','msg:%').not('key','like','sent:%');
+    var ses = await sb.auth.getSession();
+    if(!(ses.data && ses.data.session)){ setBadge(false, 'Connectez-vous pour synchroniser'); return; }
+    var res = await sb.from(TABLE).select('key,value,updated_at').in('key',['items','map','extra']);
     if(res.error){ console.error('Lecture cloud :', res.error); setBadge(false, 'Hors ligne (lecture impossible)'); return; }
     var have = {};
     res.data.forEach(function(row){
@@ -2048,9 +2049,11 @@ buildNav();
       if(apply(row) === false) delete seen[row.key];
     });
     /* Première utilisation : la table est vide, on y dépose les données actuelles */
-    if(!have.items) cloudSave('items');
-    if(!have.map && Object.keys(MAP).length) cloudSave('map');
-    if(!have.extra && window.hasExtra && window.hasExtra()) cloudSave('extra');
+    if(typeof canEdit === 'function' && canEdit()){
+      if(!have.items) cloudSave('items');
+      if(!have.map && Object.keys(MAP).length) cloudSave('map');
+      if(!have.extra && window.hasExtra && window.hasExtra()) cloudSave('extra');
+    }
     setBadge(true, 'Synchronisé');
   }
 
@@ -2072,6 +2075,7 @@ buildNav();
 
   if(!sb){ setBadge(false, 'Supabase indisponible'); return; }
 
+  window.cloudLoad = cloudLoad;
   cloudLoad();
   /* Temps réel : à chaque changement, on relit la table */
   sb.channel('afriflow-state')
@@ -2107,27 +2111,53 @@ function ukey(e){return "user:"+String(e).toLowerCase()}
 function fail(e){var m=String((e&&e.message)||e);return /fetch|network|Failed/i.test(m)?"Connexion au serveur impossible. Vérifiez votre réseau.":m}
 function fdt(t){return new Date(t).toLocaleString("fr-FR",{dateStyle:"short",timeStyle:"short"})}
 
-/* --- Comptes --- */
+/* --- Comptes (Supabase Auth : mots de passe gérés et hachés par le serveur) --- */
+function nameOf(us){var md=us.user_metadata||{};return md.full_name||md.name||String(us.email).split("@")[0]}
+async function finish(us){
+  var email=String(us.email).toLowerCase(),isA=false;
+  try{var a=await SB().rpc("af_is_admin");isA=a.data===true}catch(e){}
+  var u=await getRow(ukey(email));
+  if(!u){
+    u={email:email,name:nameOf(us),grants:[],created:iso()};
+    var ins=await SB().from(TB()).insert({key:ukey(email),value:u,updated_at:iso()});
+    if(ins.error&&ins.error.code!=="23505")throw ins.error;
+  }
+  var g=isA?["all"]:(u.grants||[]);
+  return {ok:true,email:email,name:isA?"Administrateur":(u.name||nameOf(us)),grants:g,role:isA?"admin":(g.length?"editor":"reader")};
+}
 AFRI.login=async function(email,pwd){
   try{
     if(!SB())return {ok:false,error:"Service de comptes indisponible."};
-    var u=await getRow(ukey(email)); if(!u)return {ok:false,error:"Aucun compte avec cet email. Cliquez sur « S'inscrire »."};
-    if(!u.hash) return {ok:false,error:"Ce compte a été créé avec Google/Facebook/Apple : utilisez le bouton correspondant."};
-    if(await hashPw(pwd,u.salt)!==u.hash)return {ok:false,error:"Mot de passe incorrect."};
-    var g=u.grants||[];
-    var role = g.indexOf("all") > -1 ? "admin" : (g.length ? "editor" : "reader");
-    return {ok:true,name:u.name,grants:g,role:role};
+    var r=await SB().auth.signInWithPassword({email:email,password:pwd});
+    if(r.error){
+      var m=r.error.message||"";
+      if(/not confirmed/i.test(m))return {ok:false,error:"Email non confirmé : cliquez sur le lien reçu par email."};
+      if(/invalid login/i.test(m))return {ok:false,error:"Email ou mot de passe incorrect. Compte créé avant la mise à jour de sécurité ? Cliquez sur « S'inscrire » avec le même email pour choisir un mot de passe."};
+      return {ok:false,error:m};
+    }
+    return await finish(r.data.user);
   }catch(e){return {ok:false,error:fail(e)}}
 };
 AFRI.register=async function(email,name,pwd){
   try{
     if(!SB())return {ok:false,error:"Service de comptes indisponible."};
-    var salt=hex(crypto.getRandomValues(new Uint8Array(16))),v={email:email.toLowerCase(),name:name,salt:salt,hash:await hashPw(pwd,salt),grants:[],created:iso()};
-    var r=await SB().from(TB()).insert({key:ukey(email),value:v,updated_at:iso()});
-    if(r.error){if(r.error.code==="23505"||/duplicate/i.test(r.error.message))return {ok:false,error:"Cet email est déjà inscrit. Connectez-vous."};throw r.error}
-    return {ok:true,name:name,grants:[],role:"reader"};
+    var r=await SB().auth.signUp({email:email,password:pwd,options:{data:{full_name:name},emailRedirectTo:location.origin+location.pathname}});
+    if(r.error){
+      if(/already registered/i.test(r.error.message||""))return {ok:false,error:"Cet email est déjà inscrit. Connectez-vous."};
+      return {ok:false,error:r.error.message};
+    }
+    if(!r.data.session)return {ok:true,confirm:true};
+    return await finish(r.data.user);
   }catch(e){return {ok:false,error:fail(e)}}
 };
+AFRI.resume=async function(){
+  try{
+    var r=await SB().auth.getSession(),us=r.data&&r.data.session&&r.data.session.user;
+    if(!us||!us.email)return false;
+    var x=await finish(us);enterApp(x.email,x.role,x.name,x.grants);return true;
+  }catch(e){return false}
+};
+AFRI.signOut=function(){try{if(SB())SB().auth.signOut({scope:"local"})}catch(e){}};
 AFRI.listUsers=async function(){return (await listRows("user:",500)).map(function(r){return r.value})};
 AFRI.listRequests=async function(){return (await listRows("req:",300)).map(function(r){return r.value})};
 AFRI.setGrants=async function(email,g){var u=await getRow(ukey(email));if(!u)throw new Error("Compte introuvable");u.grants=g;await putRow(ukey(email),u)};
@@ -2135,7 +2165,7 @@ AFRI.deleteUser=async function(email){
   var e=String(email).toLowerCase(),keys=[ukey(e),"req:"+e];
   var r=await SB().from(TB()).delete().in("key",keys).select("key");
   if(r.error)throw r.error;
-  if(!r.data||!r.data.some(function(x){return x.key===keys[0]}))throw new Error("Suppression refusée par Supabase (0 ligne supprimée) : il manque la règle DELETE sur la table afriflow_state.");
+  if(!r.data||!r.data.some(function(x){return x.key===keys[0]}))throw new Error("Suppression refusée (0 ligne supprimée) : réservé à l'administrateur connecté avec son compte.");
   /* ménage best-effort : messages de ce compte */
   try{await SB().from(TB()).delete().like("key","msg:"+e+":%");await SB().from(TB()).delete().like("key","sent:"+e+":%")}catch(x){}
 };
@@ -2224,16 +2254,8 @@ function openReq(){
   };
 }
 var prev=window.onRole;
-window.onRole=function(){if(prev)prev();if(loggedUserEmail)AFRI.start(loggedUserEmail,USER_ROLE,USER_NAME);reqUI()};
+window.onRole=function(){if(prev)prev();if(loggedUserEmail)AFRI.start(loggedUserEmail,USER_ROLE,USER_NAME);reqUI();if(window.cloudLoad)cloudLoad()};
   /* --- Connexion via fournisseur externe --- */
-AFRI.oauthUser = async function(email, name){
-  var u = await getRow(ukey(email));
-  if(!u){
-    u = {email:email, name:name, salt:"", hash:"", grants:[], created:iso(), oauth:true};
-    await putRow(ukey(email), u);
-  }
-  return u;
-};
 document.querySelectorAll(".oauth").forEach(function(b){
   b.onclick = function(){
     if(!SB()){ document.getElementById("authError").textContent = "Service indisponible."; return; }
@@ -2245,19 +2267,24 @@ document.querySelectorAll(".oauth").forEach(function(b){
   if(/error_description=/.test(h)){ err.textContent = "Connexion refusée ou annulée."; history.replaceState(null,"",location.pathname); return; }
   if(!/access_token=/.test(h) || !SB()) return;
   try{
-    var r = await SB().auth.getSession(), us = r.data && r.data.session && r.data.session.user;
+    var us = null;
+    for(var i = 0; i < 10 && !us; i++){
+      var r = await SB().auth.getSession(); us = r.data && r.data.session && r.data.session.user;
+      if(!us) await new Promise(function(ok){ setTimeout(ok, 300); });
+    }
     if(!us || !us.email) return;
-    var email = us.email.toLowerCase(), md = us.user_metadata || {},
-        name = md.full_name || md.name || email.split("@")[0],
-        u = await AFRI.oauthUser(email, name), g = u.grants || [];
+    var x = await finish(us);
     history.replaceState(null,"",location.pathname);
-    enterApp(email, g.length ? "editor" : "reader", u.name, g);
-    recordUserAction("Connexion via " + (us.app_metadata.provider || "fournisseur externe"));
-    await SB().auth.signOut({scope:"local"}); /* la session de 15 min du site prend le relais */
+    enterApp(x.email, x.role, x.name, x.grants);
+    recordUserAction("Connexion via " + ((us.app_metadata && us.app_metadata.provider) || "fournisseur externe"));
   }catch(e){ err.textContent = fail(e); }
 })();
 window.AFRI=AFRI;
-if(loggedUserEmail)window.onRole();
+/* Reprise de session : seulement si l'activité date de moins de 15 min ; sinon on ferme la session serveur */
+if(!/access_token=/.test(window.__oauthReturn || "")){
+  if(window.__resume) AFRI.resume().then(function(ok){ if(!ok){ try{ localStorage.removeItem(SESSION_KEY); }catch(e){} } });
+  else AFRI.signOut();
+}
 })();
 </script>
 
@@ -2390,7 +2417,7 @@ async function compose(to,subj){
       if(files.length){base.att=k;base.nf=files.length}
       var out=[{key:"sent:"+me()+":"+k,value:Object.assign({},base,{to:rec.join(", "),read:true,group:rec.length>1?rec:undefined}),updated_at:now}];
       rec.forEach(function(t){out.push({key:"msg:"+t+":"+k,value:Object.assign({},base,{to:t,group:rec.length>1?rec:undefined}),updated_at:now})});
-      if(files.length)out.push({key:"att:"+k,value:{files:files,from:me(),ts:ts},updated_at:now});
+      if(files.length)out.push({key:"att:"+k,value:{files:files,from:me(),to:rec,ts:ts},updated_at:now});
       var r=await S().from(T()).insert(out);
       if(r.error)throw r.error;
       if(files.length&&isAdm()&&window.DBX&&DBX.ready()){
