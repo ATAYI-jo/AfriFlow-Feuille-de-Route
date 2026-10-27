@@ -2434,6 +2434,88 @@ setInterval(poll,25000);
 if(loggedUserEmail)setTimeout(poll,1500);
 })();
 </script>
+<!-- ===== Assistant IA (administrateur uniquement) ===== -->
+<script>
+(function(){
+  var H = [], busy = false;
+  var $g = function(i){ return document.getElementById(i); };
 
+  var btn = document.createElement("button");
+  btn.type = "button"; btn.id = "aiBtn"; btn.className = "p"; btn.textContent = "🦉JO AI";
+  btn.style.cssText = "position:fixed;right:12px;bottom:calc(12px + env(safe-area-inset-bottom,0px));z-index:900;display:none;box-shadow:0 4px 14px rgba(0,0,0,.25)";
+
+  var box = document.createElement("div");
+  box.id = "aiBox"; box.setAttribute("role", "dialog"); box.setAttribute("aria-label", "Assistant IA");
+  box.style.cssText = "position:fixed;right:12px;bottom:calc(64px + env(safe-area-inset-bottom,0px));z-index:900;width:min(440px,94vw);height:min(70vh,640px);display:none;flex-direction:column;gap:8px;background:var(--card);color:var(--ink);border:1px solid var(--line);border-radius:16px;padding:12px;box-shadow:0 12px 40px rgba(0,0,0,.3)";
+  box.innerHTML =
+    '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px">' +
+      '<b style="color:var(--green)">Assistant technique (admin)</b>' +
+      '<span><button type="button" id="aiClear" style="padding:4px 10px;font-size:.8rem">Effacer</button> ' +
+      '<button type="button" id="aiClose" aria-label="Fermer" style="padding:4px 10px;font-size:.8rem">✕</button></span>' +
+    '</div>' +
+    '<div id="aiLog" style="flex:1;overflow-y:auto;font-size:.92rem;line-height:1.45"></div>' +
+    '<textarea id="aiIn" rows="3" placeholder="Ex. : change le titre de l\'étape 1… (Ctrl+Entrée pour envoyer)" style="width:100%;resize:vertical"></textarea>' +
+    '<button type="button" class="p" id="aiGo">Envoyer</button>';
+  document.body.appendChild(btn);
+  document.body.appendChild(box);
+
+  function add(who, text, url){
+    var d = document.createElement("div");
+    d.style.cssText = "margin:6px 0;padding:8px 10px;border-radius:10px;white-space:pre-wrap;overflow-wrap:anywhere;background:" +
+      (who === "Vous" ? "color-mix(in srgb,var(--green) 12%,var(--card))" : "color-mix(in srgb,var(--ink) 6%,var(--card))");
+    var b = document.createElement("b"); b.textContent = who + " : "; d.appendChild(b);
+    d.appendChild(document.createTextNode(text || ""));
+    if(url && /^https:\/\/github\.com\//.test(url)){
+      d.appendChild(document.createElement("br"));
+      var a = document.createElement("a"); a.href = url; a.target = "_blank"; a.rel = "noopener noreferrer";
+      a.textContent = "🔗 Ouvrir la Pull Request sur GitHub"; a.style.cssText = "color:var(--green);font-weight:700";
+      d.appendChild(a);
+    }
+    var log = $g("aiLog"); log.appendChild(d); log.scrollTop = log.scrollHeight;
+    return d;
+  }
+
+  async function send(){
+    if(busy) return;
+    var inp = $g("aiIn"), t = inp.value.trim();
+    if(!t) return;
+    if(!window.__sb){ add("Erreur", "Service indisponible."); return; }
+    busy = true; $g("aiGo").disabled = true; inp.value = "";
+    add("Vous", t); H.push({role:"user", content:t});
+    var wait = add("Claude", "réfléchit… (cela peut prendre une minute)");
+    try {
+      var r = await window.__sb.functions.invoke("admin-ai", {body:{messages:H.slice(-12)}});
+      if(r.error){
+        var m = r.error.message || "Erreur";
+        try { var j = await r.error.context.json(); if(j && j.error) m = j.error; } catch(e){}
+        throw new Error(m);
+      }
+      var reply = (r.data && (r.data.reply || r.data.error)) || "(réponse vide)";
+      wait.remove();
+      H.push({role:"assistant", content:reply});
+      var prs = (r.data && r.data.prs) || [];
+      add("Claude", reply, prs.length ? prs[0].url : null);
+      for(var i = 1; i < prs.length; i++) add("PR", prs[i].title, prs[i].url);
+    } catch(e){
+      wait.remove(); H.pop();
+      add("Erreur", e.message || String(e));
+    }
+    busy = false; $g("aiGo").disabled = false; inp.focus();
+  }
+
+  btn.onclick = function(){ box.style.display = box.style.display === "flex" ? "none" : "flex"; };
+  $g("aiClose").onclick = function(){ box.style.display = "none"; };
+  $g("aiClear").onclick = function(){ H = []; $g("aiLog").textContent = ""; };
+  $g("aiGo").onclick = send;
+  $g("aiIn").addEventListener("keydown", function(e){ if(e.key === "Enter" && (e.ctrlKey || e.metaKey)){ e.preventDefault(); send(); } });
+
+  /* Visible uniquement pour l'administrateur connecté (se masque aussi à la déconnexion) */
+  setInterval(function(){
+    var isAdm = (typeof loggedUserEmail !== "undefined" && loggedUserEmail) && (typeof USER_ROLE !== "undefined" && USER_ROLE === "admin");
+    btn.style.display = isAdm ? "" : "none";
+    if(!isAdm){ box.style.display = "none"; if(H.length){ H = []; $g("aiLog").textContent = ""; } }
+  }, 1000);
+})();
+</script>
 </body>
 </html>
