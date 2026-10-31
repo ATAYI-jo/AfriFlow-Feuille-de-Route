@@ -1430,7 +1430,7 @@ function ask(title,fields,ok){
 /* ---------- Navigation ---------- */
 function isAdmin(){return window.USER_ROLE==="admin"}
 function buildNav(){
-  var base=BASE.slice(); base.push({id:"messages",n:"Messagerie"}); if(isAdmin())base.push({id:"admin",n:"Administration"});
+  var base=BASE.slice(); base.push({id:"messages",n:"Messagerie"}); if(isAdmin()){base.push({id:"assistant",n:"Assistant IA"});base.push({id:"admin",n:"Administration"})}
   var nb=base.length,h=""; base.concat(X.nav).forEach(function(it,i){
     var badge=(it.id==="admin"&&AF_PEND)?' ('+AF_PEND+')':''; if(it.id==="messages"&&window.MSG_UNREAD)badge=' ('+window.MSG_UNREAD+')';
     h+='<div class="nvr"><button type="button" class="nv'+(it.id===cur?' on':'')+'" data-id="'+esc(it.id)+'">'+esc(it.n)+badge+'</button>'+(i>=nb&&isAdmin()?'<button type="button" class="nx" data-del="'+esc(it.id)+'" aria-label="Supprimer '+esc(it.n)+'">✕</button>':'')+'</div>';
@@ -1442,10 +1442,10 @@ function openNav(){$("side").classList.add("on");$("scrim").classList.add("on");
 function closeNav(){$("side").classList.remove("on");$("scrim").classList.remove("on");$("menuBtn").setAttribute("aria-expanded","false")}
 function show(id){
   wkClean(); cur=id; sel=null; W.tv=null; W.pv=null; W.tvAt=0;
-  if(id==="admin"&&!isAdmin())cur=id="home";
+  if((id==="admin"||id==="assistant")&&!isAdmin())cur=id="home";
   $("view-home").style.display=id==="home"?"":"none";
   $("viewHost").style.display=id==="home"?"none":"";
-  if(id==="admin")renAdmin();else if(id==="messages"){if(window.renMsg)window.renMsg()}
+  if(id==="admin")renAdmin();else if(id==="messages"){if(window.renMsg)window.renMsg()}else if(id==="assistant"){if(window.renAI)window.renAI()}
   else if(id!=="home"){
     var run=function(){ if(id==="treasury")renTre(); else renEd(id) };
     if(cep(id))run(); else viewPub(id,function(p){ W.tvAt=p.at; if(id==="treasury")W.tv=p.tre; else W.pv=p; run() });
@@ -1567,7 +1567,7 @@ var W={open:false,id:null,page:null,sl:null,S:null,D:null,kd:null,tv:null,pv:nul
   mammoth:["https://cdn.jsdelivr.net/npm/mammoth@1.6.0/mammoth.browser.min.js",function(){return window.mammoth}]};
 function lib(n){ var l=LIBS[n]; if(l[1]())return Promise.resolve(); return libs[n]||(libs[n]=loadJs(l[0]).catch(function(e){delete libs[n];throw new Error("Module "+n+" indisponible (connexion ?)")})); }
 function toast(m){var t=document.createElement("div");t.textContent=m;t.setAttribute("role","status");t.style.cssText="position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:var(--green);color:#fff;padding:10px 18px;border-radius:12px;z-index:1200;max-width:90vw;box-shadow:0 8px 24px rgba(0,0,0,.25)";document.body.appendChild(t);setTimeout(function(){t.remove()},5000)}
-function pageName(id){return (BASE.concat(X.nav,[{id:"admin",n:"Administration"},{id:"messages",n:"Messagerie"}]).filter(function(x){return x.id===id})[0]||{n:"Direction"}).n}
+function pageName(id){return (BASE.concat(X.nav,[{id:"admin",n:"Administration"},{id:"messages",n:"Messagerie"},{id:"assistant",n:"Assistant IA"}]).filter(function(x){return x.id===id})[0]||{n:"Direction"}).n}
 function safeName(s){return String(s||"").replace(/[<>:"\/\\|?*\u0000-\u001f]/g,"-").trim().slice(0,80)||"Sans titre"}
 function fdt(t){return new Date(t).toLocaleString("fr-FR",{dateStyle:"short",timeStyle:"short"})}
 function uid(){return "d"+Date.now().toString(36)+Math.floor(Math.random()*1e4).toString(36)}
@@ -2434,88 +2434,50 @@ setInterval(poll,25000);
 if(loggedUserEmail)setTimeout(poll,1500);
 })();
 </script>
-<!-- ===== Assistant IA (administrateur uniquement) ===== -->
 <script>
+/* ===== Assistant IA (Claude) : réservé à l'administrateur, via la fonction Supabase « admin-ai » ===== */
 (function(){
-  var H = [], busy = false;
-  var $g = function(i){ return document.getElementById(i); };
-
-  var btn = document.createElement("button");
-  btn.type = "button"; btn.id = "aiBtn"; btn.className = "p"; btn.textContent = "🦉JO AI";
-  btn.style.cssText = "position:fixed;right:12px;bottom:calc(12px + env(safe-area-inset-bottom,0px));z-index:900;display:none;box-shadow:0 4px 14px rgba(0,0,0,.25)";
-
-  var box = document.createElement("div");
-  box.id = "aiBox"; box.setAttribute("role", "dialog"); box.setAttribute("aria-label", "Assistant IA");
-  box.style.cssText = "position:fixed;right:12px;bottom:calc(64px + env(safe-area-inset-bottom,0px));z-index:900;width:min(440px,94vw);height:min(70vh,640px);display:none;flex-direction:column;gap:8px;background:var(--card);color:var(--ink);border:1px solid var(--line);border-radius:16px;padding:12px;box-shadow:0 12px 40px rgba(0,0,0,.3)";
-  box.innerHTML =
-    '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px">' +
-      '<b style="color:var(--green)">Assistant technique (admin)</b>' +
-      '<span><button type="button" id="aiClear" style="padding:4px 10px;font-size:.8rem">Effacer</button> ' +
-      '<button type="button" id="aiClose" aria-label="Fermer" style="padding:4px 10px;font-size:.8rem">✕</button></span>' +
-    '</div>' +
-    '<div id="aiLog" style="flex:1;overflow-y:auto;font-size:.92rem;line-height:1.45"></div>' +
-    '<textarea id="aiIn" rows="3" placeholder="Ex. : change le titre de l\'étape 1… (Ctrl+Entrée pour envoyer)" style="width:100%;resize:vertical"></textarea>' +
-    '<button type="button" class="p" id="aiGo">Envoyer</button>';
-  document.body.appendChild(btn);
-  document.body.appendChild(box);
-
-  function add(who, text, url){
-    var d = document.createElement("div");
-    d.style.cssText = "margin:6px 0;padding:8px 10px;border-radius:10px;white-space:pre-wrap;overflow-wrap:anywhere;background:" +
-      (who === "Vous" ? "color-mix(in srgb,var(--green) 12%,var(--card))" : "color-mix(in srgb,var(--ink) 6%,var(--card))");
-    var b = document.createElement("b"); b.textContent = who + " : "; d.appendChild(b);
-    d.appendChild(document.createTextNode(text || ""));
-    if(url && /^https:\/\/github\.com\//.test(url)){
-      d.appendChild(document.createElement("br"));
-      var a = document.createElement("a"); a.href = url; a.target = "_blank"; a.rel = "noopener noreferrer";
-      a.textContent = "🔗 Ouvrir la Pull Request sur GitHub"; a.style.cssText = "color:var(--green);font-weight:700";
-      d.appendChild(a);
+var hist=[],busy=false,$=function(i){return document.getElementById(i)};
+function esc(s){return String(s==null?"":s).replace(/[&<>"']/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]})}
+function draw(){
+  var box=$("aiLog");if(!box)return;
+  box.innerHTML=hist.length?hist.map(function(m){
+    var me=m.role==="user",prs=(m.prs||[]).map(function(p){return '<div style="margin-top:8px"><a href="'+esc(p.url)+'" target="_blank" rel="noopener noreferrer">🔀 Ouvrir la Pull Request : '+esc(p.title)+'</a></div>'}).join("");
+    return '<div style="margin:0 0 10px;padding:10px 12px;border-radius:12px;border:1px solid var(--line);background:'+(me?'transparent':'var(--card)')+'"><small style="color:var(--muted)">'+(me?"Vous":"Claude")+'</small><div style="white-space:pre-wrap;overflow-wrap:anywhere">'+esc(m.content)+'</div>'+prs+'</div>';
+  }).join("")+(busy?'<p style="color:var(--muted)">Claude travaille… (jusqu\'à 1–2 minutes si le code est lu ou modifié)</p>':''):'<p style="color:var(--muted)">Exemples : « Explique comment fonctionne la messagerie », « Ajoute un bouton pour exporter les messages », « Change la couleur des boutons principaux ».</p>';
+  box.scrollTop=box.scrollHeight;
+}
+async function send(){
+  var inp=$("aiIn"),txt=inp.value.trim(),err=$("aiErr");
+  if(!txt||busy)return;
+  err.textContent="";hist.push({role:"user",content:txt});inp.value="";busy=true;$("aiSend").disabled=true;draw();
+  try{
+    var r=await window.__sb.functions.invoke("admin-ai",{body:{messages:hist.map(function(m){return {role:m.role,content:m.content}})}});
+    if(r.error){
+      var msg=r.error.message||"Erreur";
+      try{var j=await r.error.context.json();if(j&&j.error)msg=j.error}catch(e){}
+      throw new Error(msg);
     }
-    var log = $g("aiLog"); log.appendChild(d); log.scrollTop = log.scrollHeight;
-    return d;
+    hist.push({role:"assistant",content:(r.data&&r.data.reply)||"(réponse vide)",prs:(r.data&&r.data.prs)||[]});
+  }catch(e){
+    hist.pop();inp.value=txt;err.textContent="Impossible de joindre l'assistant : "+(e.message||e);
   }
-
-  async function send(){
-    if(busy) return;
-    var inp = $g("aiIn"), t = inp.value.trim();
-    if(!t) return;
-    if(!window.__sb){ add("Erreur", "Service indisponible."); return; }
-    busy = true; $g("aiGo").disabled = true; inp.value = "";
-    add("Vous", t); H.push({role:"user", content:t});
-    var wait = add("Claude", "réfléchit… (cela peut prendre une minute)");
-    try {
-      var r = await window.__sb.functions.invoke("admin-ai", {body:{messages:H.slice(-12)}});
-      if(r.error){
-        var m = r.error.message || "Erreur";
-        try { var j = await r.error.context.json(); if(j && j.error) m = j.error; } catch(e){}
-        throw new Error(m);
-      }
-      var reply = (r.data && (r.data.reply || r.data.error)) || "(réponse vide)";
-      wait.remove();
-      H.push({role:"assistant", content:reply});
-      var prs = (r.data && r.data.prs) || [];
-      add("Claude", reply, prs.length ? prs[0].url : null);
-      for(var i = 1; i < prs.length; i++) add("PR", prs[i].title, prs[i].url);
-    } catch(e){
-      wait.remove(); H.pop();
-      add("Erreur", e.message || String(e));
-    }
-    busy = false; $g("aiGo").disabled = false; inp.focus();
-  }
-
-  btn.onclick = function(){ box.style.display = box.style.display === "flex" ? "none" : "flex"; };
-  $g("aiClose").onclick = function(){ box.style.display = "none"; };
-  $g("aiClear").onclick = function(){ H = []; $g("aiLog").textContent = ""; };
-  $g("aiGo").onclick = send;
-  $g("aiIn").addEventListener("keydown", function(e){ if(e.key === "Enter" && (e.ctrlKey || e.metaKey)){ e.preventDefault(); send(); } });
-
-  /* Visible uniquement pour l'administrateur connecté (se masque aussi à la déconnexion) */
-  setInterval(function(){
-    var isAdm = (typeof loggedUserEmail !== "undefined" && loggedUserEmail) && (typeof USER_ROLE !== "undefined" && USER_ROLE === "admin");
-    btn.style.display = isAdm ? "" : "none";
-    if(!isAdm){ box.style.display = "none"; if(H.length){ H = []; $g("aiLog").textContent = ""; } }
-  }, 1000);
+  busy=false;if($("aiSend"))$("aiSend").disabled=false;draw();
+}
+window.renAI=function(){
+  var h=$("viewHost");
+  h.innerHTML='<div class="toolbar"><b>Assistant IA (Claude)</b><div class="toolbar-actions"><button type="button" id="aiNew">Nouvelle conversation</button></div></div>'
+  +'<div class="journal-article"><p style="margin-top:0;color:var(--muted);font-size:.9rem">Réservé à l’administrateur. Claude peut lire le code du site sur GitHub et proposer des modifications sous forme de <b>Pull Request</b> : rien n’est publié tant que vous ne l’avez pas relue et fusionnée sur GitHub.</p>'
+  +'<div id="aiLog" style="max-height:52vh;overflow:auto;margin-bottom:10px"></div>'
+  +'<textarea id="aiIn" rows="4" maxlength="6000" placeholder="Votre demande…"></textarea>'
+  +'<div id="aiErr" role="alert" style="color:#c0392b;min-height:1.2em"></div><button type="button" class="p" id="aiSend">Envoyer</button></div>';
+  $("aiSend").onclick=send;
+  $("aiIn").onkeydown=function(e){if(e.key==="Enter"&&(e.ctrlKey||e.metaKey)){e.preventDefault();send()}};
+  $("aiNew").onclick=function(){if(busy)return;hist=[];$("aiErr").textContent="";draw()};
+  draw();
+};
 })();
 </script>
+
 </body>
 </html>
