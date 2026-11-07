@@ -1602,9 +1602,9 @@ document.addEventListener("keydown",function(e){ if((e.ctrlKey||e.metaKey)&&Stri
 
 /* ----- Dropbox (OAuth PKCE : aucune clé secrète dans la page) ----- */
 function dbxCfg(){try{return JSON.parse(localStorage.getItem(DK)||"{}")}catch(e){return {}}}
-function dbxSet(o){try{localStorage.setItem(DK,JSON.stringify(o))}catch(e){}}
+function dbxSet(o){try{localStorage.setItem(DK,JSON.stringify(o));return true}catch(e){toast("Connexion Dropbox non enregistrée : stockage du navigateur plein ou bloqué. Retirez les images lourdes (Personnaliser › Réinitialiser) ou autorisez les données du site.");return false}}
 function dbxReady(){var c=dbxCfg();return !!(c.key&&c.refresh)}
-function redir(){return location.origin+location.pathname}
+function redir(){return location.origin+"/"}
 function b64u(buf){var s="",b=new Uint8Array(buf);for(var i=0;i<b.length;i++)s+=String.fromCharCode(b[i]);return btoa(s).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/,"")}
 async function dbxConnect(key,folder){
   var v=b64u(crypto.getRandomValues(new Uint8Array(48))), ch=b64u(await crypto.subtle.digest("SHA-256",new TextEncoder().encode(v)));
@@ -1618,7 +1618,7 @@ async function dbxConnect(key,folder){
   fetch("https://api.dropboxapi.com/oauth2/token",{method:"POST",headers:{"Content-Type":"application/x-www-form-urlencoded"},body:new URLSearchParams({code:code,grant_type:"authorization_code",code_verifier:st.v,client_id:st.key,redirect_uri:redir()})})
   .then(function(r){return r.json()}).then(function(j){
     if(!j.access_token||!j.refresh_token)throw new Error(j.error_description||j.error||"réponse inattendue");
-    var c=dbxCfg(); c.key=st.key; c.access=j.access_token; c.refresh=j.refresh_token; c.exp=Date.now()+j.expires_in*1000; dbxSet(c); toast("Dropbox connecté. Les enregistrements partent maintenant dans votre Dropbox.");
+    var c=dbxCfg(); c.key=st.key; c.access=j.access_token; c.refresh=j.refresh_token; c.exp=Date.now()+j.expires_in*1000; if(dbxSet(c))toast("Dropbox connecté. Les enregistrements partent maintenant dans votre Dropbox.");
   }).catch(function(e){toast("Connexion Dropbox échouée : "+e.message)});
 })();
 async function dbxToken(){
@@ -3858,6 +3858,120 @@ document.getElementById("hd-file").addEventListener("change",function(){
   };
   r.readAsDataURL(f);
 });
+})();
+</script>
+  <!-- =====================================================================
+  MODULE AFRIFLOW · Éditeurs façon Microsoft (Word / Excel)
+  À COLLER juste avant </body>, après tous les autres modules.
+  Aucune autre modification : il réorganise l'éditeur existant (les
+  boutons gardent leurs fonctions). Hors éditeur, rien ne change.
+====================================================================== -->
+<style id="ms-css">
+body.ms-edit #afBg,body.ms-edit #bgLayer,body.ms-edit #sky{display:none!important}
+body.ms-edit{background:#e6e6e6!important;font-family:"Segoe UI",system-ui,sans-serif}
+body.ms-edit #viewHost.wrap{max-width:none;padding:0 0 40px}
+body.ms-edit #menuBtn{top:6px;width:40px;height:40px;border-radius:6px}
+.ms-word{--ms:#2b579a}.ms-excel{--ms:#217346}.ms-design{--ms:#b7472a}
+/* barre de titre */
+.ms-edit #viewHost>.toolbar:first-child{background:var(--ms)!important;color:#fff;border:0!important;border-radius:0!important;box-shadow:none!important;backdrop-filter:none!important;margin:0;padding:8px 18px 8px 64px;gap:12px}
+.ms-edit #viewHost>.toolbar:first-child button{background:rgba(255,255,255,.14)!important;color:#fff;border:1px solid rgba(255,255,255,.35)!important;border-radius:4px;padding:6px 14px;font-weight:600;box-shadow:none!important;backdrop-filter:none!important}
+.ms-edit #viewHost>.toolbar:first-child button:hover{background:rgba(255,255,255,.28)!important}
+#wName{background:transparent!important;border:0!important;box-shadow:none!important;color:#fff;font-weight:600;font-size:1rem}
+#wSt{color:rgba(255,255,255,.88)!important}
+/* onglets + ruban */
+.ms-tabs{display:flex;gap:2px;background:var(--ms);padding:0 12px 0 64px}
+.ms-tabs .ms-tab{background:transparent!important;color:#fff;border:0!important;border-radius:4px 4px 0 0;padding:6px 16px;font-weight:400;box-shadow:none!important;backdrop-filter:none!important}
+.ms-tabs .ms-tab.on{background:#f3f3f3!important;color:var(--ms)}
+#wBar.ed-bar{display:flex;flex-wrap:nowrap;overflow-x:auto;gap:0;align-items:stretch;background:#f3f3f3!important;border:0!important;border-bottom:1px solid #d1d1d1!important;border-radius:0!important;box-shadow:none!important;backdrop-filter:none!important;padding:6px 8px 2px 64px;margin:0;top:0!important}
+.ms-g{display:flex;flex-direction:column;justify-content:space-between;padding:0 10px;border-right:1px solid #d6d6d6;flex:none}
+.ms-g[hidden]{display:none}
+.ms-gb{display:flex;align-items:center;gap:2px;min-height:46px}
+.ms-gl{text-align:center;font-size:.7rem;color:#605e5c;padding:2px 0}
+#wBar button{background:transparent!important;color:#252423;border:1px solid transparent!important;border-radius:3px;box-shadow:none!important;backdrop-filter:none!important;padding:4px 8px;min-width:28px;height:30px;font-weight:400;font-size:.9rem;transform:none}
+#wBar button:hover{background:#e1dfdd!important}
+#wBar select{background:#fff!important;border:1px solid #c8c6c4;border-radius:2px;padding:3px 6px;height:28px;font-size:.88rem;backdrop-filter:none}
+#wBar label{font-size:.72rem;color:#605e5c;display:flex;align-items:center;gap:4px}
+#wBar .ms-big{flex-direction:column;height:auto!important;padding:4px 10px!important;gap:2px}
+#wBar .ms-big i{font-style:normal;font-size:1.25rem;line-height:1}
+#wBar .ms-big span{font-size:.72rem}
+/* page Word */
+.ms-word .ed-scroll{background:#e6e6e6;border:0;border-radius:0;padding:28px 0 60px}
+.ms-word .wpage{box-shadow:0 1px 5px rgba(0,0,0,.35);border-radius:0}
+/* Excel */
+.ms-excel .ed-bar{background:#f3f3f3!important;border:0!important;border-bottom:1px solid #d1d1d1!important;border-radius:0!important;box-shadow:none!important;backdrop-filter:none!important;margin:0;padding:8px 8px 8px 64px;position:static}
+.ms-fx{display:flex;align-items:center;gap:8px;background:#fff;border-bottom:1px solid #d1d1d1;padding:4px 8px 4px 64px}
+.ms-fx input{border:1px solid #c8c6c4;border-radius:2px;padding:3px 8px;background:#fff!important;height:26px}
+#msNb{width:72px;text-align:center}.ms-fx i{color:#217346;font-weight:700;font-style:italic}#msFi{flex:1}
+.ms-excel .xlw{max-height:calc(100vh - 230px);border:0;border-radius:0;background:#fff;box-shadow:none;backdrop-filter:none}
+.ms-excel table.xl th{background:#e6e6e6;color:#444;font-weight:400;border:1px solid #c8c8c8;backdrop-filter:none}
+.ms-excel table.xl td{border:1px solid #d4d4d4}
+.ms-excel table.xl input{font:11pt Calibri,Arial,sans-serif;color:#000;width:100px}
+.ms-excel table.xl input:focus{outline:2px solid #217346;outline-offset:-2px}
+/* barre d'état */
+.ms-status{position:fixed;left:0;right:0;bottom:0;z-index:800;height:24px;background:var(--ms);color:#fff;font-size:.78rem;display:flex;gap:24px;align-items:center;padding:0 16px 0 170px}
+.ms-status .ms-sh{background:#fff;color:var(--ms);padding:2px 14px;font-weight:600;border-radius:3px 3px 0 0}
+</style>
+
+<script>
+(function(){
+"use strict";
+var $=function(i){return document.getElementById(i)},vh=$("viewHost");if(!vh)return;
+function al(m){var w=[14,9,14,7],s="";w.forEach(function(v,i){var x=m==="c"?(14-v)/2:m==="r"?14-v:0;if(m==="j")v=14;s+='<rect x="'+(x+1)+'" y="'+(1+i*3.4)+'" width="'+v+'" height="1.6" fill="currentColor"/>'});return '<svg width="16" height="16" viewBox="0 0 16 16">'+s+'</svg>'}
+var IC={bold:"<b>G</b>",italic:"<i>I</i>",underline:"<u>S</u>",strikeThrough:"<s>abc</s>",justifyLeft:al("l"),justifyCenter:al("c"),justifyRight:al("r"),justifyFull:al("j"),insertUnorderedList:"•≡",insertOrderedList:"1≡",outdent:"⇤",indent:"⇥",undo:"↶",redo:"↷"};
+var TT={bold:"Gras (Ctrl+B)",italic:"Italique (Ctrl+I)",underline:"Souligné (Ctrl+U)",strikeThrough:"Barré",justifyLeft:"Aligner à gauche",justifyCenter:"Centrer",justifyRight:"Aligner à droite",justifyFull:"Justifier",insertUnorderedList:"Puces",insertOrderedList:"Numérotation",outdent:"Diminuer le retrait",indent:"Augmenter le retrait",undo:"Annuler (Ctrl+Z)",redo:"Rétablir (Ctrl+Y)"};
+var BIG={table:["▦","Tableau"],image:["🖼","Image"],link:["🔗","Lien"],insertHorizontalRule:["―","Ligne"]};
+var G=[["a","Annuler",["[data-c=undo]","[data-c=redo]"]],["a","Style",["[data-s=formatBlock]"]],
+["a","Police",["[data-s=fontName]","[data-s=fontSize]","[data-c=bold]","[data-c=italic]","[data-c=underline]","[data-c=strikeThrough]","[data-k=foreColor]","[data-k=hiliteColor]"]],
+["a","Paragraphe",["[data-c=justifyLeft]","[data-c=justifyCenter]","[data-c=justifyRight]","[data-c=justifyFull]","[data-c=insertUnorderedList]","[data-c=insertOrderedList]","[data-c=outdent]","[data-c=indent]"]],
+["i","Insertion",["[data-c=table]","[data-c=image]","[data-c=link]","[data-c=insertHorizontalRule]","#wImg"]]];
+
+function ribbon(bar){
+  var tabs=document.createElement("div");tabs.className="ms-tabs";
+  tabs.innerHTML='<button type="button" class="ms-tab on" data-t="a">Accueil</button><button type="button" class="ms-tab" data-t="i">Insertion</button>';
+  bar.before(tabs);
+  var els=G.map(function(g){
+    var gd=document.createElement("div"),b=document.createElement("div"),l=document.createElement("div");
+    gd.className="ms-g";gd.dataset.t=g[0];b.className="ms-gb";l.className="ms-gl";l.textContent=g[1];gd.appendChild(b);gd.appendChild(l);
+    g[2].forEach(function(s){
+      var e=bar.querySelector(s);if(!e)return;if(e.type==="color")e=e.closest("label");
+      var c=e.dataset&&e.dataset.c;
+      if(IC[c])e.innerHTML=IC[c];if(TT[c])e.title=TT[c];
+      if(BIG[c]){e.innerHTML="<i>"+BIG[c][0]+"</i><span>"+BIG[c][1]+"</span>";e.classList.add("ms-big")}
+      b.appendChild(e);
+    });
+    return gd;
+  });
+  bar.querySelectorAll(".sep").forEach(function(x){x.remove()});
+  els.forEach(function(g){bar.appendChild(g)});
+  function tab(t){els.forEach(function(g){g.hidden=g.dataset.t!==t});tabs.querySelectorAll(".ms-tab").forEach(function(b){b.classList.toggle("on",b.dataset.t===t)})}
+  tabs.onclick=function(e){var b=e.target.closest("[data-t]");if(b)tab(b.dataset.t)};tab("a");
+}
+function cn(i){var s="";i++;while(i>0){var m=(i-1)%26;s=String.fromCharCode(65+m)+s;i=Math.floor((i-1)/26)}return s}
+
+function sync(){
+  var doc=$("wDoc"),grid=$("wGrid"),bd=$("board"),bar=$("wBar"),k=doc?"word":grid?"excel":bd?"design":"";
+  document.body.classList.toggle("ms-edit",!!k);
+  vh.classList.remove("ms-word","ms-excel","ms-design");
+  if(!k)return;
+  vh.classList.add("ms-"+k);
+  if(bar&&!bar.dataset.ms){bar.dataset.ms=1;ribbon(bar)}
+  if(grid&&!grid.dataset.ms){
+    grid.dataset.ms=1;
+    var fx=document.createElement("div");fx.className="ms-fx";
+    fx.innerHTML='<input id="msNb" readonly aria-label="Cellule"><i>fx</i><input id="msFi" readonly aria-label="Contenu de la cellule">';
+    grid.before(fx);
+    grid.addEventListener("focusin",function(e){var i=e.target;if(i.tagName!=="INPUT")return;$("msNb").value=cn(+i.dataset.c)+(+i.dataset.r+1);$("msFi").value=i.value});
+    grid.addEventListener("input",function(e){$("msFi").value=e.target.value});
+  }
+  if(!vh.querySelector(".ms-status")){
+    var st=document.createElement("div");st.className="ms-status";
+    st.innerHTML=k==="excel"?'<span class="ms-sh">Feuille1</span><span>Prêt</span>':k==="word"?'<span id="msWc"></span><span>Français (France)</span>':'<span>Design</span>';
+    vh.appendChild(st);
+    if(doc){var up=function(){var t=(doc.innerText||"").trim();$("msWc").textContent=(t?t.split(/\s+/).length:0)+" mot(s)"};doc.addEventListener("input",up);up()}
+  }
+}
+new MutationObserver(sync).observe(vh,{childList:true});
+sync();
 })();
 </script>
 </body>
