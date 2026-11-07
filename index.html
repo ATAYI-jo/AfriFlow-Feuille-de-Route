@@ -3818,5 +3818,261 @@ new MutationObserver(sync).observe(vh,{childList:true,attributes:true,attributeF
 sync();
 })();
 </script>
+  <style id="af-fix-css">
+/* Connexion : boutons lisibles en thème clair */
+#auth-screen .auth-tabs button{color:var(--ink)!important;background:color-mix(in srgb,var(--card) 70%,transparent)!important}
+#auth-screen .auth-tabs button.on{background:var(--green)!important;color:#fff!important;border-color:var(--green)!important}
+#auth-screen #authBtn{background:var(--green)!important;color:#fff!important;border-color:var(--green)!important}
+#auth-screen .oauth{color:var(--ink)!important}
+/* Connexion : le fond d'écran (animé ou image perso) reste visible */
+#auth-screen{background:transparent!important}
+.auth-box{background:color-mix(in srgb,var(--card) 82%,transparent)!important}
+body:has(#auth-screen:not(.off)) .wrap,
+body:has(#auth-screen:not(.off)) #menuBtn,
+body:has(#auth-screen:not(.off)) #side{visibility:hidden!important}
+body:has(#auth-screen:not(.off)) #afBg[data-home="1"] .af-mid{visibility:visible!important}
+/* Assistant IA au centre de l'écran */
+#aiBox{left:50%!important;top:50%!important;right:auto!important;bottom:auto!important;transform:translate(-50%,-50%)!important;width:min(560px,94vw)!important;height:min(78vh,700px)!important;z-index:1500!important}
+/* Justificatifs + page Marketing */
+.jf-blk{margin-top:16px}
+.jf-it{display:flex;gap:12px;justify-content:space-between;flex-wrap:wrap;padding:12px 0;border-top:1px solid var(--line);font-size:.9rem}
+#mkDoc{min-height:320px;outline:none;line-height:1.7;overflow-wrap:anywhere}
+#mkDoc:empty::before{content:attr(data-ph);color:var(--muted)}
+</style>
+  <script>
+(function(){
+"use strict";
+var $=function(i){return document.getElementById(i)};
+function esc(s){return String(s==null?"":s).replace(/[&<>"']/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]})}
+function SB(){return window.__sb} function TB(){return window.__TABLE||"afriflow_state"}
+
+/* ----- Boutons de connexion : Apple retiré, Microsoft ajouté ----- */
+var ap=document.querySelector('.oauth[data-p="apple"]'); if(ap)ap.remove();
+var fb=document.querySelector('.oauth[data-p="facebook"]');
+if(fb&&!document.querySelector('.oauth[data-p="azure"]')){
+  var mb=document.createElement("button");mb.type="button";mb.className="oauth";mb.dataset.p="azure";mb.textContent="Continuer avec Microsoft";
+  fb.after(mb);
+  mb.onclick=function(){
+    if(!SB()){$("authError").textContent="Service indisponible.";return}
+    SB().auth.signInWithOAuth({provider:"azure",options:{redirectTo:location.origin+location.pathname,scopes:"email"}});
+  };
+}
+
+/* ----- Onglets réellement présents dans le menu ----- */
+function tabs(){
+  var out=[];
+  document.querySelectorAll("#navList .nvr .nv").forEach(function(b){
+    var id=b.dataset.id||(b.hasAttribute("data-cs-nav")?"censeur":null);
+    if(!id||id==="admin"||id==="messages")return;
+    out.push({id:id,n:b.textContent.replace(/\s\(\d+\)$/,"")});
+  });
+  return out;
+}
+var oldGP=window.getPages;
+window.getPages=function(){var t=tabs().filter(function(x){return x.id!=="censeur"});return t.length?t:(oldGP?oldGP():[])};
+
+/* ----- Fenêtre « Droits » à jour ----- */
+async function getCfg(){
+  var r=await SB().from(TB()).select("value").eq("key","pub:meetcfg").maybeSingle();
+  return (r.data&&r.data.value)||{link:"",censeurs:[]};
+}
+document.addEventListener("click",async function(e){
+  var b=e.target.closest("button[data-dg]");
+  if(!b||window.USER_ROLE!=="admin")return;
+  e.stopPropagation();e.preventDefault();
+  var email=b.dataset.dg,low=email.toLowerCase();
+  try{
+    var U=await window.AFRI.listUsers(),u=U.filter(function(x){return x.email===email})[0];if(!u)return;
+    var cfg=await getCfg(),cs=(cfg.censeurs||[]).map(function(x){return String(x).toLowerCase()}),g=u.grants||[];
+    var items=[{id:"all",n:"Tout (toute la plateforme)"}].concat(tabs());
+    var box=$("xmBox");
+    box.innerHTML='<h2 style="margin-top:0">Droits de modification</h2><p style="font-size:.85rem;color:var(--muted);margin-top:0">'+esc(u.name)+' · '+esc(u.email)+'</p>'
+      +items.map(function(p){
+        var on=p.id==="censeur"?cs.indexOf(low)>-1:g.indexOf(p.id)>-1;
+        return '<label class="rq"><input type="checkbox" value="'+esc(p.id)+'"'+(on?' checked':'')+'> '+esc(p.n)+'</label>';
+      }).join("")
+      +'<div class="dact"><button type="button" class="p" id="gOk2">Enregistrer</button><button type="button" id="gNo2">Annuler</button></div>';
+    box.onkeydown=null;$("xm").classList.add("on");
+    $("gNo2").onclick=function(){$("xm").classList.remove("on")};
+    $("gOk2").onclick=async function(){
+      try{
+        var v=[].slice.call(box.querySelectorAll("input:checked")).map(function(i){return i.value}),isC=v.indexOf("censeur")>-1;
+        v=v.filter(function(x){return x!=="censeur"});if(v.indexOf("all")>-1)v=["all"];
+        await window.AFRI.setGrants(email,v);
+        var ns=cs.filter(function(x){return x!==low});if(isC)ns.push(low);
+        if(ns.join()!==cs.join()){
+          var r=await SB().from(TB()).upsert({key:"pub:meetcfg",value:{link:cfg.link||"",censeurs:ns,at:Date.now(),by:String(window.loggedUserEmail||"")},updated_at:new Date().toISOString()});
+          if(r.error)throw r.error;
+        }
+        $("xm").classList.remove("on");(window.toast||alert)("Droits mis à jour");
+        var rf=$("adRef");if(rf)rf.click();
+      }catch(x){(window.toast||alert)("Échec : "+(x.message||x))}
+    };
+  }catch(x){(window.toast||alert)("Impossible d'ouvrir les droits : "+(x.message||x))}
+},true);
+})();
+</script>
+  <script>
+(function(){
+"use strict";
+var $=function(i){return document.getElementById(i)},vh=$("viewHost");
+function SB(){return window.__sb} function TB(){return window.__TABLE||"afriflow_state"}
+function me(){return String(window.loggedUserEmail||"").toLowerCase()}
+function adm(){return window.USER_ROLE==="admin"}
+function toast(m){(window.toast||alert)(m)}
+function esc(s){return String(s==null?"":s).replace(/[&<>"']/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]})}
+function fdt(ms){return new Date(ms).toLocaleString("fr-FR",{day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"})}
+var MAXF=1.2*1024*1024;
+
+async function put(key,val){
+  var now=new Date().toISOString();
+  var r=await SB().from(TB()).insert({key:key,value:val,updated_at:now});
+  if(r.error&&r.error.code==="23505"){
+    r=await SB().from(TB()).update({value:val,updated_at:now}).eq("key",key).select("key");
+    if(!r.error&&(!r.data||!r.data.length))throw new Error("modification refusée par le serveur");
+  }
+  if(r.error)throw r.error;
+}
+
+/* ================= Bouton « Justificatif » (en bas à gauche) ================= */
+var btn=document.createElement("button");btn.type="button";btn.id="jfBtn";btn.textContent="📎 Justificatif";
+btn.style.cssText="position:fixed;left:12px;bottom:calc(52px + env(safe-area-inset-bottom,0px));z-index:900;display:none";
+document.body.appendChild(btn);
+setInterval(function(){
+  var hv=$("view-home"),home=hv&&hv.style.display!=="none",cs=!!document.querySelector("#navList .nv.on[data-cs-nav]");
+  btn.style.display=(me()&&(home||cs))?"":"none";
+},800);
+
+btn.onclick=async function(){
+  var box=$("xmBox"),now=Date.now(),meets=[],J={},D={};
+  try{
+    var r=await SB().from(TB()).select("value").like("key","meet:%").limit(300);
+    meets=(r.data||[]).map(function(x){return x.value}).filter(function(v){return v&&v.start&&v.start>now-7*864e5}).sort(function(a,b){return a.start-b.start});
+    var a=await SB().from(TB()).select("value").like("key","att:j-%:"+me()).limit(100);
+    var d=await SB().from(TB()).select("value").like("key","att:jd-%:"+me()).limit(100);
+    (a.data||[]).forEach(function(x){if(x.value&&x.value.mid)J[x.value.mid]=x.value});
+    (d.data||[]).forEach(function(x){if(x.value&&x.value.mid)D[x.value.mid]=x.value});
+  }catch(e){}
+  var title=function(id){var m=meets.filter(function(x){return x.id===id})[0];return m?m.title:id};
+  var mine=Object.keys(J).map(function(id){var s=D[id];return '<div class="file-row"><div>'+esc(title(id))+'</div><small>'+(s?(s.ok?"✔ Accepté":"✖ Refusé"):"En attente")+'</small></div>'}).join("");
+  box.innerHTML='<h2 style="margin-top:0">Justificatif d\'absence / permission</h2>'
+    +(meets.length?'<div class="fm"><label for="jfM">Réunion concernée</label><select id="jfM">'+meets.map(function(m){return '<option value="'+esc(m.id)+'">'+esc(m.title)+' · '+fdt(m.start)+'</option>'}).join("")+'</select>'
+      +'<label for="jfR">Motif</label><textarea id="jfR" rows="4" maxlength="800"></textarea>'
+      +'<label for="jfF">Pièce jointe (facultatif · image ou PDF · 1,2 Mo max)</label><input type="file" id="jfF" accept="image/*,application/pdf"></div>'
+      :'<p style="color:var(--muted)">Aucune réunion programmée pour le moment.</p>')
+    +(mine?'<h4 style="margin:8px 0">Vos justificatifs</h4>'+mine:'')
+    +'<div id="xerr" role="alert" style="color:#c0392b;min-height:1.2em;font-size:.85rem"></div>'
+    +'<div class="dact">'+(meets.length?'<button type="button" class="p" id="jfSend">Envoyer</button>':'')+'<button type="button" id="jfNo">Fermer</button></div>';
+  box.onkeydown=null;$("xm").classList.add("on");
+  $("jfNo").onclick=function(){$("xm").classList.remove("on")};
+  if($("jfSend"))$("jfSend").onclick=async function(){
+    var mid=$("jfM").value,reason=$("jfR").value.trim(),f=$("jfF").files[0],er=$("xerr"),sb=this;
+    if(reason.length<5){er.textContent="Expliquez brièvement le motif.";return}
+    if(f&&f.size>MAXF){er.textContent="Fichier trop lourd (1,2 Mo maximum).";return}
+    er.textContent="";sb.disabled=true;
+    try{
+      if(f){
+        var du=await new Promise(function(ok,ko){var fr=new FileReader();fr.onload=function(){ok(fr.result)};fr.onerror=function(){ko(new Error("Lecture du fichier impossible"))};fr.readAsDataURL(f)});
+        await put("att:jf-"+mid+":"+me(),{mid:mid,email:me(),n:f.name,t:f.type,d:du});
+      }
+      await put("att:j-"+mid+":"+me(),{mid:mid,email:me(),name:window.USER_NAME||"",reason:reason,at:Date.now(),file:f?f.name:""});
+      $("xm").classList.remove("on");toast("Justificatif envoyé au censeur.");
+    }catch(x){er.textContent="Envoi impossible : "+(x.message||x);sb.disabled=false}
+  };
+};
+
+/* ================= Vue Censeur : justificatifs reçus + « Excusé » ================= */
+async function decorate(){
+  if(!$("csGo"))return;
+  var det=[].slice.call(vh.querySelectorAll("details.mt-m"));if(!det.length)return;
+  var r1=await SB().from(TB()).select("key,value").like("key","att:j-%").limit(1000);
+  var r2=await SB().from(TB()).select("key,value").like("key","att:jd-%").limit(1000);
+  var J={},D={};
+  (r1.data||[]).forEach(function(x){if(x.value&&x.value.mid)(J[x.value.mid]=J[x.value.mid]||[]).push(x.value)});
+  (r2.data||[]).forEach(function(x){if(x.value&&x.value.mid)D[x.value.mid+":"+x.value.email]=x.value});
+  det.forEach(function(d){
+    if(!d.isConnected||d.dataset.jf)return;d.dataset.jf="1";
+    var del=d.querySelector("[data-csdel]");if(!del)return;
+    var id=del.dataset.csdel,L=J[id]||[];if(!L.length)return;
+    var exc=0;
+    d.querySelectorAll("tbody tr").forEach(function(tr){
+      var td=tr.children;if(td.length<4)return;
+      var em=td[1].textContent.trim().toLowerCase(),j=L.filter(function(x){return x.email===em})[0];if(!j)return;
+      var s=D[id+":"+em],pill=td[2].querySelector(".mt-pill");
+      if(s&&s.ok){if(pill&&pill.classList.contains("mt-abs")){pill.className="mt-pill mt-ok";pill.textContent="Excusé";exc++}}
+      else if(!s)td[2].insertAdjacentHTML("beforeend"," <span class=\"mt-pill mt-wait\">Justificatif reçu</span>");
+    });
+    var sum=d.querySelector(".mt-sum");
+    if(exc&&sum){var ab=sum.querySelector(".mt-abs");if(ab)ab.textContent=Math.max(0,(parseInt(ab.textContent)||0)-exc)+" absent(s)";sum.insertAdjacentHTML("beforeend",'<span class="mt-pill mt-ok">'+exc+' excusé(s)</span>')}
+    var blk=document.createElement("div");blk.className="jf-blk";
+    blk.innerHTML='<h4 style="margin:0 0 6px;color:var(--green)">Justificatifs reçus ('+L.length+')</h4>'+L.map(function(j){
+      var s=D[id+":"+j.email];
+      return '<div class="jf-it"><div><b>'+esc(j.name||j.email)+'</b> · '+esc(j.email)+' · '+fdt(j.at)+'<br>'+esc(j.reason)+'</div><div class="dact">'
+        +(j.file?'<button type="button" data-jf="file" data-m="'+esc(id)+'" data-e="'+esc(j.email)+'">📎 '+esc(j.file)+'</button>':'')
+        +'<span class="mt-pill '+(s?(s.ok?"mt-ok":"mt-abs"):"mt-wait")+'">'+(s?(s.ok?"Accepté":"Refusé"):"En attente")+'</span>'
+        +'<button type="button" class="p" data-jf="ok" data-m="'+esc(id)+'" data-e="'+esc(j.email)+'">Accepter</button>'
+        +'<button type="button" class="danger" data-jf="no" data-m="'+esc(id)+'" data-e="'+esc(j.email)+'">Refuser</button></div></div>';
+    }).join("");
+    del.parentNode.before(blk);
+  });
+}
+document.addEventListener("click",async function(e){
+  var b=e.target.closest("button[data-jf]");if(!b)return;
+  var m=b.dataset.m,em=b.dataset.e;
+  try{
+    if(b.dataset.jf==="file"){
+      var r=await SB().from(TB()).select("value").eq("key","att:jf-"+m+":"+em).maybeSingle(),v=r.data&&r.data.value;
+      if(!v){toast("Pièce introuvable");return}
+      var a=document.createElement("a");a.href=v.d;a.download=v.n;document.body.appendChild(a);a.click();a.remove();return;
+    }
+    await put("att:jd-"+m+":"+em,{mid:m,email:em,ok:b.dataset.jf==="ok",by:me(),at:Date.now()});
+    toast(b.dataset.jf==="ok"?"Justificatif accepté":"Justificatif refusé");
+    var rf=$("csRef");if(rf)rf.click();
+  }catch(x){toast("Action impossible : "+(x.message||x))}
+});
+
+/* ================= Page Marketing (Feuille de route) vidée ================= */
+function clean(html){
+  var t=document.createElement("template");t.innerHTML=html;
+  t.content.querySelectorAll("script,iframe,object,embed,link,meta,style,form,base").forEach(function(n){n.remove()});
+  t.content.querySelectorAll("*").forEach(function(el){[].slice.call(el.attributes).forEach(function(a){if(/^on/i.test(a.name)||(/^(href|src|xlink:href)$/i.test(a.name)&&/^\s*javascript:/i.test(a.value)))el.removeAttribute(a.name)})});
+  return t.innerHTML;
+}
+async function marketing(){
+  var f=vh.querySelector(".fdr");if(!f||f.dataset.free)return;f.dataset.free="1";
+  [].slice.call(f.children).forEach(function(c){
+    if(c.id==="b-dl")return;
+    if(c.tagName==="H3"&&c.nextElementSibling&&c.nextElementSibling.id==="b-dl")return;
+    c.remove();
+  });
+  var can=adm(),nb=document.querySelector("#navList [data-fdr-nav]"),lbl=nb?nb.textContent.replace(/\s\(\d+\)$/,""):"Marketing";
+  var z=document.createElement("div");
+  z.innerHTML='<div class="toolbar"><b>'+esc(lbl)+'</b></div>'
+    +(can?'<div class="ed-bar" id="mkBar"><button type="button" data-mk="h2">Titre</button><button type="button" data-mk="bold"><b>G</b></button><button type="button" data-mk="italic"><i>I</i></button><button type="button" data-mk="insertUnorderedList">Puces</button><button type="button" data-mk="insertOrderedList">Numéros</button><button type="button" class="p" id="mkSave">Enregistrer</button></div>':'')
+    +'<div class="journal-article" style="margin-bottom:34px"><div id="mkDoc" data-ph="'+(can?'Cliquez ici et rédigez votre contenu…':'Cette page est en cours de rédaction.')+'"'+(can?' contenteditable="true"':'')+'></div></div>';
+  f.prepend(z);
+  try{
+    var r=await SB().from(TB()).select("value").eq("key","pub:marketing").maybeSingle();
+    if(r.data&&r.data.value&&r.data.value.html&&$("mkDoc"))$("mkDoc").innerHTML=clean(r.data.value.html);
+  }catch(e){}
+  if(!can)return;
+  var bar=$("mkBar");
+  bar.addEventListener("mousedown",function(e){if(e.target.closest("button"))e.preventDefault()});
+  bar.addEventListener("click",async function(e){
+    var b=e.target.closest("button");if(!b)return;
+    if(b.dataset.mk){var c=b.dataset.mk;$("mkDoc").focus();if(c==="h2")document.execCommand("formatBlock",false,"<h2>");else document.execCommand(c)}
+    else if(b.id==="mkSave"){
+      var r2=await SB().from(TB()).upsert({key:"pub:marketing",value:{html:clean($("mkDoc").innerHTML),at:Date.now(),by:me()},updated_at:new Date().toISOString()});
+      toast(r2.error?"Enregistrement impossible : "+r2.error.message:"Page enregistrée pour tous les utilisateurs.");
+    }
+  });
+}
+
+new MutationObserver(function(){
+  if(vh.querySelector(".fdr"))marketing().catch(function(){});
+  if($("csGo"))decorate().catch(function(){});
+}).observe(vh,{childList:true});
+})();
+</script>
 </body>
 </html>
