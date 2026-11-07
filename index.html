@@ -18,21 +18,10 @@
 <meta name="description" content="Feuille de route interactive d’AfriFloW en mode journal avec registre START des connexions.">
 <script>try{if(sessionStorage.getItem("afriflow_intro_seen"))document.documentElement.classList.add("no-intro")}catch(e){}</script>
 <style>
-:root{
-  --bg: #fcfbfa; --card: #fff; --ink: #1d2a22; --muted: #55625a; --green: #1f5d3a; --amber: #d98a1b; --line: #e2ded7; --done: #1f5d3a; --doing: #d98a1b; --todo: #7b8a93;
-  --font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
-  --journal-font: Georgia, "Times New Roman", serif;
-  --road-bg: #4a4f55;
-  --road-line: #f4f1de;
-}
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
-    --bg: #121212; --card: #1e1e1e; --ink: #eef2ec; --muted: #9aa89f; --green: #4fa874; --amber: #f0a73a; --line: #333; --done: #4fa874; --doing: #f0a73a; --todo: #8c99a2;
-  }
-}
-:root[data-theme="light"] {
-  --bg: #fcfbfa; --card: #fff; --ink: #1d2a22; --muted: #55625a; --green: #1f5d3a; --amber: #d98a1b; --line: #e2ded7; --done: #1f5d3a; --doing: #d98a1b; --todo: #7b8a93;
-}
+:root{--bg:#fcfbfa;--card:#fff;--ink:#1d2a22;--muted:#66726a;--green:#1f5d3a;--amber:#d98a1b;--line:#e2ded7;--done:#1f5d3a;--doing:#d98a1b;--todo:#7b8a93;--road-bg:#1a231e;--road-line:#fff;--font-family:system-ui,-apple-system,"Segoe UI",sans-serif;--journal-font:Georgia,"Times New Roman",serif}
+*,*::before,*::after{box-sizing:border-box}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){color-scheme:dark;--bg:#121212;--card:#1e1e1e;--ink:#eef2ec;--muted:#9aa89f;--green:#4fa874;--amber:#f0a73a;--line:#333;--done:#4fa874;--doing:#f0a73a;--todo:#8fa0a9;--road-bg:#243029}}
+:root[data-theme="dark"]{color-scheme:dark;--bg:#121212;--card:#1e1e1e;--ink:#eef2ec;--muted:#9aa89f;--green:#4fa874;--amber:#f0a73a;--line:#333;--done:#4fa874;--doing:#f0a73a;--todo:#8fa0a9;--road-bg:#243029}
 html{scroll-padding-top:env(safe-area-inset-top,0px)}
 body{margin:0;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);background:var(--bg);color:var(--ink);font:16px/1.5 var(--font-family);letter-spacing:.005em;transition:background .3s,color .3s}
 
@@ -1326,7 +1315,7 @@ $("shSel").addEventListener("change", renderMap);
 
 /* ---------- Session (15 min d'inactivité) + intro vidéo ---------- */
 var USER_ROLE = "reader", USER_NAME = "", USER_GRANTS = [];
-function canEditPage(id){ return USER_ROLE === "admin" || USER_GRANTS.indexOf("all") > -1 || USER_GRANTS.indexOf(id) > -1 || id === "home"; }
+function canEditPage(id){ return USER_ROLE === "admin" || USER_GRANTS.indexOf("all") > -1 || USER_GRANTS.indexOf(id) > -1; }
 function canEdit(){ return canEditPage("home"); }
 var SESSION_KEY = "afriflow_session_v1", SESSION_TTL = 15 * 60 * 1000, INTRO_KEY = "afriflow_intro_seen";
 var lastAct = Date.now(), lastSaved = 0;
@@ -1986,17 +1975,7 @@ async function designBlob(d){
 }
 
 /* ---------- Espace d'administration ---------- */
-function navPages(){
-  var o=[],seen={};
-  document.querySelectorAll("#navList .nv").forEach(function(b){
-    var id=b.dataset.id||(b.hasAttribute("data-fdr-nav")?"fdr":(b.hasAttribute("data-cs-nav")?"censeur":null));
-    if(!id||id==="admin"||id==="messages"||seen[id])return;
-    seen[id]=1;o.push({id:id,n:b.textContent.replace(/\s\(\d+\)$/,"")});
-  });
-  BASE.concat(X.nav).forEach(function(p){if(!seen[p.id]&&p.id!=="messages"){seen[p.id]=1;o.push(p)}});
-  return o;
-}
-function pn(id){return id==="all"?"Tout":(navPages().filter(function(x){return x.id===id})[0]||{n:id}).n}
+function pn(id){return id==="all"?"Tout":(BASE.concat(X.nav).filter(function(x){return x.id===id})[0]||{n:id}).n}
 function gtxt(g){g=g||[];return g.length?(g.indexOf("all")>-1?"Tout (modification complète)":g.map(pn).join(", ")):"Lecture seule"}
 function drawOnline(){
   var el=$("adOn");if(!el)return;var L=window.AFRI?AFRI.onlineList():[];
@@ -2020,12 +1999,12 @@ async function renAdmin(){
 }
 function grantsDialog(email){
   var u=(W.U||[]).filter(function(x){return x.email===email})[0];if(!u)return;var g=u.grants||[],b=$("xmBox");
-  b.innerHTML='<h2 style="margin-top:0">Droits de modification</h2><p style="font-size:.85rem;color:var(--muted);margin-top:0">'+esc(u.name)+' · '+esc(u.email)+'</p>'+[{id:"all",n:"Tout (toute la plateforme)"}].concat(navPages()).map(function(p){return '<label class="rq"><input type="checkbox" value="'+esc(p.id)+'"'+(g.indexOf(p.id)>-1?' checked':'')+'> '+esc(p.n)+'</label>'}).join("")+'<div class="dact"><button type="button" class="p" id="gOk">Enregistrer</button><button type="button" id="gNo">Annuler</button></div>';
+  b.innerHTML='<h2 style="margin-top:0">Droits de modification</h2><p style="font-size:.85rem;color:var(--muted);margin-top:0">'+esc(u.name)+' · '+esc(u.email)+'</p>'+[{id:"all",n:"Tout (toute la plateforme)"}].concat(BASE.concat(X.nav)).map(function(p){return '<label class="rq"><input type="checkbox" value="'+esc(p.id)+'"'+(g.indexOf(p.id)>-1?' checked':'')+'> '+esc(p.n)+'</label>'}).join("")+'<div class="dact"><button type="button" class="p" id="gOk">Enregistrer</button><button type="button" id="gNo">Annuler</button></div>';
   b.onkeydown=null;$("xm").classList.add("on");
   $("gNo").onclick=function(){$("xm").classList.remove("on")};
   $("gOk").onclick=function(){var v=[].slice.call(b.querySelectorAll("input:checked")).map(function(i){return i.value});if(v.indexOf("all")>-1)v=["all"];AFRI.setGrants(email,v).then(function(){$("xm").classList.remove("on");toast("Droits mis à jour");renAdmin()}).catch(function(x){toast(x.message)})};
 }
-window.getPages=navPages;
+window.getPages=function(){return BASE.concat(X.nav)};
 window.askDlg=ask;window.toast=toast;
 window.onPending=function(n){AF_PEND=n;buildNav()};
 
@@ -2109,7 +2088,7 @@ buildNav();
   sb.channel('afriflow-state')
     .on('postgres_changes', {event:'*', schema:'public', table:TABLE}, function(p){
       var k = (p.new && p.new.key) || (p.old && p.old.key) || '';
-      if(/^(log|user|req|pub|msg|sent|att|meet|mtatt|mtjus):/.test(k)) return;
+      if(/^(log|user|req|pub|msg|sent|att):/.test(k)) return;
       cloudLoad();
     })
     .subscribe();
@@ -2369,7 +2348,6 @@ async function showAtt(v,x){
   var r=await S().from(T()).select("value").eq("key","att:"+v.att).maybeSingle();
   box=$("mAtt");if(!box)return;
   var fs=(r.data&&r.data.value&&r.data.value.files)||[];
-  fs=fs.filter(function(f){return f&&/^data:[\w.+-]+\/[\w.+-]+(;[^,]*)?;base64,/.test(f.d)});
   if(r.error||!fs.length){box.innerHTML='<small style="color:var(--muted)">Pièces jointes indisponibles.</small>';return}
   box.innerHTML='<h4 style="margin:14px 0 6px;font-family:var(--font-family)">Pièces jointes ('+fs.length+')</h4>'+fs.map(function(f){return '<div class="file-row"><div>📎 <a href="'+f.d+'" download="'+esc(f.n)+'">'+esc(f.n)+'</a></div><small style="color:var(--muted)">'+fsz(f.s)+'</small></div>'}).join("")+'<div id="mDbxNote" style="font-size:.85rem;color:var(--muted);margin-top:6px"></div>';
   if(tab==="in"&&isAdm()&&window.DBX){
@@ -2504,7 +2482,7 @@ if(loggedUserEmail)setTimeout(poll,1500);
     return d;
   }
 
- async function send(){
+  async function send(){
     if(busy) return;
     var inp = $g("aiIn"), t = inp.value.trim();
     if(!t) return;
@@ -2513,46 +2491,30 @@ if(loggedUserEmail)setTimeout(poll,1500);
     add("Vous", t); H.push({role:"user", content:t});
     var wait = add("Gemini", "réfléchit… (cela peut prendre une minute)");
     try {
-      var r = await window.__sb.functions.invoke("admin-ai", {
-        body: {
-          messages: H.slice(-12),
-          mode: (typeof USER_ROLE !== "undefined" && USER_ROLE === "admin") ? "admin" : "help"
-        }
-      });
-
+      var r = await window.__sb.functions.invoke("admin-ai", {body:{messages:H.slice(-12), mode:(typeof USER_ROLE !== "undefined" && USER_ROLE === "admin") ? "admin" : "help"}});
       if(r.error){
         var m = r.error.message || "Erreur";
-        try { 
-          var j = await r.error.context.json(); 
-          if(j && j.error) m = j.error; 
-        } catch(e){}
+        try { var j = await r.error.context.json(); if(j && j.error) m = j.error; } catch(e){}
         throw new Error(m);
       }
-      
-      if(r.data && r.data.error) {
-        throw new Error(r.data.error);
-      }
-
       var reply = (r.data && (r.data.reply || r.data.error)) || "(réponse vide)";
-      
-      // Lignes indispensables qui manquaient :
       wait.remove();
       H.push({role:"assistant", content:reply});
-
       var prs = (r.data && r.data.prs) || [];
       add("Gemini", reply, prs.length ? prs[0].url : null);
       for(var i = 1; i < prs.length; i++) add("PR", prs[i].title, prs[i].url);
-
     } catch(e){
-      wait.remove(); 
-      H.pop();
+      wait.remove(); H.pop();
       add("Erreur", e.message || String(e));
     }
-    
-    busy = false; 
-    $g("aiGo").disabled = false; 
-    inp.focus();
+    busy = false; $g("aiGo").disabled = false; inp.focus();
   }
+
+  btn.onclick = function(){ box.style.display = box.style.display === "flex" ? "none" : "flex"; };
+  $g("aiClose").onclick = function(){ box.style.display = "none"; };
+  $g("aiClear").onclick = function(){ H = []; $g("aiLog").textContent = ""; };
+  $g("aiGo").onclick = send;
+  $g("aiIn").addEventListener("keydown", function(e){ if(e.key === "Enter" && (e.ctrlKey || e.metaKey)){ e.preventDefault(); send(); } });
 
   /* Visible par tout utilisateur connecté ; seul l'administrateur peut demander des modifications du site
      (le serveur « admin-ai » applique la même règle : mode "help" = réponses seulement). */
@@ -2871,9 +2833,51 @@ if(window.loggedUserEmail)setTimeout(pull,1500);
 (function(){
 "use strict";
 
-/* ---------- Contenu : vide au départ, rempli par l'administrateur dans la page ---------- */
-var DK="pub:fdrdata";
-var DATA={title:"Feuille de route",sub:"",start:"",end:"",phases:[],jalons:[],kpis:[],risks:[]};
+/* ---------- Contenu de la feuille de route (modifiable ici) ---------- */
+var START="2026-11-09", END="2027-02-05";
+var PHASES=[
+ {n:1,name:"Consolidation des outils et analyse terrain",start:"2026-11-09",end:"2026-12-06",
+  goal:"Fiabiliser les informations commerciales et adapter les outils aux deux marchés.",
+  seq:[
+   {t:"Audit et remontées de prospection",d:"9–15 novembre",a:["Centraliser les retours de Lomé et de Dakar dans un fichier unique","Qualifier chaque prospect : chaud, tiède ou froid","Comparer le Togo et le Sénégal sans mélanger les résultats"],l:"Base prospects, synthèse des objections, tableau comparatif, liste prioritaire"},
+   {t:"Supports commerciaux et architecture multi-produits",d:"16–29 novembre",a:["Catalogue PDF léger, lisible sur téléphone et partageable sur WhatsApp","Fiche produit mangue séchée et modèle de fiche pour les futurs produits","Rubrique « Nouveautés à venir » sans annonce non validée"],l:"Catalogue versionné, fiches produits, argumentaire commercial"},
+   {t:"Échantillons et traçabilité",d:"30 novembre – 6 décembre",a:["Circuit d'envoi : demande, validation, expédition, réception, relance","Un échantillon = un prospect + une date de relance","Test des QR-codes sur plusieurs téléphones"],l:"Registre des échantillons, fiche de retour, contrôle QR"}]},
+ {n:2,name:"Activation digitale et soutien commercial",start:"2026-12-07",end:"2027-01-03",
+  goal:"Renforcer la crédibilité B2B et transformer la visibilité en conversations commerciales.",
+  seq:[
+   {t:"Notoriété B2B et sourcing",d:"7–20 décembre",a:["Publications LinkedIn régulières fondées sur des preuves réelles","Un appel à l'action précis par publication","Contacts générés intégrés à la base prospects sous 48 h"],l:"Calendrier éditorial, publications, suivi des demandes entrantes"},
+   {t:"Pré-lancement et qualification des nouveautés",d:"21 décembre – 3 janvier",a:["Distinguer l'intérêt déclaré de l'intention d'achat concrète","FAQ et prix dégressifs seulement après validation coûts et marges","Aucune précommande ferme sans disponibilité, prix et calendrier confirmés"],l:"Synthèse des attentes, FAQ, grille tarifaire validée, registre des intentions"}]},
+ {n:3,name:"Optimisation, fidélisation et passage à l'échelle",start:"2027-01-04",end:"2027-02-05",
+  goal:"Consolider les ventes, améliorer la rétention et préparer les décisions de lancement.",
+  seq:[
+   {t:"Bilan des performances régionales",d:"4–17 janvier",a:["Indicateurs par pays, segment et canal","Repérer les étapes où les prospects décrochent","Décider des ajustements prioritaires"],l:"Tableau de bord Togo/Sénégal, bilan de conversion, recommandations"},
+   {t:"Point de vente et fidélisation",d:"18–31 janvier",a:["Supports de point de vente validés par les partenaires","Retours des premiers distributeurs sur la rotation et le réassort","Conditions de réassort adaptées à la marge réelle"],l:"Kit PLV, fiche de suivi partenaire, conditions de réassort"},
+   {t:"Décision de lancement et trimestre suivant",d:"1er–5 février",a:["Évaluer chaque nouveauté sur 5 critères : demande, marge, fournisseur, conformité, logistique","Classer : lancement préparé, test complémentaire ou différé","Fixer priorités, responsables et échéances du trimestre suivant"],l:"Note de décision par produit, bilan, feuille de route suivante"}]}
+];
+var JALONS=[
+ {date:"2026-12-06",t:"Outils et données prêts",d:"Base prospects, catalogue, fiches produits, registre d'échantillons et contrôle QR prêts.",dec:"Autoriser l'activation commerciale et fixer les cibles chiffrées des KPI."},
+ {date:"2027-01-03",t:"Demande marché qualifiée",d:"Bilan LinkedIn, retours prospects, intentions d'achat et grille tarifaire validée.",dec:"Prioriser les nouveautés à étudier ou tester."},
+ {date:"2027-01-17",t:"Performance analysée",d:"KPI par pays et canal, analyse des conversions et recommandations.",dec:"Corriger le ciblage et le processus commercial."},
+ {date:"2027-02-05",t:"Décision de lancement",d:"Bilan final, décision par produit et feuille de route suivante.",dec:"Lancer, tester davantage ou différer chaque nouveauté."}
+];
+var KPIS=[
+ ["Prospects qualifiés","Prospects dans la cible avec contact et besoin identifiés","Hebdo"],
+ ["Taux contact → échantillon","Échantillons remis ÷ prospects qualifiés × 100","Hebdo"],
+ ["Taux d'évaluation des échantillons","Retours exploitables ÷ échantillons remis × 100","Hebdo"],
+ ["Délai de réponse","Jours entre l'envoi d'une offre et le retour du prospect","Hebdo"],
+ ["Taux de conversion","Commandes obtenues ÷ prospects qualifiés × 100","Mensuel"],
+ ["Commandes et réassorts","Nombre de commandes, volumes, fréquence de réachat","Mensuel"],
+ ["Marge par commande","(Prix de vente − coût complet) ÷ prix de vente","Par commande"],
+ ["Engagement LinkedIn B2B","Demandes entrantes et contacts professionnels générés","Hebdo"]
+];
+var RISKS=[
+ ["Retours terrain incomplets","Fiche unique, champs obligatoires, saisie sous 48 h"],
+ ["Prix non aligné sur les coûts","Valider coût complet, transport, conditionnement et marge avant tout tarif"],
+ ["Rupture ou retard d'approvisionnement","Confirmer stocks et délais avant devis ferme"],
+ ["Échantillons sans suivi","Un échantillon = un prospect, une date de relance, une fiche de retour"],
+ ["Lancement prématuré d'une nouveauté","Grille de décision et jalon du 5 février"],
+ ["Ralentissement de fin d'année","Concentrer les relances avant le 24 décembre, message d'attente, reprise planifiée"]
+];
 
 /* ---------- Utilitaires ---------- */
 var KEY="pub:deadlines", active=false, cache=[], openSet={};
@@ -3003,108 +3007,13 @@ function drawList(){
 }
 
 /* ---------- Page « Feuille de route » ---------- */
-function phaseStatus(p){
-  if(!p.start||!p.end)return["À planifier","var(--todo)"];
-  var t=today();if(t<pd(p.start))return["À venir","var(--todo)"];if(t>pd(p.end))return["Terminée","var(--done)"];return["En cours","var(--doing)"];
-}
-function normData(){
-  DATA.phases.forEach(function(p){if(!p.id)p.id=uid();if(!Array.isArray(p.seq))p.seq=[];p.seq.forEach(function(q){if(!q.id)q.id=uid();if(!Array.isArray(q.a))q.a=[]})});
-  ["jalons","kpis","risks"].forEach(function(a){DATA[a].forEach(function(x){if(!x.id)x.id=uid()})});
-}
-async function loadData(){
-  if(!SB())return;
-  var r=await SB().from(TB()).select("value").eq("key",DK).maybeSingle();
-  if(r.error)throw r.error;
-  var v=r.data&&r.data.value&&r.data.value.data;
-  if(v&&typeof v==="object"){
-    ["phases","jalons","kpis","risks"].forEach(function(a){DATA[a]=Array.isArray(v[a])?v[a]:[]});
-    ["title","sub","start","end"].forEach(function(a){if(typeof v[a]==="string")DATA[a]=v[a]});
-    normData();
-  }
-}
-async function saveData(){
-  normData();
-  var r=await SB().from(TB()).upsert({key:DK,value:{at:Date.now(),by:me(),data:DATA},updated_at:new Date().toISOString()});
-  if(r.error)throw r.error;
-}
-function persist(){return saveData().then(render).catch(function(x){toast("Enregistrement impossible : "+(x&&x.message||x))})}
-
-/* ----- Fenêtre de saisie ----- */
-function dlg(title,fields,vals,ok){
-  var b=$("xmBox");
-  b.innerHTML='<h2 style="margin-top:0">'+esc(title)+'</h2>'+fields.map(function(f){
-    return '<div class="fm"><label for="fd_'+f.k+'">'+esc(f.l)+'</label>'+(f.t==="area"?'<textarea id="fd_'+f.k+'" rows="'+(f.r||3)+'"></textarea>':'<input id="fd_'+f.k+'" type="'+(f.t||"text")+'" autocomplete="off" style="width:100%;box-sizing:border-box">')+'</div>';
-  }).join("")+'<div id="fdErr" role="alert" style="color:#c0392b;min-height:1.2em;font-size:.85rem"></div><div style="display:flex;gap:10px"><button type="button" class="p" id="fdOk" style="flex:1">Enregistrer</button><button type="button" id="fdNo">Annuler</button></div>';
-  b.onkeydown=null;
-  fields.forEach(function(f){$("fd_"+f.k).value=vals[f.k]==null?"":vals[f.k]});
-  $("xm").classList.add("on");
-  $("fdNo").onclick=function(){$("xm").classList.remove("on")};
-  $("fdOk").onclick=function(){
-    var v={};fields.forEach(function(f){v[f.k]=$("fd_"+f.k).value.trim()});
-    var e=ok(v);if(e){$("fdErr").textContent=e;return}
-    $("xm").classList.remove("on");
-  };
-}
-var DEF={
-  jalon:{n:"jalon",f:[{k:"t",l:"Intitulé"},{k:"date",l:"Date d'exécution",t:"date"},{k:"d",l:"Description",t:"area"},{k:"dec",l:"Décision attendue",t:"area"}],req:["t","date"]},
-  phase:{n:"phase",f:[{k:"name",l:"Nom de la phase"},{k:"start",l:"Début",t:"date"},{k:"end",l:"Fin",t:"date"},{k:"goal",l:"Objectif",t:"area"}],req:["name"]},
-  seq:{n:"séquence",f:[{k:"t",l:"Titre"},{k:"d",l:"Période (texte libre, ex. 9–15 novembre)"},{k:"a",l:"Actions (une par ligne)",t:"area",r:5},{k:"l",l:"Livrables"}],req:["t"]},
-  kpi:{n:"indicateur",f:[{k:"n",l:"Indicateur"},{k:"c",l:"Mode de calcul",t:"area"},{k:"f",l:"Fréquence"}],req:["n"]},
-  risk:{n:"risque",f:[{k:"n",l:"Risque"},{k:"m",l:"Mesure de maîtrise",t:"area"}],req:["n"]}
-};
-function ctx(k,i,j){
-  if(k==="seq"){var ph=DATA.phases[i];return ph?{arr:ph.seq,idx:j}:null}
-  var m={jalon:"jalons",phase:"phases",kpi:"kpis",risk:"risks"};
-  return m[k]?{arr:DATA[m[k]],idx:i}:null;
-}
-function editItem(b){
-  var d=b.dataset;
-  if(b.id==="fdrHd"){
-    dlg("Modifier l'en-tête",[{k:"title",l:"Titre"},{k:"sub",l:"Sous-titre (facultatif)"},{k:"start",l:"Début de la période",t:"date"},{k:"end",l:"Fin de la période",t:"date"}],DATA,function(v){
-      if(!v.title)return "Le titre est obligatoire.";
-      if(v.start&&v.end&&v.end<v.start)return "La date de fin précède la date de début.";
-      Object.assign(DATA,v);setTimeout(persist,0);
-    });
-    return;
-  }
-  var k=d.add||d.ed||d.del,C=ctx(k,+d.i,d.j!=null?+d.j:null),D=DEF[k];
-  if(!C||!D)return;
-  if(d.del!==undefined){
-    if(!confirm("Supprimer cet élément ?"))return;
-    C.arr.splice(C.idx,1);persist();return;
-  }
-  var isNew=d.add!==undefined,it=isNew?{}:(C.arr[C.idx]||{}),vals=Object.assign({},it);
-  if(k==="seq")vals.a=(it.a||[]).join("\n");
-  dlg((isNew?"Ajouter : ":"Modifier : ")+D.n,D.f,vals,function(v){
-    for(var q=0;q<D.req.length;q++)if(!v[D.req[q]])return "Renseignez : "+D.f.filter(function(f){return f.k===D.req[q]})[0].l+".";
-    if(v.start&&v.end&&v.end<v.start)return "La date de fin précède la date de début.";
-    if(k==="seq")v.a=v.a.split(/\r?\n/).map(function(x){return x.trim()}).filter(Boolean);
-    var o=Object.assign({},it,v);if(!o.id)o.id=uid();if(k==="phase"&&!o.seq)o.seq=[];
-    if(isNew)C.arr.push(o);else C.arr[C.idx]=o;
-    if(k==="jalon")DATA.jalons.sort(function(x,y){return x.date<y.date?-1:x.date>y.date?1:0});
-    setTimeout(persist,0);
-  });
-}
-function adm(k,i,j){
-  if(!isAdmin())return "";
-  var a=' data-i="'+i+'"'+(j!=null?' data-j="'+j+'"':'');
-  return '<div class="fdr-act" style="margin-top:14px"><button type="button" data-ed="'+k+'"'+a+'>Modifier</button><button type="button" class="danger" data-del="'+k+'"'+a+'>Supprimer</button></div>';
-}
-function addBtn(k,label,i){return isAdmin()?'<p style="margin:14px 0 0"><button type="button" class="p" data-add="'+k+'"'+(i!=null?' data-i="'+i+'"':'')+'>'+esc(label)+'</button></p>':""}
-function empty(t){return '<p style="color:var(--muted);margin:10px 0 0">'+esc(t)+'</p>'}
-
-/* ---------- Page « Feuille de route » ---------- */
+function phaseStatus(p){var t=today();if(t<pd(p.start))return["À venir","var(--todo)"];if(t>pd(p.end))return["Terminée","var(--done)"];return["En cours","var(--doing)"]}
 function render(){
-  var t=today(),s=DATA.start?pd(DATA.start):null,e=DATA.end?pd(DATA.end):null,prog="";
-  if(s&&e&&e>s){
-    var pct=Math.max(0,Math.min(100,Math.round((t-s)/(e-s)*100))),tw=Math.max(1,Math.ceil((e-s)/(7*864e5)));
-    var wk=t<s?"Démarre dans "+Math.round((s-t)/864e5)+" jour(s)":t>e?"Période terminée":"Semaine "+Math.min(tw,Math.floor((t-s)/(7*864e5))+1)+" sur "+tw;
-    prog='<div class="fdr-prog"><div class="fdr-prog-top"><span>'+wk+'</span><span>'+pct+' % de la période écoulée</span></div><div class="fdr-barline"><i style="width:'+pct+'%"></i></div></div>';
-  }
-  var blank=!DATA.jalons.length&&!DATA.phases.length&&!DATA.kpis.length&&!DATA.risks.length;
-  var h='<div class="fdr"><div class="fdr-hero"><h2>'+esc(DATA.title||"Feuille de route")+'</h2>'+(DATA.sub?'<p>'+esc(DATA.sub)+'</p>':'')+prog
-  +(isAdmin()?'<p style="margin-top:18px"><button type="button" id="fdrHd">Modifier l\'en-tête</button></p>':'')+'</div>'
-  +(isAdmin()&&blank?'<p class="fdr-note">La feuille de route est vide. Utilisez les boutons « + Ajouter » de chaque section pour la remplir ; les modifications sont visibles par tous les utilisateurs.</p>':'')
+  var t=today(),s=pd(START),e=pd(END),pct=Math.max(0,Math.min(100,Math.round((t-s)/(e-s)*100)));
+  var wk=t<s?"Démarre dans "+Math.round((s-t)/864e5)+" jour(s)":t>e?"Période terminée":"Semaine "+Math.min(13,Math.floor((t-s)/(7*864e5))+1)+" sur 13";
+  var h='<div class="fdr">'
+  +'<div class="fdr-hero"><h2>Feuille de route marketing et développement commercial</h2><p>9 novembre 2026 – 5 février 2027 · Togo (Lomé) et Sénégal (Dakar) · Mangue séchée et gamme multi-produits</p>'
+  +'<div class="fdr-prog"><div class="fdr-prog-top"><span>'+wk+'</span><span>'+pct+' % de la période écoulée</span></div><div class="fdr-barline"><i style="width:'+pct+'%"></i></div></div></div>'
   +'<div class="fdr-ctl"><button type="button" data-fdr-all="1">Tout déplier</button><button type="button" data-fdr-all="0">Tout replier</button></div>';
 
   /* Échéances et alertes */
@@ -3118,32 +3027,26 @@ function render(){
   h+='<h3>Échéances et alertes</h3>'+bar("dl","Échéances et alertes","…","…","var(--todo)",form+'<div id="fdrDl"></div>',{open:urgent,metaId:"fdrDlMeta",tagId:"fdrDlTag"});
 
   /* Jalons */
-  h+='<h3>Jalons</h3>'+(DATA.jalons.length?DATA.jalons.map(function(j,i){
+  h+='<h3>Jalons</h3>'+JALONS.map(function(j,i){
     var l=daysLeft(j.date),c=l<0?"var(--done)":l<=14?"var(--doing)":"var(--todo)";
-    return bar("j"+j.id,j.t,"Exécution : "+frl(j.date),"",c,(j.d?'<p>'+esc(j.d)+'</p>':'')+(j.dec?'<p><b>Décision attendue :</b> '+esc(j.dec)+'</p>':'')+adm("jalon",i),{to:j.date});
-  }).join(""):empty("Aucun jalon pour le moment."))+addBtn("jalon","+ Ajouter un jalon");
+    return bar("j"+i,j.t,"Exécution : "+frl(j.date),"",c,'<p>'+esc(j.d)+'</p><p><b>Décision attendue :</b> '+esc(j.dec)+'</p>',{to:j.date});
+  }).join("");
 
-  /* Phases et séquences */
-  h+='<h3>Déploiement par phase</h3>'+(DATA.phases.length?DATA.phases.map(function(p,pi){
+  /* Phases, avec séquences en sous-barres */
+  h+='<h3>Déploiement par phase</h3>'+PHASES.map(function(p){
     var st=phaseStatus(p);
-    var seqs=(p.seq||[]).map(function(q,k){
-      return bar("s"+q.id,q.t,q.d?"Exécution : "+q.d:null,"",st[1],(q.a&&q.a.length?'<ul>'+q.a.map(function(x){return '<li>'+esc(x)+'</li>'}).join("")+'</ul>':'')+(q.l?'<small><b>Livrables :</b> '+esc(q.l)+'</small>':'')+adm("seq",pi,k),{sub:true});
+    var inner='<p>'+esc(p.goal)+'</p>'+p.seq.map(function(q,k){
+      return bar("ph"+p.n+"s"+k,q.t,"Exécution : "+q.d,"",st[1],'<ul>'+q.a.map(function(x){return '<li>'+esc(x)+'</li>'}).join("")+'</ul><small><b>Livrables :</b> '+esc(q.l)+'</small>',{sub:true});
     }).join("");
-    var inner=(p.goal?'<p>'+esc(p.goal)+'</p>':'')+seqs+addBtn("seq","+ Ajouter une séquence",pi)+adm("phase",pi);
-    return bar("p"+p.id,"Phase "+(pi+1)+" · "+p.name,(p.start&&p.end?"Exécution : du "+frl(p.start)+" au "+frl(p.end):null),"",st[1],inner,{open:st[0]==="En cours",from:p.start||"",to:p.end||""});
-  }).join(""):empty("Aucune phase pour le moment."))+addBtn("phase","+ Ajouter une phase");
+    return bar("ph"+p.n,"Phase "+p.n+" · "+p.name,"Exécution : du "+frl(p.start)+" au "+frl(p.end),"",st[1],inner,{open:st[0]==="En cours",from:p.start,to:p.end});
+  }).join("");
 
   /* Indicateurs et risques */
-  var A=isAdmin();
-  var kp=DATA.kpis.length?'<div class="fdr-tbl"><table><thead><tr><th>Indicateur</th><th>Mode de calcul</th><th>Fréquence</th>'+(A?'<th></th>':'')+'</tr></thead><tbody>'+DATA.kpis.map(function(k,i){
-    return '<tr><td><b>'+esc(k.n)+'</b></td><td>'+esc(k.c||"")+'</td><td>'+esc(k.f||"")+'</td>'+(A?'<td style="white-space:nowrap"><button type="button" data-ed="kpi" data-i="'+i+'">Modifier</button> <button type="button" class="danger" data-del="kpi" data-i="'+i+'" aria-label="Supprimer">✕</button></td>':'')+'</tr>';
-  }).join("")+'</tbody></table></div>':empty("Aucun indicateur pour le moment.");
-  var rk=DATA.risks.length?'<div class="fdr-tbl"><table><thead><tr><th>Risque</th><th>Mesure de maîtrise</th>'+(A?'<th></th>':'')+'</tr></thead><tbody>'+DATA.risks.map(function(r,i){
-    return '<tr><td><b>'+esc(r.n)+'</b></td><td>'+esc(r.m||"")+'</td>'+(A?'<td style="white-space:nowrap"><button type="button" data-ed="risk" data-i="'+i+'">Modifier</button> <button type="button" class="danger" data-del="risk" data-i="'+i+'" aria-label="Supprimer">✕</button></td>':'')+'</tr>';
-  }).join("")+'</tbody></table></div>':empty("Aucun risque pour le moment.");
   h+='<h3>Pilotage et risques</h3>'
-  +bar("kpi","Indicateurs de pilotage",DATA.kpis.length+" indicateur(s)","","var(--green)",kp+addBtn("kpi","+ Ajouter un indicateur"))
-  +bar("risk","Risques et mesures de maîtrise",DATA.risks.length+" risque(s)","","var(--amber)",rk+addBtn("risk","+ Ajouter un risque"))
+  +bar("kpi","Indicateurs de pilotage",KPIS.length+" indicateurs suivis par pays, segment et canal","",'var(--green)',
+     '<div class="fdr-tbl"><table><thead><tr><th>Indicateur</th><th>Mode de calcul</th><th>Fréquence</th></tr></thead><tbody>'+KPIS.map(function(k){return '<tr><td><b>'+esc(k[0])+'</b></td><td>'+esc(k[1])+'</td><td>'+esc(k[2])+'</td></tr>'}).join("")+'</tbody></table></div><p class="fdr-note">Les cibles chiffrées sont fixées au jalon du 6 décembre 2026, à partir de la situation de départ réelle. Données ventilées par pays, jamais agrégées.</p>')
+  +bar("risk","Risques et mesures de maîtrise",RISKS.length+" risques identifiés","",'var(--amber)',
+     '<div class="fdr-tbl"><table><thead><tr><th>Risque</th><th>Mesure de maîtrise</th></tr></thead><tbody>'+RISKS.map(function(r){return '<tr><td><b>'+esc(r[0])+'</b></td><td>'+esc(r[1])+'</td></tr>'}).join("")+'</tbody></table></div>')
   +'</div>';
   var host=$("viewHost");host.innerHTML=h;host.onclick=onClick;
   drawBanner(cache);drawList();tick();
@@ -3165,7 +3068,6 @@ async function onClick(e){
   var b=e.target.closest("button");if(!b)return;
   if(b.dataset.fdr==="dis"){sset("fdr_dis_"+b.dataset.id,"1");drawBanner(cache);return}
   if(!isAdmin())return;
-  if(b.dataset.add!==undefined||b.dataset.ed!==undefined||b.dataset.del!==undefined||b.id==="fdrHd"){editItem(b);return}
   try{
     if(b.id==="fdrGo"){
       var title=$("fdrT").value.trim(),due=$("fdrD").value,note=$("fdrN").value.trim(),err=$("fdrErr");
@@ -3201,7 +3103,7 @@ async function openPage(){
   active=true;
   $("view-home").style.display="none";$("viewHost").style.display="";
   var sc=$("scrim");if(sc&&sc.classList.contains("on"))sc.click();
-  render();loadData().then(function(){if(active)render()}).catch(function(){});window.scrollTo(0,0);markNav();
+  render();window.scrollTo(0,0);markNav();
   if(window.AFRI)window.AFRI.page("Feuille de route");
   refreshBanner();
 }
@@ -3230,7 +3132,6 @@ if(nl0){
 var prev=window.onRole;
 window.onRole=function(){if(prev)prev();setTimeout(refreshBanner,1200)};
 setInterval(function(){if(me())refreshBanner();else drawBanner([])},90000);
-setInterval(function(){if(active&&me()&&!isAdmin())loadData().then(function(){if(active)render()}).catch(function(){})},90000);
 setInterval(tick,20000);
 if(me())setTimeout(refreshBanner,1500);
 })();
@@ -3514,12 +3415,11 @@ collect();sched();
 @media (max-width:640px){.mt-card{flex-wrap:wrap}.mt-btn{width:100%;text-align:center}}
 .mt-adm,.mt-box{border-radius:22px;padding:24px 28px;margin:0 0 28px}
 .mt-adm h3,.mt-box h3{margin:0 0 14px;color:var(--green)}
-.mt-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:14px}
+.mt-grid{display:grid;grid-template-columns:2fr 1fr 1fr;gap:14px}
 .mt-grid label,.mt-adm label{display:flex;flex-direction:column;gap:6px;font-size:.82rem;font-weight:700;color:var(--muted)}
-.mt-grid input,.mt-adm input,.mt-just input:not([type=checkbox]),.mt-just textarea,.fdr-form input,.fdr-form textarea,.addrow input:not([type=checkbox]),.addrow select{width:100%;box-sizing:border-box;min-width:0}
-.mt-grid label,.fdr-form label,.addrow label{min-width:0}
+.mt-grid input,.mt-adm input{width:100%}
 .mt-grid .full{grid-column:1/-1}
-
+@media (max-width:700px){.mt-grid{grid-template-columns:1fr 1fr}.mt-grid .full{grid-column:1/-1}}
 .mt-err{color:#c0392b;min-height:1.2em;font-size:.88rem;margin:8px 0}
 .mt-m{border-radius:20px;margin:0 0 16px;overflow:hidden}
 .mt-m>summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:14px;flex-wrap:wrap;padding:16px 22px}
@@ -3531,11 +3431,9 @@ collect();sched();
 .mt-ok{background:color-mix(in srgb,var(--green) 18%,transparent);color:var(--green)}
 .mt-late{background:color-mix(in srgb,var(--amber) 20%,transparent);color:var(--amber)}
 .mt-abs{background:color-mix(in srgb,#c0392b 16%,transparent);color:#c0392b}
-.mt-exc{background:color-mix(in srgb,#4a90c2 18%,transparent);color:#4a90c2}
-.mt-foot{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-top:16px}
 .mt-wait{background:color-mix(in srgb,var(--muted) 18%,transparent);color:var(--muted)}
 .mt-m .mt-body{padding:0 22px 20px}
-.mt-m table{width:100%;border-collapse:collapse;min-width:640px}
+.mt-m table{width:100%;border-collapse:collapse;min-width:460px}
 .mt-tw{overflow-x:auto}
 .mt-m th,.mt-m td{padding:10px 12px;border-bottom:1px solid var(--line);text-align:left;font-size:.9rem}
 </style>
@@ -3543,8 +3441,8 @@ collect();sched();
 <script>
 (function(){
 "use strict";
-var CFG="pub:meetcfg", PRE="meet:", ATT="mtatt:", JUS="mtjus:", OPEN_BEFORE=15*6e4;
-var cfg={link:"",censeurs:[]}, meets=[], atts={}, active=false, jus={}, USERS=[], openM={};
+var CFG="pub:meetcfg", PRE="meet:", ATT="att:", OPEN_BEFORE=15*6e4;
+var cfg={link:"",censeurs:[]}, meets=[], atts={}, active=false;
 
 function $(i){return document.getElementById(i)}
 function SB(){return window.__sb} function TB(){return window.__TABLE||"afriflow_state"}
@@ -3569,7 +3467,6 @@ async function load(){
   var q=SB().from(TB()).select("key,value").like("key",isCens()?ATT+"%":ATT+"%:"+me()).limit(5000);
   var t=await q; atts={};
   if(!t.error)(t.data||[]).forEach(function(x){atts[x.key]=x.value});
-  jus={};if(isCens()){var jq=await SB().from(TB()).select("key,value").like("key",JUS+"%").limit(5000);if(!jq.error)(jq.data||[]).forEach(function(x){jus[x.key]=x.value})}
 }
 
 /* ---------- Réunion en cours / prochaine ---------- */
@@ -3580,13 +3477,12 @@ function pick(){
   var nx=meets.filter(function(m){return m.start>n})[0];
   return nx?{m:nx,live:false}:null;
 }
-function statut(m,rec,jv){
+function statut(m,rec){
   var n=Date.now(),end=m.start+m.dur*6e4;
   if(rec){
     if(rec.at<=m.start+m.grace*6e4)return {k:"ok",t:"Présent"};
     return {k:"late",t:"Retard (+"+Math.max(1,Math.round((rec.at-m.start)/6e4))+" min)"};
   }
-  if(jv)return {k:"exc",t:"Excusé"};
   if(n>end)return {k:"abs",t:"Absent"};
   return {k:"wait",t:n<m.start?"À venir":"En attente"};
 }
@@ -3662,7 +3558,7 @@ async function render(){
   var host=$("viewHost");if(!active||!host)return;
   var U=[];try{U=window.AFRI?await window.AFRI.listUsers():[]}catch(e){}
   if(!active)return;
-  USERS=U;var d=new Date(),dd=d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate());
+  var d=new Date(),dd=d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate());
   var h='<div class="toolbar"><b>Censeur</b><div class="toolbar-actions"><button type="button" id="csRef">Actualiser</button></div></div>'
    +'<div class="mt-box"><h3>Programmer une réunion</h3><div class="mt-grid">'
    +'<label class="full">Intitulé<input id="csT" maxlength="100" placeholder="Ex. Point hebdomadaire" autocomplete="off"></label>'
@@ -3674,53 +3570,22 @@ async function render(){
    +'<p style="color:var(--muted);font-size:.85rem;margin:12px 0 0">Présent : clic sur « Rejoindre » avant la fin de la tolérance · Retard : clic après · Absent : aucun clic à la fin de la réunion. Les clics sont comptés de 15 min avant le début jusqu\'à la fin.</p></div>';
   var L=meets.slice().sort(function(a,b){return b.start-a.start});
   h+='<h3 style="color:var(--green)">Réunions et présences</h3>'+(L.length?L.map(function(m){
-    var emails=people(m);
-    var rows=Object.keys(emails).sort().map(function(em){var rec=atts[ATT+m.id+":"+em],jv=jus[JUS+m.id+":"+em];return {em:em,nm:emails[em],rec:rec,jv:jv,s:statut(m,rec,jv)}});
-    var c={ok:0,late:0,abs:0,wait:0,exc:0};rows.forEach(function(r){c[r.s.k]++});
-    return '<details class="mt-m" data-mid="'+esc(m.id)+'"'+(openM[m.id]?' open':'')+'><summary><b>'+esc(m.title)+'</b><small>'+fdt(m.start)+' · '+m.dur+' min</small>'
-     +'<span class="mt-sum"><span class="mt-pill mt-ok">'+c.ok+' présent(s)</span><span class="mt-pill mt-late">'+c.late+' retard(s)</span><span class="mt-pill mt-abs">'+c.abs+' absent(s)</span>'+(c.exc?'<span class="mt-pill mt-exc">'+c.exc+' excusé(s)</span>':'')+(c.wait?'<span class="mt-pill mt-wait">'+c.wait+' en attente</span>':'')+'</span></summary>'
-     +'<div class="mt-body"><div class="mt-tw"><table><thead><tr><th>Nom</th><th>Email</th><th>Statut</th><th>Clic à</th><th>Justificatif</th></tr></thead><tbody>'
-     +(rows.length?rows.map(function(r){return '<tr><td>'+esc(r.nm||"—")+'</td><td>'+esc(r.em)+'</td><td><span class="mt-pill mt-'+r.s.k+'">'+esc(r.s.t)+'</span></td><td>'+(r.rec?fh(r.rec.at):"—")+'</td><td>'+(r.jv?esc(r.jv.motif)+' <button type="button" class="danger" style="padding:2px 8px;font-size:.75rem" data-csunj="'+esc(m.id)+'" data-em="'+esc(r.em)+'" aria-label="Retirer le justificatif">✕</button>':"—")+'</td></tr>'}).join(""):'<tr><td colspan="5" style="color:var(--muted)">Aucun compte à afficher.</td></tr>')
-     +'</tbody></table></div><div class="mt-foot"><button type="button" class="danger" data-csdel="'+esc(m.id)+'">Supprimer cette réunion</button><button type="button" class="p" data-csjus="'+esc(m.id)+'">Justificatif</button></div></div></details>';
+    var emails={};U.forEach(function(u){if(u&&u.email)emails[String(u.email).toLowerCase()]=u.name||""});
+    Object.keys(atts).forEach(function(k){var v=atts[k];if(v&&v.meet===m.id&&v.email&&!(v.email in emails))emails[v.email]=v.name||""});
+    var rows=Object.keys(emails).sort().map(function(em){var rec=atts[ATT+m.id+":"+em],s=statut(m,rec);return {em:em,nm:emails[em],rec:rec,s:s}});
+    var c={ok:0,late:0,abs:0,wait:0};rows.forEach(function(r){c[r.s.k]++});
+    return '<details class="mt-m"><summary><b>'+esc(m.title)+'</b><small>'+fdt(m.start)+' · '+m.dur+' min</small>'
+     +'<span class="mt-sum"><span class="mt-pill mt-ok">'+c.ok+' présent(s)</span><span class="mt-pill mt-late">'+c.late+' retard(s)</span><span class="mt-pill mt-abs">'+c.abs+' absent(s)</span>'+(c.wait?'<span class="mt-pill mt-wait">'+c.wait+' en attente</span>':'')+'</span></summary>'
+     +'<div class="mt-body"><div class="mt-tw"><table><thead><tr><th>Nom</th><th>Email</th><th>Statut</th><th>Clic à</th></tr></thead><tbody>'
+     +(rows.length?rows.map(function(r){return '<tr><td>'+esc(r.nm||"—")+'</td><td>'+esc(r.em)+'</td><td><span class="mt-pill mt-'+(r.s.k==="ok"?"ok":r.s.k==="late"?"late":r.s.k==="abs"?"abs":"wait")+'">'+esc(r.s.t)+'</span></td><td>'+(r.rec?fh(r.rec.at):"—")+'</td></tr>'}).join(""):'<tr><td colspan="4" style="color:var(--muted)">Aucun compte à afficher.</td></tr>')
+     +'</tbody></table></div><p style="margin:14px 0 0"><button type="button" class="danger" data-csdel="'+esc(m.id)+'">Supprimer cette réunion</button></p></div></details>';
   }).join(""):'<p style="color:var(--muted)">Aucune réunion programmée.</p>');
   host.innerHTML=h;host.onclick=onClick;
-  if(!host._tg){host._tg=1;host.addEventListener("toggle",function(e){var d=e.target;if(d&&d.classList&&d.classList.contains("mt-m"))openM[d.dataset.mid]=d.open},true)}
-}
-function people(m){
-  var emails={};USERS.forEach(function(u){if(u&&u.email)emails[String(u.email).toLowerCase()]=u.name||""});
-  Object.keys(atts).forEach(function(k){var v=atts[k];if(v&&v.meet===m.id&&v.email&&!(v.email in emails))emails[v.email]=v.name||""});
-  return emails;
-}
-function jusDialog(mid){
-  var m=meets.filter(function(x){return x.id===mid})[0];if(!m)return;
-  var em=people(m),L=Object.keys(em).sort().filter(function(e){return !atts[ATT+m.id+":"+e]}),box=$("xmBox");
-  box.innerHTML='<h2 style="margin-top:0">Justificatif · '+esc(m.title)+'</h2><p style="font-size:.88rem;color:var(--muted);margin-top:0">Cochez les personnes qui ont demandé une permission ou fourni une excuse, puis précisez le motif.</p><div class="mt-just">'
-   +(L.length?'<div style="max-height:220px;overflow:auto;border:1px solid var(--line);border-radius:10px;padding:8px">'+L.map(function(e){return '<label class="rq"><input type="checkbox" value="'+esc(e)+'"> '+esc(em[e]||e)+' · '+esc(e)+(jus[JUS+m.id+":"+e]?' <small style="color:var(--muted)">(déjà excusé)</small>':'')+'</label>'}).join("")+'</div>':'<p style="color:var(--muted)">Toutes les personnes ont déjà été enregistrées présentes.</p>')
-   +'<div class="fm" style="margin-top:14px"><label for="jsM">Motif / justificatif</label><textarea id="jsM" rows="3" maxlength="400" placeholder="Ex. Permission accordée : déplacement professionnel"></textarea></div><div class="mt-err" id="jsErr" role="alert"></div><div style="display:flex;gap:10px"><button type="button" class="p" id="jsOk" style="flex:1">Enregistrer</button><button type="button" id="jsNo">Annuler</button></div></div>';
-  box.onkeydown=null;$("xm").classList.add("on");
-  $("jsNo").onclick=function(){$("xm").classList.remove("on")};
-  $("jsOk").onclick=async function(){
-    var btn=this,sel=[].slice.call(box.querySelectorAll("input[type=checkbox]:checked")).map(function(i){return i.value}),mo=$("jsM").value.trim().slice(0,400),er=$("jsErr");
-    if(!sel.length){er.textContent="Cochez au moins une personne.";return}
-    if(!mo){er.textContent="Précisez le motif du justificatif.";return}
-    btn.disabled=true;er.textContent="";
-    var now=Date.now(),rows=sel.map(function(e){return {key:JUS+m.id+":"+e,value:{meet:m.id,email:e,motif:mo,by:me(),at:now},updated_at:new Date().toISOString()}});
-    var r=await SB().from(TB()).upsert(rows);
-    if(r.error){btn.disabled=false;er.textContent="Enregistrement impossible : "+(r.error.message||r.error);return}
-    rows.forEach(function(x){jus[x.key]=x.value});
-    $("xm").classList.remove("on");toast("Justificatif enregistré ("+sel.length+").");render();
-  };
 }
 async function onClick(e){
   var b=e.target.closest("button");if(!b)return;
   try{
     if(b.id==="csRef"){await load();render();return}
-    if(b.dataset.csjus){jusDialog(b.dataset.csjus);return}
-    if(b.dataset.csunj){
-      var jk=JUS+b.dataset.csunj+":"+b.dataset.em,jr=await SB().from(TB()).delete().eq("key",jk);
-      if(jr.error){toast("Action impossible : "+jr.error.message);return}
-      delete jus[jk];render();return;
-    }
     if(b.id==="csGo"){
       var t=$("csT").value.trim(),d=$("csD").value,hh=$("csH").value,du=+$("csU").value,g=+$("csG").value,l=$("csL").value.trim(),er=$("csErr");
       if(!t||!d||!hh){er.textContent="Indiquez l'intitulé, la date et l'heure.";return}
@@ -3739,8 +3604,7 @@ async function onClick(e){
       var id=b.dataset.csdel;
       await SB().from(TB()).delete().eq("key",PRE+id);
       try{await SB().from(TB()).delete().like("key",ATT+id+":%")}catch(x){}
-      try{await SB().from(TB()).delete().like("key",JUS+id+":%")}catch(x){}
-      meets=meets.filter(function(x){return x.id!==id});Object.keys(atts).forEach(function(k){if(k.indexOf(ATT+id+":")===0)delete atts[k]});Object.keys(jus).forEach(function(k){if(k.indexOf(JUS+id+":")===0)delete jus[k]});
+      meets=meets.filter(function(x){return x.id!==id});Object.keys(atts).forEach(function(k){if(k.indexOf(ATT+id+":")===0)delete atts[k]});
       drawCard();render();
     }
   }catch(x){toast("Action impossible : "+(x&&x.message||x))}
