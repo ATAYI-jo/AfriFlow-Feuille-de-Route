@@ -2565,8 +2565,20 @@ if(loggedUserEmail)setTimeout(poll,1500);
     if(inp) inp.placeholder = isAdm ? "Ex. : change le titre de l'étape 1… (Ctrl+Entrée pour envoyer)" : "Posez votre question sur AfriFloW… (Ctrl+Entrée pour envoyer)";
     if(!logged){ box.style.display = "none"; if(H.length){ H = []; $g("aiLog").textContent = ""; } }
   }, 1000);
+    btn.onclick = function(){
+    var open = box.style.display === "none" || box.style.display === "";
+    box.style.display = open ? "flex" : "none";
+    if(open) $g("aiIn").focus();
+  };
+  $g("aiClose").onclick = function(){ box.style.display = "none"; };
+  $g("aiClear").onclick = function(){ H = []; $g("aiLog").textContent = ""; };
+  $g("aiGo").onclick = send;
+  $g("aiIn").addEventListener("keydown", function(e){
+    if(e.key === "Enter" && (e.ctrlKey || e.metaKey)){ e.preventDefault(); send(); }
+  });
 })();
 </script>
+
   <!-- =====================================================================
   MODULE AFRIFLOW · Onglets renommables + design « verre » aéré
   À COLLER juste avant </body>, APRÈS le module « Feuille de route »
