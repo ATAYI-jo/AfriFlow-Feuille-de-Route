@@ -4074,5 +4074,279 @@ new MutationObserver(function(){
 }).observe(vh,{childList:true});
 })();
 </script>
+  <!-- =====================================================================
+  MODULE AFRIFLOW · CORRECTIFS (à coller juste avant </body>, après TOUS les autres modules)
+
+  1. Marketing : contenu pré-rempli d'après votre PDF, entièrement modifiable
+     (titres, gras, listes, tableaux, insertion de période « Du … au … »).
+     Modifiable par l'administrateur ET par toute personne ayant le droit « Marketing ».
+  2. Justificatifs : le bouton flottant disparaît.
+     - Censeur/administrateur : bouton « Mon justificatif » dans l'onglet Censeur
+       (+ la réception/acceptation des justificatifs reste dans chaque réunion).
+     - Tous les autres inscrits : un onglet « Mes présences » (leur statut par réunion
+       + envoi de leur justificatif, de façon strictement personnelle).
+  3. « Droits de modification » : affiche « Marketing » (voir remplacement n°1 du guide)
+     et le nom « fdr » est remplacé par le nom réel de l'onglet dans l'Administration.
+====================================================================== -->
+<style id="af-corr-css">
+#jfBtn{display:none!important}
+/* Échéances : champ « Date de début » */
+.fdr-form{grid-template-columns:1fr 1fr!important}
+.fdr-form>label:first-child{grid-column:1/-1}
+@media (max-width:640px){.fdr-form{grid-template-columns:1fr!important}}
+/* Page Marketing */
+#mkDoc{overflow-x:auto}
+#mkDoc h2{margin:28px 0 10px;color:var(--green);font-size:1.4rem}
+#mkDoc h2:first-child{margin-top:0}
+#mkDoc h3{margin:26px 0 8px;font-size:1.12rem}
+#mkDoc p{margin:0 0 10px}
+#mkDoc ul,#mkDoc ol{margin:6px 0 12px 22px;padding:0}
+#mkDoc table{border-collapse:collapse;width:100%;margin:14px 0;min-width:640px}
+#mkDoc td,#mkDoc th{border:1px solid var(--line);padding:9px 12px;vertical-align:top;text-align:left;font-size:.92rem}
+#mkDoc th{background:color-mix(in srgb,var(--green) 9%,transparent)}
+</style>
+
+<script>
+(function(){
+"use strict";
+var $=function(i){return document.getElementById(i)},vh=$("viewHost");if(!vh)return;
+function SB(){return window.__sb} function TB(){return window.__TABLE||"afriflow_state"}
+function me(){return String(window.loggedUserEmail||"").toLowerCase()}
+function adm(){return window.USER_ROLE==="admin"}
+function toast(m){(window.toast||alert)(m)}
+function esc(s){return String(s==null?"":s).replace(/[&<>"']/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]})}
+function fr(s){var p=String(s).split("-");return p[2]+"/"+p[1]+"/"+p[0]}
+function fdt(ms){return new Date(ms).toLocaleString("fr-FR",{weekday:"short",day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"})}
+function navLabel(sel,def){var b=document.querySelector("#navList "+sel);return b?b.textContent.replace(/\s\(\d+\)$/,""):def}
+
+/* =================== 1. MARKETING =================== */
+var DEF=
+'<h2>Feuille de route marketing opérationnelle</h2>'
++'<p><b>Période :</b> du 9 novembre 2026 au 5 février 2027<br><b>Marchés cibles :</b> Togo, Sénégal, France, Bénin, Tunisie et Burkina Faso</p>'
++'<p><b>Contexte et objectifs :</b> cette feuille de route intègre l’approche multi-produits et structure l’expansion internationale. Elle s’appuie d’abord sur les marchés de prospection initiaux (Togo, Sénégal), consolide les pays partenaires stratégiques (France, Bénin, Tunisie, Burkina Faso) et prépare l’extension vers de nouveaux marchés.</p>'
+
++'<h3>Étape 1 : Audit, analyse et structuration de la gamme</h3>'
++'<p><b>Début :</b> 9 novembre 2026 · <b>Fin :</b> 6 décembre 2026</p>'
++'<p>Phase initiale dédiée à l’analyse des marchés de prospection (Togo, Sénégal) et à la structuration de l’architecture multi-produits pour toute la gamme.</p>'
++'<p><b>Du 09/11/2026 au 15/11/2026 : analyse des marchés pilotes et besoins</b></p><ul><li>Analyse des retours de terrain au Togo et au Sénégal pour ajuster le positionnement de la mangue séchée.</li><li>Étude des attentes des distributeurs et consommateurs locaux (prix, formats, exigences de qualité).</li></ul>'
++'<p><b>Du 16/11/2026 au 29/11/2026 : architecture multi-produits et packaging</b></p><ul><li>Définition de l’architecture de marque pour intégrer les futurs produits en complément de la mangue séchée.</li><li>Validation des déclinaisons visuelles et des mentions légales pour l’export régional et international.</li></ul>'
++'<p><b>Du 30/11/2026 au 06/12/2026 : storytelling et traçabilité numérique</b></p><ul><li>Mise en valeur de la chaîne d’approvisionnement et intégration visuelle des QR-codes de traçabilité sur les emballages.</li><li>Création du parcours client digital pour rassurer l’ensemble des acheteurs.</li></ul>'
+
++'<h3>Étape 2 : Consolidation des pays partenaires (France, Bénin, Tunisie, Burkina Faso)</h3>'
++'<p><b>Début :</b> 7 décembre 2026 · <b>Fin :</b> 3 janvier 2027</p>'
++'<p>Adaptation du marketing pour adresser les marchés partenaires clés avant l’ouverture de nouvelles zones géographiques.</p>'
++'<p><b>Du 07/12/2026 au 20/12/2026 : adaptation des offres par pays partenaire</b></p><ul><li><b>France :</b> positionnement sur le créneau du bio/équitable et des épiceries fines (exigences réglementaires strictes).</li><li><b>Bénin et Burkina Faso :</b> adaptation de l’offre pour le marché local et sous-régional (partenariats de distribution).</li><li><b>Tunisie :</b> ciblage des réseaux de distribution spécialisés en produits naturels.</li></ul>'
++'<p><b>Du 21/12/2026 au 03/01/2027 : kits de vente et outils d’aide à la commercialisation</b></p><ul><li>Création de catalogues multicanaux et fiches techniques adaptés aux exigences de chaque pays partenaire.</li><li>Mise en place d’un circuit d’échantillonnage international rapide (notamment vers la France et la Tunisie).</li></ul>'
+
++'<h3>Étape 3 : Déploiement digital et notoriété internationale</h3>'
++'<p><b>Début :</b> 4 janvier 2027 · <b>Fin :</b> 17 janvier 2027</p>'
++'<p>Asseoir la crédibilité d’AfriFloW en ligne pour soutenir les partenaires en France, au Bénin, en Tunisie et au Burkina Faso.</p>'
++'<p><b>Du 04/01/2027 au 17/01/2027 : stratégie de contenu B2B et relations partenaires</b></p><ul><li>Animation ciblée sur LinkedIn et les réseaux professionnels pour valoriser la maîtrise de la chaîne logistique internationale.</li><li>Campagnes de notoriété numérique pour soutenir les distributeurs dans les pays partenaires.</li></ul>'
+
++'<h3>Étape 4 : Marketing du point de vente et extension de marché</h3>'
++'<p><b>Début :</b> 18 janvier 2027 · <b>Fin :</b> 5 février 2027</p>'
++'<p>Optimisation de la présence en rayon et préparation de l’ouverture vers de nouveaux marchés cibles.</p>'
++'<p><b>Du 18/01/2027 au 31/01/2027 : merchandising et éléments de PLV</b></p><ul><li>Création de supports de présentation en rayon (présentoirs, flyers explicatifs sur la traçabilité).</li><li>Évaluation des retours des pays partenaires pour ajuster les actions marketing.</li></ul>'
++'<p><b>Du 01/02/2027 au 05/02/2027 : bilan global et stratégie d’extension</b></p><ul><li>Analyse des performances marketing par pays (Togo, Sénégal, France, Bénin, Tunisie, Burkina Faso).</li><li>Planification du marketing pour l’ouverture de nouveaux marchés à l’export.</li></ul>'
+
++'<h3>Tableau synthétique des étapes marketing</h3>'
++'<table><thead><tr><th>Étape</th><th>Début</th><th>Fin</th><th>Actions clés et périmètre géographique</th><th>Livrables marketing</th></tr></thead><tbody>'
++'<tr><td>Étape 1 : Analyse et gamme</td><td>09/11/2026</td><td>06/12/2026</td><td>Étude des marchés pilotes (Togo, Sénégal) et structuration de l’offre multi-produits.</td><td>Architecture de gamme et parcours de traçabilité validés.</td></tr>'
++'<tr><td>Étape 2 : Pays partenaires</td><td>07/12/2026</td><td>03/01/2027</td><td>Adaptation des offres pour la France, le Bénin, la Tunisie et le Burkina Faso.</td><td>Kits de vente et outils d’aide à la vente internationalisés.</td></tr>'
++'<tr><td>Étape 3 : Notoriété digitale</td><td>04/01/2027</td><td>17/01/2027</td><td>Animation B2B internationale et soutien aux distributeurs partenaires.</td><td>Crédibilité de marque renforcée sur les marchés extérieurs.</td></tr>'
++'<tr><td>Étape 4 : PLV et extension</td><td>18/01/2027</td><td>05/02/2027</td><td>Éléments de merchandising, bilan des performances et préparation de nouveaux marchés.</td><td>Supports de rayon et plan d’expansion géographique.</td></tr>'
++'</tbody></table>';
+
+function cleanHtml(html){
+  var t=document.createElement("template");t.innerHTML=html;
+  t.content.querySelectorAll("script,iframe,object,embed,link,meta,style,form,base").forEach(function(n){n.remove()});
+  t.content.querySelectorAll("*").forEach(function(el){[].slice.call(el.attributes).forEach(function(a){if(/^on/i.test(a.name)||(/^(href|src|xlink:href)$/i.test(a.name)&&/^\s*javascript:/i.test(a.value)))el.removeAttribute(a.name)})});
+  return t.innerHTML;
+}
+function canMk(){return adm()||!!(window.canEditPage&&window.canEditPage("fdr"))}
+
+var rng=null;
+document.addEventListener("selectionchange",function(){
+  var d=$("mkDoc");if(!d)return;var s=window.getSelection();
+  if(s.rangeCount&&d.contains(s.anchorNode))rng=s.getRangeAt(0).cloneRange();
+});
+function ex(c,v){
+  var d=$("mkDoc");if(!d)return;d.focus();
+  if(rng){var s=window.getSelection();s.removeAllRanges();s.addRange(rng)}
+  try{document.execCommand("styleWithCSS",false,true)}catch(e){}
+  document.execCommand(c,false,v);
+}
+async function saveMk(btn){
+  var d=$("mkDoc");if(!d)return;btn.disabled=true;
+  try{
+    var r=await SB().from(TB()).upsert({key:"pub:marketing",value:{html:cleanHtml(d.innerHTML),at:Date.now(),by:me()},updated_at:new Date().toISOString()});
+    if(r.error)throw r.error;
+    toast("Page Marketing enregistrée pour tous les utilisateurs.");
+  }catch(x){
+    toast("Enregistrement impossible : "+(x.message||x)+(adm()?"":" (le serveur n’autorise peut-être que l’administrateur à écrire cette page)"));
+  }
+  btn.disabled=false;
+}
+function buildBar(d){
+  var bar=document.createElement("div");bar.className="ed-bar";bar.id="mkBar2";
+  bar.innerHTML='<select data-s="formatBlock" aria-label="Style"><option value="p">Texte</option><option value="h2">Titre</option><option value="h3">Sous-titre</option></select>'
+   +'<button type="button" data-c="bold" title="Gras"><b>G</b></button><button type="button" data-c="italic" title="Italique"><i>I</i></button><button type="button" data-c="underline" title="Souligné"><u>S</u></button>'
+   +'<label>Couleur<input type="color" data-k="foreColor" value="#1d2a22"></label>'
+   +'<button type="button" data-c="insertUnorderedList">Puces</button><button type="button" data-c="insertOrderedList">Numéros</button>'
+   +'<button type="button" data-c="justifyLeft">Gauche</button><button type="button" data-c="justifyCenter">Centré</button>'
+   +'<button type="button" data-c="table">Tableau</button><button type="button" data-c="period">Période (dates)</button>'
+   +'<button type="button" data-c="undo">Annuler</button><button type="button" data-c="redo">Rétablir</button>'
+   +'<button type="button" class="danger" data-c="reset">Remettre le modèle PDF</button>'
+   +'<button type="button" class="p" data-c="save">Enregistrer</button>';
+  bar.addEventListener("mousedown",function(e){if(e.target.closest("button"))e.preventDefault()});
+  bar.addEventListener("click",function(e){
+    var b=e.target.closest("button");if(!b)return;var c=b.dataset.c;
+    if(c==="save")saveMk(b);
+    else if(c==="reset"){if(confirm("Remplacer le contenu actuel par le modèle issu du PDF ? (non enregistré tant que vous ne cliquez pas sur Enregistrer)"))d.innerHTML=cleanHtml(DEF)}
+    else if(c==="table"){
+      var p=(prompt("Lignes, colonnes ?","3,3")||"").split(",").map(Number),r=p[0],k=p[1];if(!(r>0&&k>0))return;
+      r=Math.min(r,30);k=Math.min(k,12);
+      var t='<table><tbody>';for(var i=0;i<r;i++){t+="<tr>";for(var j=0;j<k;j++)t+="<td><br></td>";t+="</tr>"}
+      ex("insertHTML",t+"</tbody></table><p><br></p>");
+    }
+    else if(c==="period"){
+      var saved=rng;
+      if(!window.askDlg){toast("Fenêtre indisponible");return}
+      window.askDlg("Insérer une période",[{id:"a",l:"Date de début",t:"date"},{id:"b",l:"Date de fin",t:"date"}],function(v){
+        if(!v.a)return "Indiquez la date de début.";
+        if(v.b&&v.b<v.a)return "La date de fin doit suivre la date de début.";
+        rng=saved;ex("insertText",v.b?"Du "+fr(v.a)+" au "+fr(v.b):"À partir du "+fr(v.a));
+      });
+    }
+    else if(c)ex(c);
+  });
+  bar.addEventListener("change",function(e){var t=e.target;if(t.dataset.s==="formatBlock")ex("formatBlock","<"+t.value+">")});
+  bar.addEventListener("input",function(e){var t=e.target;if(t.dataset.k)ex(t.dataset.k,t.value)});
+  return bar;
+}
+async function mk(){
+  var d=$("mkDoc");if(!d||d.dataset.v2)return;d.dataset.v2="1";
+  var saved=null;
+  try{
+    var r=await SB().from(TB()).select("value").eq("key","pub:marketing").maybeSingle();
+    if(r.data&&r.data.value&&r.data.value.html&&String(r.data.value.html).trim())saved=r.data.value.html;
+  }catch(e){}
+  if(!d.isConnected)return;
+  d.innerHTML=cleanHtml(saved||DEF);
+  var old=$("mkBar");if(old)old.remove();
+  var can=canMk();
+  d.setAttribute("contenteditable",can?"true":"false");
+  if(!can)return;
+  d.parentNode.before(buildBar(d));
+}
+
+/* =================== 2. JUSTIFICATIFS / CENSEUR =================== */
+function openJf(){var b=$("jfBtn");if(b)b.click();else toast("Fonction indisponible.")}
+document.addEventListener("click",function(e){
+  var b=e.target.closest("button");if(!b)return;
+  if(b.id==="csMine"||b.id==="jpNew")openJf();
+  else if(b.id==="jpRef")renderPersonal();
+});
+function censeurBtn(){
+  var ref=$("csRef");if(!ref||$("csMine"))return;
+  var b=document.createElement("button");b.type="button";b.id="csMine";b.textContent="📎 Mon justificatif";
+  ref.before(b);
+}
+
+var cfg2=null,jpActive=false;
+async function loadCfg(){
+  try{var r=await SB().from(TB()).select("value").eq("key","pub:meetcfg").maybeSingle();cfg2=(r.data&&r.data.value)||{censeurs:[]}}catch(e){}
+}
+function isCensor(){return adm()||((cfg2&&cfg2.censeurs)||[]).map(function(x){return String(x).toLowerCase()}).indexOf(me())>-1}
+function markJp(){var nl=$("navList");if(!nl||!jpActive)return;nl.querySelectorAll(".nv").forEach(function(b){b.classList.toggle("on",b.hasAttribute("data-jp-nav"))})}
+function injectNav(){
+  var nl=$("navList");if(!nl||!nl.firstElementChild)return;
+  var has=nl.querySelector("[data-jp-nav]");
+  if(!me()||!cfg2||isCensor()){if(has)has.parentNode.remove();return}
+  if(has){markJp();return}
+  var row=document.createElement("div");row.className="nvr";
+  row.innerHTML='<button type="button" class="nv" data-jp-nav="1">Mes présences</button>';
+  var f=nl.querySelector("[data-fdr-nav]");(f?f.parentNode:nl.firstElementChild).after(row);
+  markJp();
+}
+async function openPersonal(){
+  var home=document.querySelector('#navList .nv[data-id="home"]');if(home)home.click();
+  jpActive=true;$("view-home").style.display="none";vh.style.display="";
+  var sc=$("scrim");if(sc&&sc.classList.contains("on"))sc.click();
+  window.scrollTo(0,0);if(window.AFRI)window.AFRI.page("Mes présences");
+  renderPersonal();
+}
+function statut(m,rec,exc){
+  var n=Date.now(),end=m.start+m.dur*6e4;
+  if(rec)return rec.at<=m.start+m.grace*6e4?["ok","Présent"]:["late","Retard (+"+Math.max(1,Math.round((rec.at-m.start)/6e4))+" min)"];
+  if(exc)return ["ok","Excusé"];
+  if(n>end)return ["abs","Absent"];
+  return ["wait",n<m.start?"À venir":"En attente"];
+}
+async function renderPersonal(){
+  if(!jpActive)return;
+  vh.innerHTML='<div class="toolbar"><b>Mes présences</b><div class="toolbar-actions"><button type="button" id="jpRef">Actualiser</button><button type="button" class="p" id="jpNew">📎 Envoyer un justificatif</button></div></div><div id="jpRoot"><p style="color:var(--muted)">Chargement…</p></div>';
+  var meets=[],A={},J={},D={},q=me(),err="";
+  try{
+    var r=await SB().from(TB()).select("value").like("key","meet:%").limit(300);
+    meets=(r.data||[]).map(function(x){return x.value}).filter(function(v){return v&&v.start});
+    var a=await SB().from(TB()).select("value").like("key","att:m%:"+q).limit(300);
+    var j=await SB().from(TB()).select("value").like("key","att:j-%:"+q).limit(300);
+    var d=await SB().from(TB()).select("value").like("key","att:jd-%:"+q).limit(300);
+    (a.data||[]).forEach(function(x){if(x.value&&x.value.email===q&&x.value.meet)A[x.value.meet]=x.value});
+    (j.data||[]).forEach(function(x){if(x.value&&x.value.email===q&&x.value.mid)J[x.value.mid]=x.value});
+    (d.data||[]).forEach(function(x){if(x.value&&x.value.email===q&&x.value.mid)D[x.value.mid]=x.value});
+  }catch(e){err=String((e&&e.message)||e)}
+  var root=$("jpRoot");if(!root||!jpActive)return;
+  if(err){root.innerHTML='<p style="color:#c0392b">Lecture impossible : '+esc(err)+'</p>';return}
+  meets.sort(function(x,y){return y.start-x.start});
+  if(!meets.length){root.innerHTML='<p style="color:var(--muted)">Aucune réunion programmée pour le moment.</p>';return}
+  root.innerHTML='<div class="journal-article" style="padding:22px"><div style="overflow-x:auto"><table class="t"><thead><tr><th>Réunion</th><th>Date</th><th>Ma présence</th><th>Mon justificatif</th></tr></thead><tbody>'
+   +meets.map(function(m){
+     var ex=!!(D[m.id]&&D[m.id].ok),s=statut(m,A[m.id],ex),jf=J[m.id],jd=D[m.id];
+     var jt=!jf?'—':(jd?(jd.ok?'<span class="mt-pill mt-ok">Accepté</span>':'<span class="mt-pill mt-abs">Refusé</span>'):'<span class="mt-pill mt-wait">En attente du censeur</span>');
+     return '<tr><td><b>'+esc(m.title)+'</b></td><td>'+fdt(m.start)+'</td><td><span class="mt-pill mt-'+s[0]+'">'+esc(s[1])+'</span></td><td>'+jt+'</td></tr>';
+   }).join("")+'</tbody></table></div><p style="color:var(--muted);font-size:.85rem;margin:14px 0 0">Seules vos propres données sont affichées. Pour une absence, cliquez sur « Envoyer un justificatif » : seul le censeur le reçoit.</p></div>';
+}
+var xm=$("xm");
+if(xm)new MutationObserver(function(){if(!xm.classList.contains("on")&&jpActive&&$("jpRoot"))renderPersonal()}).observe(xm,{attributes:true,attributeFilter:["class"]});
+
+var nl0=$("navList");
+if(nl0){
+  new MutationObserver(injectNav).observe(nl0,{childList:true});
+  nl0.addEventListener("click",function(e){
+    var b=e.target.closest("button");if(!b)return;
+    if(b.hasAttribute("data-jp-nav"))openPersonal();else jpActive=false;
+  });
+}
+
+/* =================== 3. DROITS : libellé « fdr » =================== */
+function fixAdmin(){
+  var b=$("adBody");if(!b)return;var lbl=navLabel("[data-fdr-nav]","Marketing");
+  b.querySelectorAll("td,b").forEach(function(el){
+    if(el.children.length===0&&/(^|,\s)fdr(,|$)/.test(el.textContent))el.textContent=el.textContent.replace(/(^|,\s)fdr(?=,|$)/g,"$1"+lbl);
+  });
+}
+
+/* =================== Observateur unique (limité à une passe par image) =================== */
+var raf=0;
+new MutationObserver(function(){
+  if(raf)return;
+  raf=requestAnimationFrame(function(){
+    raf=0;
+    if($("mkDoc"))mk().catch(function(){});
+    if($("csRef"))censeurBtn();
+    if($("adBody"))fixAdmin();
+  });
+}).observe(vh,{childList:true,subtree:true});
+
+/* =================== Démarrage =================== */
+function refresh(){if(!me()){injectNav();return}loadCfg().then(injectNav)}
+var prev=window.onRole;
+window.onRole=function(){if(prev)prev();setTimeout(refresh,1400)};
+setInterval(function(){if(me())refresh()},60000);
+if(me())setTimeout(refresh,1600);
+})();
+</script>
 </body>
 </html>
