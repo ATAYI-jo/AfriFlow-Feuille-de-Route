@@ -2448,15 +2448,15 @@ if(loggedUserEmail)setTimeout(poll,1500);
   var $g = function(i){ return document.getElementById(i); };
 
   var btn = document.createElement("button");
-  btn.type = "button"; btn.id = "aiBtn"; btn.className = "p"; btn.textContent = "🦉JO AI";
+  btn.type = "button"; btn.id = "aiBtn"; btn.className = "p"; btn.textContent = "🦉 Assistance";
   btn.style.cssText = "position:fixed;right:12px;bottom:calc(12px + env(safe-area-inset-bottom,0px));z-index:900;display:none;box-shadow:0 4px 14px rgba(0,0,0,.25)";
 
   var box = document.createElement("div");
-  box.id = "aiBox"; box.setAttribute("role", "dialog"); box.setAttribute("aria-label", "Assistant IA");
+  box.id = "aiBox"; box.setAttribute("role", "dialog"); box.setAttribute("aria-label", "Assistance");
   box.style.cssText = "position:fixed;right:12px;bottom:calc(64px + env(safe-area-inset-bottom,0px));z-index:900;width:min(440px,94vw);height:min(70vh,640px);display:none;flex-direction:column;gap:8px;background:var(--card);color:var(--ink);border:1px solid var(--line);border-radius:16px;padding:12px;box-shadow:0 12px 40px rgba(0,0,0,.3)";
   box.innerHTML =
     '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px">' +
-      '<b style="color:var(--green)">Assistant technique (admin)</b>' +
+      '<b id="aiTitle" style="color:var(--green)">Assistance</b>' +
       '<span><button type="button" id="aiClear" style="padding:4px 10px;font-size:.8rem">Effacer</button> ' +
       '<button type="button" id="aiClose" aria-label="Fermer" style="padding:4px 10px;font-size:.8rem">✕</button></span>' +
     '</div>' +
@@ -2489,9 +2489,9 @@ if(loggedUserEmail)setTimeout(poll,1500);
     if(!window.__sb){ add("Erreur", "Service indisponible."); return; }
     busy = true; $g("aiGo").disabled = true; inp.value = "";
     add("Vous", t); H.push({role:"user", content:t});
-    var wait = add("Claude", "réfléchit… (cela peut prendre une minute)");
+    var wait = add("Gemini", "réfléchit… (cela peut prendre une minute)");
     try {
-      var r = await window.__sb.functions.invoke("admin-ai", {body:{messages:H.slice(-12)}});
+      var r = await window.__sb.functions.invoke("admin-ai", {body:{messages:H.slice(-12), mode:(typeof USER_ROLE !== "undefined" && USER_ROLE === "admin") ? "admin" : "help"}});
       if(r.error){
         var m = r.error.message || "Erreur";
         try { var j = await r.error.context.json(); if(j && j.error) m = j.error; } catch(e){}
@@ -2501,7 +2501,7 @@ if(loggedUserEmail)setTimeout(poll,1500);
       wait.remove();
       H.push({role:"assistant", content:reply});
       var prs = (r.data && r.data.prs) || [];
-      add("Claude", reply, prs.length ? prs[0].url : null);
+      add("Gemini", reply, prs.length ? prs[0].url : null);
       for(var i = 1; i < prs.length; i++) add("PR", prs[i].title, prs[i].url);
     } catch(e){
       wait.remove(); H.pop();
@@ -2516,11 +2516,16 @@ if(loggedUserEmail)setTimeout(poll,1500);
   $g("aiGo").onclick = send;
   $g("aiIn").addEventListener("keydown", function(e){ if(e.key === "Enter" && (e.ctrlKey || e.metaKey)){ e.preventDefault(); send(); } });
 
-  /* Visible uniquement pour l'administrateur connecté (se masque aussi à la déconnexion) */
+  /* Visible par tout utilisateur connecté ; seul l'administrateur peut demander des modifications du site
+     (le serveur « admin-ai » applique la même règle : mode "help" = réponses seulement). */
   setInterval(function(){
-    var isAdm = (typeof loggedUserEmail !== "undefined" && loggedUserEmail) && (typeof USER_ROLE !== "undefined" && USER_ROLE === "admin");
-    btn.style.display = isAdm ? "" : "none";
-    if(!isAdm){ box.style.display = "none"; if(H.length){ H = []; $g("aiLog").textContent = ""; } }
+    var logged = (typeof loggedUserEmail !== "undefined" && loggedUserEmail);
+    var isAdm = logged && (typeof USER_ROLE !== "undefined" && USER_ROLE === "admin");
+    btn.style.display = logged ? "" : "none";
+    var t = $g("aiTitle"), inp = $g("aiIn");
+    if(t) t.textContent = isAdm ? "Assistance · modification du site (administrateur)" : "Assistance";
+    if(inp) inp.placeholder = isAdm ? "Ex. : change le titre de l'étape 1… (Ctrl+Entrée pour envoyer)" : "Posez votre question sur AfriFloW… (Ctrl+Entrée pour envoyer)";
+    if(!logged){ box.style.display = "none"; if(H.length){ H = []; $g("aiLog").textContent = ""; } }
   }, 1000);
 })();
 </script>
@@ -3636,5 +3641,88 @@ if(me())setTimeout(refresh,1500);
 })();
 </script>
 
+
+<!-- =====================================================================
+  MODULE AFRIFLOW · Verre sans teinte + bandes d'entête personnalisables
+  Les bandes d'entête (titre de l'accueil, feuille de route) ont l'image
+  de votre choix (Personnaliser › « Image des bandes d'entête »). Elle reste
+  toujours translucide (réglage de 5 % à 60 % maximum, jamais opaque).
+====================================================================== -->
+<style id="af-neutre-css">
+/* ---------- Verre neutre : plus de teinte ni de halo coloré ---------- */
+:root{--g-neutral-edge:rgba(255,255,255,.62);--g-neutral-shadow:0 10px 30px rgba(0,0,0,.09),inset 0 1px 0 rgba(255,255,255,.5)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--g-neutral-edge:rgba(255,255,255,.14);--g-neutral-shadow:0 10px 30px rgba(0,0,0,.35),inset 0 1px 0 rgba(255,255,255,.06)}}
+:root[data-theme="dark"]{--g-neutral-edge:rgba(255,255,255,.14);--g-neutral-shadow:0 10px 30px rgba(0,0,0,.35),inset 0 1px 0 rgba(255,255,255,.06)}
+.toolbar,.map-panel,.step-card,.dcard,.journal-article,.addrow,.stm,.ed-bar,.pubbar,.lock-banner,.auth-box,.customizer-box,.fdr-tbl,.xlw,
+.start-pill,.plus-card,.border-sign,#side,#menuBtn,.fdr-bar,.fdr-ban,.mt-card,.mt-adm,.mt-box,.mt-m,.brand,.fdr-hero,
+button:not(.p):not(.danger):not(#logout-btn):not(.fdr-head):not(.nv):not(.nx):not(#menuBtn){
+ -webkit-backdrop-filter:blur(22px)!important;backdrop-filter:blur(22px)!important;
+ border-color:var(--g-neutral-edge)!important;box-shadow:var(--g-neutral-shadow)!important}
+/* les liserés de couleur disparaissent (le statut reste lisible dans les pastilles) */
+.fdr-bar::before{display:none}
+.fdr-bar{--c:var(--todo)}
+.step-card{border-top-color:var(--g-neutral-edge)!important}
+.fdr-row{border-left-color:transparent}
+.fdr-ban{border-left-width:1px!important}
+.mt-card.live{border-color:var(--g-neutral-edge)}
+
+/* ---------- Bandes d'entête : verre + image au choix, toujours translucides ---------- */
+.brand,.fdr-hero{position:relative;isolation:isolate;overflow:hidden;
+ background:color-mix(in srgb,var(--card) 55%,transparent)!important;color:var(--ink)}
+.brand::before,.fdr-hero::before{content:"";position:absolute;inset:0;z-index:-1;pointer-events:none;border-radius:inherit;
+ background:var(--hd-img,none) center/cover no-repeat;opacity:var(--hd-op,.3)}
+.brand h1,.fdr-hero h2,.fdr-hero p,.fdr-prog-top{color:var(--ink)!important;text-shadow:0 1px 2px rgba(255,255,255,.35)}
+.brand .sub{color:var(--muted)!important}
+.brand h1 span{color:var(--amber)!important;text-shadow:none}
+.fdr-barline{background:color-mix(in srgb,var(--ink) 14%,transparent)!important}
+.fdr-barline i{background:var(--green)!important}
+#hdBox small{color:var(--muted)}
+</style>
+
+<script>
+(function(){
+"use strict";
+var K="afriflow_hd_v1",R=document.documentElement.style;
+function load(){try{return JSON.parse(localStorage.getItem(K)||"null")||{}}catch(e){return{}}}
+function save(o){try{localStorage.setItem(K,JSON.stringify(o));return true}catch(e){(window.toast||alert)("Stockage de l'appareil plein : choisissez une image plus petite.");return false}}
+function apply(o){
+  if(o&&o.i)R.setProperty("--hd-img",'url("'+o.i+'")');else R.removeProperty("--hd-img");
+  var v=Math.max(5,Math.min(60,o&&o.o!=null?o.o:30));      /* plafond 60 % : jamais opaque */
+  R.setProperty("--hd-op",(v/100).toFixed(2));
+}
+var o0=load();apply(o0);
+
+var cb=document.getElementById("closeCustomBtn");
+if(!cb||!cb.parentNode)return;
+var bx=document.createElement("div");bx.id="hdBox";
+bx.innerHTML='<div class="fm"><label for="hd-file">Image des bandes d\'entête</label><input type="file" id="hd-file" accept="image/*"><small>Toujours affichée en transparence, quelle que soit l\'image.</small></div>'
+ +'<div class="fm"><label for="hd-op">Transparence de l\'image (plus à gauche = plus transparent)</label><input type="range" id="hd-op" min="5" max="60" value="'+(o0.o!=null?o0.o:30)+'"></div>'
+ +'<div style="margin-top:6px"><button type="button" id="hd-reset">Retirer l\'image des bandes</button></div>';
+cb.parentNode.before(bx);
+
+document.getElementById("hd-op").addEventListener("input",function(){var o=load();o.o=+this.value;if(save(o))apply(o)});
+document.getElementById("hd-reset").onclick=function(){try{localStorage.removeItem(K)}catch(e){}document.getElementById("hd-op").value=30;apply({})};
+document.getElementById("hd-file").addEventListener("change",function(){
+  var f=this.files[0];this.value="";if(!f)return;
+  if(!/^image\//.test(f.type)){(window.toast||alert)("Choisissez un fichier image (JPG, PNG, WebP…).");return}
+  var r=new FileReader();
+  r.onload=function(){
+    var img=new Image();
+    img.onload=function(){
+      var k=Math.min(1,1400/Math.max(img.width,img.height)),cv=document.createElement("canvas");
+      cv.width=Math.round(img.width*k);cv.height=Math.round(img.height*k);
+      cv.getContext("2d").drawImage(img,0,0,cv.width,cv.height);
+      var q=.8,d=cv.toDataURL("image/jpeg",q);
+      while(d.length>600000&&q>.35){q-=.1;d=cv.toDataURL("image/jpeg",q)}
+      var o=load();o.i=d;if(o.o==null)o.o=+document.getElementById("hd-op").value;
+      if(save(o))apply(o);
+    };
+    img.onerror=function(){(window.toast||alert)("Image illisible.")};
+    img.src=r.result;
+  };
+  r.readAsDataURL(f);
+});
+})();
+</script>
 </body>
 </html>
