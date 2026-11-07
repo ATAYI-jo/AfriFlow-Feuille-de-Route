@@ -4024,14 +4024,27 @@ if(!setup()){var t=setInterval(function(){if(setup())clearInterval(t)},300)}
 #aiGo{width:100%;margin:0}
 #aiLog{min-width:0}
 </style>
-  <style id="af-mobile-css">
-html,body{max-width:100%;overflow-x:hidden}
+<style id="af-mobile-css">
+html,body{max-width:100%;overflow-x:hidden;overscroll-behavior-y:none}
 img,svg,video,canvas{max-width:100%}
 @media (max-width:768px){
- :root{--g-bg:94%}
+ *,*::before,*::after{box-sizing:border-box}
+ :root{--g-bg:70%}
+ /* verre conservé (flou plus léger) sur les grandes surfaces */
+ .toolbar,.map-panel,.step-card,.dcard,.journal-article,.addrow,.stm,.pubbar,.lock-banner,.auth-box,.customizer-box,.fdr-tbl,.xlw,.start-pill,.plus-card,.border-sign,#side,#menuBtn,.fdr-bar,.fdr-ban,.mt-card,.mt-adm,.mt-box,.mt-m,.brand,.fdr-hero{
+  -webkit-backdrop-filter:blur(12px) saturate(140%)!important;backdrop-filter:blur(12px) saturate(140%)!important}
+ /* boutons : translucides sans flou (beaucoup d'éléments = lourd) */
+ button:not(.p):not(.danger):not(#logout-btn):not(.fdr-head):not(.nv):not(.nx):not(#menuBtn){-webkit-backdrop-filter:none!important;backdrop-filter:none!important}
+ /* allègement : fond plein écran, filtres et animations */
  #afBg{display:none!important}
- *{-webkit-backdrop-filter:none!important;backdrop-filter:none!important}
+ #scenery{filter:none!important;-webkit-mask-image:none!important;mask-image:none!important}
+ #sceneryGlow,.wk{display:none!important}
  .cloud,.af-cloud,.sw,.af-sw,.lg,.am,.bd,.hoe2{animation:none!important}
+ /* le logo qui suit la route passe derrière les cartes */
+ #car-marker{z-index:1!important;pointer-events:none}
+ /* centrage */
+ .step-card,.border-sign,.mt-card,.brand{max-width:100%}
+ .mt-btn{width:100%;text-align:center}
  .toolbar,.toolbar-actions{flex-wrap:wrap}
  .toolbar button,.toolbar-actions button{flex:1 1 auto}
  .brand{padding:22px 18px!important;gap:14px!important}
