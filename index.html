@@ -18,17 +18,15 @@
 <meta name="description" content="Feuille de route interactive d’AfriFloW en mode journal avec registre START des connexions.">
 <script>try{if(sessionStorage.getItem("afriflow_intro_seen"))document.documentElement.classList.add("no-intro")}catch(e){}</script>
 <style>
-:root {
-  --bg: #fcfbfa; --card: #fff; --ink: #1d2a22; --muted: #55625a; --green: #1f5d3a; --amber: #d98a1b; --line: #e2ed7; --done: #1f5d3a; --doing: #d98a1b; --todo: #7b8a93;
+:root{
+  --font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+  --journal-font: Georgia, "Times New Roman", serif;
+  --road-bg: #4a4f55;
+  --road-line: #f4f1de;
 }
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
-    --bg: #121212; --card: #1e1e1e; --ink: #eef2ec; --muted: #9aa89f; --green: #4fa874; --amber: #f0a73a; --line: #333; --done: #4fa874; --doing: #f0a73a; --todo: #8c99a2;
-  }
 }
 :root[data-theme="light"] {
-  --bg: #fcfbfa; --card: #fff; --ink: #1d2a22; --muted: #55625a; --green: #1f5d3a; --amber: #d98a1b; --line: #e2ed7; --done: #1f5d3a; --doing: #d98a1b; --todo: #7b8a93;
-}
+  --bg: #fcfbfa; --card: #fff; --ink: #1d2a22; --muted: #55625a; --green: #1f5d3a; --amber: #d98a1b; --line: #e2ded7; --done: #1f5d3a; ...
 html{scroll-padding-top:env(safe-area-inset-top,0px)}
 body{margin:0;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);background:var(--bg);color:var(--ink);font:16px/1.5 var(--font-family);letter-spacing:.005em;transition:background .3s,color .3s}
 
@@ -2095,7 +2093,7 @@ buildNav();
   sb.channel('afriflow-state')
     .on('postgres_changes', {event:'*', schema:'public', table:TABLE}, function(p){
       var k = (p.new && p.new.key) || (p.old && p.old.key) || '';
-      if(/^(log|user|req|pub|msg|sent|att):/.test(k)) return;
+      if(/^(log|user|req|pub|msg|sent|att|meet|mtatt):/.test(k)) return;
       cloudLoad();
     })
     .subscribe();
@@ -2355,6 +2353,7 @@ async function showAtt(v,x){
   var r=await S().from(T()).select("value").eq("key","att:"+v.att).maybeSingle();
   box=$("mAtt");if(!box)return;
   var fs=(r.data&&r.data.value&&r.data.value.files)||[];
+  fs=fs.filter(function(f){return f&&/^data:[\w.+-]+\/[\w.+-]+(;[^,]*)?;base64,/.test(f.d)});
   if(r.error||!fs.length){box.innerHTML='<small style="color:var(--muted)">Pièces jointes indisponibles.</small>';return}
   box.innerHTML='<h4 style="margin:14px 0 6px;font-family:var(--font-family)">Pièces jointes ('+fs.length+')</h4>'+fs.map(function(f){return '<div class="file-row"><div>📎 <a href="'+f.d+'" download="'+esc(f.n)+'">'+esc(f.n)+'</a></div><small style="color:var(--muted)">'+fsz(f.s)+'</small></div>'}).join("")+'<div id="mDbxNote" style="font-size:.85rem;color:var(--muted);margin-top:6px"></div>';
   if(tab==="in"&&isAdm()&&window.DBX){
@@ -3464,7 +3463,7 @@ collect();sched();
 <script>
 (function(){
 "use strict";
-var CFG="pub:meetcfg", PRE="meet:", ATT="att:", OPEN_BEFORE=15*6e4;
+var CFG="pub:meetcfg", PRE="meet:", ATT="mtatt:", OPEN_BEFORE=15*6e4;
 var cfg={link:"",censeurs:[]}, meets=[], atts={}, active=false;
 
 function $(i){return document.getElementById(i)}
