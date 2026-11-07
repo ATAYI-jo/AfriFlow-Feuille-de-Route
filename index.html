@@ -2994,7 +2994,7 @@ function drawList(){
   var L=cache.slice().sort(function(a,b){return a.due<b.due?-1:1});
   host.innerHTML=L.length?L.map(function(i){
     var l=daysLeft(i.due);
-    return '<div class="fdr-row'+(i.done?' done':'')+'" style="--c:'+(i.done?'var(--done)':colorFor(l))+'"><div><b>'+esc(i.title)+'</b><br><small>Clôture le '+fr(i.due)+(i.notified?' · alerte envoyée à '+i.notifiedCount+' inscrit(s) le '+new Date(i.notified).toLocaleDateString("fr-FR"):'')+(i.note?' · '+esc(i.note):'')+'</small></div>'
+    return '<div class="fdr-row'+(i.done?' done':'')+'" style="--c:'+(i.done?'var(--done)':colorFor(l))+'"><div><b>'+esc(i.title)+'</b><br><small>'+(i.start?'Du '+fr(i.start)+' au '+fr(i.due):'Clôture le '+fr(i.due))+(i.notified?' · alerte envoyée à '+i.notifiedCount+' inscrit(s) le '+new Date(i.notified).toLocaleDateString("fr-FR"):'')+(i.note?' · '+esc(i.note):'')+'</small></div>'
      +'<div class="fdr-act"><span class="when">'+(i.done?'Clôturé':when(l))+'</span>'
      +(isAdmin()?'<button type="button" data-a="resend" data-id="'+esc(i.id)+'">Relancer</button><button type="button" data-a="done" data-id="'+esc(i.id)+'">'+(i.done?'Rouvrir':'Marquer clôturé')+'</button><button type="button" class="danger" data-a="del" data-id="'+esc(i.id)+'">Supprimer</button>':'')+'</div></div>';
   }).join(""):'<p style="color:var(--muted);margin-top:12px">Aucune échéance en cours.</p>';
@@ -3019,7 +3019,7 @@ function render(){
   /* Échéances et alertes */
   var form=isAdmin()?'<p style="margin:6px 0 4px"><b>Nouvelle échéance</b><br><small>Tous les comptes inscrits reçoivent un message dans leur Messagerie et voient un bandeau de compte à rebours à chaque connexion.</small></p>'
     +'<div class="fdr-form"><label>Élément à clôturer<input id="fdrT" maxlength="120" placeholder="Ex. Base prospects consolidée" autocomplete="off"></label>'
-    +'<label>Date de clôture<input type="date" id="fdrD" value="'+addDays(15)+'"></label>'
+    +'<label>Date de début<input type="date" id="fdrS" value="'+addDays(0)+'"></label><label>Date de clôture<input type="date" id="fdrD" value="'+addDays(15)+'"></label>'
     +'<label class="full">Précision (facultatif)<textarea id="fdrN" rows="2" maxlength="400" placeholder="Ce qui est attendu, qui est concerné…"></textarea></label></div>'
     +'<div id="fdrErr" role="alert" style="color:#c0392b;min-height:1.2em;font-size:.88rem"></div>'
     +'<button type="button" class="p" id="fdrGo">Créer l\'échéance et alerter les inscrits</button>':'';
@@ -3070,14 +3070,15 @@ async function onClick(e){
   if(!isAdmin())return;
   try{
     if(b.id==="fdrGo"){
-      var title=$("fdrT").value.trim(),due=$("fdrD").value,note=$("fdrN").value.trim(),err=$("fdrErr");
+      var title=$("fdrT").value.trim(),start=$("fdrS").value,due=$("fdrD").value,note=$("fdrN").value.trim(),err=$("fdrErr");
       if(!title||!due){err.textContent="Indiquez l'élément à clôturer et la date de clôture.";return}
       if(daysLeft(due)<0){err.textContent="La date de clôture est déjà passée.";return}
+      if(start&&start>due){err.textContent="La date de début doit être avant la date de clôture.";return}
       err.textContent="";b.disabled=true;
       var rec=await recipients();
       if(!rec.length){err.textContent="Aucun autre compte inscrit pour le moment.";b.disabled=false;return}
       if(!confirm("Envoyer l'alerte « "+title+" » (clôture "+when(daysLeft(due))+") à "+rec.length+" inscrit(s) ?")){b.disabled=false;return}
-      var it={id:uid(),title:title,due:due,note:note,created:Date.now()};
+      var it={id:uid(),title:title,start:start,due:due,note:note,created:Date.now()};
       await notify(it,rec);
       await saveDl(cache.concat([it]));
       toast("Alerte envoyée à "+rec.length+" inscrit(s).");
@@ -3464,7 +3465,7 @@ async function load(){
   if(!a.error&&a.data&&a.data.value){cfg=a.data.value;cfg.censeurs=(cfg.censeurs||[]).map(function(x){return String(x).toLowerCase()})}
   var r=await SB().from(TB()).select("key,value").like("key",PRE+"%").limit(300);
   if(!r.error)meets=(r.data||[]).map(function(x){return x.value}).filter(function(v){return v&&v.start}).sort(function(x,y){return x.start-y.start});
-  var q=SB().from(TB()).select("key,value").like("key",isCens()?ATT+"%":ATT+"%:"+me()).limit(5000);
+  var q=SB().from(TB()).select("key,value").like("key",isCens()?ATT+"m%":ATT+"m%:"+me()).limit(5000);
   var t=await q; atts={};
   if(!t.error)(t.data||[]).forEach(function(x){atts[x.key]=x.value});
 }
@@ -3862,7 +3863,7 @@ if(fb&&!document.querySelector('.oauth[data-p="azure"]')){
 function tabs(){
   var out=[];
   document.querySelectorAll("#navList .nvr .nv").forEach(function(b){
-    var id=b.dataset.id||(b.hasAttribute("data-cs-nav")?"censeur":null);
+    var id=b.dataset.id||(b.hasAttribute("data-cs-nav")?"censeur":(b.hasAttribute("data-fdr-nav")?"fdr":null));
     if(!id||id==="admin"||id==="messages")return;
     out.push({id:id,n:b.textContent.replace(/\s\(\d+\)$/,"")});
   });
