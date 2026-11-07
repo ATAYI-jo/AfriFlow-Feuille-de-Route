@@ -3752,5 +3752,71 @@ function setup(){
 if(!setup()){var t=setInterval(function(){if(setup())clearInterval(t)},300)}
 })();
 </script>
+  <script>
+(function(){
+"use strict";
+var $=function(i){return document.getElementById(i)},vh=$("viewHost");if(!vh)return;
+function al(m){var w=[14,9,14,7],s="";w.forEach(function(v,i){var x=m==="c"?(14-v)/2:m==="r"?14-v:0;if(m==="j")v=14;s+='<rect x="'+(x+1)+'" y="'+(1+i*3.4)+'" width="'+v+'" height="1.6" fill="currentColor"/>'});return '<svg width="16" height="16" viewBox="0 0 16 16">'+s+'</svg>'}
+var IC={bold:"<b>G</b>",italic:"<i>I</i>",underline:"<u>S</u>",strikeThrough:"<s>abc</s>",justifyLeft:al("l"),justifyCenter:al("c"),justifyRight:al("r"),justifyFull:al("j"),insertUnorderedList:"•≡",insertOrderedList:"1≡",outdent:"⇤",indent:"⇥",undo:"↶",redo:"↷"};
+var TT={bold:"Gras (Ctrl+B)",italic:"Italique (Ctrl+I)",underline:"Souligné (Ctrl+U)",strikeThrough:"Barré",justifyLeft:"Aligner à gauche",justifyCenter:"Centrer",justifyRight:"Aligner à droite",justifyFull:"Justifier",insertUnorderedList:"Puces",insertOrderedList:"Numérotation",outdent:"Diminuer le retrait",indent:"Augmenter le retrait",undo:"Annuler (Ctrl+Z)",redo:"Rétablir (Ctrl+Y)"};
+var BIG={table:["▦","Tableau"],image:["🖼","Image"],link:["🔗","Lien"],insertHorizontalRule:["―","Ligne"]};
+var G=[["a","Annuler",["[data-c=undo]","[data-c=redo]"]],["a","Style",["[data-s=formatBlock]"]],
+["a","Police",["[data-s=fontName]","[data-s=fontSize]","[data-c=bold]","[data-c=italic]","[data-c=underline]","[data-c=strikeThrough]","[data-k=foreColor]","[data-k=hiliteColor]"]],
+["a","Paragraphe",["[data-c=justifyLeft]","[data-c=justifyCenter]","[data-c=justifyRight]","[data-c=justifyFull]","[data-c=insertUnorderedList]","[data-c=insertOrderedList]","[data-c=outdent]","[data-c=indent]"]],
+["i","Insertion",["[data-c=table]","[data-c=image]","[data-c=link]","[data-c=insertHorizontalRule]","#wImg"]]];
+
+function ribbon(bar){
+  var tabs=document.createElement("div");tabs.className="ms-tabs";
+  tabs.innerHTML='<button type="button" class="ms-tab on" data-t="a">Accueil</button><button type="button" class="ms-tab" data-t="i">Insertion</button>';
+  bar.before(tabs);
+  var els=G.map(function(g){
+    var gd=document.createElement("div"),b=document.createElement("div"),l=document.createElement("div");
+    gd.className="ms-g";gd.dataset.t=g[0];b.className="ms-gb";l.className="ms-gl";l.textContent=g[1];gd.appendChild(b);gd.appendChild(l);
+    g[2].forEach(function(s){
+      var e=bar.querySelector(s);if(!e)return;if(e.type==="color")e=e.closest("label");
+      var c=e.dataset&&e.dataset.c;
+      if(IC[c])e.innerHTML=IC[c];if(TT[c])e.title=TT[c];
+      if(BIG[c]){e.innerHTML="<i>"+BIG[c][0]+"</i><span>"+BIG[c][1]+"</span>";e.classList.add("ms-big")}
+      b.appendChild(e);
+    });
+    return gd;
+  });
+  bar.querySelectorAll(".sep").forEach(function(x){x.remove()});
+  els.forEach(function(g){bar.appendChild(g)});
+  function tab(t){els.forEach(function(g){g.hidden=g.dataset.t!==t});tabs.querySelectorAll(".ms-tab").forEach(function(b){b.classList.toggle("on",b.dataset.t===t)})}
+  tabs.onclick=function(e){var b=e.target.closest("[data-t]");if(b)tab(b.dataset.t)};tab("a");
+}
+function cn(i){var s="";i++;while(i>0){var m=(i-1)%26;s=String.fromCharCode(65+m)+s;i=Math.floor((i-1)/26)}return s}
+
+function sync(){
+  /* CORRECTION : l'éditeur ne compte que si #viewHost est réellement affiché */
+  var shown=vh.style.display!=="none";
+  var doc=shown?$("wDoc"):null,grid=shown?$("wGrid"):null,bd=shown?$("board"):null,bar=$("wBar");
+  var k=doc?"word":grid?"excel":bd?"design":"";
+  document.body.classList.toggle("ms-edit",!!k);
+  vh.classList.remove("ms-word","ms-excel","ms-design");
+  if(!k)return;
+  vh.classList.add("ms-"+k);
+  if(bar&&!bar.dataset.ms){bar.dataset.ms=1;ribbon(bar)}
+  if(grid&&!grid.dataset.ms){
+    grid.dataset.ms=1;
+    var fx=document.createElement("div");fx.className="ms-fx";
+    fx.innerHTML='<input id="msNb" readonly aria-label="Cellule"><i>fx</i><input id="msFi" readonly aria-label="Contenu de la cellule">';
+    grid.before(fx);
+    grid.addEventListener("focusin",function(e){var i=e.target;if(i.tagName!=="INPUT")return;$("msNb").value=cn(+i.dataset.c)+(+i.dataset.r+1);$("msFi").value=i.value});
+    grid.addEventListener("input",function(e){$("msFi").value=e.target.value});
+  }
+  if(!vh.querySelector(".ms-status")){
+    var st=document.createElement("div");st.className="ms-status";
+    st.innerHTML=k==="excel"?'<span class="ms-sh">Feuille1</span><span>Prêt</span>':k==="word"?'<span id="msWc"></span><span>Français (France)</span>':'<span>Design</span>';
+    vh.appendChild(st);
+    if(doc){var up=function(){var t=(doc.innerText||"").trim();$("msWc").textContent=(t?t.split(/\s+/).length:0)+" mot(s)"};doc.addEventListener("input",up);up()}
+  }
+}
+/* CORRECTION : on surveille aussi le style (affichage/masquage de #viewHost) */
+new MutationObserver(sync).observe(vh,{childList:true,attributes:true,attributeFilter:["style"]});
+sync();
+})();
+</script>
 </body>
 </html>
