@@ -2963,9 +2963,24 @@ function bar(id,title,meta,tag,color,inner,o){
   return '<section class="fdr-bar'+(o.sub?' sub':'')+(op?' open':'')+'" id="b-'+id+'" style="--c:'+color+'">'
    +'<button type="button" class="fdr-head" aria-expanded="'+op+'" aria-controls="p-'+id+'">'
    +'<span class="fdr-ttl"><b>'+esc(title)+'</b>'+(meta!=null?'<small'+(o.metaId?' id="'+o.metaId+'"':'')+'>'+esc(meta)+'</small>':'')+'</span>'
+   +(o.to?'<span class="fdr-clock" data-from="'+(o.from||"")+'" data-to="'+o.to+'"></span>':'')
    +(tag?'<span class="fdr-tag"'+(o.tagId?' id="'+o.tagId+'"':'')+' style="--c:'+(o.tagColor||color)+'">'+esc(tag)+'</span>':'')
    +'<span class="fdr-chev" aria-hidden="true"></span></button>'
    +'<div class="fdr-panel" id="p-'+id+'" role="region"><div class="fdr-pclip"><div class="fdr-pin">'+inner+'</div></div></div></section>';
+}
+function dur(ms){ms=Math.max(0,ms);var m=Math.floor(ms/6e4),d=Math.floor(m/1440),h=Math.floor(m%1440/60),mi=m%60;return (d?d+" j ":"")+h+" h "+("0"+mi).slice(-2)+" min"}
+function tick(){
+  var now=Date.now();
+  document.querySelectorAll("#viewHost .fdr-clock").forEach(function(el){
+    var f=el.dataset.from?pd(el.dataset.from).getTime():0,t=pd(el.dataset.to).getTime()+864e5-1000,cls,h,s="";
+    if(f&&now<f){cls="soon";h="Démarre dans "+dur(f-now)}
+    else if(now>t){cls="done";h=f?"Terminée":"Atteint";s="depuis "+dur(now-t)}
+    else if(f){cls="";h="Reste "+dur(t-now);s="écoulé : "+dur(now-f)}
+    else{cls=(t-now)<=14*864e5?"late":"soon";h="Dans "+dur(t-now)}
+    var html='<span>'+h+'</span>'+(s?'<small>'+s+'</small>':'');
+    if(el.innerHTML!==html)el.innerHTML=html;
+    el.className="fdr-clock"+(cls?" "+cls:"");
+  });
 }
 
 /* ---------- Liste des échéances (dans la barre « Échéances ») ---------- */
@@ -3009,16 +3024,16 @@ function render(){
   /* Jalons */
   h+='<h3>Jalons</h3>'+JALONS.map(function(j,i){
     var l=daysLeft(j.date),c=l<0?"var(--done)":l<=14?"var(--doing)":"var(--todo)";
-    return bar("j"+i,frl(j.date)+" · "+j.t,j.d,l<0?"Passé":when(l),c,'<p><b>Décision attendue :</b> '+esc(j.dec)+'</p>');
+    return bar("j"+i,j.t,"Exécution : "+frl(j.date),"",c,'<p>'+esc(j.d)+'</p><p><b>Décision attendue :</b> '+esc(j.dec)+'</p>',{to:j.date});
   }).join("");
 
   /* Phases, avec séquences en sous-barres */
   h+='<h3>Déploiement par phase</h3>'+PHASES.map(function(p){
     var st=phaseStatus(p);
     var inner='<p>'+esc(p.goal)+'</p>'+p.seq.map(function(q,k){
-      return bar("ph"+p.n+"s"+k,q.t,q.d,"",st[1],'<ul>'+q.a.map(function(x){return '<li>'+esc(x)+'</li>'}).join("")+'</ul><small><b>Livrables :</b> '+esc(q.l)+'</small>',{sub:true});
+      return bar("ph"+p.n+"s"+k,q.t,"Exécution : "+q.d,"",st[1],'<ul>'+q.a.map(function(x){return '<li>'+esc(x)+'</li>'}).join("")+'</ul><small><b>Livrables :</b> '+esc(q.l)+'</small>',{sub:true});
     }).join("");
-    return bar("ph"+p.n,"Phase "+p.n+" · "+p.name,"Du "+frl(p.start)+" au "+frl(p.end),st[0],st[1],inner,{open:st[0]==="En cours"});
+    return bar("ph"+p.n,"Phase "+p.n+" · "+p.name,"Exécution : du "+frl(p.start)+" au "+frl(p.end),"",st[1],inner,{open:st[0]==="En cours",from:p.start,to:p.end});
   }).join("");
 
   /* Indicateurs et risques */
@@ -3029,7 +3044,7 @@ function render(){
      '<div class="fdr-tbl"><table><thead><tr><th>Risque</th><th>Mesure de maîtrise</th></tr></thead><tbody>'+RISKS.map(function(r){return '<tr><td><b>'+esc(r[0])+'</b></td><td>'+esc(r[1])+'</td></tr>'}).join("")+'</tbody></table></div>')
   +'</div>';
   var host=$("viewHost");host.innerHTML=h;host.onclick=onClick;
-  drawBanner(cache);drawList();
+  drawBanner(cache);drawList();tick();
 }
 
 async function onClick(e){
@@ -3112,6 +3127,7 @@ if(nl0){
 var prev=window.onRole;
 window.onRole=function(){if(prev)prev();setTimeout(refreshBanner,1200)};
 setInterval(function(){if(me())refreshBanner();else drawBanner([])},90000);
+setInterval(tick,20000);
 if(me())setTimeout(refreshBanner,1500);
 })();
 </script>
@@ -3282,5 +3298,343 @@ if(!off)build();
 sched();
 })();
 </script>
-  </body>
+  <!-- =====================================================================
+  AJOUTS AFRIFLOW — à coller juste avant </body>, APRÈS le dernier </script>
+  (après le module « Fond animé plein écran »). Rien d'autre à supprimer.
+
+  BLOC 1  Carte lisible en mode clair · décor sans coupure · verre partout
+  BLOC 2  Style « ruban » de la feuille de route (CSS ; 4 petits
+          remplacements JS à faire en plus : voir modifs-feuille-de-route.md)
+  BLOC 3  Espace « Réunion » sur l'accueil (lien Teams réglable par l'admin)
+          + onglet « Censeur » (programmation des réunions et présences)
+====================================================================== -->
+
+<!-- ============================ BLOC 1 + 2 : CSS ============================ -->
+<style id="af-ajouts-css">
+/* ---------- 1. Carte du monde lisible en mode clair ---------- */
+:root{--map-sea:#a9cfe9;--map-land:#eeebe0;--map-edge:#8a978d}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--map-sea:#1c3a52;--map-land:#34423b;--map-edge:#0f1a14}}
+:root[data-theme="dark"]{--map-sea:#1c3a52;--map-land:#34423b;--map-edge:#0f1a14}
+#flowMap>rect:first-child{fill:var(--map-sea)!important}
+#flowMap .country{stroke:var(--map-edge);stroke-width:.45}
+#flowMap .country:not(.st-actif):not(.st-prosp):not(.st-prevu){fill:var(--map-land)}
+.map-panel{background:color-mix(in srgb,var(--card) 88%,transparent)}
+.legend span:last-child i{background:var(--map-land)!important;border:1px solid var(--map-edge)}
+
+/* ---------- 2. Décor : plus de coupure entre la route et le fond ---------- */
+/* a) bords fondus au lieu d'un rectangle arrondi qui découpe le décor */
+body:not(.af-off) #scenery,body:not(.af-off) #sceneryGlow{
+ border-radius:0;
+ -webkit-mask-image:linear-gradient(90deg,transparent,#000 16%,#000 84%,transparent),linear-gradient(180deg,transparent,#000 5%,#000 95%,transparent);
+ -webkit-mask-composite:source-in;
+ mask-image:linear-gradient(90deg,transparent,#000 16%,#000 84%,transparent),linear-gradient(180deg,transparent,#000 5%,#000 95%,transparent);
+ mask-composite:intersect}
+/* b) les éléments de la route qui seraient « dans le ciel » s'effacent */
+body:not(.af-off) #scenery .ob{transition:opacity .35s ease}
+body:not(.af-off) #scenery .ob.af-sky-hide{opacity:0}
+/* c) horizon doux (brume) au lieu d'une ligne dure ciel/sol */
+.af-sky{inset:0!important;background:linear-gradient(var(--aT) 0,var(--aB) 34%,var(--aB) 100%)!important}
+.af-ground{-webkit-mask-image:linear-gradient(transparent 0,#000 130px);mask-image:linear-gradient(transparent 0,#000 130px)}
+.af-mts{-webkit-mask-image:linear-gradient(#000 40%,transparent);mask-image:linear-gradient(#000 40%,transparent)}
+
+/* ---------- 3. Verre partout ---------- */
+button:not(.p):not(.danger):not(#logout-btn):not(.fdr-head):not(.nv):not(.nx):not(#menuBtn){
+ background:color-mix(in srgb,var(--card) 58%,transparent);
+ -webkit-backdrop-filter:blur(12px) saturate(160%);backdrop-filter:blur(12px) saturate(160%);
+ border-color:color-mix(in srgb,#fff var(--g-edge,60%),transparent);
+ box-shadow:0 6px 18px var(--g-shadow,rgba(24,48,36,.10)),inset 0 1px 0 rgba(255,255,255,var(--g-hi,.5))}
+select,textarea,input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=color]):not([type=file]){
+ background:color-mix(in srgb,var(--card) 62%,transparent)}
+.brand,.fdr-hero{
+ background:linear-gradient(120deg,rgba(18,61,42,.84),rgba(31,93,58,.76) 58%,rgba(40,115,74,.72));
+ -webkit-backdrop-filter:blur(18px) saturate(150%);backdrop-filter:blur(18px) saturate(150%);
+ border:1px solid rgba(255,255,255,.22);
+ box-shadow:0 18px 46px rgba(20,60,39,.22),inset 0 1px 0 rgba(255,255,255,.22)}
+
+/* ---------- Feuille de route : ruban cliquable (date + temps qui passe) ---------- */
+.fdr-bar{border-radius:22px}
+.fdr-head{min-height:68px;padding:14px 18px 14px 28px;gap:14px}
+.fdr-ttl b{font-size:1.05rem}
+.fdr-clock{flex:none;display:inline-flex;flex-direction:column;align-items:flex-end;gap:1px;padding:8px 16px;border-radius:14px;
+ background:var(--green);color:#fff;font-weight:700;font-size:.86rem;line-height:1.25;text-align:right;white-space:nowrap;
+ box-shadow:0 6px 16px color-mix(in srgb,var(--green) 35%,transparent)}
+.fdr-clock small{display:block;margin:0;font-weight:500;font-size:.74rem;opacity:.88;color:inherit}
+.fdr-clock.soon{background:var(--todo)}
+.fdr-clock.late{background:var(--doing)}
+.fdr-clock.done{background:color-mix(in srgb,var(--ink) 55%,transparent)}
+@media (max-width:640px){.fdr-head{flex-wrap:wrap}.fdr-clock{order:3;width:100%;align-items:flex-start}}
+</style>
+
+<!-- ============================ BLOC 1 : JS (horizon) ============================ -->
+<script>
+(function(){
+"use strict";
+/* Cache les éléments de la route situés au-dessus de l'horizon du fond plein écran
+   (l'horizon est à 34 % de la hauteur de l'écran, voir module « Fond animé »). */
+var sc=document.getElementById("scenery"),rc=document.getElementById("roadContainer"),objs=[],raf=0;
+function collect(){objs=[].slice.call(document.querySelectorAll("#scenery .ob")).map(function(e){return {e:e,y:parseFloat(e.style.top)||0}})}
+function upd(){
+  raf=0;
+  if(!sc||!rc||document.body.classList.contains("af-off"))return;
+  var hz=window.innerHeight*.34-rc.getBoundingClientRect().top+10;
+  for(var i=0;i<objs.length;i++)objs[i].e.classList.toggle("af-sky-hide",objs[i].y<hz);
+}
+function sched(){if(!raf)raf=requestAnimationFrame(upd)}
+addEventListener("scroll",sched,{passive:true});addEventListener("resize",sched);
+if(sc)new MutationObserver(function(){collect();sched()}).observe(sc,{childList:true});
+collect();sched();
+})();
+</script>
+
+<!-- ============================ BLOC 3 : RÉUNION + CENSEUR ============================ -->
+<style id="mt-css">
+.mt-card,.mt-adm,.mt-box,.mt-m{
+ background:color-mix(in srgb,var(--card) var(--g-bg,56%),transparent);
+ -webkit-backdrop-filter:blur(var(--g-blur,20px)) saturate(165%);backdrop-filter:blur(var(--g-blur,20px)) saturate(165%);
+ border:1px solid color-mix(in srgb,#fff var(--g-edge,60%),transparent);
+ box-shadow:0 12px 40px var(--g-shadow,rgba(24,48,36,.10)),inset 0 1px 0 rgba(255,255,255,var(--g-hi,.5))}
+#meetCard{margin:0 0 30px}
+.mt-card{display:flex;align-items:center;gap:20px;padding:20px 26px;border-radius:24px;text-decoration:none;color:inherit;
+ transition:transform .2s ease,box-shadow .2s ease}
+.mt-card:hover{transform:translateY(-3px)}
+.mt-card svg{flex:none;filter:drop-shadow(0 6px 12px rgba(91,95,199,.35))}
+.mt-txt{flex:1;min-width:0}
+.mt-txt b{display:block;font-size:1.1rem}
+.mt-txt small{display:block;color:var(--muted);margin-top:2px}
+.mt-btn{flex:none;padding:11px 22px;border-radius:14px;background:#5b5fc7;color:#fff;font-weight:700;box-shadow:0 8px 20px rgba(91,95,199,.35)}
+.mt-card.live{border-color:var(--green)}
+.mt-card.live .mt-btn{background:var(--green);box-shadow:0 8px 20px color-mix(in srgb,var(--green) 40%,transparent)}
+.mt-dot{display:inline-block;width:9px;height:9px;border-radius:50%;background:#c0392b;margin-right:7px;animation:mtp 1.4s ease-in-out infinite}
+@keyframes mtp{50%{opacity:.25}}
+@media (prefers-reduced-motion:reduce){.mt-dot{animation:none}}
+@media (max-width:640px){.mt-card{flex-wrap:wrap}.mt-btn{width:100%;text-align:center}}
+.mt-adm,.mt-box{border-radius:22px;padding:24px 28px;margin:0 0 28px}
+.mt-adm h3,.mt-box h3{margin:0 0 14px;color:var(--green)}
+.mt-grid{display:grid;grid-template-columns:2fr 1fr 1fr;gap:14px}
+.mt-grid label,.mt-adm label{display:flex;flex-direction:column;gap:6px;font-size:.82rem;font-weight:700;color:var(--muted)}
+.mt-grid input,.mt-adm input{width:100%}
+.mt-grid .full{grid-column:1/-1}
+@media (max-width:700px){.mt-grid{grid-template-columns:1fr 1fr}.mt-grid .full{grid-column:1/-1}}
+.mt-err{color:#c0392b;min-height:1.2em;font-size:.88rem;margin:8px 0}
+.mt-m{border-radius:20px;margin:0 0 16px;overflow:hidden}
+.mt-m>summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:14px;flex-wrap:wrap;padding:16px 22px}
+.mt-m>summary::-webkit-details-marker{display:none}
+.mt-m>summary b{flex:1;min-width:180px}
+.mt-m>summary small{color:var(--muted)}
+.mt-sum{display:flex;gap:8px;flex-wrap:wrap}
+.mt-pill{padding:3px 11px;border-radius:99px;font-size:.78rem;font-weight:700;white-space:nowrap}
+.mt-ok{background:color-mix(in srgb,var(--green) 18%,transparent);color:var(--green)}
+.mt-late{background:color-mix(in srgb,var(--amber) 20%,transparent);color:var(--amber)}
+.mt-abs{background:color-mix(in srgb,#c0392b 16%,transparent);color:#c0392b}
+.mt-wait{background:color-mix(in srgb,var(--muted) 18%,transparent);color:var(--muted)}
+.mt-m .mt-body{padding:0 22px 20px}
+.mt-m table{width:100%;border-collapse:collapse;min-width:460px}
+.mt-tw{overflow-x:auto}
+.mt-m th,.mt-m td{padding:10px 12px;border-bottom:1px solid var(--line);text-align:left;font-size:.9rem}
+</style>
+
+<script>
+(function(){
+"use strict";
+var CFG="pub:meetcfg", PRE="meet:", ATT="att:", OPEN_BEFORE=15*6e4;
+var cfg={link:"",censeurs:[]}, meets=[], atts={}, active=false;
+
+function $(i){return document.getElementById(i)}
+function SB(){return window.__sb} function TB(){return window.__TABLE||"afriflow_state"}
+function me(){return String(window.loggedUserEmail||"").toLowerCase()}
+function isAdmin(){return window.USER_ROLE==="admin"}
+function isCens(){return isAdmin()||(cfg.censeurs||[]).indexOf(me())>-1}
+function esc(s){return String(s==null?"":s).replace(/[&<>"']/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]})}
+function toast(m){(window.toast||alert)(m)}
+function okUrl(u){return /^https:\/\/[^\s"'<>]+$/i.test(u||"")}
+function uid(){return "m"+Date.now().toString(36)+Math.floor(Math.random()*1e4).toString(36)}
+function fdt(ms){return new Date(ms).toLocaleString("fr-FR",{weekday:"long",day:"numeric",month:"long",hour:"2-digit",minute:"2-digit"})}
+function fh(ms){return new Date(ms).toLocaleTimeString("fr-FR",{hour:"2-digit",minute:"2-digit"})}
+function pad(n){return ("0"+n).slice(-2)}
+
+/* ---------- Lecture des données ---------- */
+async function load(){
+  if(!SB()||!me())return;
+  var a=await SB().from(TB()).select("value").eq("key",CFG).maybeSingle();
+  if(!a.error&&a.data&&a.data.value){cfg=a.data.value;cfg.censeurs=(cfg.censeurs||[]).map(function(x){return String(x).toLowerCase()})}
+  var r=await SB().from(TB()).select("key,value").like("key",PRE+"%").limit(300);
+  if(!r.error)meets=(r.data||[]).map(function(x){return x.value}).filter(function(v){return v&&v.start}).sort(function(x,y){return x.start-y.start});
+  var q=SB().from(TB()).select("key,value").like("key",isCens()?ATT+"%":ATT+"%:"+me()).limit(5000);
+  var t=await q; atts={};
+  if(!t.error)(t.data||[]).forEach(function(x){atts[x.key]=x.value});
+}
+
+/* ---------- Réunion en cours / prochaine ---------- */
+function pick(){
+  var n=Date.now();
+  var cur=meets.filter(function(m){return n>=m.start-OPEN_BEFORE&&n<=m.start+m.dur*6e4});
+  if(cur.length)return {m:cur[0],live:true};
+  var nx=meets.filter(function(m){return m.start>n})[0];
+  return nx?{m:nx,live:false}:null;
+}
+function statut(m,rec){
+  var n=Date.now(),end=m.start+m.dur*6e4;
+  if(rec){
+    if(rec.at<=m.start+m.grace*6e4)return {k:"ok",t:"Présent"};
+    return {k:"late",t:"Retard (+"+Math.max(1,Math.round((rec.at-m.start)/6e4))+" min)"};
+  }
+  if(n>end)return {k:"abs",t:"Absent"};
+  return {k:"wait",t:n<m.start?"À venir":"En attente"};
+}
+
+/* ---------- Carte « Réunion » sur l'accueil ---------- */
+var ICON='<svg viewBox="0 0 48 48" width="54" height="54" aria-hidden="true"><defs><linearGradient id="mtg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#7b83eb"/><stop offset="1" stop-color="#4b53bc"/></linearGradient></defs><rect width="48" height="48" rx="13" fill="url(#mtg)"/><rect x="8" y="15" width="21" height="18" rx="4" fill="#fff"/><path d="M31 21.5l9-5v15l-9-5z" fill="#fff" opacity=".92"/><circle cx="18.5" cy="21.4" r="2.7" fill="#5b5fc7"/><path d="M13 30a5.5 5.5 0 0 1 11 0z" fill="#5b5fc7"/></svg>';
+function drawCard(){
+  var host=$("meetCard");
+  if(!host){
+    var br=document.querySelector("#view-home .brand");if(!br)return;
+    host=document.createElement("div");host.id="meetCard";br.after(host);
+  }
+  if(!me()){host.innerHTML="";return}
+  var p=pick(),link=(p&&p.m.link)||cfg.link,sub;
+  if(p&&p.live)sub='<span class="mt-dot"></span>En cours : '+esc(p.m.title)+' · '+fh(p.m.start)+' – '+fh(p.m.start+p.m.dur*6e4)+(atts[ATT+p.m.id+":"+me()]?' · votre présence est enregistrée':'');
+  else if(p)sub='Prochaine réunion : '+esc(p.m.title)+' · '+fdt(p.m.start);
+  else sub=cfg.link?'Aucune réunion programmée · lien disponible':'Aucune réunion programmée';
+  host.innerHTML='<a class="mt-card'+(p&&p.live?' live':'')+'" id="meetGo" href="'+(okUrl(link)?esc(link):'#')+'" target="_blank" rel="noopener noreferrer">'
+    +ICON+'<span class="mt-txt"><b>Réunion en ligne</b><small>'+sub+'</small></span><span class="mt-btn">Rejoindre</span></a>';
+}
+document.addEventListener("click",function(e){
+  var a=e.target.closest("#meetGo");if(!a)return;
+  if(!okUrl(a.getAttribute("href"))){
+    e.preventDefault();
+    toast(isAdmin()?"Aucun lien : renseignez-le dans Administration › Réunion en ligne.":"Le lien de la réunion n'a pas encore été configuré.");
+    return;
+  }
+  var p=pick();if(p&&p.live)mark(p.m);   /* le lien s'ouvre normalement, l'enregistrement part en parallèle */
+});
+async function mark(m){
+  if(!me()||!SB())return;
+  var k=ATT+m.id+":"+me();if(atts[k])return;           /* le premier clic est conservé */
+  var v={meet:m.id,email:me(),name:window.USER_NAME||"",at:Date.now()};
+  var r=await SB().from(TB()).insert({key:k,value:v,updated_at:new Date().toISOString()});
+  if(r.error&&r.error.code!=="23505"){toast("Présence non enregistrée : "+(r.error.message||r.error));return}
+  if(!r.error)atts[k]=v;
+  if(typeof window.recordUserAction==="function")window.recordUserAction("Présence à la réunion : "+m.title);
+  drawCard();
+}
+
+/* ---------- Réglage admin (dans la page Administration) ---------- */
+function injectAdmin(){
+  var ad=$("adOn");if(!isAdmin()||!ad||$("mtAdmin"))return;
+  var b=document.createElement("div");b.id="mtAdmin";b.className="mt-adm";
+  b.innerHTML='<h3>Réunion en ligne (Teams)</h3>'
+   +'<div class="mt-grid" style="grid-template-columns:1fr"><label>Lien de la réunion (https://…)<input id="mtLink" placeholder="https://teams.microsoft.com/l/meetup-join/…" autocomplete="off"></label>'
+   +'<label>Censeur(s) — adresses email séparées par des virgules<input id="mtCens" placeholder="prenom@exemple.com, autre@exemple.com" autocomplete="off"></label></div>'
+   +'<div class="mt-err" id="mtAErr" role="alert"></div><button type="button" class="p" id="mtASave">Enregistrer</button>';
+  ad.before(b);
+  $("mtLink").value=cfg.link||"";$("mtCens").value=(cfg.censeurs||[]).join(", ");
+  $("mtASave").onclick=async function(){
+    var l=$("mtLink").value.trim(),c=$("mtCens").value.split(/[,;\s]+/).map(function(x){return x.trim().toLowerCase()}).filter(Boolean),er=$("mtAErr");
+    if(l&&!okUrl(l)){er.textContent="Le lien doit commencer par https://";return}
+    er.textContent="";
+    var r=await SB().from(TB()).upsert({key:CFG,value:{link:l,censeurs:c,at:Date.now(),by:me()},updated_at:new Date().toISOString()});
+    if(r.error){er.textContent="Enregistrement impossible : "+(r.error.message||r.error);return}
+    cfg={link:l,censeurs:c};toast("Réunion en ligne enregistrée.");drawCard();inject();
+  };
+}
+
+/* ---------- Page « Censeur » ---------- */
+function mark2(){var nl=$("navList");if(nl)nl.querySelectorAll(".nv").forEach(function(b){b.classList.toggle("on",b.hasAttribute("data-cs-nav"))})}
+async function openPage(){
+  var home=document.querySelector('#navList .nv[data-id="home"]');if(home)home.click();
+  active=true;$("view-home").style.display="none";$("viewHost").style.display="";
+  var sc=$("scrim");if(sc&&sc.classList.contains("on"))sc.click();
+  $("viewHost").innerHTML='<div class="toolbar"><b>Censeur</b></div><p style="color:var(--muted)">Chargement…</p>';
+  mark2();window.scrollTo(0,0);if(window.AFRI)window.AFRI.page("Censeur");
+  try{await load()}catch(e){}
+  if(active)render();
+}
+async function render(){
+  var host=$("viewHost");if(!active||!host)return;
+  var U=[];try{U=window.AFRI?await window.AFRI.listUsers():[]}catch(e){}
+  if(!active)return;
+  var d=new Date(),dd=d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate());
+  var h='<div class="toolbar"><b>Censeur</b><div class="toolbar-actions"><button type="button" id="csRef">Actualiser</button></div></div>'
+   +'<div class="mt-box"><h3>Programmer une réunion</h3><div class="mt-grid">'
+   +'<label class="full">Intitulé<input id="csT" maxlength="100" placeholder="Ex. Point hebdomadaire" autocomplete="off"></label>'
+   +'<label>Date<input type="date" id="csD" value="'+dd+'"></label><label>Heure de début<input type="time" id="csH" value="14:00"></label>'
+   +'<label>Durée (min)<input type="number" id="csU" value="60" min="5" max="600"></label>'
+   +'<label>Tolérance avant « retard » (min)<input type="number" id="csG" value="5" min="0" max="120"></label>'
+   +'<label class="full">Lien propre à cette réunion (facultatif, sinon lien général)<input id="csL" placeholder="https://…" autocomplete="off"></label></div>'
+   +'<div class="mt-err" id="csErr" role="alert"></div><button type="button" class="p" id="csGo">Programmer</button>'
+   +'<p style="color:var(--muted);font-size:.85rem;margin:12px 0 0">Présent : clic sur « Rejoindre » avant la fin de la tolérance · Retard : clic après · Absent : aucun clic à la fin de la réunion. Les clics sont comptés de 15 min avant le début jusqu\'à la fin.</p></div>';
+  var L=meets.slice().sort(function(a,b){return b.start-a.start});
+  h+='<h3 style="color:var(--green)">Réunions et présences</h3>'+(L.length?L.map(function(m){
+    var emails={};U.forEach(function(u){if(u&&u.email)emails[String(u.email).toLowerCase()]=u.name||""});
+    Object.keys(atts).forEach(function(k){var v=atts[k];if(v&&v.meet===m.id&&v.email&&!(v.email in emails))emails[v.email]=v.name||""});
+    var rows=Object.keys(emails).sort().map(function(em){var rec=atts[ATT+m.id+":"+em],s=statut(m,rec);return {em:em,nm:emails[em],rec:rec,s:s}});
+    var c={ok:0,late:0,abs:0,wait:0};rows.forEach(function(r){c[r.s.k]++});
+    return '<details class="mt-m"><summary><b>'+esc(m.title)+'</b><small>'+fdt(m.start)+' · '+m.dur+' min</small>'
+     +'<span class="mt-sum"><span class="mt-pill mt-ok">'+c.ok+' présent(s)</span><span class="mt-pill mt-late">'+c.late+' retard(s)</span><span class="mt-pill mt-abs">'+c.abs+' absent(s)</span>'+(c.wait?'<span class="mt-pill mt-wait">'+c.wait+' en attente</span>':'')+'</span></summary>'
+     +'<div class="mt-body"><div class="mt-tw"><table><thead><tr><th>Nom</th><th>Email</th><th>Statut</th><th>Clic à</th></tr></thead><tbody>'
+     +(rows.length?rows.map(function(r){return '<tr><td>'+esc(r.nm||"—")+'</td><td>'+esc(r.em)+'</td><td><span class="mt-pill mt-'+(r.s.k==="ok"?"ok":r.s.k==="late"?"late":r.s.k==="abs"?"abs":"wait")+'">'+esc(r.s.t)+'</span></td><td>'+(r.rec?fh(r.rec.at):"—")+'</td></tr>'}).join(""):'<tr><td colspan="4" style="color:var(--muted)">Aucun compte à afficher.</td></tr>')
+     +'</tbody></table></div><p style="margin:14px 0 0"><button type="button" class="danger" data-csdel="'+esc(m.id)+'">Supprimer cette réunion</button></p></div></details>';
+  }).join(""):'<p style="color:var(--muted)">Aucune réunion programmée.</p>');
+  host.innerHTML=h;host.onclick=onClick;
+}
+async function onClick(e){
+  var b=e.target.closest("button");if(!b)return;
+  try{
+    if(b.id==="csRef"){await load();render();return}
+    if(b.id==="csGo"){
+      var t=$("csT").value.trim(),d=$("csD").value,hh=$("csH").value,du=+$("csU").value,g=+$("csG").value,l=$("csL").value.trim(),er=$("csErr");
+      if(!t||!d||!hh){er.textContent="Indiquez l'intitulé, la date et l'heure.";return}
+      if(!(du>=5)){er.textContent="Durée invalide.";return}
+      if(l&&!okUrl(l)){er.textContent="Le lien doit commencer par https://";return}
+      var st=new Date(d+"T"+hh).getTime();if(isNaN(st)){er.textContent="Date ou heure invalide.";return}
+      if(st+du*6e4<Date.now()){er.textContent="Cette réunion est déjà terminée.";return}
+      er.textContent="";b.disabled=true;
+      var m={id:uid(),title:t,start:st,dur:du,grace:g>=0?g:5,link:l,by:me(),created:Date.now()};
+      var r=await SB().from(TB()).upsert({key:PRE+m.id,value:m,updated_at:new Date().toISOString()});
+      b.disabled=false;
+      if(r.error){er.textContent="Enregistrement impossible : "+(r.error.message||r.error);return}
+      meets.push(m);meets.sort(function(x,y){return x.start-y.start});toast("Réunion programmée.");drawCard();render();return;
+    }
+    if(b.dataset.csdel&&confirm("Supprimer cette réunion et ses présences ?")){
+      var id=b.dataset.csdel;
+      await SB().from(TB()).delete().eq("key",PRE+id);
+      try{await SB().from(TB()).delete().like("key",ATT+id+":%")}catch(x){}
+      meets=meets.filter(function(x){return x.id!==id});Object.keys(atts).forEach(function(k){if(k.indexOf(ATT+id+":")===0)delete atts[k]});
+      drawCard();render();
+    }
+  }catch(x){toast("Action impossible : "+(x&&x.message||x))}
+}
+
+/* ---------- Onglet « Censeur » dans le menu ---------- */
+function inject(){
+  var nl=$("navList");if(!nl||!nl.firstElementChild)return;
+  var has=nl.querySelector("[data-cs-nav]");
+  if(!isCens()){if(has)has.parentNode.remove();return}
+  if(has)return;
+  var row=document.createElement("div");row.className="nvr";
+  row.innerHTML='<button type="button" class="nv" data-cs-nav="1">Censeur</button>';
+  var f=nl.querySelector("[data-fdr-nav]");(f?f.parentNode:nl.firstElementChild).after(row);
+  if(active)mark2();
+}
+var nl0=$("navList");
+if(nl0){
+  new MutationObserver(inject).observe(nl0,{childList:true});
+  nl0.addEventListener("click",function(e){
+    var b=e.target.closest("button");if(!b)return;
+    if(b.hasAttribute("data-cs-nav"))openPage();else if(!b.hasAttribute("data-fdr-ren"))active=false;
+  });
+}
+var vh=$("viewHost");if(vh)new MutationObserver(injectAdmin).observe(vh,{childList:true});
+
+/* ---------- Démarrage ---------- */
+function refresh(){if(!me()){drawCard();return}load().then(function(){inject();drawCard();injectAdmin()}).catch(function(){})}
+var prev=window.onRole;
+window.onRole=function(){if(prev)prev();setTimeout(refresh,1300)};
+setInterval(function(){if(me())refresh();else drawCard()},60000);
+setInterval(function(){if(me())drawCard()},30000);
+if(me())setTimeout(refresh,1500);
+})();
+</script>
+
+</body>
 </html>
