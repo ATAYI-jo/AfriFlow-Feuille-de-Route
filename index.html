@@ -2573,8 +2573,8 @@ if(loggedUserEmail)setTimeout(poll,1500);
   $g("aiClose").onclick = function(){ box.style.display = "none"; };
   $g("aiClear").onclick = function(){ H = []; $g("aiLog").textContent = ""; };
   $g("aiGo").onclick = send;
-  $g("aiIn").addEventListener("keydown", function(e){
-    if(e.key === "Enter" && (e.ctrlKey || e.metaKey)){ e.preventDefault(); send(); }
+   $g("aiIn").addEventListener("keydown", function(e){
+    if(e.key === "Enter" && !e.shiftKey && !e.isComposing){ e.preventDefault(); send(); }
   });
 })();
 </script>
