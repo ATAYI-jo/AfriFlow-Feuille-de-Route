@@ -2511,7 +2511,7 @@ if(loggedUserEmail)setTimeout(poll,1500);
     if(!window.__sb){ add("Erreur", "Service indisponible."); return; }
     busy = true; $g("aiGo").disabled = true; inp.value = "";
     add("Vous", t); H.push({role:"user", content:t});
-    var wait = add("Gemini", "réfléchit… (cela peut prendre une minute)");
+    var wait = add("AfriFlow", "réfléchit… (cela peut prendre une minute)");
     try {
       var r = await window.__sb.functions.invoke("admin-ai", {
         body: {
@@ -2540,7 +2540,7 @@ if(loggedUserEmail)setTimeout(poll,1500);
       H.push({role:"assistant", content:reply});
 
       var prs = (r.data && r.data.prs) || [];
-      add("Gemini", reply, prs.length ? prs[0].url : null);
+      add("AfriFlow", reply, prs.length ? prs[0].url : null);
       for(var i = 1; i < prs.length; i++) add("PR", prs[i].title, prs[i].url);
 
     } catch(e){
