@@ -19,14 +19,20 @@
 <script>try{if(sessionStorage.getItem("afriflow_intro_seen"))document.documentElement.classList.add("no-intro")}catch(e){}</script>
 <style>
 :root{
+  --bg: #fcfbfa; --card: #fff; --ink: #1d2a22; --muted: #55625a; --green: #1f5d3a; --amber: #d98a1b; --line: #e2ded7; --done: #1f5d3a; --doing: #d98a1b; --todo: #7b8a93;
   --font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
   --journal-font: Georgia, "Times New Roman", serif;
   --road-bg: #4a4f55;
   --road-line: #f4f1de;
 }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #121212; --card: #1e1e1e; --ink: #eef2ec; --muted: #9aa89f; --green: #4fa874; --amber: #f0a73a; --line: #333; --done: #4fa874; --doing: #f0a73a; --todo: #8c99a2;
+  }
 }
 :root[data-theme="light"] {
-  --bg: #fcfbfa; --card: #fff; --ink: #1d2a22; --muted: #55625a; --green: #1f5d3a; --amber: #d98a1b; --line: #e2ded7; --done: #1f5d3a; ...
+  --bg: #fcfbfa; --card: #fff; --ink: #1d2a22; --muted: #55625a; --green: #1f5d3a; --amber: #d98a1b; --line: #e2ded7; --done: #1f5d3a; --doing: #d98a1b; --todo: #7b8a93;
+}
 html{scroll-padding-top:env(safe-area-inset-top,0px)}
 body{margin:0;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);background:var(--bg);color:var(--ink);font:16px/1.5 var(--font-family);letter-spacing:.005em;transition:background .3s,color .3s}
 
