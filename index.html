@@ -4024,5 +4024,27 @@ if(!setup()){var t=setInterval(function(){if(setup())clearInterval(t)},300)}
 #aiGo{width:100%;margin:0}
 #aiLog{min-width:0}
 </style>
+  <style id="af-mobile-css">
+html,body{max-width:100%;overflow-x:hidden}
+img,svg,video,canvas{max-width:100%}
+@media (max-width:768px){
+ :root{--g-bg:94%}
+ #afBg{display:none!important}
+ *{-webkit-backdrop-filter:none!important;backdrop-filter:none!important}
+ .cloud,.af-cloud,.sw,.af-sw,.lg,.am,.bd,.hoe2{animation:none!important}
+ .toolbar,.toolbar-actions{flex-wrap:wrap}
+ .toolbar button,.toolbar-actions button{flex:1 1 auto}
+ .brand{padding:22px 18px!important;gap:14px!important}
+ .logo-img{height:56px;width:56px}
+ .map-panel{padding:14px!important}
+ .wpage{padding:16px!important;min-height:60vh}
+ .journal-columns{column-count:1}
+ #aiBox{width:94vw!important;height:78vh!important}
+ button{padding:10px 14px}
+}
+</style>
+<script>
+if(innerWidth<=768){try{if(localStorage.getItem("afriflow_animbg_v1")===null)localStorage.setItem("afriflow_animbg_v1","0")}catch(e){}document.body.classList.add("af-off")}
+</script>
 </body>
 </html>
