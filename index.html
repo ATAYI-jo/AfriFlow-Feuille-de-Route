@@ -4059,52 +4059,9 @@ img,svg,video,canvas{max-width:100%}
 <script>
 if(innerWidth<=768){try{if(localStorage.getItem("afriflow_animbg_v1")===null)localStorage.setItem("afriflow_animbg_v1","0")}catch(e){}document.body.classList.add("af-off")}
 </script>
-  <!-- =====================================================================
-  MODULE AFRIFLOW · Allègement (anti-blocage sur PC)
-  À COLLER en TOUT DERNIER, juste avant </body>, après le bloc mobile.
-  Ne supprime rien : il coupe seulement ce qui surcharge le navigateur.
-====================================================================== -->
-<style id="af-light-css">
-/* 1. Le paysage ne subit plus de filtre ni de masque géants (très coûteux sur une page haute) */
-#scenery,#sceneryGlow{
-  filter:none!important;
-  -webkit-mask-image:none!important;mask-image:none!important}
-
-/* 2. Plus de centaines d'animations infinies (arbres, herbes, nuages, marcheurs) */
-#scenery *,#afBg *,.cloud,.af-cloud,.sw,.af-sw,.lg,.am,.bd,.hoe2{animation:none!important}
-.cloud,.af-cloud{filter:none!important}
-#sceneryGlow,.wk,.pth{display:none!important}
-
-/* 3. Le flou « verre » reste sur les grandes surfaces, mais plus léger et plus du tout sur les boutons */
-.toolbar,.map-panel,.step-card,.dcard,.journal-article,.addrow,.stm,.pubbar,.lock-banner,
-.auth-box,.customizer-box,.fdr-tbl,.xlw,.start-pill,.plus-card,.border-sign,#side,#menuBtn,
-.fdr-bar,.fdr-ban,.mt-card,.mt-adm,.mt-box,.mt-m,.brand,.fdr-hero{
-  -webkit-backdrop-filter:blur(10px)!important;backdrop-filter:blur(10px)!important}
-button:not(.p):not(.danger):not(#logout-btn):not(.fdr-head):not(.nv):not(.nx):not(#menuBtn),
-#aiBtn,#aiIn,#aiGo,#aiLog>div{
-  -webkit-backdrop-filter:none!important;backdrop-filter:none!important}
-
-/* 4. Fenêtre d'assistance : plus d'ombre géante autour de l'écran */
-#aiBox{box-shadow:0 24px 70px rgba(0,0,0,.35)!important}
+<style>
+html{overflow-x:hidden!important;overscroll-behavior:auto!important}
+body{overflow:visible!important;overscroll-behavior:auto!important}
 </style>
-
-<script>
-(function(){
-"use strict";
-var K="afriflow_animbg_v1";
-
-/* Fond animé plein écran : désactivé par défaut (comme sur mobile).
-   Pour le réactiver : Personnaliser › « Fond animé plein écran ». */
-try{ if(localStorage.getItem(K)===null) localStorage.setItem(K,"0"); }catch(e){}
-var off=true; try{ off=localStorage.getItem(K)==="0"; }catch(e){}
-if(off){
-  document.body.classList.add("af-off");
-  var c=document.getElementById("afAnim"); if(c) c.checked=false;
-}
-
-/* Arrête la boucle d'animation des marcheurs (elle tournait à chaque image, en permanence) */
-window.wkTick=function(){};
-})();
-</script>
 </body>
 </html>
