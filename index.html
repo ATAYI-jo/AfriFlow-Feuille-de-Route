@@ -4068,5 +4068,22 @@ body{overflow:visible!important;overscroll-behavior:auto!important}
 button:not(.p):not(.danger):not(#logout-btn):not(.fdr-head):not(.nv):not(.nx):not(#menuBtn){-webkit-backdrop-filter:none!important;backdrop-filter:none!important}
 #aiBox{box-shadow:0 24px 70px rgba(0,0,0,.35)!important}
 </style>
+  <style id="af-light-css">
+#scenery,#sceneryGlow{filter:none!important;-webkit-mask-image:none!important;mask-image:none!important}
+button:not(.p):not(.danger):not(#logout-btn):not(.fdr-head):not(.nv):not(.nx):not(#menuBtn){-webkit-backdrop-filter:none!important;backdrop-filter:none!important}
+#aiBox{box-shadow:0 24px 70px rgba(0,0,0,.35)!important}
+</style>
+<script>
+(function(){
+  var K="afriflow_animbg_v1",F="afriflow_light_once";
+  try{
+    if(!localStorage.getItem(F)){localStorage.setItem(K,"0");localStorage.setItem(F,"1")}
+    if(localStorage.getItem(K)==="0"){
+      document.body.classList.add("af-off");
+      var c=document.getElementById("afAnim"); if(c) c.checked=false;
+    }
+  }catch(e){}
+})();
+</script>
 </body>
 </html>
