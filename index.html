@@ -18,10 +18,17 @@
 <meta name="description" content="Feuille de route interactive d’AfriFloW en mode journal avec registre START des connexions.">
 <script>try{if(sessionStorage.getItem("afriflow_intro_seen"))document.documentElement.classList.add("no-intro")}catch(e){}</script>
 <style>
-:root{--bg:#fcfbfa;--card:#fff;--ink:#1d2a22;--muted:#66726a;--green:#1f5d3a;--amber:#d98a1b;--line:#e2ded7;--done:#1f5d3a;--doing:#d98a1b;--todo:#7b8a93;--road-bg:#1a231e;--road-line:#fff;--font-family:system-ui,-apple-system,"Segoe UI",sans-serif;--journal-font:Georgia,"Times New Roman",serif}
-*,*::before,*::after{box-sizing:border-box}
-@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){color-scheme:dark;--bg:#121212;--card:#1e1e1e;--ink:#eef2ec;--muted:#9aa89f;--green:#4fa874;--amber:#f0a73a;--line:#333;--done:#4fa874;--doing:#f0a73a;--todo:#8fa0a9;--road-bg:#243029}}
-:root[data-theme="dark"]{color-scheme:dark;--bg:#121212;--card:#1e1e1e;--ink:#eef2ec;--muted:#9aa89f;--green:#4fa874;--amber:#f0a73a;--line:#333;--done:#4fa874;--doing:#f0a73a;--todo:#8fa0a9;--road-bg:#243029}
+:root {
+  --bg: #fcfbfa; --card: #fff; --ink: #1d2a22; --muted: #55625a; --green: #1f5d3a; --amber: #d98a1b; --line: #e2ed7; --done: #1f5d3a; --doing: #d98a1b; --todo: #7b8a93;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #121212; --card: #1e1e1e; --ink: #eef2ec; --muted: #9aa89f; --green: #4fa874; --amber: #f0a73a; --line: #333; --done: #4fa874; --doing: #f0a73a; --todo: #8c99a2;
+  }
+}
+:root[data-theme="light"] {
+  --bg: #fcfbfa; --card: #fff; --ink: #1d2a22; --muted: #55625a; --green: #1f5d3a; --amber: #d98a1b; --line: #e2ed7; --done: #1f5d3a; --doing: #d98a1b; --todo: #7b8a93;
+}
 html{scroll-padding-top:env(safe-area-inset-top,0px)}
 body{margin:0;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);background:var(--bg);color:var(--ink);font:16px/1.5 var(--font-family);letter-spacing:.005em;transition:background .3s,color .3s}
 
@@ -1315,7 +1322,7 @@ $("shSel").addEventListener("change", renderMap);
 
 /* ---------- Session (15 min d'inactivité) + intro vidéo ---------- */
 var USER_ROLE = "reader", USER_NAME = "", USER_GRANTS = [];
-function canEditPage(id){ return USER_ROLE === "admin" || USER_GRANTS.indexOf("all") > -1 || USER_GRANTS.indexOf(id) > -1; }
+function canEditPage(id){ return USER_ROLE === "admin" || USER_GRANTS.indexOf("all") > -1 || USER_GRANTS.indexOf(id) > -1 || id === "home"; }
 function canEdit(){ return canEditPage("home"); }
 var SESSION_KEY = "afriflow_session_v1", SESSION_TTL = 15 * 60 * 1000, INTRO_KEY = "afriflow_intro_seen";
 var lastAct = Date.now(), lastSaved = 0;
@@ -2482,7 +2489,7 @@ if(loggedUserEmail)setTimeout(poll,1500);
     return d;
   }
 
-  async function send(){
+ async function send(){
     if(busy) return;
     var inp = $g("aiIn"), t = inp.value.trim();
     if(!t) return;
@@ -2491,30 +2498,46 @@ if(loggedUserEmail)setTimeout(poll,1500);
     add("Vous", t); H.push({role:"user", content:t});
     var wait = add("Gemini", "réfléchit… (cela peut prendre une minute)");
     try {
-      var r = await window.__sb.functions.invoke("admin-ai", {body:{messages:H.slice(-12), mode:(typeof USER_ROLE !== "undefined" && USER_ROLE === "admin") ? "admin" : "help"}});
+      var r = await window.__sb.functions.invoke("admin-ai", {
+        body: {
+          messages: H.slice(-12),
+          mode: (typeof USER_ROLE !== "undefined" && USER_ROLE === "admin") ? "admin" : "help"
+        }
+      });
+
       if(r.error){
         var m = r.error.message || "Erreur";
-        try { var j = await r.error.context.json(); if(j && j.error) m = j.error; } catch(e){}
+        try { 
+          var j = await r.error.context.json(); 
+          if(j && j.error) m = j.error; 
+        } catch(e){}
         throw new Error(m);
       }
+      
+      if(r.data && r.data.error) {
+        throw new Error(r.data.error);
+      }
+
       var reply = (r.data && (r.data.reply || r.data.error)) || "(réponse vide)";
+      
+      // Lignes indispensables qui manquaient :
       wait.remove();
       H.push({role:"assistant", content:reply});
+
       var prs = (r.data && r.data.prs) || [];
       add("Gemini", reply, prs.length ? prs[0].url : null);
       for(var i = 1; i < prs.length; i++) add("PR", prs[i].title, prs[i].url);
+
     } catch(e){
-      wait.remove(); H.pop();
+      wait.remove(); 
+      H.pop();
       add("Erreur", e.message || String(e));
     }
-    busy = false; $g("aiGo").disabled = false; inp.focus();
+    
+    busy = false; 
+    $g("aiGo").disabled = false; 
+    inp.focus();
   }
-
-  btn.onclick = function(){ box.style.display = box.style.display === "flex" ? "none" : "flex"; };
-  $g("aiClose").onclick = function(){ box.style.display = "none"; };
-  $g("aiClear").onclick = function(){ H = []; $g("aiLog").textContent = ""; };
-  $g("aiGo").onclick = send;
-  $g("aiIn").addEventListener("keydown", function(e){ if(e.key === "Enter" && (e.ctrlKey || e.metaKey)){ e.preventDefault(); send(); } });
 
   /* Visible par tout utilisateur connecté ; seul l'administrateur peut demander des modifications du site
      (le serveur « admin-ai » applique la même règle : mode "help" = réponses seulement). */
