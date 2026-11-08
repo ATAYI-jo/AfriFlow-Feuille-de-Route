@@ -4890,5 +4890,113 @@ new MutationObserver(function(ms){
 sweep(document.body);
 })();
 </script>
+  <style>
+.dvp{max-width:1000px;margin:0 auto}
+.dvp-pg{background:#fff;margin:0 auto 16px;border-radius:8px;box-shadow:0 6px 24px rgba(0,0,0,.18);overflow:hidden}
+.dvp-pg canvas{display:block;width:100%;height:auto}
+</style>
+<script>
+/* Affichage des documents sans téléchargement (PDF.js, images, vidéos, sons, Office) */
+(function(){
+"use strict";
+var $=function(i){return document.getElementById(i)};
+var PDFJS="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js";
+var WORKER="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js";
+var MIME={pdf:"application/pdf",png:"image/png",jpg:"image/jpeg",jpeg:"image/jpeg",gif:"image/gif",webp:"image/webp",svg:"image/svg+xml",txt:"text/plain",mp4:"video/mp4",webm:"video/webm",mp3:"audio/mpeg"};
+var cache={},keys=[],urls=[],token=0,pdfP=null,cur={i:-1,path:""};
+function esc(s){return String(s==null?"":s).replace(/[&<>"']/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]})}
+function ext(p){var m=/\.([a-z0-9]+)$/i.exec(p||"");return m?m[1].toLowerCase():""}
+function freeUrls(){urls.forEach(function(u){URL.revokeObjectURL(u)});urls=[]}
+function mkUrl(b){var u=URL.createObjectURL(b);urls.push(u);return u}
+
+async function call(body){
+  var r=await window.__sb.functions.invoke("dropbox-view",{body:body});
+  if(r.error){var m=r.error.message||"Erreur";try{var j=await r.error.context.json();if(j&&j.error)m=j.error}catch(e){}throw new Error(m)}
+  if(r.data&&r.data.error)throw new Error(r.data.error);
+  return r.data;
+}
+async function getItems(){
+  var r=await window.__sb.from(window.__TABLE||"afriflow_state").select("value").eq("key","pub:dbxshow").maybeSingle();
+  return (r.data&&r.data.value&&Array.isArray(r.data.value.items))?r.data.value.items:[];
+}
+async function getBlob(path){
+  if(cache[path])return cache[path];
+  var d=await call({action:"stream",path:path});
+  if(!(d instanceof Blob))throw new Error("Réponse inattendue : vérifiez que la fonction dropbox-view est bien redéployée.");
+  cache[path]=d;keys.push(path);
+  while(keys.length>4){delete cache[keys.shift()]}   /* 4 documents gardés en mémoire */
+  return d;
+}
+function loadPdfjs(){
+  if(window.pdfjsLib)return Promise.resolve();
+  return pdfP||(pdfP=new Promise(function(ok,ko){
+    var s=document.createElement("script");s.src=PDFJS;
+    s.onload=function(){window.pdfjsLib.GlobalWorkerOptions.workerSrc=WORKER;ok()};
+    s.onerror=function(){pdfP=null;ko(new Error("Module PDF indisponible (connexion ?)"))};
+    document.head.appendChild(s);
+  }));
+}
+async function renderPdf(blob,host,my){
+  await loadPdfjs();
+  var pdf=await window.pdfjsLib.getDocument({data:new Uint8Array(await blob.arrayBuffer())}).promise;
+  if(my!==token)return;
+  var W=Math.min(host.clientWidth||900,1000),dpr=Math.min(window.devicePixelRatio||1,2);
+  var v1=(await pdf.getPage(1)).getViewport({scale:1}),ratio=v1.height/v1.width,slots=[];
+  for(var p=1;p<=pdf.numPages;p++){
+    var d=document.createElement("div");d.className="dvp-pg";d.style.height=Math.round(W*ratio)+"px";d.dataset.p=p;
+    host.appendChild(d);slots.push(d);
+  }
+  async function draw(d){
+    if(my!==token||d.dataset.done)return;d.dataset.done="1";
+    var pg=await pdf.getPage(+d.dataset.p),v=pg.getViewport({scale:1}),vp=pg.getViewport({scale:(W/v.width)*dpr});
+    var c=document.createElement("canvas");c.width=Math.floor(vp.width);c.height=Math.floor(vp.height);
+    await pg.render({canvasContext:c.getContext("2d"),viewport:vp}).promise;
+    if(my!==token)return;d.style.height="auto";d.appendChild(c);
+  }
+  var io=new IntersectionObserver(function(es){es.forEach(function(en){if(en.isIntersecting){io.unobserve(en.target);draw(en.target)}})},{rootMargin:"700px 0px"});
+  slots.forEach(function(d){io.observe(d)});
+}
+
+async function show(i){
+  var my=++token,box=$("dvView");if(!box)return;
+  freeUrls();
+  box.innerHTML='<p style="color:var(--muted)">Chargement du document… (le premier affichage d\'un gros fichier peut prendre quelques secondes)</p>';
+  box.scrollIntoView({behavior:"smooth",block:"start"});
+  var it=(await getItems())[i];
+  if(!it)throw new Error("Document introuvable : rechargez la page.");
+  cur={i:i,path:it.path};
+  var e=ext(it.path),name=esc(it.title||it.path),fname=esc(String(it.path).split("/").pop());
+  if(MIME[e]){
+    var blob=await getBlob(it.path);if(my!==token)return;
+    var u=mkUrl(new Blob([blob],{type:MIME[e]}));
+    var bar='<div class="toolbar"><b>'+name+'</b><div class="toolbar-actions"><a href="'+u+'" download="'+fname+'"><button type="button">Télécharger</button></a><a href="'+u+'" target="_blank" rel="noopener noreferrer"><button type="button">Ouvrir dans un onglet</button></a><button type="button" data-dvp-refresh="1">Actualiser</button></div></div>';
+    if(e==="pdf"){
+      box.innerHTML=bar+'<div class="dvp" id="dvpBox"></div>';
+      try{await renderPdf(blob,$("dvpBox"),my)}
+      catch(x){if(my===token)box.innerHTML=bar+'<iframe src="'+u+'" title="'+name+'"></iframe>'}   /* secours */
+    }else if(/^(png|jpe?g|gif|webp|svg)$/.test(e))box.innerHTML=bar+'<img src="'+u+'" alt="'+name+'">';
+    else if(/^(mp4|webm)$/.test(e))box.innerHTML=bar+'<video src="'+u+'" controls></video>';
+    else if(e==="mp3")box.innerHTML=bar+'<audio src="'+u+'" controls style="width:100%"></audio>';
+    else box.innerHTML=bar+'<iframe src="'+u+'" title="'+name+'"></iframe>';
+  }else{
+    var l=await call({action:"link",path:it.path});if(my!==token)return;
+    var lk=esc(l.link),h;
+    if(/^(docx?|xlsx?|pptx?)$/.test(e))h='<iframe src="https://view.officeapps.live.com/op/embed.aspx?src='+encodeURIComponent(l.link)+'" title="'+name+'"></iframe>';
+    else h='<p>Aperçu indisponible pour ce format.</p>';
+    box.innerHTML='<div class="toolbar"><b>'+name+'</b><div class="toolbar-actions"><a href="'+lk+'" target="_blank" rel="noopener noreferrer"><button type="button">Télécharger</button></a></div></div>'+h;
+  }
+}
+function fail(x){var b=$("dvView");if(b)b.innerHTML='<p style="color:#c0392b">Impossible d\'afficher : '+esc(x&&x.message||x)+'</p>'}
+
+/* prend le relais avant l'ancien code du site */
+document.addEventListener("click",function(e){
+  var r=e.target.closest("button[data-dvp-refresh]");
+  if(r){e.preventDefault();e.stopPropagation();delete cache[cur.path];show(cur.i).catch(fail);return}
+  var b=e.target.closest("button[data-dvopen]");if(!b)return;
+  e.preventDefault();e.stopPropagation();
+  show(+b.dataset.dvopen).catch(fail);
+},true);
+})();
+</script>
 </body>
 </html>
