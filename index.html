@@ -5130,5 +5130,154 @@ var old=window.setAuthMode;
 if(typeof old==="function")window.setAuthMode=function(m){old(m);paint(m==="register")};
 })();
 </script>
+  <script>
+(function(){
+"use strict";
+var $=function(i){return document.getElementById(i)};
+var live=false,readAll=false,rec=null,speaking=false,spk=0,ctx=null,curSrc=null,empties=0;
+function toast(m){(window.toast||alert)(m)}
+function stat(t){var s=$("aiStat");if(s)s.textContent=t||""}
+function paint(){var m=$("aiMic"),v=$("aiVoice"),r=$("aiRead");if(m)m.classList.toggle("on",!!rec);if(v)v.classList.toggle("on",live);if(r)r.classList.toggle("on",readAll||live)}
+function actx(){if(!ctx)ctx=new (window.AudioContext||window.webkitAudioContext)();if(ctx.state==="suspended")ctx.resume();return ctx}
+function b64(buf){var b=new Uint8Array(buf),s="",k=0x8000;for(var i=0;i<b.length;i+=k)s+=String.fromCharCode.apply(null,b.subarray(i,i+k));return btoa(s)}
+function toWav(ch,sr){
+  var n=0;ch.forEach(function(a){n+=a.length});
+  var all=new Float32Array(n),o=0;ch.forEach(function(a){all.set(a,o);o+=a.length});
+  var ratio=sr/16000,m=Math.floor(n/ratio),buf=new ArrayBuffer(44+m*2),v=new DataView(buf);
+  function ws(p,s){for(var i=0;i<s.length;i++)v.setUint8(p+i,s.charCodeAt(i))}
+  ws(0,"RIFF");v.setUint32(4,36+m*2,true);ws(8,"WAVE");ws(12,"fmt ");v.setUint32(16,16,true);v.setUint16(20,1,true);v.setUint16(22,1,true);
+  v.setUint32(24,16000,true);v.setUint32(28,32000,true);v.setUint16(32,2,true);v.setUint16(34,16,true);ws(36,"data");v.setUint32(40,m*2,true);
+  for(var i=0;i<m;i++){
+    var s0=Math.floor(i*ratio),s1=Math.min(n,Math.floor((i+1)*ratio)),a=0;
+    for(var j=s0;j<s1;j++)a+=all[j];a/=Math.max(1,s1-s0);a=Math.max(-1,Math.min(1,a));
+    v.setInt16(44+i*2,a<0?a*32768:a*32767,true);
+  }
+  return b64(buf);
+}
+/* Enregistrement avec détection de silence : s'arrête tout seul quand vous avez fini de parler */
+async function record(){
+  var stream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true,autoGainControl:true}});
+  var c=actx(),src=c.createMediaStreamSource(stream),pr=c.createScriptProcessor(4096,1,1);
+  var chunks=[],t0=Date.now(),heard=false,last=0,stopped=false,res,noise=0,nN=0,thr=.015;
+  var p=new Promise(function(r){res=r});
+  function end(ok){
+    if(stopped)return;stopped=true;
+    try{pr.disconnect();src.disconnect()}catch(e){}
+    stream.getTracks().forEach(function(t){t.stop()});
+    rec=null;paint();res(ok&&heard?toWav(chunks,c.sampleRate):null);
+  }
+  pr.onaudioprocess=function(e){
+    if(stopped)return;
+    var d=e.inputBuffer.getChannelData(0),sum=0,i;for(i=0;i<d.length;i++)sum+=d[i]*d[i];
+    var rms=Math.sqrt(sum/d.length),now=Date.now();
+    chunks.push(new Float32Array(d));if(!heard&&chunks.length>6)chunks.shift();
+    if(nN<4){noise+=rms;nN++;if(nN===4)thr=Math.min(.04,Math.max(.012,noise/4*2.5))}
+    else if(rms>thr){heard=true;last=now}
+    if(!heard&&now-t0>9000)end(false);
+    else if(heard&&now-last>1300)end(true);
+    else if(now-t0>40000)end(true);
+  };
+  src.connect(pr);pr.connect(c.destination);
+  rec={stop:function(){end(true)},cancel:function(){heard=false;end(false)}};
+  paint();return p;
+}
+async function call(b){
+  var r=await window.__sb.functions.invoke("admin-ai",{body:b});
+  if(r.error){var m=r.error.message||"Erreur";try{var j=await r.error.context.json();if(j&&j.error)m=j.error}catch(e){}throw new Error(m)}
+  if(r.data&&r.data.error)throw new Error(r.data.error);
+  return r.data;
+}
+async function listenOnce(autoSend){
+  var wav;stat("Je vous écoute…");
+  try{wav=await record()}catch(e){stat("");live=false;paint();toast("Micro inaccessible : autorisez-le dans le navigateur (le site doit être en https).");return null}
+  if(!wav){stat("");return false}
+  stat("Je réfléchis à ce que vous avez dit…");
+  try{
+    var d=await call({op:"stt",audio:wav}),t=String(d.text||"").trim();stat("");
+    if(!t)return false;
+    var inp=$("aiIn");
+    inp.value=autoSend?t:((inp.value?inp.value+" ":"")+t);
+    if(autoSend)$("aiGo").click();
+    return true;
+  }catch(e){stat("");live=false;paint();toast("Transcription impossible : "+(e.message||e));return null}
+}
+function cycle(){
+  if(!live||rec||speaking)return;
+  listenOnce(true).then(function(ok){
+    if(ok===null||!live)return;
+    if(ok){empties=0;return}                       /* la réponse de l'IA relancera l'écoute */
+    if(++empties>=3){live=false;paint();stat("Conversation en pause : je n'entends rien. Appuyez sur la vague pour reprendre.");return}
+    cycle();
+  });
+}
+/* Lecture à voix haute (voix naturelle, phrase par phrase pour démarrer vite) */
+function plain(s){return String(s).replace(/```[\s\S]*?```/g," ").replace(/`([^`]*)`/g,"$1").replace(/\[([^\]]+)\]\([^)]*\)/g,"$1").replace(/https?:\/\/\S+/g," lien ").replace(/[*#_>|]/g,"").replace(/^[-•] +/gm,"").replace(/\s+/g," ").trim()}
+function parts(t){
+  var s=plain(t),ps=s.match(/[^.!?…]+[.!?…]*\s*/g)||[s],out=[],cur="";
+  ps.forEach(function(p){if(cur&&(cur+p).length>(out.length?260:120)){out.push(cur.trim());cur=p}else cur+=p});
+  if(cur.trim())out.push(cur.trim());return out.slice(0,8);
+}
+function play(a){return new Promise(function(ok){
+  var c=actx(),bin=atob(a),n=bin.length>>1,buf=c.createBuffer(1,n,24000),ch=buf.getChannelData(0);
+  for(var i=0;i<n;i++){var v=(bin.charCodeAt(2*i+1)<<8)|bin.charCodeAt(2*i);if(v>=32768)v-=65536;ch[i]=v/32768}
+  var s=c.createBufferSource();s.buffer=buf;s.connect(c.destination);curSrc=s;s.onended=ok;s.start();
+})}
+function browserSpeak(t){return new Promise(function(ok){
+  if(!window.speechSynthesis)return ok(true);
+  var u=new SpeechSynthesisUtterance(plain(t));u.lang="fr-FR";u.onend=u.onerror=function(){ok(true)};speechSynthesis.speak(u);
+})}
+function stopSpeak(){spk++;speaking=false;try{if(curSrc)curSrc.stop()}catch(e){}try{if(window.speechSynthesis)speechSynthesis.cancel()}catch(e){}}
+async function speak(text){
+  stopSpeak();var my=spk,ps=parts(text),q=[];
+  if(!ps.length)return false;
+  speaking=true;stat("Je parle…");
+  function get(i){return q[i]||(q[i]=call({op:"tts",text:ps[i]}).then(function(d){return d.audio}))}
+  try{
+    get(0);
+    for(var i=0;i<ps.length;i++){
+      if(my!==spk)return false;
+      if(i+1<ps.length)get(i+1).catch(function(){});
+      var a=await get(i);if(my!==spk)return false;
+      await play(a);
+    }
+  }catch(e){
+    if(my===spk){toast("Voix naturelle indisponible, voix du navigateur utilisée : "+(e.message||e));await browserSpeak(text)}
+  }
+  if(my!==spk)return false;
+  speaking=false;stat("");return true;
+}
+function stopAll(){live=false;if(rec)rec.cancel();stopSpeak();stat("");paint()}
+/* Boutons : on prend la main avant l'ancien code */
+document.addEventListener("click",function(e){
+  var b=e.target.closest("#aiMic,#aiVoice,#aiRead");
+  if(!b){if(e.target.closest("#aiClose,#aiBtn,#aiClear"))stopAll();return}
+  e.stopPropagation();e.preventDefault();
+  if(b.id==="aiMic"){
+    if(rec){rec.stop();return}
+    if(speaking)stopSpeak();live=false;paint();listenOnce(false);
+  }else if(b.id==="aiVoice"){
+    if(live){stopAll();return}
+    live=true;readAll=true;empties=0;actx();stopSpeak();paint();cycle();
+  }else{
+    readAll=!readAll;if(!readAll){if(live)stopAll();else stopSpeak()}paint();
+  }
+},true);
+/* Chaque réponse de l'IA est lue ; en mode conversation, l'écoute reprend ensuite */
+var log=$("aiLog");
+if(log)new MutationObserver(function(ms){ms.forEach(function(m){m.addedNodes.forEach(function(n){
+  if(n.nodeType!==1||!n.children[1])return;
+  var who=n.firstElementChild.textContent,t=n.children[1].textContent;
+  if(/^AfriFlow/.test(who)){
+    if(/^je réfléchis/.test(t)||/^Bonjour, je suis AfriFlow/.test(t))return;
+    if(live||readAll)speak(t).then(function(done){if(done&&live)setTimeout(cycle,250)});
+  }else if(/^Erreur/.test(who)&&live)setTimeout(cycle,1500);
+})})}).observe(log,{childList:true});
+/* Indique au serveur qu'on est en conversation vocale (réponses plus courtes et orales) */
+if(window.__sb&&window.__sb.functions){
+  var f=window.__sb.functions,orig=f.invoke.bind(f);
+  f.invoke=function(n,o){if(n==="admin-ai"&&o&&o.body&&o.body.messages&&live)o.body.voice=true;return orig(n,o)};
+}
+})();
+</script>
 </body>
 </html>
