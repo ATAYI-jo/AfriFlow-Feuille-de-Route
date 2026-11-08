@@ -2989,7 +2989,7 @@ function $(i){return document.getElementById(i)}
 function esc(s){return String(s==null?"":s).replace(/[&<>"']/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]})}
 function isAdmin(){return window.USER_ROLE==="admin"}
 function toast(m){(window.toast||alert)(m)}
-function idOf(b){return b.dataset.id||(b.hasAttribute("data-fdr-nav")?"fdr":null)}
+function idOf(b){return b.dataset.id||(b.hasAttribute("data-fdr-nav")?"fdr":b.hasAttribute("data-cs-nav")?"censeur":b.hasAttribute("data-dv-nav")?"documents":b.hasAttribute("data-jp-nav")?"presences":null)}
 try{labels=JSON.parse(localStorage.getItem(LS)||"{}")||{}}catch(e){labels={}}
 function saveLocal(){try{localStorage.setItem(LS,JSON.stringify(labels))}catch(e){}}
 
