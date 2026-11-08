@@ -1395,7 +1395,7 @@ function enterApp(email, role, name, grants){
   document.body.classList.toggle("ro", !canEdit());
   $("auth-screen").classList.add("off");
   $("authPasswordInput").value = ""; $("authPassword2").value = "";
-  $("editStatusIndicator").textContent = USER_ROLE === "admin" ? "'+ic("unlock")+' Connecté : " + email + " — administrateur" : (canEdit() ? "'+ic("unlock")+' Connecté : " + email + " — modification active" : "🔒 Connecté : " + email + " — lecture seule");
+ $("editStatusIndicator").innerHTML = USER_ROLE === "admin" ? ic("unlock") + " Connecté : " + esc(email) + " — administrateur" : (canEdit() ? ic("unlock") + " Connecté : " + esc(email) + " — modification active" : ic("lock") + " Connecté : " + esc(email) + " — lecture seule");
   renderRoadmap();
   if(window.onRole) window.onRole();
 }
@@ -1405,7 +1405,7 @@ function logout(msg){
   try { localStorage.removeItem(SESSION_KEY); } catch(e){}
   closeDrawer(); $("customizer-modal").classList.remove("on");
   $("authPasswordInput").value = ""; $("authError").textContent = msg || "";
-  $("editStatusIndicator").innerHTML = USER_ROLE === "admin" ? ic("unlock") + " Connecté : " + esc(email) + " — administrateur" : (canEdit() ? ic("unlock") + " Connecté : " + esc(email) + " — modification active" : ic("lock") + " Connecté : " + esc(email) + " — lecture seule");
+  $("editStatusIndicator").textContent = "";
   $("auth-screen").classList.remove("off");
 }
 function checkIdle(){ if(loggedUserEmail && Date.now() - lastAct > SESSION_TTL) logout("Session expirée après 15 minutes d'inactivité."); }
@@ -2501,21 +2501,7 @@ setInterval(poll,25000);
 if(loggedUserEmail)setTimeout(poll,1500);
 })();
 </script>
-<!-- =====================================================================
-  ASSISTANT AFRIFLOW · version complète
-  REMPLACE l'ancien bloc « Assistant IA (administrateur uniquement) » :
-  supprimez depuis la ligne  <!-- ===== Assistant IA (administrateur uniquement) ===== -->
-  jusqu'au </script> qui la suit, puis collez ce bloc à la même place.
-  Le module « glass » de l'assistant (ai-glass-css) reste inchangé : mêmes identifiants.
-
-  Nouveautés
-   - Dialogue libre : l'assistant se présente comme AfriFlow, mémoire de la conversation.
-   - Pièces jointes : images, PDF, fichiers texte/CSV/JSON (trombone ou glisser-déposer).
-   - Fichiers générés : Word, Excel, PDF, CSV, Markdown, texte, JSON, HTML (boutons de téléchargement).
-   - Voix : micro de dictée, « conversation vocale » mains libres (écoute, répond, relance l'écoute),
-     lecture des réponses à voix haute. Chrome, Edge ou Safari, site en https.
-   - Administrateur : mêmes fonctions + modification du site via Pull Request GitHub.
-====================================================================== -->
+  
 <style id="ai-v2-css">
 #aiBox .aiic{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;vertical-align:-4px;flex:none}
 #aiBox .aibar{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
