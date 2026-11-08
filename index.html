@@ -4642,7 +4642,7 @@ if(nl0){
   new MutationObserver(injectNav).observe(nl0,{childList:true});
   nl0.addEventListener("click",function(e){
     var b=e.target.closest("button");if(!b)return;
-    if(b.hasAttribute("data-jp-nav"))openPersonal();else jpActive=false;
+    if(b.hasAttribute("data-jp-nav"))openPersonal();else if(!b.hasAttribute("data-fdr-ren"))jpActive=false;
   });
 }
 
@@ -5106,5 +5106,29 @@ window.editBorder=function(a,b){
 var prev=window.onRole;window.onRole=function(){if(prev)prev();setTimeout(pull,1500)};
 })();
 </script>  
+  <style>
+#auth-screen .oauth{display:flex!important;align-items:center;justify-content:center;gap:12px}
+#auth-screen .oauth svg{width:20px;height:20px;flex:none}
+</style>
+<script>
+(function(){
+"use strict";
+var L={
+ google:'<svg viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9.1 3.6l6.8-6.8C35.8 2.4 30.3 0 24 0 14.6 0 6.5 5.4 2.6 13.2l7.9 6.1C12.4 13.6 17.7 9.5 24 9.5z"/><path fill="#4285F4" d="M46.5 24.5c0-1.6-.1-3.1-.4-4.5H24v9h12.7c-.6 3-2.3 5.5-4.8 7.2l7.5 5.8c4.4-4.1 7.1-10.1 7.1-17.5z"/><path fill="#FBBC05" d="M10.5 28.7c-.5-1.4-.8-3-.8-4.7s.3-3.2.8-4.7l-7.9-6.1C.9 16.4 0 20.1 0 24s.9 7.6 2.6 10.8l7.9-6.1z"/><path fill="#34A853" d="M24 48c6.5 0 11.9-2.1 15.9-5.8l-7.5-5.8c-2.1 1.4-4.8 2.3-8.4 2.3-6.3 0-11.6-4.1-13.5-9.8l-7.9 6.1C6.5 42.6 14.6 48 24 48z"/></svg>',
+ facebook:'<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="12" fill="#1877F2"/><path fill="#fff" d="M16.7 15.5l.5-3.5h-3.4V9.7c0-1 .5-1.9 2-1.9h1.5V4.8s-1.4-.2-2.7-.2c-2.8 0-4.6 1.7-4.6 4.7V12H7v3.5h3V24h3.8v-8.5z"/></svg>',
+ azure:'<svg viewBox="0 0 23 23"><path fill="#f25022" d="M1 1h10v10H1z"/><path fill="#7fba00" d="M12 1h10v10H12z"/><path fill="#00a4ef" d="M1 12h10v10H1z"/><path fill="#ffb900" d="M12 12h10v10H12z"/></svg>'
+};
+var NM={google:"Google",facebook:"Facebook",azure:"Microsoft"};
+function paint(reg){
+  document.querySelectorAll("#auth-screen .oauth").forEach(function(b){
+    var p=b.dataset.p;if(!L[p])return;
+    b.innerHTML=L[p]+'<span>'+(reg?"S'inscrire avec ":"Continuer avec ")+NM[p]+'</span>';
+  });
+}
+paint(false);
+var old=window.setAuthMode;
+if(typeof old==="function")window.setAuthMode=function(m){old(m);paint(m==="register")};
+})();
+</script>
 </body>
 </html>
