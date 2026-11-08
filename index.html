@@ -2787,7 +2787,7 @@ async function send(){
   H.push({role:"user",content:content});
   var wait=add("AfriFlow","je réfléchis… (cela peut prendre un moment)");
   try{
-    var r=await window.__sb.functions.invoke("admin-ai",{body:{messages:H.slice(-16),mode:isAdm()?"admin":"help"}});
+    var r=await window.__sb.functions.invoke("admin-ai",{body:{messages:H.slice(-16),mode:isAdm()?"admin":"help",tz:new Date().getTimezoneOffset()}});
     if(r.error){
       var m=r.error.message||"Erreur";
       try{var j=await r.error.context.json();if(j&&j.error)m=j.error}catch(e){}
