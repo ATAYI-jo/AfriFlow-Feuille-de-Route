@@ -4,12 +4,19 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="theme-color" content="#075a40">
-<title>Assistante AfriFloW — portrait fidèle</title>
+<title>AfriFloW — Assistante 3D</title>
+<script>if(new URLSearchParams(location.search).has("embed"))document.documentElement.classList.add("af-embedded")</script>
 <link rel="icon" href="../logo.png">
 <link rel="stylesheet" href="./style.css">
 <script type="importmap">
 {"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.164.1/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.164.1/examples/jsm/"}}
 </script>
+<style>
+/* Le modèle est la seule représentation visuelle de l'assistante. */
+#avatarViewport{position:absolute;inset:0;width:100%;height:100%}
+#avatarViewport canvas{width:100%;height:100%;display:block}
+#sceneStatus{overflow-wrap:anywhere}
+</style>
 </head>
 <body>
 <div class="shell">
@@ -19,21 +26,17 @@
   </header>
   <main class="main">
     <section class="visual" aria-label="Personnage AfriFloW en 3D">
-      <div id="avatarViewport" aria-hidden="true"></div>
-      <img id="photoMode" class="photo" src="../avatar.jpg" alt="Portrait original de l’assistante AfriFloW">
-      <div class="overlay-top"><span class="dot"></span><span id="sceneStatus">Portrait original AfriFloW</span></div>
+      <div id="avatarViewport" aria-label="Modèle 3D de l’assistante AfriFloW"></div>
+      <div class="overlay-top"><span class="dot"></span><span id="sceneStatus">Chargement de la 3D…</span></div>
       <div class="bottom-overlay">
-        <span class="hint">Image originale, sans déformation des traits</span>
-        <div class="pills">
-          <button type="button" id="mode3d">Afficher le GLB</button>
-          <button type="button" id="modePhoto" class="active">Portrait original</button>
-        </div>
+        <span class="hint">Affichage 3D exclusivement</span>
+        
       </div>
     </section>
     <section class="panel">
       <div class="eyebrow">BIENVENUE CHEZ AFRIFLOW</div>
       <h1>Votre assistante <em>AfriFloW.</em></h1>
-      <p class="lede">Le portrait original reste affiché. Pour activer l’avatar 3D, ajoute ton vrai fichier GLB dans <code>avatar-3d/models/afriflow-assistante.glb</code>, puis clique sur « Afficher le GLB ».</p>
+      <p class="lede">Cette assistante utilise exclusivement un véritable modèle 3D GLB. Si celui-ci est absent, un message de diagnostic s’affiche sans portrait 2D de substitution.</p>
       <label for="message">Texte à prononcer</label>
       <textarea id="message">Bonjour ! Je suis l'assistante virtuelle AfriFloW. Je suis ravie de vous accueillir. Comment puis-je vous accompagner aujourd'hui ?</textarea>
       <div class="buttons">
@@ -52,7 +55,7 @@
       </div>
     </section>
   </main>
-  <footer><span>AfriFloW · Du territoire africain vers le monde</span><span>Portrait original · Chargement GLB facultatif</span></footer>
+  <footer><span>AfriFloW · Du territoire africain vers le monde</span><span>Un seul avatar · GLB réel uniquement</span></footer>
 </div>
 <script type="module" src="./avatar-controller.js"></script>
 </body>
