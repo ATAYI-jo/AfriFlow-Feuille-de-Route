@@ -5036,13 +5036,26 @@ async function getItems(){
 }
 function nrm(s){return String(s||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().trim()}
 async function relocate(path){
-  var i=path.lastIndexOf("/"),dir=path.slice(0,i)||"/",name=nrm(path.slice(i+1)),dirs=[dir],seen={},count=0;
-  while(dirs.length&&count<60){var folder=dirs.shift(),key=nrm(folder);if(seen[key])continue;seen[key]=1;count++;
-    try{var d=await call({action:"list",path:folder}),entries=d.entries||[];
-      var match=entries.find(function(x){return !x.dir&&nrm(x.name)===name});if(match)return match.path;
-      entries.filter(function(x){return x.dir}).forEach(function(x){if(dirs.length<100)dirs.push(x.path)});
-    }catch(e){}
+  // Essayer d'abord le dossier enregistré, puis l'arborescence accessible.
+  // Ne sélectionner que les fichiers portant exactement le même nom et la même extension.
+  var i=path.lastIndexOf("/"),parent=path.slice(0,i)||"/",target=nrm(path.slice(i+1));
+  var folders=[parent,""],visited=new Set(),matches=[],checked=0,limit=180;
+  while(folders.length&&checked<limit){
+    var folder=folders.shift(),key=nrm(folder);
+    if(visited.has(key))continue;visited.add(key);checked++;
+    try{
+      var data=await call({action:"list",path:folder}),entries=data.entries||[];
+      entries.forEach(function(entry){
+        if(entry.dir){if(folders.length<500)folders.push(entry.path)}
+        else if(nrm(entry.name)===target&&matches.indexOf(entry.path)<0)matches.push(entry.path);
+      });
+      // Un seul résultat dans le dossier attendu : chemin fiable.
+      if(key===nrm(parent)&&matches.length===1)return matches[0];
+    }catch(e){/* Le dossier d'origine peut avoir été déplacé. Continuer depuis la racine. */}
   }
+  if(matches.length>1)throw new Error("Plusieurs fichiers portent ce nom dans Dropbox. Sélectionnez le bon fichier depuis « Parcourir ma Dropbox ».");
+  if(matches.length===1)return matches[0];
+  if(folders.length)throw new Error("Recherche Dropbox incomplète : trop de dossiers. Sélectionnez le fichier depuis « Parcourir ma Dropbox ».");
   return null;
 }
 async function getBlob(path){
@@ -5051,7 +5064,7 @@ async function getBlob(path){
   try{d=await call({action:"stream",path:path})}
   catch(err){
     if(!/not_found/i.test(String(err.message||err)))throw err;
-    var p2=await relocate(path);if(!p2)throw new Error("Fichier Dropbox introuvable. Vérifiez son nom et son emplacement.");
+    var p2=await relocate(path);if(!p2)throw new Error("Analyse Dropbox : aucun fichier de ce nom à l’emplacement enregistré ni dans les dossiers parcourus. Depuis « Parcourir ma Dropbox », choisissez son nouvel emplacement.");
     d=await call({action:"stream",path:p2});cur.path=p2;
   }
   if(!(d instanceof Blob))throw new Error("Réponse inattendue : redéployez la fonction dropbox-view.");
