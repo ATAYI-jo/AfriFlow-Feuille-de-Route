@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="theme-color" content="#075a40">
-<title>Assistante 3D — AfriFloW</title>
+<title>Assistante AfriFloW — portrait fidèle</title>
 <link rel="icon" href="../logo.png">
 <link rel="stylesheet" href="./style.css">
 </head>
@@ -16,21 +16,21 @@
   </header>
   <main class="main">
     <section class="visual" aria-label="Personnage AfriFloW en 3D">
-      <div id="avatarViewport"></div>
-      <img id="photoMode" class="photo hidden" src="../avatar.jpg" alt="Portrait de référence AfriFloW">
-      <div class="overlay-top"><span class="dot"></span><span id="sceneStatus">Avatar 3D interactif</span></div>
+      <div id="avatarViewport" aria-hidden="true"></div>
+      <img id="photoMode" class="photo" src="../avatar.jpg" alt="Portrait original de l’assistante AfriFloW">
+      <div class="overlay-top"><span class="dot"></span><span id="sceneStatus">Portrait original AfriFloW</span></div>
       <div class="bottom-overlay">
-        <span class="hint">Faites glisser pour orienter le personnage</span>
+        <span class="hint">Image originale, sans déformation des traits</span>
         <div class="pills">
-          <button type="button" id="mode3d" class="active">3D interactif</button>
-          <button type="button" id="modePhoto">Portrait fidèle</button>
+          <button type="button" id="mode3d">Prototype 3D</button>
+          <button type="button" id="modePhoto" class="active">Portrait original</button>
         </div>
       </div>
     </section>
     <section class="panel">
       <div class="eyebrow">BIENVENUE CHEZ AFRIFLOW</div>
-      <h1>Votre assistante <em>prend vie.</em></h1>
-      <p class="lede">Elle vous accueille, répond à vos questions et anime naturellement son visage et ses gestes pendant la conversation.</p>
+      <h1>Votre assistante <em>AfriFloW.</em></h1>
+      <p class="lede">Retrouvez le portrait original de votre assistante et faites-lui lire un message. Le portrait reste fixe : une vraie animation 3D fidèle demandera un modèle 3D conçu à partir de cette référence.</p>
       <label for="message">Texte à prononcer</label>
       <textarea id="message">Bonjour ! Je suis l'assistante virtuelle AfriFloW. Je suis ravie de vous accueillir. Comment puis-je vous accompagner aujourd'hui ?</textarea>
       <div class="buttons">
@@ -49,7 +49,7 @@
       </div>
     </section>
   </main>
-  <footer><span>AfriFloW · Du territoire africain vers le monde</span><span>Prototype 3D interactif</span></footer>
+  <footer><span>AfriFloW · Du territoire africain vers le monde</span><span>Portrait fidèle · Prototype 3D facultatif</span></footer>
 </div>
 <script type="module" src="./avatar.js"></script>
 </body>
