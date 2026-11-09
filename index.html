@@ -5148,7 +5148,7 @@ document.addEventListener("click",function(e){
   var download=e.target.closest("[data-dvp-dl-fail]");if(download){e.preventDefault();getBlob(cur.path).then(function(b){var u=mkUrl(b),a=document.createElement("a");a.href=u;a.download=cur.path.split("/").pop()||"document";a.click()}).catch(function(x){fail(x)});return}
    var r=e.target.closest("button[data-dvp-refresh]");
   if(r){e.preventDefault();e.stopPropagation();delete cache[cur.path];show(cur.i).catch(fail);return}
-  var b=e.target.closest("[data-dvopen]");if(!b)return;
+  if(e.target.closest("button,a,input,textarea,select,[data-dvrm]"))return;var b=e.target.closest("[data-dvopen]");if(!b)return;
   e.preventDefault();e.stopPropagation();show(+b.dataset.dvopen).catch(fail);
 },true); window.dvReload=function(){delete cache[cur.path];show(cur.i).catch(fail)};
 })();
