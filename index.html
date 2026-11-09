@@ -6081,7 +6081,7 @@ window.dvWordEdit=function(path,orig){
         var msg=n.children[1].textContent||"";
         if(/^AfriFlow/i.test(who)){
           if(/je réfléchis/i.test(msg))sendState("thinking");
-          else if(msg.trim()){sendState("talking");if(!live&&pane&&!pane.hidden&&frame.dataset.loaded==="yes"){frame.contentWindow.postMessage({type:"AFRIFLOW_SPEAK",text:msg},location.origin)}}
+          else if(msg.trim())sendState("talking"); // L'audio reste géré par le chatbot principal, sans lecture en double.
         }else if(/^Vous/i.test(who))sendState("thinking");
       })});
     }).observe(log,{childList:true});
