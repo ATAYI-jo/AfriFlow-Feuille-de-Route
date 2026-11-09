@@ -5577,8 +5577,13 @@ async function startLive(){
     ws.onerror=function(){console.warn("WebSocket vocal : erreur (détail dans l'événement de fermeture)")};
     ws.onclose=function(ev){
       if(LV!==me||me.closing)return;
-      toast(me.ready?"Conversation terminée (limite de durée atteinte ou connexion perdue).":"Connexion vocale refusée (code "+ev.code+") : "+(ev.reason||"aucun détail. Vérifiez le modèle GEMINI_LIVE_MODEL et la clé GEMINI_API_KEY."));
-      stopLive();
+      console.warn("Gemini Live terminé :",ev.code,ev.reason||"");
+      if(!me.ready){
+        fallbackVoice("Connexion Live refusée");
+      }else{
+        toast("Conversation Live interrompue. Le mode vocal de secours est disponible.");
+        fallbackVoice("Connexion Live perdue");
+      }
     };
     function play(b){
       var bin=atob(b),n=bin.length>>1,bf=ctx.createBuffer(1,n,24000),ch=bf.getChannelData(0);
