@@ -6243,5 +6243,26 @@ window.dvWordEdit=function(path,orig){
   }
 }
 </style>
+
+<style id="af-glass-dark-contrast">
+/* Contraste : les titres verts sur les surfaces vitrées deviennent blancs en mode sombre.
+   Sélecteurs ciblés pour ne pas modifier les couleurs du thème clair ni les boutons d'action. */
+:root[data-theme="dark"] .start-pill > b,
+:root[data-theme="dark"] .plus-card b,
+:root[data-theme="dark"] .mt-box > h3,
+:root[data-theme="dark"] .mt-adm > h3,
+:root[data-theme="dark"] .brand h1 {
+  color:#fff !important;
+}
+@media (prefers-color-scheme:dark) {
+  :root:not([data-theme="light"]) .start-pill > b,
+  :root:not([data-theme="light"]) .plus-card b,
+  :root:not([data-theme="light"]) .mt-box > h3,
+  :root:not([data-theme="light"]) .mt-adm > h3,
+  :root:not([data-theme="light"]) .brand h1 {
+    color:#fff !important;
+  }
+}
+</style>
 </body>
 </html>
