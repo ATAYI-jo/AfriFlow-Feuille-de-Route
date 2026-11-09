@@ -1857,17 +1857,7 @@ async function toBlob(d){
   if(d.t==="design")return designBlob(d);
   if(d.t==="doc"){
     await lib("docx");
-    return window.htmlDocx.asBlob('<!DOCTYPE html><html><head><meta charset="utf-8"><style>body{font-family:Calibri,Arial,sans-serif;font-size:12pt}table{border-collapse:collapse}td,th{border:1px solid #999;padding:4px 8px}</style></head><body>'+(d.html||"")+'<style id="af-mobile-stability">
-@media(max-width:700px){
-  /* Économiser la mémoire graphique sur smartphones : supprimer les flous plein écran. */
-  .brand,.fdr-hero,#aiBox,.toolbar,.map-panel,.step-card,.dcard,.journal-article,.customizer-box{
-    -webkit-backdrop-filter:none!important;backdrop-filter:none!important;
-  }
-  .brand::after,.fdr-hero::after{-webkit-backdrop-filter:none!important;backdrop-filter:none!important}
-  .af-cloud,.af-sw{animation:none!important}
-}
-</style>
-</body></html>');
+    return window.htmlDocx.asBlob('<!DOCTYPE html><html><head><meta charset="utf-8"><style>body{font-family:Calibri,Arial,sans-serif;font-size:12pt}table{border-collapse:collapse}td,th{border:1px solid #999;padding:4px 8px}</style></head><body>'+(d.html||"")+'</body></html>');
   }
   await lib("xlsx"); var X2=window.XLSX,E=evalSheet(d.cells||[]),ws={},mr=0,mc=0;
   (d.cells||[]).forEach(function(row,r){(row||[]).forEach(function(raw,c){
@@ -6221,6 +6211,16 @@ window.dvWordEdit=function(path,orig){
 #side{z-index:1202!important}
 #side.on{visibility:visible!important;transform:translateX(0)!important;pointer-events:auto!important}
 #menuBtn:focus-visible{outline:3px solid var(--amber,#e99424);outline-offset:3px}
+</style>
+<style id="af-mobile-stability">
+@media(max-width:700px){
+  /* Économiser la mémoire graphique sur smartphones : supprimer les flous plein écran. */
+  .brand,.fdr-hero,#aiBox,.toolbar,.map-panel,.step-card,.dcard,.journal-article,.customizer-box{
+    -webkit-backdrop-filter:none!important;backdrop-filter:none!important;
+  }
+  .brand::after,.fdr-hero::after{-webkit-backdrop-filter:none!important;backdrop-filter:none!important}
+  .af-cloud,.af-sw{animation:none!important}
+}
 </style>
 </body>
 </html>
