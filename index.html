@@ -424,6 +424,35 @@ window.ic=function(n,s){return '<svg class="ic"'+(s?' style="width:'+s+';height:
 
 <button type="button" id="menuBtn" aria-label="Ouvrir le menu" aria-expanded="false"><i></i><i></i><i></i></button>
 <div id="scrim"></div>
+<script id="af-menu-robust-init">
+/* Gestionnaire indépendant : le menu reste accessible même si un module secondaire échoue. */
+(function(){
+  "use strict";
+  function get(id){return document.getElementById(id)}
+  function setOpen(open){
+    var menu=get("side"),shade=get("scrim"),btn=get("menuBtn");
+    if(!menu||!shade||!btn)return;
+    menu.classList.toggle("on",!!open);
+    shade.classList.toggle("on",!!open);
+    btn.setAttribute("aria-expanded",open?"true":"false");
+    btn.setAttribute("aria-label",open?"Fermer le menu":"Ouvrir le menu");
+  }
+  document.addEventListener("click",function(event){
+    var target=event.target;
+    if(!target||!target.closest)return;
+    var toggle=target.closest("#menuBtn");
+    var close=target.closest("#scrim,#sideClose");
+    if(!toggle&&!close)return;
+    event.preventDefault();event.stopImmediatePropagation();
+    if(toggle){
+      var menu=get("side");setOpen(!menu||!menu.classList.contains("on"));
+    }else setOpen(false);
+  },true);
+  document.addEventListener("keydown",function(e){
+    if(e.key==="Escape"&&get("side")&&get("side").classList.contains("on"))setOpen(false);
+  },true);
+})();
+</script>
 <nav id="side" aria-label="Menu principal">
   <div class="side-h"><img src="logo.png" alt="" onerror="this.onerror=null;this.src='https://placehold.co/42x42/1f5d3a/ffffff?text=A'"><b>AfriFloW</b><button type="button" id="sideClose" aria-label="Fermer le menu">✕</button></div>
   <div id="navList"></div>
@@ -6139,5 +6168,19 @@ window.dvWordEdit=function(path,orig){
   else initialize();
 })();
 </script>
+<style id="af-menu-robust-css">
+/* Bouton tactile au-dessus du décor ; menu au-dessus du voile, hors des modales. */
+#menuBtn{
+ z-index:1200!important;
+ pointer-events:auto!important;
+ touch-action:manipulation;
+ -webkit-tap-highlight-color:transparent;
+ min-width:46px;min-height:46px;
+}
+#scrim{z-index:1201!important}
+#side{z-index:1202!important}
+#side.on{visibility:visible!important;transform:translateX(0)!important;pointer-events:auto!important}
+#menuBtn:focus-visible{outline:3px solid var(--amber,#e99424);outline-offset:3px}
+</style>
 </body>
 </html>
