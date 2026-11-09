@@ -2135,7 +2135,7 @@ async function renAdmin(){
   var U,R;
   try{U=await AFRI.listUsers();R=await AFRI.listRequests()}catch(e){if(cur==="admin")$("adBody").innerHTML='<p style="color:#c0392b">Lecture impossible : '+esc(e.message||e)+'</p>';return}
   if(cur!=="admin")return; W.U=U; var P=R.filter(function(r){return r.status==="pending"});
-  $("adBody").innerHTML='<h3>Demandes de modification ('+P.length+')</h3>'+(P.length?'<div class="dgrid">'+P.map(function(r){return '<div class="dcard"><b>'+esc(r.name||r.email)+'</b><small>'+esc(r.email)+' · '+fdt(r.at)+'</small><small>Souhaite modifier : <b>'+esc((r.pages||[]).map(pn).join(", "))+'</b></small>'+(r.msg?'<small>« '+esc(r.msg)+' »</small>':'')+'<div class="dact"><button type="button" class="p" data-ok="'+esc(r.email)+'">Accepter</button><button type="button" data-no="'+esc(r.email)+'">Refuser</button></div></div>'}).join("")+'</div>':'<p style="color:var(--muted)">Aucune demande en attente.</p>')
+  $("adBody").innerHTML='<h3>Demandes de modification ('+P.length+')</h3>'+(P.length?'<div class="dgrid">'+P.map(function(r){return '<div class="dcard"><b>'+esc(r.name||r.email)+'</b><small>'+esc(r.email)+' · '+fdt(r.at)+'</small><small>Souhaite modifier : <b>'+esc(r.docPath?String(r.docPath).split("/").pop():(r.pages||[]).map(pn).join(", "))+'</b></small>'+(r.msg?'<small>« '+esc(r.msg)+' »</small>':'')+'<div class="dact"><button type="button" class="p" data-ok="'+esc(r.email)+'">Accepter</button><button type="button" data-no="'+esc(r.email)+'">Refuser</button></div></div>'}).join("")+'</div>':'<p style="color:var(--muted)">Aucune demande en attente.</p>')
   +'<h3>Comptes inscrits ('+U.length+')</h3>'+(U.length?'<div class="xlw"><table class="t"><thead><tr><th>Nom</th><th>Email</th><th>Droits de modification</th><th>Inscrit le</th><th></th></tr></thead><tbody>'+U.map(function(u){return '<tr><td>'+esc(u.name)+'</td><td>'+esc(u.email)+'</td><td>'+esc(gtxt(u.grants))+'</td><td>'+fdt(u.created)+'</td><td><button type="button" data-dg="'+esc(u.email)+'">Droits</button> <button type="button" class="danger" data-du="'+esc(u.email)+'">Supprimer</button></td></tr>'}).join("")+'</tbody></table></div>':'<p style="color:var(--muted)">Aucun compte pour le moment.</p>');
   h.onclick=function(e){
     var b=e.target.closest("button");if(!b)return;var d=b.dataset;
@@ -2332,10 +2332,18 @@ AFRI.deleteUser=async function(email){
   try{await SB().from(TB()).delete().like("key","msg:"+e+":%");await SB().from(TB()).delete().like("key","sent:"+e+":%")}catch(x){}
 };
 AFRI.sendRequest=async function(pages,msg){var e=loggedUserEmail.toLowerCase();await putRow("req:"+e,{email:e,name:USER_NAME,pages:pages,msg:msg,at:iso(),status:"pending"})};
+AFRI.sendDocRequest=async function(path){var e=loggedUserEmail.toLowerCase();await putRow("req:"+e,{email:e,name:USER_NAME,pages:[],docPath:path,msg:"Demande de modification : "+String(path).split("/").pop(),at:iso(),status:"pending"})};
 AFRI.myRequest=function(){return getRow("req:"+loggedUserEmail.toLowerCase())};
 AFRI.resolve=async function(email,ok){
   email=String(email).toLowerCase(); var r=await getRow("req:"+email); if(!r)return;
-  if(ok){var u=await getRow(ukey(email));if(u){var g=u.grants||[];(r.pages||[]).forEach(function(p){if(g.indexOf(p)<0)g.push(p)});if(g.indexOf("all")>-1)g=["all"];u.grants=g;await putRow(ukey(email),u)}}
+  if(ok&&r.docPath){
+    var per=await getRow("pub:dbxperm")||{},users=per.users||{},key=String(r.docPath).toLowerCase();
+    var list=Array.isArray(users[key])?users[key]:[];
+    if(list.indexOf(email)<0)list.push(email);
+    users[key]=list;
+    per.users=users;per.at=Date.now();per.by=loggedUserEmail;
+    await putRow("pub:dbxperm",per);
+  }else if(ok){var u=await getRow(ukey(email));if(u){var g=u.grants||[];(r.pages||[]).forEach(function(p){if(g.indexOf(p)<0)g.push(p)});if(g.indexOf("all")>-1)g=["all"];u.grants=g;await putRow(ukey(email),u)}}
   r.status=ok?"approved":"refused";r.done=iso();await putRow("req:"+email,r);
 };
 async function refreshMe(){
@@ -5081,12 +5089,12 @@ async function show(i){
   var e=ext(it.path),name=esc(it.title||it.path),fname=esc(String(it.path).split("/").pop());
   if(e==="pptx"||e==="ppt"){
     var l=await call({action:"link",path:it.path});if(my!==token)return;
-    box.innerHTML='<div class="toolbar"><b>'+name+'</b><div class="toolbar-actions"><a href="'+esc(l.link)+'" target="_blank" rel="noopener noreferrer"><button type="button">Télécharger</button></a></div></div><iframe src="https://view.officeapps.live.com/op/embed.aspx?src='+encodeURIComponent(l.link)+'" title="'+name+'"></iframe>';
+    box.innerHTML='<div class="toolbar"><b>'+name+'</b><div class="toolbar-actions"><button type="button" data-dvp-edit="1">Modifier</button><a href="'+esc(l.link)+'" target="_blank" rel="noopener noreferrer"><button type="button">Télécharger</button></a></div></div><iframe src="https://view.officeapps.live.com/op/embed.aspx?src='+encodeURIComponent(l.link)+'" title="'+name+'"></iframe>';
     return;
   }
   var blob=await getBlob(it.path);if(my!==token)return;
   var dlu=mkUrl(blob);
-  var edBtn=(e==="docx"&&window.USER_ROLE==="admin")?'<button type="button" class="p" data-dvp-edit="1">Modifier</button>':'';
+  var edBtn=/^(docx|xlsx|pdf)$/.test(e)?'<button type="button" class="p" data-dvp-edit="1">Modifier</button>':'';
 var bar='<div class="toolbar"><b>'+name+'</b><div class="toolbar-actions">'+edBtn+'<a href="'+dlu+'" download="'+fname+'"><button type="button">Télécharger</button></a><button type="button" data-dvp-refresh="1">Actualiser</button></div></div>';
   if(e==="pdf"){
     box.innerHTML=bar+'<div class="dvp" id="dvpBox"></div>';
@@ -5099,7 +5107,7 @@ var bar='<div class="toolbar"><b>'+name+'</b><div class="toolbar-actions">'+edBt
     await lib("mammoth");var r=await window.mammoth.convertToHtml({arrayBuffer:await blob.arrayBuffer()});if(my!==token)return;
     box.innerHTML=bar+'<div class="wpage">'+clean(r.value)+'</div>';
   }else if(/^(xlsx|xls|csv)$/.test(e)){
-    await lib("xlsx");var wb=window.XLSX.read(await blob.arrayBuffer(),{type:"array"});if(my!==token)return;
+    await lib("xlsx");var wb=window.XLSX.read(await blob.arrayBuffer(),{type:"array"});if(my!==token)return;window.__dvWorkbook=wb;
     box.innerHTML=bar+'<div class="auth-tabs" id="dvTabs" style="max-width:none;flex-wrap:wrap">'+wb.SheetNames.map(function(n,k){return '<button type="button" data-sh="'+k+'" class="'+(k?'':'on')+'">'+esc(n)+'</button>'}).join("")+'</div><div class="dv-sheet" id="dvSheet"></div>';
     var showS=function(k){$("dvSheet").innerHTML=window.XLSX.utils.sheet_to_html(wb.Sheets[wb.SheetNames[k]]);$("dvTabs").querySelectorAll("button").forEach(function(b){b.classList.toggle("on",+b.dataset.sh===k)})};
     showS(0);$("dvTabs").onclick=function(ev){var b=ev.target.closest("[data-sh]");if(b)showS(+b.dataset.sh)};
@@ -5110,7 +5118,7 @@ var bar='<div class="toolbar"><b>'+name+'</b><div class="toolbar-actions">'+edBt
 function fail(x){var b=$("dvView");if(b)b.innerHTML='<p style="color:#c0392b">Impossible d\'afficher : '+esc(x&&x.message||x)+'</p>'}
 document.addEventListener("click",function(e){
   var ed=e.target.closest("button[data-dvp-edit]");
-  if(ed){e.preventDefault();e.stopPropagation();if(window.dvWordEdit)window.dvWordEdit(cur.path,cache[cur.path]);return}
+  if(ed){e.preventDefault();e.stopPropagation();if(window.dvRequestEdit)window.dvRequestEdit(cur.path);return}
   var r=e.target.closest("button[data-dvp-refresh]");
   if(r){e.preventDefault();e.stopPropagation();delete cache[cur.path];show(cur.i).catch(fail);return}
   var b=e.target.closest("button[data-dvopen]");if(!b)return;
@@ -6272,5 +6280,34 @@ window.dvWordEdit=function(path,orig){
   :root:not([data-theme="light"]) .dcard .dtype { color:#fff!important; border-color:rgba(255,255,255,.7)!important; }
 }
 </style>
+
+<style id="af-document-permissions-ui">
+#afPermOverlay{position:fixed;inset:0;z-index:12050;background:rgba(0,0,0,.7);display:grid;place-items:center;padding:12px}
+.afPermBox{width:min(860px,96vw);max-height:90vh;display:flex;flex-direction:column;overflow:hidden;background:var(--card,#fff);color:var(--ink,#222);border:1px solid var(--line,#ddd);border-radius:16px;box-shadow:0 18px 70px #0005}
+.afPermBox header,.afPermBox footer{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:14px 18px}
+.afPermBox header{border-bottom:1px solid var(--line,#ddd)}.afPermBox header h2{margin:0;font-size:1.25rem}
+.afPermBox>p{margin:12px 18px}.afPermBox footer{border-top:1px solid var(--line,#ddd);justify-content:flex-end}
+#afPermList{overflow:auto;padding:0 18px 18px}.afPermFile{border:1px solid var(--line,#ddd);border-radius:10px;padding:14px;margin:12px 0}
+.afPermFile h3{margin:0 0 4px;font-size:1rem}.afPermFile small{display:block;overflow-wrap:anywhere;opacity:.7;margin-bottom:8px}
+.afPermFile label{display:flex;align-items:center;gap:10px;padding:6px 2px;font-size:.9rem;cursor:pointer}
+.afPermFile input{width:17px;height:17px}.afPermBox button,#afPermAdmin button{cursor:pointer}
+#afPermAdmin{margin:18px 0;padding:16px;border:1px solid var(--line,#ddd);border-radius:12px;background:color-mix(in srgb,var(--card) 80%,transparent)}
+#afPermAdmin h3{margin:0 0 6px}#afPermAdmin p{margin:0 0 12px}
+#afExcel{position:fixed;inset:0;z-index:13000;display:flex;flex-direction:column;background:#e9edf2;color:#182332;font:14px/1.35 system-ui,sans-serif}
+#afExcel header{display:flex;align-items:center;gap:12px;flex-wrap:wrap;background:#155b30;color:#fff;padding:12px 18px}
+#afExcel header strong{flex:1}#afExcel header button{background:#fff;color:#155b30;font-weight:700;border-radius:7px}
+#afExcel>p{margin:0;padding:10px 18px;background:#f5fbf5}
+#afExcelTabs{display:flex;gap:4px;padding:8px 12px;background:#dfe8e1;overflow-x:auto}
+#afExcelTabs button.on{background:#fff;font-weight:700}
+.afExcelGrid{flex:1;overflow:auto;background:#fff}
+.afExcelGrid table{border-collapse:collapse;white-space:nowrap}
+.afExcelGrid td,.afExcelGrid th{border:1px solid #ccd2d8;padding:0;min-width:95px;height:29px}
+.afExcelGrid th{position:sticky;top:0;z-index:1;background:#edf0f4;padding:5px;min-width:42px}
+.afExcelGrid input{border:0;border-radius:0;background:#fff;color:#111;width:100%;height:29px;padding:3px 7px;font:13px system-ui,sans-serif;outline-offset:-2px}
+#afExcel footer{padding:8px 16px;background:#dfe8e1}
+@media(max-width:700px){.afPermBox{max-height:94vh}.afPermBox header{flex-wrap:wrap}.afExcelGrid td{min-width:110px}}
+</style>
+<script src="document-excel-editor.js" defer></script>
+<script src="document-permissions.js" defer></script>
 </body>
 </html>
