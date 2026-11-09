@@ -5580,7 +5580,14 @@ async function startLive(){
     function speaking(){return me.next>ctx.currentTime+.02}
     function level(){if(!speaking())return 0;me.an.getByteTimeDomainData(buf);var s=0;for(var i=0;i<buf.length;i++){var v=(buf[i]-128)/128;s+=v*v}return Math.min(1,Math.sqrt(s/buf.length)*5)}
     function state(){if(!me.ready)return "think";if(speaking())return "speak";var n=Date.now();if(me.lastVoice>me.lastOut&&n-me.lastVoice>500&&n-me.lastVoice<5000)return "think";return "listen"}
-    HEAD=buildHead($("aiCv"),level,state);
+    // L'avatar visuel est facultatif : un échec Canvas/WebGL ne doit jamais bloquer le micro ni Gemini Live.
+    try { HEAD=buildHead($("aiCv"),level,state); }
+    catch(avatarError) {
+      HEAD=null;
+      console.warn("Animation avatar indisponible, voix Live maintenue :",avatarError);
+      var avCanvas=$("aiCv");if(avCanvas)avCanvas.style.display="none";
+      var avLabel=$("aiLbl");if(avLabel)avLabel.lastChild.textContent="Connexion vocale…";
+    }
     /* 1. le micro d'abord : la fenêtre d'autorisation peut durer, le jeton (valable 1 min) est demandé après */
     me.stream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true,autoGainControl:true,channelCount:1}});
     if(LV!==me)return;
