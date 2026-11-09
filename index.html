@@ -6222,5 +6222,26 @@ window.dvWordEdit=function(path,orig){
   .af-cloud,.af-sw{animation:none!important}
 }
 </style>
+
+<style id="af-dark-readability">
+/* Titres ciblés uniquement en thème sombre : le thème clair reste inchangé. */
+:root[data-theme="dark"] #side .side-h b,
+:root[data-theme="dark"] #menuBtn i,
+:root[data-theme="dark"] #mtAdmin h3 {
+  color:#fff !important;
+}
+:root[data-theme="dark"] #menuBtn i {
+  background:#fff !important;
+}
+@media (prefers-color-scheme:dark) {
+  :root:not([data-theme="light"]) #side .side-h b,
+  :root:not([data-theme="light"]) #mtAdmin h3 {
+    color:#fff !important;
+  }
+  :root:not([data-theme="light"]) #menuBtn i {
+    background:#fff !important;
+  }
+}
+</style>
 </body>
 </html>
