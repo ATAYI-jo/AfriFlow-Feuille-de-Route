@@ -4828,32 +4828,42 @@ function render(){
   if(!active)return;
   var h='<div class="toolbar"><b>Documents</b></div>';
   h+=items.length?'<div class="dv-grid">'+items.map(function(it,i){
-    return '<div class="dcard"><div class="dtype">'+esc((ext(it.path)||"fichier").toUpperCase())+'</div><b>'+esc(it.title)+'</b><div class="dact"><button type="button" class="p" data-dvopen="'+i+'">Afficher</button>'
-      +(adm()?'<button type="button" class="danger" data-dvrm="'+i+'">Retirer</button>':'')+'</div></div>';
+    return '<div class="dcard dv-clickable" data-dv-card="'+i+'" role="button" tabindex="0" aria-label="Afficher '+esc(it.title||it.path)+'"><div class="dtype">'+esc((ext(it.path)||"fichier").toUpperCase())+'</div><b class="dv-file-title">'+esc(it.title)+'</b><div class="dact">'
+      +(adm()?'<button type="button" class="danger" data-dvrm="'+i+'" aria-label="Retirer '+esc(it.title)+' du site">Retirer</button>':'')+'</div></div>';
   }).join("")+'</div>':'<p style="color:var(--muted)">Aucun document n\'est affiché pour le moment.</p>';
   h+='<div class="dv-view" id="dvView"></div>';
   if(adm()){
     h+='<div class="mt-box" style="margin-top:34px"><h3>Choisir les fichiers à afficher</h3>'
       +'<p style="color:var(--muted);font-size:.9rem;margin-top:0">Seuls les fichiers cochés ici sont visibles par les utilisateurs. Le reste de la Dropbox reste privé.</p>'
-      +'<div class="dact" style="margin:0 0 14px"><button type="button" id="dvBrowse">Parcourir ma Dropbox</button><button type="button" id="dvTok">Copier le jeton permanent (pour le serveur)</button></div><div id="dvBrowser"></div></div>';
+      +'<div class="dact" style="margin:0 0 14px"><button type="button" id="dvBrowse">Parcourir ma Dropbox</button></div><div id="dvBrowser"></div></div>';
   }
   vh.innerHTML=h;vh.onclick=onClick;
+  vh.onkeydown=function(e){if((e.key==="Enter"||e.key===" ")&&e.target.matches(".dv-clickable")){e.preventDefault();e.target.click()}};
+  // Delegation : déclencher l'ouverture sur toute la surface du fichier ou dossier.
 }
 async function browse(p){
   cwd=p;var b=$("dvBrowser");if(!b)return;b.innerHTML='<p style="color:var(--muted)">Chargement…</p>';
   try{
     var d=await call({action:"list",path:p||"/"}),parts=p.split("/").filter(Boolean),acc="";
     var crumb='<button type="button" data-dvdir="">Racine</button>'+parts.map(function(s){acc+="/"+s;return ' › <button type="button" data-dvdir="'+esc(acc)+'">'+esc(s)+'</button>'}).join("");
-    b.innerHTML='<div class="dact" style="margin:0 0 10px">'+crumb+'</div>'+(d.entries.length?d.entries.map(function(e){
+    var previous=parts.length?'<button type="button" data-dvdir="'+esc(p.slice(0,p.lastIndexOf("/")))+'">← Dossier précédent</button>':'';
+    b.innerHTML='<nav class="dv-crumb" aria-label="Chemin du dossier">'+previous+crumb+'</nav>'+(d.entries.length?d.entries.map(function(e){
       var shown=items.some(function(x){return String(x.path).toLowerCase()===e.path.toLowerCase()});
-      return '<div class="dv-row"><span>'+ic(e.dir?"folder":"file")+' '+esc(e.name)+'</span>'+(e.dir?'<button type="button" data-dvdir="'+esc(e.path)+'">Ouvrir</button>':(shown?'<small style="color:var(--muted)">Déjà affiché</small>':'<button type="button" class="p" data-dvadd="'+esc(e.path)+'" data-n="'+esc(e.name)+'">Afficher sur le site</button>'))+'</div>';
+      return '<div class="dv-row dv-clickable" role="button" tabindex="0" data-dventry="'+esc(e.path)+'" data-dvfolder="'+(e.dir?'1':'0')+'" data-dvname="'+esc(e.name)+'" aria-label="'+esc(e.dir?'Ouvrir le dossier '+e.name:'Afficher le fichier '+e.name)+'"><span class="dv-row-name">'+ic(e.dir?"folder":"file")+' '+esc(e.name)+'</span>'+(e.dir?'<span class="dv-row-hint" aria-hidden="true">›</span>':(shown?'<small style="color:var(--muted)">Déjà affiché</small>':'<button type="button" class="p" data-dvadd="'+esc(e.path)+'" data-n="'+esc(e.name)+'">Afficher sur le site</button>'))+'</div>';
     }).join(""):'<p style="color:var(--muted)">Dossier vide.</p>');
   }catch(x){b.innerHTML='<p style="color:#c0392b">'+esc(x.message||x)+'<br><small>Vérifiez que la fonction « dropbox-view » est déployée et que les secrets DROPBOX_APP_KEY / DROPBOX_REFRESH_TOKEN sont définis.</small></p>'}
 }
 async function onClick(e){
-  var b=e.target.closest("button");if(!b)return;var d=b.dataset;
+  var b=e.target.closest("button");var card=e.target.closest("[data-dv-card]");var entry=e.target.closest("[data-dventry]");
+  if(!b&&!card&&!entry)return;
+  var d=b?b.dataset:{};
   try{
-    if(d.dvopen!=null)openFile(+d.dvopen);
+    if(card&&!b){if(window.dvOpenItem)window.dvOpenItem(+card.dataset.dvCard);else openFile(+card.dataset.dvCard)}
+    else if(entry&&!b){
+      if(entry.dataset.dvfolder==="1")browse(entry.dataset.dventry);
+      else{var it=items.findIndex(function(x){return x.path.toLowerCase()===entry.dataset.dventry.toLowerCase()});if(it>=0&&window.dvOpenItem)window.dvOpenItem(it);else window.askDlg("Afficher ce fichier",[{id:"t",l:"Titre affiché sur le site"}],function(v){var path=entry.dataset.dventry,name=entry.dataset.dvname;items.push({path:path,title:v.t||name,at:Date.now()});saveItems().then(function(){toast("Fichier ajouté.");render();browse(cwd)}).catch(function(x){items.pop();toast(x.message||x)})});}
+    }
+    else if(d.dvopen!=null)window.dvOpenItem?window.dvOpenItem(+d.dvopen):openFile(+d.dvopen);
     else if(d.dvrm!=null){if(confirm("Retirer ce fichier de l'affichage du site ? (il reste dans la Dropbox)")){items.splice(+d.dvrm,1);await saveItems();render()}}
     else if(b.id==="dvBrowse")browse("");
     else if(d.dvdir!=null)browse(d.dvdir);
@@ -4865,12 +4875,7 @@ async function onClick(e){
       });
       var f=$("xf_t");if(f){f.value=name.replace(/\.[^.]+$/,"");f.select()}
     }
-    else if(b.id==="dvTok"){
-      var c={};try{c=JSON.parse(localStorage.getItem("afriflow_dbx_v1")||"{}")}catch(x){}
-      if(!c.refresh){toast("Connectez d'abord Dropbox (Messagerie › ☁ Dropbox › Se connecter).");return}
-      await navigator.clipboard.writeText(c.refresh);
-      toast("Jeton copié. Collez-le dans le secret DROPBOX_REFRESH_TOKEN de Supabase, sans le partager.");
-    }
+
   }catch(x){toast("Action impossible : "+(x.message||x))}
 }
 async function openPage(){
