@@ -7,6 +7,9 @@
 <title>Assistante AfriFloW — portrait fidèle</title>
 <link rel="icon" href="../logo.png">
 <link rel="stylesheet" href="./style.css">
+<script type="importmap">
+{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.164.1/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.164.1/examples/jsm/"}}
+</script>
 </head>
 <body>
 <div class="shell">
@@ -22,7 +25,7 @@
       <div class="bottom-overlay">
         <span class="hint">Image originale, sans déformation des traits</span>
         <div class="pills">
-          <button type="button" id="mode3d">Prototype 3D</button>
+          <button type="button" id="mode3d">Afficher le GLB</button>
           <button type="button" id="modePhoto" class="active">Portrait original</button>
         </div>
       </div>
@@ -30,7 +33,7 @@
     <section class="panel">
       <div class="eyebrow">BIENVENUE CHEZ AFRIFLOW</div>
       <h1>Votre assistante <em>AfriFloW.</em></h1>
-      <p class="lede">Retrouvez le portrait original de votre assistante et faites-lui lire un message. Le portrait reste fixe : une vraie animation 3D fidèle demandera un modèle 3D conçu à partir de cette référence.</p>
+      <p class="lede">Le portrait original reste affiché. Pour activer l’avatar 3D, ajoute ton vrai fichier GLB dans <code>avatar-3d/models/afriflow-assistante.glb</code>, puis clique sur « Afficher le GLB ».</p>
       <label for="message">Texte à prononcer</label>
       <textarea id="message">Bonjour ! Je suis l'assistante virtuelle AfriFloW. Je suis ravie de vous accueillir. Comment puis-je vous accompagner aujourd'hui ?</textarea>
       <div class="buttons">
@@ -45,12 +48,12 @@
       <div class="api">
         <span class="api-title">Connecter votre chatbot</span>
         <code>window.AfriFlowAvatar.speak(reponse)</code>
-        <small>La voix utilise la synthèse vocale du navigateur. L'animation des lèvres est approximative et non synchronisée phonème par phonème.</small>
+        <small>La voix de démonstration utilise le navigateur. Les animations et les visèmes dépendent du véritable fichier GLB ; Gemini Live n’est pas encore relié au modèle.</small>
       </div>
     </section>
   </main>
-  <footer><span>AfriFloW · Du territoire africain vers le monde</span><span>Portrait fidèle · Prototype 3D facultatif</span></footer>
+  <footer><span>AfriFloW · Du territoire africain vers le monde</span><span>Portrait original · Chargement GLB facultatif</span></footer>
 </div>
-<script type="module" src="./avatar.js"></script>
+<script type="module" src="./avatar-controller.js"></script>
 </body>
 </html>
