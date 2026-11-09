@@ -273,6 +273,13 @@ table.xl input:focus{outline:2px solid var(--green);outline-offset:-2px;backgrou
 #view-home .brand > div { z-index:2; }
 </style>
 
+
+<!-- AfriFloW PWA: installation metadata only -->
+<link rel="manifest" href="./manifest.webmanifest">
+<meta name="theme-color" content="#1f5d3a">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="AfriFloW">
+<link rel="apple-touch-icon" href="./logo.png">
 </head>
 <body class="ro">
   <!-- =====================================================================
@@ -6525,5 +6532,16 @@ window.dvWordEdit=function(path,orig){
  .dcard{min-width:0}
 }
 </style>
+
+<!-- AfriFloW PWA: registration without request interception -->
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', function () {
+    navigator.serviceWorker.register('./sw.js').catch(function (error) {
+      console.warn('AfriFloW PWA registration:', error);
+    });
+  });
+}
+</script>
 </body>
 </html>

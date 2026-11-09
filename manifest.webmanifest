@@ -1,0 +1,19 @@
+{
+  "id": "./",
+  "name": "AfriFloW",
+  "short_name": "AfriFloW",
+  "description": "Plateforme de gestion et de suivi des projets AfriFloW",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#fcfbfa",
+  "theme_color": "#1f5d3a",
+  "icons": [
+    {
+      "src": "./logo.png",
+      "sizes": "726x726",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}
