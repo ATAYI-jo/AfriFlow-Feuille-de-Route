@@ -47,22 +47,24 @@ Deno.serve(async (req:Request)=>{
     const user=userResult.data.user;
     if(userResult.error||!user?.email||!user.email_confirmed_at)return respond({error:"Session invalide"},401);
     const email=user.email.toLowerCase();
-    const [adminResult,userRow,listed]=await Promise.all([
+    const [adminResult,listed]=await Promise.all([
       service.from("afriflow_admins").select("email").eq("email",email).maybeSingle(),
-      service.from("afriflow_state").select("value").eq("key","user:"+email).maybeSingle(),
       service.from("afriflow_state").select("value").eq("key","pub:dbxshow").maybeSingle()
     ]);
-    if(adminResult.error||userRow.error||listed.error)throw new Error("Impossible de vérifier les autorisations");
+    if(adminResult.error||listed.error)throw new Error("Impossible de vérifier les autorisations");
     const admin=!!adminResult.data;
-    const grants=Array.isArray(userRow.data?.value?.grants)?userRow.data.value.grants:[];
-    if(!admin&&!grants.includes("all")&&!grants.includes("documents")){
-      return respond({error:"Permission absente. Demandez l'autorisation à l'administrateur."},403);
-    }
+    const permissions=await service.from("afriflow_state").select("value").eq("key","pub:dbxperm").maybeSingle();
+    if(permissions.error)throw new Error("Impossible de vérifier les permissions des documents");
     const input=await req.json();
     const path=String(input.path||"");
     const data=String(input.data||"");
     if(!validPath(path)||!(/\.(docx|xlsx)$/i.test(path)))return respond({error:"Seuls les documents DOCX et XLSX autorisés peuvent être modifiés."},400);
     if(!Array.isArray(listed.data?.value?.items)||!listed.data.value.items.some((x:any)=>x&&x.path===path))return respond({error:"Fichier non publié sur AfriFloW"},403);
+    const allowed=permissions.data?.value?.users||{};
+    const members=Array.isArray(allowed[path.toLowerCase()])?allowed[path.toLowerCase()]:[];
+    if(!admin&&!members.some((v:unknown)=>String(v).toLowerCase()===email)){
+      return respond({error:"Vous n'avez pas la permission de modifier ce fichier. Faites une demande à l'administrateur."},403);
+    }
     if(data.length>11000000||data.length<50||!/^[-A-Za-z0-9+/=]+$/.test(data))return respond({error:"Fichier invalide ou trop volumineux (8 Mo maximum)."},400);
     const bytes=Uint8Array.from(atob(data),c=>c.charCodeAt(0));
     if(bytes.length>8*1024*1024||bytes[0]!==80||bytes[1]!==75)return respond({error:"Le document doit être un fichier Office ZIP valide."},400);
