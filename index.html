@@ -1517,11 +1517,39 @@ var KEY="afriflow_extra_v1", $=function(i){return document.getElementById(i)};
 var X={nav:[],tre:{open:0,cur:"XOF",rows:[]},pages:{},docs:{},pubAt:{},chg:{},del:{}}; window.EXTRA=X;
 var BASE=[{id:"home",n:"Accueil",e:"🏠"},{id:"treasury",n:"Trésorerie",e:"💰"},{id:"direction",n:"Direction",e:"🧭"}];
 var CURW={XOF:"francs CFA",EUR:"euros",USD:"dollars"}, CUR={XOF:"FCFA",EUR:"EUR",USD:"USD"}, admin=false, cur="home", sel=null, tm;
-function merge(s){ if(Array.isArray(s.nav))X.nav=s.nav; if(s.tre)X.tre=s.tre; if(s.pages)X.pages=s.pages; mergeDocs(s); mergeAbs("pubAt",s); mergeAbs("chg",s); }
-try{ var s0=JSON.parse(localStorage.getItem(KEY)||"null"); if(s0)merge(s0); }catch(e){}
+var NAV_BACKUP_KEY="afriflow_extra_nav_recovery_v1";
+function backupNav(){
+  // Préserve les noms et identifiants des onglets sur cet appareil avant toute synchronisation.
+  if(!Array.isArray(X.nav)||!X.nav.length)return;
+  try{localStorage.setItem(NAV_BACKUP_KEY,JSON.stringify({nav:X.nav,at:Date.now()}))}catch(e){}
+}
+function restoreLocalNavBackup(){
+  if(X.nav.length)return;
+  try{
+    var b=JSON.parse(localStorage.getItem(NAV_BACKUP_KEY)||"null");
+    if(b&&Array.isArray(b.nav)&&b.nav.length)X.nav=b.nav;
+  }catch(e){}
+}
+function merge(s){
+  // Une liste vide venant du cloud ne doit pas effacer la navigation existante.
+  if(Array.isArray(s.nav)&&s.nav.length){
+    backupNav();
+    if(!X.nav.length)X.nav=s.nav;
+    else{
+      var known={};X.nav.forEach(function(n){known[n.id]=true});
+      s.nav.forEach(function(n){if(n&&n.id&&!known[n.id]){X.nav.push(n);known[n.id]=true}});
+    }
+    backupNav();
+  }
+  if(s.tre)X.tre=s.tre;
+  if(s.pages)X.pages=Object.assign({},s.pages,X.pages);
+  mergeDocs(s);mergeAbs("pubAt",s);mergeAbs("chg",s);
+}
+try{ var s0=JSON.parse(localStorage.getItem(KEY)||"null"); if(s0)merge(s0);restoreLocalNavBackup();backupNav(); }catch(e){}
 function esc(s){return String(s==null?"":s).replace(/[&<>"']/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]})}
 function editing(){var a=document.activeElement;return !!(a&&a.isContentEditable)}
 function save(){
+  backupNav();
   try{localStorage.setItem(KEY,JSON.stringify(X))}catch(e){alert("Stockage du navigateur plein : image trop lourde ? Supprimez-en ou utilisez des images plus petites.")}
   clearTimeout(tm); tm=setTimeout(pushExtra,900);
 }
@@ -1954,8 +1982,20 @@ function mergeDocs(r){
 }
 function mergeAbs(k,r){ var a=X[k]=X[k]||{},b=r[k]||{}; Object.keys(b).forEach(function(i){if(!(i in a)||Math.abs(b[i])>Math.abs(a[i]))a[i]=b[i]}) }
 async function pushExtra(){
-  try{ var s=window.__sb; if(s){ var r=await s.from(window.__TABLE).select("value").eq("key","extra").maybeSingle(); if(r.data&&r.data.value&&typeof r.data.value==="object"){ mergeDocs(r.data.value); mergeAbs("pubAt",r.data.value); mergeAbs("chg",r.data.value); try{localStorage.setItem(KEY,JSON.stringify(X))}catch(e){} } } }catch(e){}
-  if(window.cloudSave)window.cloudSave("extra");
+  // Relit et fusionne la navigation distante AVANT l'enregistrement, pour éviter son écrasement.
+  try{
+    var s=window.__sb;
+    if(s){
+      var r=await s.from(window.__TABLE).select("value").eq("key","extra").maybeSingle();
+      if(r.error)throw r.error;
+      if(r.data&&r.data.value&&typeof r.data.value==="object"){
+        merge(r.data.value);
+        backupNav();
+        try{localStorage.setItem(KEY,JSON.stringify(X))}catch(e){}
+      }
+    }
+  }catch(e){console.warn("Vérification sauvegarde onglets échouée :",e);return}
+  if(window.cloudSave)await window.cloudSave("extra");
 }
 function inProg(){return '<div class="wip" role="status"><div class="spin"></div><h2>En cours...</h2><div class="bar"><i></i></div><p>Cette page est en cours de préparation. Elle sera visible dès sa publication.</p></div>'}
 async function fetchPub(id){var s=window.__sb;if(!s)return null;var r=await s.from(window.__TABLE).select("value").eq("key","pub:"+id).maybeSingle();if(r.error)throw r.error;return r.data?r.data.value:null}
