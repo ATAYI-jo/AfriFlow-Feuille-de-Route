@@ -4938,13 +4938,27 @@ async function getItems(){
   var r=await window.__sb.from(window.__TABLE||"afriflow_state").select("value").eq("key","pub:dbxshow").maybeSingle();
   return (r.data&&r.data.value&&Array.isArray(r.data.value.items))?r.data.value.items:[];
 }
+function nrm(s){return String(s||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().trim()}
+async function relocate(path){
+  var i=path.lastIndexOf("/"),dir=path.slice(0,i)||"/",name=nrm(path.slice(i+1));
+  var d=await call({action:"list",path:dir});
+  var e=(d.entries||[]).filter(function(x){return !x.dir&&nrm(x.name)===name})[0];
+  return e?e.path:null;
+}
 async function getBlob(path){
   if(cache[path])return cache[path];
-  var d=await call({action:"stream",path:path});
+  var d;
+  try{d=await call({action:"stream",path:path})}
+  catch(err){
+    if(!/not_found/i.test(String(err.message||err)))throw err;
+    var p2=await relocate(path);if(!p2)throw err;
+    d=await call({action:"stream",path:p2});
+  }
   if(!(d instanceof Blob))throw new Error("Réponse inattendue : redéployez la fonction dropbox-view.");
   cache[path]=d;keys.push(path);while(keys.length>4)delete cache[keys.shift()];
   return d;
 }
+  
 async function renderPdf(blob,host,my){
   await lib("pdf");
   var pdf=await window.pdfjsLib.getDocument({data:new Uint8Array(await blob.arrayBuffer())}).promise;
