@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#075a40">
+<title>Assistante 3D — AfriFloW</title>
+<link rel="icon" href="../logo.png">
+<link rel="stylesheet" href="./style.css">
+</head>
+<body>
+<div class="shell">
+  <header class="head">
+    <div class="identity"><img src="../logo.png" alt="Logo AfriFloW"><b>Assistante AfriFloW</b></div>
+    <span class="status"><i></i> Prête à vous aider</span>
+  </header>
+  <main class="main">
+    <section class="visual" aria-label="Personnage AfriFloW en 3D">
+      <div id="avatarViewport"></div>
+      <img id="photoMode" class="photo hidden" src="../avatar.jpg" alt="Portrait de référence AfriFloW">
+      <div class="overlay-top"><span class="dot"></span><span id="sceneStatus">Avatar 3D interactif</span></div>
+      <div class="bottom-overlay">
+        <span class="hint">Faites glisser pour orienter le personnage</span>
+        <div class="pills">
+          <button type="button" id="mode3d" class="active">3D interactif</button>
+          <button type="button" id="modePhoto">Portrait fidèle</button>
+        </div>
+      </div>
+    </section>
+    <section class="panel">
+      <div class="eyebrow">BIENVENUE CHEZ AFRIFLOW</div>
+      <h1>Votre assistante <em>prend vie.</em></h1>
+      <p class="lede">Elle vous accueille, répond à vos questions et anime naturellement son visage et ses gestes pendant la conversation.</p>
+      <label for="message">Texte à prononcer</label>
+      <textarea id="message">Bonjour ! Je suis l'assistante virtuelle AfriFloW. Je suis ravie de vous accueillir. Comment puis-je vous accompagner aujourd'hui ?</textarea>
+      <div class="buttons">
+        <button type="button" id="play" class="primary">▶ La faire parler</button>
+        <button type="button" id="stop" class="secondary">■ Arrêter</button>
+      </div>
+      <div class="controls">
+        <label class="check"><input type="checkbox" id="idle" checked> Mouvements naturels</label>
+        <label class="check"><input type="checkbox" id="lips" checked> Animation des lèvres</label>
+      </div>
+      <div id="feedback" class="feedback" aria-live="polite">Prête à parler en français.</div>
+      <div class="api">
+        <span class="api-title">Connecter votre chatbot</span>
+        <code>window.AfriFlowAvatar.speak(reponse)</code>
+        <small>La voix utilise la synthèse vocale du navigateur. L'animation des lèvres est approximative et non synchronisée phonème par phonème.</small>
+      </div>
+    </section>
+  </main>
+  <footer><span>AfriFloW · Du territoire africain vers le monde</span><span>Prototype 3D interactif</span></footer>
+</div>
+<script type="module" src="./avatar.js"></script>
+</body>
+</html>
