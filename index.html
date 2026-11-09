@@ -1858,34 +1858,7 @@ async function toBlob(d){
   if(d.t==="design")return designBlob(d);
   if(d.t==="doc"){
     await lib("docx");
-    return window.htmlDocx.asBlob('<!DOCTYPE html><html><head><meta charset="utf-8"><style>body{font-family:Calibri,Arial,sans-serif;font-size:12pt}table{border-collapse:collapse}td,th{border:1px solid #999;padding:4px 8px}</style></head><body>'+(d.html||"")+'
-<style id="afriflow-ux-20261109">
-#aiBox:not(.ai-live){background:#fffdf8!important;color:#193024!important;-webkit-backdrop-filter:none!important;backdrop-filter:none!important;border:1px solid #cbded0!important;box-shadow:0 15px 42px rgba(0,0,0,.26)!important;isolation:isolate;box-sizing:border-box!important}
-#aiBox:not(.ai-live) #aiLog{min-height:0}
-#aiBox:not(.ai-live) #aiLog>div{background:#f0f4f1!important;color:#193024!important;border:1px solid #d9e6db!important;-webkit-backdrop-filter:none!important;backdrop-filter:none!important}
-#aiBox:not(.ai-live) #aiLog>div.ai-me{background:#e0f2e5!important;color:#113920!important}
-#aiBox:not(.ai-live) #aiIn{background:#fff!important;color:#15291c!important;border:1px solid #9ebca5!important;-webkit-backdrop-filter:none!important;backdrop-filter:none!important;font-size:16px!important;min-height:44px}
-#aiBox:not(.ai-live) #aiStat{color:#52675a!important}
-#aiBox:not(.ai-live) #aiGo{background:#217044!important;color:#fff!important;-webkit-backdrop-filter:none!important;backdrop-filter:none!important}
-.af-clickable{cursor:pointer;touch-action:manipulation;transition:background .15s,box-shadow .15s;min-width:0}
-.af-clickable:hover{background:rgba(28,120,65,.07)!important;box-shadow:0 4px 18px rgba(0,0,0,.12)}
-.af-clickable:active{background:rgba(28,120,65,.14)!important}
-.af-clickable:focus-visible{outline:3px solid #228348;outline-offset:2px}
-.af-clickable b,.af-file-name{overflow-wrap:anywhere;min-width:0}
-.dv-row.af-clickable{padding:14px 10px;border-radius:10px}
-.dv-row .af-file-name{flex:1;min-width:0}
-.dv-error{padding:16px;border-radius:12px;background:#fff8f8;color:#812828;border:1px solid #edcccc}
-.dv-error button{min-height:44px;margin-right:8px}
-.dv-sheet{max-width:100%;-webkit-overflow-scrolling:touch}
-@media(max-width:700px){
- #aiBox:not(.ai-live){top:auto!important;left:2vw!important;right:2vw!important;bottom:calc(8px + env(safe-area-inset-bottom,0px))!important;transform:none!important;width:96vw!important;height:min(78dvh,700px)!important;max-height:calc(100dvh - 20px)!important;padding:10px!important;gap:5px!important}
- #aiBox:not(.ai-live) .aibar button{min-height:40px;padding:7px!important}
- .dv-grid{grid-template-columns:minmax(0,1fr)!important}
- .dv-row{min-width:0;gap:6px}
- .dcard{min-width:0}
-}
-</style>
-</body></html>');
+    return window.htmlDocx.asBlob('<!DOCTYPE html><html><head><meta charset="utf-8"><style>body{font-family:Calibri,Arial,sans-serif;font-size:12pt}table{border-collapse:collapse}td,th{border:1px solid #999;padding:4px 8px}</style></head><body>'+(d.html||"")+'</body></html>');
   }
   await lib("xlsx"); var X2=window.XLSX,E=evalSheet(d.cells||[]),ws={},mr=0,mc=0;
   (d.cells||[]).forEach(function(row,r){(row||[]).forEach(function(raw,c){
@@ -6523,6 +6496,33 @@ window.dvWordEdit=function(path,orig){
   #dwApp .dw-canvas{position:absolute;left:0;top:0;width:100%;padding:0!important;background:#fff!important;overflow:visible!important}
   #dwApp .dw-page{width:100%!important;min-height:0!important;padding:0!important;box-shadow:none!important}
   #dwApp .dw-rib,#dwApp .dw-tabs,#dwApp .dw-top,#dwApp .dw-status,#dwApp .dw-find,#dwApp .dw-shortcut-strip{display:none!important}
+}
+</style>
+
+<style id="afriflow-ux-20261109">
+#aiBox:not(.ai-live){background:#fffdf8!important;color:#193024!important;-webkit-backdrop-filter:none!important;backdrop-filter:none!important;border:1px solid #cbded0!important;box-shadow:0 15px 42px rgba(0,0,0,.26)!important;isolation:isolate;box-sizing:border-box!important}
+#aiBox:not(.ai-live) #aiLog{min-height:0}
+#aiBox:not(.ai-live) #aiLog>div{background:#f0f4f1!important;color:#193024!important;border:1px solid #d9e6db!important;-webkit-backdrop-filter:none!important;backdrop-filter:none!important}
+#aiBox:not(.ai-live) #aiLog>div.ai-me{background:#e0f2e5!important;color:#113920!important}
+#aiBox:not(.ai-live) #aiIn{background:#fff!important;color:#15291c!important;border:1px solid #9ebca5!important;-webkit-backdrop-filter:none!important;backdrop-filter:none!important;font-size:16px!important;min-height:44px}
+#aiBox:not(.ai-live) #aiStat{color:#52675a!important}
+#aiBox:not(.ai-live) #aiGo{background:#217044!important;color:#fff!important;-webkit-backdrop-filter:none!important;backdrop-filter:none!important}
+.af-clickable{cursor:pointer;touch-action:manipulation;transition:background .15s,box-shadow .15s;min-width:0}
+.af-clickable:hover{background:rgba(28,120,65,.07)!important;box-shadow:0 4px 18px rgba(0,0,0,.12)}
+.af-clickable:active{background:rgba(28,120,65,.14)!important}
+.af-clickable:focus-visible{outline:3px solid #228348;outline-offset:2px}
+.af-clickable b,.af-file-name{overflow-wrap:anywhere;min-width:0}
+.dv-row.af-clickable{padding:14px 10px;border-radius:10px}
+.dv-row .af-file-name{flex:1;min-width:0}
+.dv-error{padding:16px;border-radius:12px;background:#fff8f8;color:#812828;border:1px solid #edcccc}
+.dv-error button{min-height:44px;margin-right:8px}
+.dv-sheet{max-width:100%;-webkit-overflow-scrolling:touch}
+@media(max-width:700px){
+ #aiBox:not(.ai-live){top:auto!important;left:2vw!important;right:2vw!important;bottom:calc(8px + env(safe-area-inset-bottom,0px))!important;transform:none!important;width:96vw!important;height:min(78dvh,700px)!important;max-height:calc(100dvh - 20px)!important;padding:10px!important;gap:5px!important}
+ #aiBox:not(.ai-live) .aibar button{min-height:40px;padding:7px!important}
+ .dv-grid{grid-template-columns:minmax(0,1fr)!important}
+ .dv-row{min-width:0;gap:6px}
+ .dcard{min-width:0}
 }
 </style>
 </body>
