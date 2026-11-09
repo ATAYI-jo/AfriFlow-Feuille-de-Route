@@ -568,7 +568,7 @@ function renderRoadmap(){
       if(USER_ROLE === "admin"){
         bs.style.cursor = "pointer";
         bs.title = "Cliquer pour modifier les représentations";
-        bs.onclick = function(){ editBorder(pc, it.country); };
+        bs.onclick = function(){ editBorder(pc, it.country, k); };
       }
       container.appendChild(bs);
     }
@@ -5022,6 +5022,7 @@ body .border-sign{display:block!important;width:max-content;max-width:94%;paddin
 .bs-wrap.open .bs-info{display:block}
 .bs-info ul{margin:0;padding-left:18px}
 .bs-info small{color:var(--muted)}
+</style>
 <style id="af-flags-v3">
 body .border-sign{display:block!important;width:max-content;max-width:94%;padding:0!important;margin:-4px auto!important;background:none!important;border:0!important;box-shadow:none!important;-webkit-backdrop-filter:none!important;backdrop-filter:none!important}
 .bs-wrap{margin-top:18px;padding:0 26px 8px;border-radius:22px;text-align:center;background:color-mix(in srgb,var(--card) 62%,transparent);-webkit-backdrop-filter:blur(22px);backdrop-filter:blur(22px);border:1px solid var(--g-neutral-edge,rgba(255,255,255,.5));box-shadow:0 10px 30px rgba(0,0,0,.12),inset 0 1px 0 rgba(255,255,255,.5)}
