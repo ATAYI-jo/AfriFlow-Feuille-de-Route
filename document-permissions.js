@@ -70,6 +70,7 @@ function attach(){
  var d=document.createElement("section");d.id="afPermAdmin";d.innerHTML='<h3>Permission</h3><p>Accès à la modification des fichiers, utilisateur par utilisateur.</p><button type="button" id="afPermOpen">Gérer les permissions des documents</button>';
  $("adBody").prepend(d);$("afPermOpen").onclick=openPermissions;
 }
-new MutationObserver(function(){if(admin()&&$("adBody")&&!$("afPermAdmin"))attach()}).observe(document.body,{childList:true,subtree:true});
+var host=$("viewHost")||document.body;
+new MutationObserver(function(){if(admin()&&$("adBody")&&!$("afPermAdmin"))attach()}).observe(host,{childList:true,subtree:true});
 attach();
 })();
