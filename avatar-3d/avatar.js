@@ -160,6 +160,8 @@ document.getElementById('lips').addEventListener('change',e=>doLips=e.target.che
 function switchMode(photo){portrait=photo;document.getElementById('photoMode').classList.toggle('hidden',!photo);document.getElementById('modePhoto').classList.toggle('active',photo);document.getElementById('mode3d').classList.toggle('active',!photo);status.textContent=photo?'Image fidèle — non animée':'Avatar 3D interactif';document.querySelector('.hint').textContent=photo?'Portrait de référence (fixe)':'Faites glisser pour orienter le personnage'}
 document.getElementById('modePhoto').addEventListener('click',()=>switchMode(true));
 document.getElementById('mode3d').addEventListener('click',()=>switchMode(false));
+// Afficher par défaut la véritable image fournie, jamais la reconstruction 3D approximative.
+switchMode(true);
 window.addEventListener('beforeunload',()=>synth?.cancel());
 
 // Safe same-origin bridge to the existing AfriFloW chatbot.
