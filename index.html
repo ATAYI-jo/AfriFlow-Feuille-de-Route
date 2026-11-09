@@ -6264,5 +6264,13 @@ window.dvWordEdit=function(path,orig){
   }
 }
 </style>
+
+<style id="af-dark-file-badge-contrast">
+/* Lisibilité des pastilles de type de fichier (PDF, DOCX, etc.) sur glass sombre. */
+:root[data-theme="dark"] .dcard .dtype { color:#fff!important; border-color:rgba(255,255,255,.7)!important; }
+@media (prefers-color-scheme:dark) {
+  :root:not([data-theme="light"]) .dcard .dtype { color:#fff!important; border-color:rgba(255,255,255,.7)!important; }
+}
+</style>
 </body>
 </html>
