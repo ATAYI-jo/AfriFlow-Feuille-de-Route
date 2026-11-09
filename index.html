@@ -5132,11 +5132,20 @@ var bar='<div class="toolbar"><b>'+name+'</b><div class="toolbar-actions">'+edBt
     box.innerHTML=bar+'<div class="wpage">'+clean(r.value)+'</div>';
   }else if(/^(xlsx|xls|csv)$/.test(e)){
     try{
-    await lib("xlsx");var wb=window.XLSX.read(await blob.arrayBuffer(),{type:"array"});if(my!==token)return;window.__dvWorkbook=wb;
-    box.innerHTML=bar+'<div class="auth-tabs" id="dvTabs" style="max-width:none;flex-wrap:wrap">'+wb.SheetNames.map(function(n,k){return '<button type="button" data-sh="'+k+'" class="'+(k?'':'on')+'">'+esc(n)+'</button>'}).join("")+'</div><div class="dv-sheet" id="dvSheet"></div>';
+    await lib("xlsx");var wb=window.XLSX.read(await blob.arrayBuffer(),{type:"array",cellFormula:true,cellStyles:true});if(my!==token)return;window.__dvWorkbook=wb;
+    box.innerHTML=bar+'<div class="auth-tabs" id="dvTabs" style="max-width:none;flex-wrap:wrap">'+wb.SheetNames.map(function(n,k){return '<button type="button" data-sh="'+k+'" class="'+(k?'':'on')+'">'+esc(n)+'</button>'}).join("")+'</div><div class="dv-formula" id="dvFormula" aria-live="polite">Sélectionne une cellule pour voir son contenu ou sa formule.</div><div class="dv-sheet" id="dvSheet"></div>';
     var showS=function(k){
       var sheet=wb.Sheets[wb.SheetNames[k]],html=window.XLSX.utils.sheet_to_html(sheet,{editable:false});
       $("dvSheet").innerHTML=clean(html);
+      $("dvSheet").querySelectorAll("td[id^='sjs-'],th[id^='sjs-']").forEach(function(td){
+        var addr=td.id.slice(4),cell=sheet[addr];if(cell&&cell.f){td.title=addr+" ="+cell.f;td.dataset.dvformula="="+cell.f}
+      });
+      $("dvSheet").onclick=function(ev){
+        var td=ev.target.closest("td,th");if(!td)return;
+        var addr=td.id&&td.id.startsWith("sjs-")?td.id.slice(4):"",cell=sheet[addr];
+        var value=cell?(cell.f?"="+cell.f:cell.v==null?"":String(cell.v)):(td.textContent||"");
+        var el=$("dvFormula");if(el)el.textContent=(addr?addr+": ":"")+value;
+      };
       $("dvTabs").querySelectorAll("button").forEach(function(b){b.classList.toggle("on",+b.dataset.sh===k)});
     };
     showS(0);$("dvTabs").onclick=function(ev){var b=ev.target.closest("[data-sh]");if(b)showS(+b.dataset.sh)};
@@ -6605,6 +6614,7 @@ window.dvWordEdit=function(path,orig){
 .dv-crumb button{max-width:100%;white-space:normal;overflow-wrap:anywhere}
 .dv-row-hint{font-size:1.5em;color:var(--ink)}
 .dv-sheet{max-width:100%;overflow:auto;max-height:72dvh;overscroll-behavior:contain}
+.dv-formula{background:#fff;color:#24352a;padding:9px 12px;border:1px solid #d2ded5;border-radius:9px 9px 0 0;overflow-wrap:anywhere;font-size:.85rem;min-height:38px}
 .dv-sheet table{width:max-content;min-width:100%;border-collapse:separate;border-spacing:0}
 .dv-sheet td,.dv-sheet th{background:#fff!important;color:#1a1a1a!important;white-space:pre-wrap!important;min-width:82px;max-width:360px;overflow-wrap:anywhere;vertical-align:top}
 .dv-sheet th{background:#eaf0e9!important;position:sticky;top:0;z-index:1}
