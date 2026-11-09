@@ -1,26 +1,53 @@
-# Correctifs intégrables dans le site AfriFloW
+# AfriFloW — avatar 3D animé
 
-## Contenu
-- index.html : copie de ton index fourni, corrigée pour éviter les deux gestionnaires Live concurrents et garder le logo visible.
-- logo.png : ton logo exact, à la racine.
-- avatar-3d/ : la version 3D interactive, séparée du Live vocal (aucun WebGL requis pour démarrer la conversation).
+Projet prêt à déposer dans un dépôt GitHub Pages. Il contient un personnage **3D procédural réel**, rendu et animé avec Three.js, et le **logo original** fourni par AfriFloW.
 
-## Installation prudente
-1. Sauvegarde ton dépôt GitHub ou crée une branche.
-2. Vérifie que le `index.html` fourni correspond à ta version actuelle. Si ton dépôt a changé depuis l'export, il faut fusionner les modifications plutôt qu'écraser le fichier.
-3. Téléverse les fichiers du ZIP à la racine du dépôt GitHub.
-4. Vérifie que `https://TON-SITE/logo.png` et `https://TON-SITE/avatar-3d/index.html` fonctionnent.
-5. Recharge en vidant le cache (Ctrl+F5).
-6. Dans le chatbot, clique sur « Avatar 3D ». Les nouvelles réponses AfriFloW seront lues par l'avatar quand la lecture vocale du chatbot n'est pas déjà activée.
+## Fichiers
+- `index.html` : page d'accueil et contrôle vocal.
+- `style.css` : interface responsive.
+- `avatar.js` : personnage 3D en géométries, animations et voix.
+- `assets/logo-afriflow.png` : logo original, placé comme texture sur le polo.
+- `assets/reference-mascotte.png` : image de référence, disponible dans l'onglet « Portrait fidèle ».
 
-## Live vocal
-Le script WebGL concurrent a été retiré ; le premier contrôleur Live et son animation Canvas 2D restent.
-Cela corrige la dépendance à WebGL à l'origine de l'erreur affichée, mais ne garantit pas la réussite de la connexion Gemini Live (clé, configuration, jeton, modèle, restrictions du navigateur, permissions du micro et quota restent à vérifier).
-Le `admin-ai` Supabase n'est pas modifié.
-Si l'erreur persiste, regarder Console et Réseau (WebSocket et `admin-ai`) sans divulguer de jeton.
+## Mettre sur GitHub Pages
+1. Décompresser l'archive.
+2. Ouvrir ton dépôt GitHub > **Add file** > **Upload files**.
+3. Déposer le contenu du dossier (fichiers à la racine du dépôt, dossier `assets` compris) ; valider **Commit changes**.
+4. Dans **Settings > Pages**, sélectionner **Deploy from a branch**, branche `main`, dossier `/(root)` et enregistrer.
+5. Ouvrir l'URL GitHub Pages. Le moteur Three.js se charge depuis jsDelivr, une connexion Internet est donc nécessaire.
 
-## Limites de l'avatar
-Le 3D procédural est une interprétation du personnage ; ressemblance exacte non garantie, et lèvres non synchronisées phonème par phonème. L'avatar emploie la synthèse vocale locale en dehors du mode Gemini Live.
+## Connecter le chatbot
+Quand ton chatbot répond, exécuter dans la page :
 
-## Important
-Tu as fourni plusieurs versions du code. Ce paquet est fondé sur « Texte collé (3).txt » : tester sur une branche avant de remplacer le site publié.
+```js
+window.AfriFlowAvatar.speak(reponseDuChatbot);
+```
+
+Pour arrêter :
+
+```js
+window.AfriFlowAvatar.stop();
+```
+
+L'API expose également `setIdle(true/false)` et `setLipAnimation(true/false)`.
+
+## Ce que fait réellement le projet
+- Modèle **3D calculé en temps réel**, tournable horizontalement à la souris ou au doigt.
+- Mouvements subtils de tête, corps, bras et clignements.
+- Mouvement de bouche pendant la synthèse vocale française du navigateur.
+- Le logo exact fourni est chargé comme texture sur la poitrine.
+- Mode « Portrait fidèle », qui affiche l'image d'origine **sans mouvement**.
+
+## Limites importantes
+Ce modèle procédural est une **interprétation 3D** de la mascotte, pas sa reconstruction identique au pixel près. Ce n'est **pas** encore un personnage de studio créé avec maillage sculpté, squelette professionnel et blendshapes. La synchronisation labiale est **approximative** (durée de la parole), pas mot à mot ou phonème à phonème. Le fichier n'est pas un `.glb`/`.vrm` exportable : le personnage est créé à l'exécution par JavaScript. Pour un résultat cinéma 100 % proche de l'image avec visèmes, la suite est la modélisation/rigging dans Blender, la création de blendshapes, puis l'intégration audio-visèmes.
+
+Pour de vraies formes de bouche synchronisées, connecter un service TTS qui renvoie des horodatages de visèmes et un modèle disposant des morph targets correspondants.
+
+## Test local
+Servir le dossier via un serveur web local :
+
+```bash
+python -m http.server 8000
+```
+
+Puis ouvrir http://localhost:8000. L'ouverture par `file://` peut bloquer les modules ES ou textures selon le navigateur.
