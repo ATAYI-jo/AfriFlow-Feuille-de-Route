@@ -1542,7 +1542,7 @@ function merge(s){
     backupNav();
   }
   if(s.tre)X.tre=s.tre;
-  if(s.pages)X.pages=Object.assign({},s.pages,X.pages);
+  if(s.pages)X.pages=s.pages;
   mergeDocs(s);mergeAbs("pubAt",s);mergeAbs("chg",s);
 }
 try{ var s0=JSON.parse(localStorage.getItem(KEY)||"null"); if(s0)merge(s0);restoreLocalNavBackup();backupNav(); }catch(e){}
