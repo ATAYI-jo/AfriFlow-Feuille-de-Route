@@ -4849,7 +4849,7 @@ async function browse(p){
     var previous=parts.length?'<button type="button" data-dvdir="'+esc(p.slice(0,p.lastIndexOf("/")))+'">← Dossier précédent</button>':'';
     b.innerHTML='<nav class="dv-crumb" aria-label="Chemin du dossier">'+previous+crumb+'</nav>'+(d.entries.length?d.entries.map(function(e){
       var shown=items.some(function(x){return String(x.path).toLowerCase()===e.path.toLowerCase()});
-      return '<div class="dv-row dv-clickable" role="button" tabindex="0" data-dventry="'+esc(e.path)+'" data-dvfolder="'+(e.dir?'1':'0')+'" data-dvname="'+esc(e.name)+'" aria-label="'+esc(e.dir?'Ouvrir le dossier '+e.name:'Afficher le fichier '+e.name)+'"><span class="dv-row-name">'+ic(e.dir?"folder":"file")+' '+esc(e.name)+'</span>'+(e.dir?'<span class="dv-row-hint" aria-hidden="true">›</span>':(shown?'<small style="color:var(--muted)">Déjà affiché</small>':'<button type="button" class="p" data-dvadd="'+esc(e.path)+'" data-n="'+esc(e.name)+'">Afficher sur le site</button>'))+'</div>';
+      return '<div class="dv-row dv-clickable" role="button" tabindex="0" data-dventry="'+esc(e.path)+'" data-dvfolder="'+(e.dir?'1':'0')+'" data-dvname="'+esc(e.name)+'" data-dvid="'+esc(e.id||"")+'" aria-label="'+esc(e.dir?'Ouvrir le dossier '+e.name:'Afficher le fichier '+e.name)+'"><span class="dv-row-name">'+ic(e.dir?"folder":"file")+' '+esc(e.name)+'</span>'+(e.dir?'<span class="dv-row-hint" aria-hidden="true">›</span>':(shown?'<small style="color:var(--muted)">Déjà affiché</small>':'<button type="button" class="p" data-dvadd="'+esc(e.path)+'" data-n="'+esc(e.name)+'" data-dvid="'+esc(e.id||"")+'">Afficher sur le site</button>'))+'</div>';
     }).join(""):'<p style="color:var(--muted)">Dossier vide.</p>');
   }catch(x){b.innerHTML='<p style="color:#c0392b">'+esc(x.message||x)+'<br><small>Vérifiez que la fonction « dropbox-view » est déployée et que les secrets DROPBOX_APP_KEY / DROPBOX_REFRESH_TOKEN sont définis.</small></p>'}
 }
@@ -4874,9 +4874,9 @@ async function onClick(e){
     else if(b.id==="dvBrowse")browse("");
     else if(d.dvdir!=null)browse(d.dvdir);
     else if(d.dvadd){
-      var path=d.dvadd,name=d.n;
+      var path=d.dvadd,name=d.n,id=d.dvid||null;
       window.askDlg("Afficher ce fichier",[{id:"t",l:"Titre affiché sur le site"}],function(v){
-        items.push({path:path,title:v.t||name,at:Date.now()});
+        items.push({path:path,id:id,title:v.t||name,at:Date.now()});
         saveItems().then(function(){toast("Fichier affiché sur le site.");render();browse(cwd)}).catch(function(x){items.pop();toast("Échec : "+(x.message||x))});
       });
       var f=$("xf_t");if(f){f.value=name.replace(/\.[^.]+$/,"");f.select()}
