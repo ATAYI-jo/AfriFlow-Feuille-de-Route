@@ -5316,7 +5316,7 @@ async function speak(text){
   }catch(e){
     if(my===spk){
       var message=String(e&&e.message||e);
-      if(/(?:\\b429\\b|quota|RESOURCE_EXHAUSTED|rate.limit)/i.test(message))ttsPausedUntil=Date.now()+30*60*1000;
+      if(/(?:429|quota|RESOURCE_EXHAUSTED|rate.limit)/i.test(message))ttsPausedUntil=Date.now()+30*60*1000;
       stat("Voix Gemini limitée : utilisation de la voix du navigateur.");
       await browserSpeak(text);
     }
