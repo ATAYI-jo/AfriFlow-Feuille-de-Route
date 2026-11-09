@@ -1818,20 +1818,21 @@ function renEd(id){
   wkClean(); W.page=id; W.id=null;
   var L=docs(),ad=cep(id);
   var cards=L.slice().sort(function(a,b){return b.at-a.at}).map(function(d){
-    return '<div class="dcard"><div class="dtype">'+typeLabel(d)+'</div><b>'+esc(d.name)+'</b><small>Modifié le '+fdt(d.at)+'</small>'+(ad?'<small>'+(d.dbx?'Envoyé dans Dropbox le '+fdt(d.dbx):(d.dbxPending?'En attente d\'envoi dans Dropbox':'Pas encore envoyé dans Dropbox'))+'</small>':'')+'<div class="dact"><button type="button" class="p" data-o="'+esc(d.id)+'">Ouvrir</button><button type="button" data-dl="'+esc(d.id)+'">Télécharger</button>'+(ad?'<button type="button" class="danger" data-x="'+esc(d.id)+'">Supprimer</button>':'')+'</div></div>';
+    return '<div class="dcard af-clickable" data-doc-open="'+esc(d.id)+'" role="button" tabindex="0"><div class="dtype">'+typeLabel(d)+'</div><b>'+esc(d.name)+'</b><small>Modifié le '+fdt(d.at)+'</small>'+(ad?'<small>'+(d.dbx?'Envoyé dans Dropbox le '+fdt(d.dbx):(d.dbxPending?'En attente d\'envoi dans Dropbox':'Pas encore envoyé dans Dropbox'))+'</small>':'')+'<div class="dact"><button type="button" data-dl="'+esc(d.id)+'">Télécharger</button>'+(ad?'<button type="button" class="danger" data-x="'+esc(d.id)+'">Supprimer</button>':'')+'</div></div>';
   }).join("");
   $("viewHost").innerHTML='<div class="toolbar"><b>'+esc(pageName(id))+'</b><div class="toolbar-actions">'+(ad?'<button type="button" class="p" id="nDoc">+ Document Word</button><button type="button" id="nSh">+ Tableur Excel</button><button type="button" id="nDs">+ Design</button><button type="button" id="nImp">Importer un fichier</button><input type="file" id="nFile" accept=".docx,.xlsx,.xls,.csv" hidden>'+(isAdmin()?'<button type="button" id="nDbx">Dropbox : '+(dbxReady()?"connecté":"à connecter")+'</button>':'')+'':'')+'</div></div>'
   +pubBar(id)+(cards?'<div class="dgrid">'+cards+'</div>':'<p style="color:var(--muted)">'+(ad?'Aucun fichier. Créez un document Word ou un tableur Excel, ou importez-en un.':'Aucun fichier pour le moment.')+'</p>');
   var h=$("viewHost"); bindPub(id);
   h.onclick=function(e){
-    var b=e.target.closest("button"); if(!b)return; var d=b.dataset;
+    var b=e.target.closest("button");if(!b){var card=e.target.closest("[data-doc-open]");if(card)openDoc(card.dataset.docOpen);return}var d=b.dataset;
     if(d.o)openDoc(d.o);
     else if(d.dl){var f=getDoc(d.dl);if(f)dl(f).catch(function(x){toast(x.message)})}
     else if(d.x){if(cep(W.page)&&confirm("Supprimer ce fichier du site ? (la copie déjà envoyée dans Dropbox n'est pas supprimée)")){(X.del=X.del||{})[d.x]=Date.now();X.docs[W.page]=docs().filter(function(f){return f.id!==d.x});touch(W.page);save();renEd(W.page)}}
     else if(b.id==="nDoc"&&ad)newDoc("doc"); else if(b.id==="nSh"&&ad)newDoc("sheet"); else if(b.id==="nDs"&&ad)newDoc("design");
     else if(b.id==="nImp"&&ad)$("nFile").click(); else if(b.id==="nDbx"&&isAdmin())dbxDialog();
   };
-  if($("nFile"))$("nFile").onchange=function(){var f=this.files[0];this.value="";if(f&&cep(W.page))importFile(f).catch(function(x){toast("Import impossible : "+x.message)})};
+  h.onkeydown=function(e){var c=e.target.closest("[data-doc-open]");if(c&&(e.key==="Enter"||e.key===" ")&&!e.target.closest("button")){e.preventDefault();openDoc(c.dataset.docOpen)}};
+   if($("nFile"))$("nFile").onchange=function(){var f=this.files[0];this.value="";if(f&&cep(W.page))importFile(f).catch(function(x){toast("Import impossible : "+x.message)})};
 }
 function newDoc(t){
   ask("Nouveau "+typeNew(t),[{id:"n",l:"Nom du fichier"}],function(v){
@@ -4828,16 +4829,16 @@ function render(){
   if(!active)return;
   var h='<div class="toolbar"><b>Documents</b></div>';
   h+=items.length?'<div class="dv-grid">'+items.map(function(it,i){
-    return '<div class="dcard"><div class="dtype">'+esc((ext(it.path)||"fichier").toUpperCase())+'</div><b>'+esc(it.title)+'</b><div class="dact"><button type="button" class="p" data-dvopen="'+i+'">Afficher</button>'
+    return '<div class="dcard af-clickable" data-dvopen="'+i+'" role="button" tabindex="0"><div class="dtype">'+esc((ext(it.path)||"fichier").toUpperCase())+'</div><b>'+esc(it.title)+'</b><div class="dact">'
       +(adm()?'<button type="button" class="danger" data-dvrm="'+i+'">Retirer</button>':'')+'</div></div>';
   }).join("")+'</div>':'<p style="color:var(--muted)">Aucun document n\'est affiché pour le moment.</p>';
   h+='<div class="dv-view" id="dvView"></div>';
   if(adm()){
     h+='<div class="mt-box" style="margin-top:34px"><h3>Choisir les fichiers à afficher</h3>'
       +'<p style="color:var(--muted);font-size:.9rem;margin-top:0">Seuls les fichiers cochés ici sont visibles par les utilisateurs. Le reste de la Dropbox reste privé.</p>'
-      +'<div class="dact" style="margin:0 0 14px"><button type="button" id="dvBrowse">Parcourir ma Dropbox</button><button type="button" id="dvTok">Copier le jeton permanent (pour le serveur)</button></div><div id="dvBrowser"></div></div>';
+      +'<div class="dact" style="margin:0 0 14px"><button type="button" id="dvBrowse">Parcourir ma Dropbox</button></div><div id="dvBrowser"></div></div>';
   }
-  vh.innerHTML=h;vh.onclick=onClick;
+  vh.innerHTML=h;vh.onclick=onClick;vh.onkeydown=function(e){var c=e.target.closest("[data-dvopen],[data-dvdir]");if(c&&(e.key==="Enter"||e.key===" ")&&!e.target.closest("button")){e.preventDefault();if(c.dataset.dvopen!=null)openFile(+c.dataset.dvopen);else browse(c.dataset.dvdir)}};
 }
 async function browse(p){
   cwd=p;var b=$("dvBrowser");if(!b)return;b.innerHTML='<p style="color:var(--muted)">Chargement…</p>';
@@ -4846,12 +4847,12 @@ async function browse(p){
     var crumb='<button type="button" data-dvdir="">Racine</button>'+parts.map(function(s){acc+="/"+s;return ' › <button type="button" data-dvdir="'+esc(acc)+'">'+esc(s)+'</button>'}).join("");
     b.innerHTML='<div class="dact" style="margin:0 0 10px">'+crumb+'</div>'+(d.entries.length?d.entries.map(function(e){
       var shown=items.some(function(x){return String(x.path).toLowerCase()===e.path.toLowerCase()});
-      return '<div class="dv-row"><span>'+ic(e.dir?"folder":"file")+' '+esc(e.name)+'</span>'+(e.dir?'<button type="button" data-dvdir="'+esc(e.path)+'">Ouvrir</button>':(shown?'<small style="color:var(--muted)">Déjà affiché</small>':'<button type="button" class="p" data-dvadd="'+esc(e.path)+'" data-n="'+esc(e.name)+'">Afficher sur le site</button>'))+'</div>';
+      return '<div class="dv-row '+(e.dir?"af-clickable":"")+'" '+(e.dir?'data-dvdir="'+esc(e.path)+'" role="button" tabindex="0"':"")+'><span class="af-file-name">'+ic(e.dir?"folder":"file")+' '+esc(e.name)+'</span>'+(e.dir?'<span aria-hidden="true">›</span>':(shown?'<small style="color:var(--muted)">Déjà affiché</small>':'<button type="button" class="p" data-dvadd="'+esc(e.path)+'" data-n="'+esc(e.name)+'">Afficher sur le site</button>'))+'</div>';
     }).join(""):'<p style="color:var(--muted)">Dossier vide.</p>');
   }catch(x){b.innerHTML='<p style="color:#c0392b">'+esc(x.message||x)+'<br><small>Vérifiez que la fonction « dropbox-view » est déployée et que les secrets DROPBOX_APP_KEY / DROPBOX_REFRESH_TOKEN sont définis.</small></p>'}
 }
 async function onClick(e){
-  var b=e.target.closest("button");if(!b)return;var d=b.dataset;
+  var b=e.target.closest("button,[data-dvopen],[data-dvdir]");if(!b)return;var d=b.dataset;
   try{
     if(d.dvopen!=null)openFile(+d.dvopen);
     else if(d.dvrm!=null){if(confirm("Retirer ce fichier de l'affichage du site ? (il reste dans la Dropbox)")){items.splice(+d.dvrm,1);await saveItems();render()}}
@@ -4864,12 +4865,6 @@ async function onClick(e){
         saveItems().then(function(){toast("Fichier affiché sur le site.");render();browse(cwd)}).catch(function(x){items.pop();toast("Échec : "+(x.message||x))});
       });
       var f=$("xf_t");if(f){f.value=name.replace(/\.[^.]+$/,"");f.select()}
-    }
-    else if(b.id==="dvTok"){
-      var c={};try{c=JSON.parse(localStorage.getItem("afriflow_dbx_v1")||"{}")}catch(x){}
-      if(!c.refresh){toast("Connectez d'abord Dropbox (Messagerie › ☁ Dropbox › Se connecter).");return}
-      await navigator.clipboard.writeText(c.refresh);
-      toast("Jeton copié. Collez-le dans le secret DROPBOX_REFRESH_TOKEN de Supabase, sans le partager.");
     }
   }catch(x){toast("Action impossible : "+(x.message||x))}
 }
@@ -5041,10 +5036,14 @@ async function getItems(){
 }
 function nrm(s){return String(s||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().trim()}
 async function relocate(path){
-  var i=path.lastIndexOf("/"),dir=path.slice(0,i)||"/",name=nrm(path.slice(i+1));
-  var d=await call({action:"list",path:dir});
-  var e=(d.entries||[]).filter(function(x){return !x.dir&&nrm(x.name)===name})[0];
-  return e?e.path:null;
+  var i=path.lastIndexOf("/"),dir=path.slice(0,i)||"/",name=nrm(path.slice(i+1)),dirs=[dir],seen={},count=0;
+  while(dirs.length&&count<60){var folder=dirs.shift(),key=nrm(folder);if(seen[key])continue;seen[key]=1;count++;
+    try{var d=await call({action:"list",path:folder}),entries=d.entries||[];
+      var match=entries.find(function(x){return !x.dir&&nrm(x.name)===name});if(match)return match.path;
+      entries.filter(function(x){return x.dir}).forEach(function(x){if(dirs.length<100)dirs.push(x.path)});
+    }catch(e){}
+  }
+  return null;
 }
 async function getBlob(path){
   if(cache[path])return cache[path];
@@ -5052,8 +5051,8 @@ async function getBlob(path){
   try{d=await call({action:"stream",path:path})}
   catch(err){
     if(!/not_found/i.test(String(err.message||err)))throw err;
-    var p2=await relocate(path);if(!p2)throw err;
-    d=await call({action:"stream",path:p2});
+    var p2=await relocate(path);if(!p2)throw new Error("Fichier Dropbox introuvable. Vérifiez son nom et son emplacement.");
+    d=await call({action:"stream",path:p2});cur.path=p2;
   }
   if(!(d instanceof Blob))throw new Error("Réponse inattendue : redéployez la fonction dropbox-view.");
   cache[path]=d;keys.push(path);while(keys.length>4)delete cache[keys.shift()];
@@ -5115,13 +5114,14 @@ var bar='<div class="toolbar"><b>'+name+'</b><div class="toolbar-actions">'+edBt
     box.innerHTML=bar+'<div class="dv-txt" id="dvTx"></div>';$("dvTx").textContent=await blob.text();
   }else box.innerHTML=bar+'<p>Aperçu indisponible pour ce format : utilisez « Télécharger ».</p>';
 }
-function fail(x){var b=$("dvView");if(b)b.innerHTML='<p style="color:#c0392b">Impossible d\'afficher : '+esc(x&&x.message||x)+'</p>'}
+function fail(x){var b=$("dvView");if(b)b.innerHTML='<div class="dv-error" role="alert"><p>Impossible de prévisualiser : '+esc(x&&x.message||x)+'</p><button type="button" data-dvp-refresh="1">Réessayer</button><button type="button" data-dvp-dl-fail="1">Télécharger</button></div>'}
 document.addEventListener("click",function(e){
   var ed=e.target.closest("button[data-dvp-edit]");
   if(ed){e.preventDefault();e.stopPropagation();if(window.dvRequestEdit)window.dvRequestEdit(cur.path);return}
-  var r=e.target.closest("button[data-dvp-refresh]");
+  var download=e.target.closest("[data-dvp-dl-fail]");if(download){e.preventDefault();getBlob(cur.path).then(function(b){var u=mkUrl(b),a=document.createElement("a");a.href=u;a.download=cur.path.split("/").pop()||"document";a.click()}).catch(function(x){fail(x)});return}
+   var r=e.target.closest("button[data-dvp-refresh]");
   if(r){e.preventDefault();e.stopPropagation();delete cache[cur.path];show(cur.i).catch(fail);return}
-  var b=e.target.closest("button[data-dvopen]");if(!b)return;
+  if(e.target.closest("button,a,input,textarea,select,[data-dvrm]"))return;var b=e.target.closest("[data-dvopen]");if(!b)return;
   e.preventDefault();e.stopPropagation();show(+b.dataset.dvopen).catch(fail);
 },true); window.dvReload=function(){delete cache[cur.path];show(cur.i).catch(fail)};
 })();
@@ -6496,6 +6496,33 @@ window.dvWordEdit=function(path,orig){
   #dwApp .dw-canvas{position:absolute;left:0;top:0;width:100%;padding:0!important;background:#fff!important;overflow:visible!important}
   #dwApp .dw-page{width:100%!important;min-height:0!important;padding:0!important;box-shadow:none!important}
   #dwApp .dw-rib,#dwApp .dw-tabs,#dwApp .dw-top,#dwApp .dw-status,#dwApp .dw-find,#dwApp .dw-shortcut-strip{display:none!important}
+}
+</style>
+
+<style id="afriflow-ux-20261109">
+#aiBox:not(.ai-live){background:#fffdf8!important;color:#193024!important;-webkit-backdrop-filter:none!important;backdrop-filter:none!important;border:1px solid #cbded0!important;box-shadow:0 15px 42px rgba(0,0,0,.26)!important;isolation:isolate;box-sizing:border-box!important}
+#aiBox:not(.ai-live) #aiLog{min-height:0}
+#aiBox:not(.ai-live) #aiLog>div{background:#f0f4f1!important;color:#193024!important;border:1px solid #d9e6db!important;-webkit-backdrop-filter:none!important;backdrop-filter:none!important}
+#aiBox:not(.ai-live) #aiLog>div.ai-me{background:#e0f2e5!important;color:#113920!important}
+#aiBox:not(.ai-live) #aiIn{background:#fff!important;color:#15291c!important;border:1px solid #9ebca5!important;-webkit-backdrop-filter:none!important;backdrop-filter:none!important;font-size:16px!important;min-height:44px}
+#aiBox:not(.ai-live) #aiStat{color:#52675a!important}
+#aiBox:not(.ai-live) #aiGo{background:#217044!important;color:#fff!important;-webkit-backdrop-filter:none!important;backdrop-filter:none!important}
+.af-clickable{cursor:pointer;touch-action:manipulation;transition:background .15s,box-shadow .15s;min-width:0}
+.af-clickable:hover{background:rgba(28,120,65,.07)!important;box-shadow:0 4px 18px rgba(0,0,0,.12)}
+.af-clickable:active{background:rgba(28,120,65,.14)!important}
+.af-clickable:focus-visible{outline:3px solid #228348;outline-offset:2px}
+.af-clickable b,.af-file-name{overflow-wrap:anywhere;min-width:0}
+.dv-row.af-clickable{padding:14px 10px;border-radius:10px}
+.dv-row .af-file-name{flex:1;min-width:0}
+.dv-error{padding:16px;border-radius:12px;background:#fff8f8;color:#812828;border:1px solid #edcccc}
+.dv-error button{min-height:44px;margin-right:8px}
+.dv-sheet{max-width:100%;-webkit-overflow-scrolling:touch}
+@media(max-width:700px){
+ #aiBox:not(.ai-live){top:auto!important;left:2vw!important;right:2vw!important;bottom:calc(8px + env(safe-area-inset-bottom,0px))!important;transform:none!important;width:96vw!important;height:min(78dvh,700px)!important;max-height:calc(100dvh - 20px)!important;padding:10px!important;gap:5px!important}
+ #aiBox:not(.ai-live) .aibar button{min-height:40px;padding:7px!important}
+ .dv-grid{grid-template-columns:minmax(0,1fr)!important}
+ .dv-row{min-width:0;gap:6px}
+ .dcard{min-width:0}
 }
 </style>
 </body>
