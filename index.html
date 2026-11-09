@@ -5022,13 +5022,37 @@ body .border-sign{display:block!important;width:max-content;max-width:94%;paddin
 .bs-wrap.open .bs-info{display:block}
 .bs-info ul{margin:0;padding-left:18px}
 .bs-info small{color:var(--muted)}
+<style id="af-flags-v3">
+body .border-sign{display:block!important;width:max-content;max-width:94%;padding:0!important;margin:-4px auto!important;background:none!important;border:0!important;box-shadow:none!important;-webkit-backdrop-filter:none!important;backdrop-filter:none!important}
+.bs-wrap{margin-top:18px;padding:0 26px 8px;border-radius:22px;text-align:center;background:color-mix(in srgb,var(--card) 62%,transparent);-webkit-backdrop-filter:blur(22px);backdrop-filter:blur(22px);border:1px solid var(--g-neutral-edge,rgba(255,255,255,.5));box-shadow:0 10px 30px rgba(0,0,0,.12),inset 0 1px 0 rgba(255,255,255,.5)}
+.bs-flags{display:flex;align-items:center;justify-content:center;gap:10px;margin-top:-18px}
+.bs-f{display:flex;flex-direction:column;align-items:center;gap:3px;font-size:.72rem;font-weight:700}
+.bs-f svg,.bs-f img{width:54px;height:36px;object-fit:cover;border-radius:5px;box-shadow:0 4px 12px rgba(0,0,0,.3)}
+.bs-plane{width:84px;height:46px;flex:none;margin-top:10px;overflow:visible}
+.bs-tog{display:flex;align-items:center;justify-content:center;margin:4px auto 2px;padding:3px 18px;border-radius:99px}
+.bs-tog svg{stroke:var(--ink);fill:none;stroke-width:2.5;stroke-linecap:round;stroke-linejoin:round;transition:transform .25s}
+.bs-wrap.open .bs-tog svg{transform:rotate(180deg)}
+.bs-info{display:none;margin:6px 0 8px;max-width:340px;text-align:left;font-size:.86rem;font-weight:500;line-height:1.5}
+.bs-wrap.open .bs-info{display:block}
+.bs-info ul{margin:0;padding-left:18px}.bs-info small{color:var(--muted)}
 </style>
 <script>
 (function(){
 "use strict";
-var LS="afriflow_flags_v2",FK="pub:flags",img={},INFO={},OPEN={};
-try{var o=JSON.parse(localStorage.getItem(LS)||"null");if(o){img=o.img||{};INFO=o.info||{}}else img=JSON.parse(localStorage.getItem("afriflow_flags_v1")||"{}")||{}}catch(e){}
-function star(cx,cy,R){var p=[];for(var i=0;i<10;i++){var a=-Math.PI/2+i*Math.PI/5,r=i%2?R*.382:R;p.push((cx+r*Math.cos(a)).toFixed(2)+","+(cy+r*Math.sin(a)).toFixed(2))}return p.join(" ")}
+var LS="afriflow_flags_v3",FK="pub:flags",img={},INFO={},OPEN={};
+try{var o=JSON.parse(localStorage.getItem(LS)||"null")||JSON.parse(localStorage.getItem("afriflow_flags_v2")||"null");if(o){img=o.img||{};INFO=o.info||{}}}catch(e){}
+function esc(s){return String(s==null?"":s).replace(/[&<>"']/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]})}
+function ok(d){return typeof d==="string"&&/^data:image\/(png|jpe?g|gif|webp);base64,/.test(d)}
+function key(a,b){return a+">"+b}
+
+/* Tous les pays du monde, triés par nom français */
+var NAME={},DF=new Intl.DisplayNames(["fr"],{type:"region"}),L=[],BAD=/^(Q[M-Z]|X[A-JL-Z]|AA|ZZ|EU|UN|EZ|AC|CP|DG|EA|IC|TA)$/;
+for(var a=65;a<91;a++)for(var b=65;b<91;b++){var c=String.fromCharCode(a,b);if(BAD.test(c))continue;try{var n=DF.of(c);if(n&&n!==c)L.push([c.toLowerCase(),n])}catch(e){}}
+L.sort(function(x,y){return x[1].localeCompare(y[1],"fr")});
+L.forEach(function(l){NAME[l[0]]=l[1]});
+window.FLAGS=NAME;          /* alimente la liste « Pays du chapitre » de l'éditeur */
+
+function star(cx,cy,R){var p=[];for(var i=0;i<10;i++){var t=-Math.PI/2+i*Math.PI/5,r=i%2?R*.382:R;p.push((cx+r*Math.cos(t)).toFixed(2)+","+(cy+r*Math.sin(t)).toFixed(2))}return p.join(" ")}
 var SVG={
  bf:'<svg viewBox="0 0 30 20"><rect width="30" height="10" fill="#ef2b2d"/><rect y="10" width="30" height="10" fill="#009e49"/><polygon points="'+star(15,10.4,4.6)+'" fill="#fcd116"/></svg>',
  sn:'<svg viewBox="0 0 30 20"><rect width="10" height="20" fill="#00853f"/><rect x="10" width="10" height="20" fill="#fdef42"/><rect x="20" width="10" height="20" fill="#e31b23"/><polygon points="'+star(15,10.4,3.8)+'" fill="#00853f"/></svg>',
@@ -5037,70 +5061,80 @@ var SVG={
  bj:'<svg viewBox="0 0 30 20"><rect width="30" height="20" fill="#fcd116"/><rect y="10" x="12" width="18" height="10" fill="#e8112d"/><rect width="12" height="20" fill="#008751"/></svg>',
  tn:'<svg viewBox="0 0 30 20"><rect width="30" height="20" fill="#e70013"/><circle cx="15" cy="10" r="5.4" fill="#fff"/><circle cx="14.6" cy="10" r="4.1" fill="#e70013"/><circle cx="15.5" cy="10" r="3.4" fill="#fff"/><polygon points="'+star(16.2,10,1.9)+'" fill="#e70013"/></svg>'
 };
-var NAME={bf:"Burkina Faso",tg:"Togo",sn:"Sénégal",fr:"France",bj:"Bénin",tn:"Tunisie"};
-var NUM={sn:"686",bf:"854",tg:"768",fr:"250",bj:"204",tn:"788"};
-window.FLAGS=NAME;
-function esc(s){return String(s==null?"":s).replace(/[&<>"']/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]})}
-function ok(d){return typeof d==="string"&&/^data:image\/(png|jpe?g|gif|webp);base64,/.test(d)}
-function key(a,b){return a+">"+b}
-function one(c){var v=ok(img[c])?'<img src="'+img[c]+'" alt="">':(SVG[c]||"");return '<span class="bs-f">'+v+'<span>'+esc(NAME[c]||c)+'</span></span>'}
+/* Image perso > dessin intégré > drapeau en ligne (flagcdn) */
+function one(c){
+  var v=ok(img[c])?'<img src="'+img[c]+'" alt="">':(SVG[c]||(/^[a-z]{2}$/.test(c)?'<img src="https://flagcdn.com/w80/'+c+'.png" alt="" onerror="this.style.visibility=\'hidden\'">':""));
+  return '<span class="bs-f">'+v+'<span>'+esc(NAME[c]||c)+'</span></span>';
+}
+/* Avion (vue de dessus) tourné à 45° : il monte vers le haut à droite, avec sa traînée */
+var PLANE='<svg class="bs-plane" viewBox="0 0 84 46" aria-label="vers"><defs><linearGradient id="pgB" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ffffff"/><stop offset="1" stop-color="#b9c4cc"/></linearGradient></defs>'
+ +'<path d="M3 43C24 41 38 30 56 17" fill="none" stroke="currentColor" stroke-opacity=".55" stroke-width="2.2" stroke-dasharray="2 6" stroke-linecap="round"/>'
+ +'<g transform="translate(47 -4) scale(.62) rotate(45 32 32)"><g stroke="#6b7880" stroke-width="1.1" stroke-linejoin="round">'
+ +'<path d="M32 2C34.4 2 35.8 7 35.8 15L35.8 26L60 40L60 46L35.8 39L35.8 50L43 55.5L43 60L32 57L21 60L21 55.5L28.2 50L28.2 39L4 46L4 40L28.2 26L28.2 15C28.2 7 29.6 2 32 2Z" fill="url(#pgB)"/>'
+ +'<ellipse cx="47" cy="41.5" rx="2.6" ry="5" fill="#8b98a1"/><ellipse cx="17" cy="41.5" rx="2.6" ry="5" fill="#8b98a1"/></g>'
+ +'<ellipse cx="32" cy="9" rx="2.3" ry="3.4" fill="#2b3f52"/><path d="M32 14V52" stroke="#9aa7b0" stroke-width=".8"/></g></svg>';
+
 function lines(a,b){
   var out=[];String(INFO[key(a,b)]||"").split("\n").forEach(function(l){l=l.trim();if(l)out.push(esc(l))});
-  var M=window.MAP&&window.MAP[NUM[b]],f=function(n){return Number(n).toLocaleString("fr-FR")};
-  if(M){
-    if(M.vol>0)out.push("Envois : "+f(M.vol)+" unités / mois vers "+esc(NAME[b]));
-    if(M.transit>0)out.push("En transit : "+f(M.transit)+" unités");
-    if(M.stock>0)out.push("Stock en "+esc(NAME[b])+" : "+f(M.stock)+" unités");
-  }
+  var W=(window.WORLD||[]).filter(function(w){return w.nm===NAME[b]})[0],M=W&&window.MAP&&window.MAP[W.k],f=function(n){return Number(n).toLocaleString("fr-FR")};
+  if(M){if(M.vol>0)out.push("Envois : "+f(M.vol)+" unités / mois vers "+esc(NAME[b]));if(M.transit>0)out.push("En transit : "+f(M.transit)+" unités");if(M.stock>0)out.push("Stock en "+esc(NAME[b])+" : "+f(M.stock)+" unités")}
   return out;
 }
 window.borderHtml=function(a,b){
-  var k=key(a,b),op=!!OPEN[k],L=lines(a,b);
-  return '<div class="bs-wrap'+(op?' open':'')+'"><div class="bs-flags">'+one(a)
-   +'<svg class="bs-ar" viewBox="0 0 46 20" aria-hidden="true"><path d="M2 10h40M33 3l9 7-9 7"/></svg>'+one(b)+'</div>'
-   +'<button type="button" class="bs-tog" data-k="'+esc(k)+'" aria-expanded="'+op+'" aria-label="Informations sur le trajet '+esc(NAME[a]||a)+' vers '+esc(NAME[b]||b)+'"><svg viewBox="0 0 24 24" width="18" height="18"><path d="M6 9l6 6 6-6"/></svg></button>'
-   +'<div class="bs-info">'+(L.length?'<ul>'+L.map(function(l){return '<li>'+l+'</li>'}).join("")+'</ul>':'<small>Aucune information renseignée pour ce trajet.</small>')+'</div></div>';
+  var k=key(a,b),op=!!OPEN[k],L2=lines(a,b);
+  return '<div class="bs-wrap'+(op?' open':'')+'"><div class="bs-flags">'+one(a)+PLANE+one(b)+'</div>'
+   +'<button type="button" class="bs-tog" data-k="'+esc(k)+'" aria-expanded="'+op+'" aria-label="Informations sur le trajet"><svg viewBox="0 0 24 24" width="18" height="18"><path d="M6 9l6 6 6-6"/></svg></button>'
+   +'<div class="bs-info">'+(L2.length?'<ul>'+L2.map(function(l){return '<li>'+l+'</li>'}).join("")+'</ul>':'<small>Aucune information renseignée pour ce trajet.</small>')+'</div></div>';
 };
 document.addEventListener("click",function(e){
   var t=e.target.closest(".bs-tog");
   if(t){e.stopPropagation();e.preventDefault();var w=t.closest(".bs-wrap"),on=w.classList.toggle("open");t.setAttribute("aria-expanded",on);OPEN[t.dataset.k]=on;return}
   if(e.target.closest(".bs-info"))e.stopPropagation();
 },true);
+
 function persist(){try{localStorage.setItem(LS,JSON.stringify({img:img,info:INFO}))}catch(e){}}
-async function push(){
-  var r=await window.__sb.from(window.__TABLE||"afriflow_state").upsert({key:FK,value:{img:img,info:INFO,at:Date.now()},updated_at:new Date().toISOString()});
-  if(r.error)throw r.error;
-}
+async function push(){var r=await window.__sb.from(window.__TABLE||"afriflow_state").upsert({key:FK,value:{img:img,info:INFO,at:Date.now()},updated_at:new Date().toISOString()});if(r.error)throw r.error}
 async function pull(){
   if(!window.__sb||!window.loggedUserEmail)return;
-  try{
-    var r=await window.__sb.from(window.__TABLE||"afriflow_state").select("value").eq("key",FK).maybeSingle(),v=r.data&&r.data.value;
-    if(v&&(JSON.stringify(v.img||{})!==JSON.stringify(img)||JSON.stringify(v.info||{})!==JSON.stringify(INFO))){img=v.img||{};INFO=v.info||{};persist();if(window.renderRoadmap)renderRoadmap()}
-  }catch(e){}
+  try{var r=await window.__sb.from(window.__TABLE||"afriflow_state").select("value").eq("key",FK).maybeSingle(),v=r.data&&r.data.value;
+    if(v&&(JSON.stringify(v.img||{})!==JSON.stringify(img)||JSON.stringify(v.info||{})!==JSON.stringify(INFO))){img=v.img||{};INFO=v.info||{};persist();if(window.renderRoadmap)renderRoadmap()}}catch(e){}
 }
-function shrink(f,cb){
-  var r=new FileReader();r.onload=function(){var i=new Image();i.onload=function(){
-    var k=Math.min(1,240/i.width),c=document.createElement("canvas");c.width=Math.round(i.width*k);c.height=Math.round(i.height*k);
-    c.getContext("2d").drawImage(i,0,0,c.width,c.height);cb(c.toDataURL("image/png"));
-  };i.src=r.result};r.readAsDataURL(f);
-}
-window.editBorder=function(a,b){
+function shrink(f,cb){var r=new FileReader();r.onload=function(){var i=new Image();i.onload=function(){var k=Math.min(1,240/i.width),c=document.createElement("canvas");c.width=Math.round(i.width*k);c.height=Math.round(i.height*k);c.getContext("2d").drawImage(i,0,0,c.width,c.height);cb(c.toDataURL("image/png"))};i.src=r.result};r.readAsDataURL(f)}
+
+/* Dialogue : choix des pays (listes déroulantes), texte du trajet, images de drapeaux */
+window.editBorder=function(a,b,k){
   if(window.USER_ROLE!=="admin")return;
-  var k=key(a,b),box=document.getElementById("xmBox");
-  box.innerHTML='<h2 style="margin-top:0">Trajet '+esc(NAME[a]||a)+' → '+esc(NAME[b]||b)+'</h2>'
-   +'<div class="fm"><label for="bsInfo">Informations affichées sous la flèche (une ligne par envoi)</label><textarea id="bsInfo" rows="5" placeholder="Ex. 50 kg de mangue séchée vers Lomé · départ le 12/11"></textarea></div>'
-   +[a,b].map(function(c){return '<div class="fm"><label>Drapeau : '+esc(NAME[c]||c)+'</label><div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">'+one(c)+'<input type="file" accept="image/*" data-c="'+esc(c)+'" style="flex:1;min-width:160px"><button type="button" data-r="'+esc(c)+'">Drapeau d\'origine</button></div></div>'}).join("")
-   +'<div class="dact"><button type="button" class="p" id="bsOk">Enregistrer</button><button type="button" id="bsNo">Annuler</button></div>';
-  document.getElementById("bsInfo").value=INFO[k]||"";
-  box.onkeydown=null;document.getElementById("xm").classList.add("on");
-  function keep(){var t=document.getElementById("bsInfo");if(t){var v=t.value.trim();if(v)INFO[k]=v;else delete INFO[k]}}
-  function commit(reopen){persist();if(window.renderRoadmap)renderRoadmap();push().catch(function(e){(window.toast||alert)("Enregistré sur cet appareil seulement : "+(e.message||e))});if(reopen)editBorder(a,b)}
-  box.onchange=function(e){var t=e.target;if(t.type!=="file"||!t.files[0])return;keep();shrink(t.files[0],function(d){img[t.dataset.c]=d;commit(true)})};
+  var box=document.getElementById("xmBox"),ia=a,ib=b,oldKey=key(a,b),txt=INFO[oldKey]||"";
+  var canSel=typeof k==="number"&&k>0&&window.ITEMS&&ITEMS[k]&&ITEMS[k-1];
+  function opts(sel){return '<option value="">—</option>'+Object.keys(NAME).map(function(c){return '<option value="'+c+'"'+(c===sel?' selected':'')+'>'+esc(NAME[c])+'</option>'}).join("")}
+  function keep(){var t=document.getElementById("bsInfo");if(t)txt=t.value}
+  function draw(){
+    box.innerHTML='<h2 style="margin-top:0">Trajet '+esc(NAME[ia]||ia)+' → '+esc(NAME[ib]||ib)+'</h2>'
+     +(canSel?'<div class="fm"><label for="bsA">Pays de départ (chapitre '+k+')</label><select id="bsA">'+opts(ia)+'</select><label for="bsB">Pays d\'arrivée (chapitre '+(k+1)+')</label><select id="bsB">'+opts(ib)+'</select></div>':'')
+     +'<div class="fm"><label for="bsInfo">Informations affichées sous l\'avion (une ligne par envoi)</label><textarea id="bsInfo" rows="4" placeholder="Ex. 50 kg de mangue séchée vers Lomé · départ le 12/11"></textarea></div>'
+     +[ia,ib].map(function(c){return '<div class="fm"><label>Image du drapeau : '+esc(NAME[c]||c)+'</label><div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">'+one(c)+'<input type="file" accept="image/*" data-c="'+esc(c)+'" style="flex:1;min-width:160px"><button type="button" data-r="'+esc(c)+'">Drapeau d\'origine</button></div></div>'}).join("")
+     +'<div class="dact"><button type="button" class="p" id="bsOk">Enregistrer</button><button type="button" id="bsNo">Annuler</button></div>';
+    document.getElementById("bsInfo").value=txt;
+  }
+  draw();box.onkeydown=null;document.getElementById("xm").classList.add("on");
+  box.onchange=function(e){
+    var t=e.target;keep();
+    if(t.id==="bsA"||t.id==="bsB"){if(t.id==="bsA")ia=t.value||ia;else ib=t.value||ib;draw()}
+    else if(t.type==="file"&&t.files[0])shrink(t.files[0],function(d){img[t.dataset.c]=d;persist();draw()});
+  };
   box.onclick=function(e){
     var t=e.target.closest("button");if(!t)return;
-    if(t.dataset.r){keep();delete img[t.dataset.r];commit(true)}
-    else if(t.id==="bsOk"){keep();commit(false);document.getElementById("xm").classList.remove("on")}
+    if(t.dataset.r){keep();delete img[t.dataset.r];persist();draw()}
     else if(t.id==="bsNo")document.getElementById("xm").classList.remove("on");
+    else if(t.id==="bsOk"){
+      keep();var nk=key(ia,ib);if(nk!==oldKey)delete INFO[oldKey];
+      if(txt.trim())INFO[nk]=txt.trim();else delete INFO[nk];
+      persist();
+      if(canSel&&(ia!==a||ib!==b)){ITEMS[k-1].country=ia;ITEMS[k].country=ib;saveLocal();cloudSave("items")}
+      if(window.renderRoadmap)renderRoadmap();
+      push().catch(function(x){(window.toast||alert)("Enregistré sur cet appareil seulement : "+(x.message||x))});
+      document.getElementById("xm").classList.remove("on");
+    }
   };
 };
 var prev=window.onRole;window.onRole=function(){if(prev)prev();setTimeout(pull,1500)};
@@ -5280,4 +5314,16 @@ if(window.__sb&&window.__sb.functions){
 })();
 </script>
 </body>
+  <style id="af-v3-css">
+/* Menu : onglets plus serrés */
+.side-h{margin-bottom:14px!important}
+.nvr{margin-bottom:2px!important;gap:2px!important}
+.nv{padding:9px 16px!important;font-size:.95rem}
+.nx{padding:4px 8px!important}
+/* Accueil : logo seul, centré et grand (le texte reste lisible par les lecteurs d'écran) */
+.brand{justify-content:center!important;padding:30px 20px!important}
+.brand>div:not(.logo-img){position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.brand .logo-img{width:clamp(170px,34vw,320px)!important;height:clamp(170px,34vw,320px)!important;padding:14px!important;border-radius:36px!important}
+@media (max-width:640px){.brand{padding:22px 14px!important}}
+</style>
 </html>
