@@ -5890,11 +5890,13 @@ var APP=null;
 function build(path,orig,html,title){
   if($("dwApp"))$("dwApp").remove();
   var st={dirty:false,saved:false,backed:false,busy:false,rng:null,zoom:1};
-  var app=document.createElement("div");app.id="dwApp";APP=app;
+  var app=document.createElement("section");app.id="dwApp";app.setAttribute("aria-label","Éditeur AfriFloW intégré");APP=app;
   app.innerHTML=
    '<div class="dw-top">'+b("save",SV.save,"Enregistrer (Ctrl+S)","dw-q")+b("undo","↶","Annuler","dw-q")+b("redo","↷","Rétablir","dw-q")
     +'<span class="dw-name">'+esc(title)+' — Dropbox</span><span class="dw-st" id="dwSt"></span>'+b("close",SV.close,"Fermer","dw-q")+'</div>'
-   +'<div class="dw-tabs"><span class="dw-tab" data-t="f" role="button" tabindex="0">Fichier</span><span class="dw-tab on" data-t="a" role="button" tabindex="0">Accueil</span><span class="dw-tab" data-t="i" role="button" tabindex="0">Insertion</span><span class="dw-tab" data-t="v" role="button" tabindex="0">Affichage</span></div>'
+   +'<div class="dw-tabs"><span class="dw-tab" data-t="f" role="button" tabindex="0">Fichier</span><span class="dw-tab on" data-t="a" role="button" tabindex="0">Accueil</span><span class="dw-tab" data-t="i" role="button" tabindex="0">Insertion</span><span class="dw-tab" data-t="v" role="button" tabindex="0">Affichage</span><span class="dw-tab" data-t="r" role="button" tabindex="0">Révision</span></div>'
+   +'<div class="dw-shortcut-strip"><strong>⌨ Raccourcis actifs</strong><span>Ctrl+B Gras</span><span>Ctrl+I Italique</span><span>Ctrl+U Souligné</span><span>Ctrl+S Enregistrer</span><span>Ctrl+Z Annuler</span><span>Ctrl+Alt+J Justifier</span><span>Ctrl+F Rechercher</span><button type="button" id="dwHelpBtn">Tous les raccourcis</button></div>'
+   +'<div class="dw-find" id="dwFind" hidden><label>Rechercher <input type="search" id="dwFindText" placeholder="Mot ou expression"></label><button type="button" id="dwFindNext">Suivant</button><label id="dwReplaceBox" hidden>Remplacer par <input id="dwReplaceText" type="text"></label><button type="button" id="dwReplaceBtn" hidden>Remplacer</button><button type="button" id="dwFindClose" aria-label="Fermer la recherche">✕</button></div>'
    +'<div class="dw-rib">'
     +'<div class="dw-pane" data-p="f">'+g("Fichier",row(big("save","save","Enregistrer")+big("dl","dl","Télécharger")+big("close","close","Fermer")))+'</div>'
     +'<div class="dw-pane on" data-p="a">'
@@ -5911,12 +5913,16 @@ function build(path,orig,html,title){
     +'</div>'
     +'<div class="dw-pane" data-p="i">'+g("Insertion",row(big("table","table","Tableau")+big("image","image","Image")+big("link","link","Lien")+big("insertHorizontalRule","hr","Ligne")+big("pagebreak","pb","Saut de page")+big("date","date","Date")))+'</div>'
     +'<div class="dw-pane" data-p="v">'+g("Zoom",row(b("zoomout","−","Zoom arrière")+'<select data-s="zoom" aria-label="Zoom" style="width:80px"><option>50</option><option>75</option><option>90</option><option selected>100</option><option>125</option><option>150</option><option>200</option></select>'+b("zoomin","+","Zoom avant")+b("zoom100","100 %","Zoom 100 %")))+'</div>'
+    +'<div class="dw-pane" data-p="r">'+g("Rechercher",row(b("find","🔍 Rechercher","Rechercher dans le document (Ctrl+F)")+b("replace","↔ Remplacer","Rechercher et remplacer")))+g("Document",row(b("selectAll","Tout sélectionner","Sélectionner le document (Ctrl+A)")+b("print","⎙ Imprimer","Imprimer le document")+b("shortcuts","⌨ Raccourcis","Liste des raccourcis")))+'</div>'
    +'</div>'
    +'<div class="dw-canvas" id="dwCv"><div class="dw-page" id="dwPage" contenteditable="true" spellcheck="true" lang="fr"></div></div>'
    +'<div class="dw-status"><span id="dwPg">Page 1 sur 1</span><span id="dwWc">0 mot</span><span>Français (France)</span><span class="sp"></span><span id="dwZl">100 %</span></div>'
    +'<input type="file" id="dwImg" accept="image/*" hidden>';
-  document.body.appendChild(app);
-  var prevOv=document.body.style.overflow;document.body.style.overflow="hidden";
+  var host=$("dvView");
+  if(!host){toast("Zone des documents indisponible.");return}
+  host.replaceChildren(app);
+  document.body.classList.add("af-editor-mode");
+  app.scrollIntoView({behavior:"smooth",block:"start"});
   var page=$("dwPage");page.innerHTML=html||"<p><br></p>";
   function setSt(t){var e=$("dwSt");if(e)e.textContent=t||""}
   function dirty(){st.dirty=true;setSt("Modifié, non enregistré");stats()}
@@ -5995,14 +6001,76 @@ function build(path,orig,html,title){
   function close(){
     if(st.dirty&&!confirm("Fermer sans enregistrer ? Les modifications seront perdues."))return;
     document.removeEventListener("selectionchange",onSel);document.removeEventListener("keydown",onKey,true);
-    document.body.style.overflow=prevOv;app.remove();APP=null;
-    if(st.saved&&window.dvReload)window.dvReload();
+    app.remove();APP=null;document.body.classList.remove("af-editor-mode");
+    if(window.dvReload)window.dvReload();
   }
+  /* Raccourcis traités en capture uniquement pendant l'édition.
+     Certains raccourcis restent réservés au navigateur selon sa configuration. */
   function onKey(e){
-    if(!$("dwApp"))return;
-    if((e.ctrlKey||e.metaKey)&&String(e.key).toLowerCase()==="s"){e.preventDefault();e.stopPropagation();save()}
+    if(!$("dwApp")||!app.isConnected)return;
+    var key=String(e.key||"").toLowerCase(),mod=e.ctrlKey||e.metaKey;
+    if(key==="escape"&&(!$("dwFind").hidden)){e.preventDefault();e.stopImmediatePropagation();$("dwFind").hidden=true;page.focus();return}
+    if(!mod||e.shiftKey||e.repeat&&key==="s")return;
+    var action=null;
+    if(e.altKey){
+      if(key==="j")action=function(){ex("justifyFull")};
+    }else{
+      switch(key){
+        case "s":action=save;break;
+        case "b":action=function(){ex("bold")};break;
+        case "i":action=function(){ex("italic")};break;
+        case "u":action=function(){ex("underline")};break;
+        case "z":action=function(){ex("undo")};break;
+        case "y":action=function(){ex("redo")};break;
+        case "l":action=function(){ex("justifyLeft")};break;
+        case "e":action=function(){ex("justifyCenter")};break;
+        case "r":action=function(){ex("justifyRight")};break;
+        case "j":action=function(){ex("justifyFull")};break;
+        case "f":action=function(){act("find")};break;
+        case "h":action=function(){act("replace")};break;
+        case "a":if(page.contains(document.activeElement))action=function(){ex("selectAll")};break;
+      }
+    }
+    if(action){e.preventDefault();e.stopImmediatePropagation();action()}
   }
   document.addEventListener("keydown",onKey,true);
+  $("dwHelpBtn").onclick=function(){act("shortcuts")};
+  function searchPanel(replace){
+    $("dwFind").hidden=false;
+    $("dwReplaceBox").hidden=!replace;
+    $("dwReplaceBtn").hidden=!replace;
+    $("dwFindText").focus();$("dwFindText").select();
+  }
+  function findNext(){
+    var search=$("dwFindText").value;if(!search)return;
+    var walker=document.createTreeWalker(page,NodeFilter.SHOW_TEXT),nodes=[],node;
+    while((node=walker.nextNode()))if(node.nodeValue)nodes.push(node);
+    var selection=window.getSelection(),end=selection.rangeCount?selection.getRangeAt(0).endContainer:null;
+    var endOffset=selection.rangeCount?selection.getRangeAt(0).endOffset:0;
+    var cursor=nodes.indexOf(end),match=null;
+    for(var pass=0;pass<2&&!match;pass++){
+      for(var k=(pass===0?Math.max(0,cursor):0);k<nodes.length;k++){
+        var start=pass===0&&k===cursor?endOffset:0;
+        var at=nodes[k].nodeValue.toLowerCase().indexOf(search.toLowerCase(),start);
+        if(at!==-1){match={node:nodes[k],at:at};break}
+      }
+    }
+    if(!match){setSt("Texte introuvable");return}
+    var range=document.createRange();range.setStart(match.node,match.at);range.setEnd(match.node,match.at+search.length);
+    selection.removeAllRanges();selection.addRange(range);
+    match.node.parentElement.scrollIntoView({behavior:"smooth",block:"nearest"});setSt("Résultat trouvé");
+  }
+  $("dwFindNext").onclick=findNext;
+  $("dwFindText").onkeydown=function(e){if(e.key==="Enter"){e.preventDefault();findNext()}};
+  $("dwFindClose").onclick=function(){$("dwFind").hidden=true;page.focus()};
+  $("dwReplaceBtn").onclick=function(){
+    var sel=window.getSelection(),query=$("dwFindText").value;
+    if(!sel||!sel.rangeCount||!query)return findNext();
+    var r=sel.getRangeAt(0);
+    if(!page.contains(r.commonAncestorContainer)||r.toString().toLowerCase()!==query.toLowerCase())return findNext();
+    r.deleteContents();var replacement=document.createTextNode($("dwReplaceText").value);r.insertNode(replacement);
+    sel.removeAllRanges();dirty();findNext();
+  };
 
   /* ----- actions ----- */
   function act(c){
@@ -6011,6 +6079,11 @@ function build(path,orig,html,title){
       case "dl":return dl();
       case "close":return close();
       case "cut":case "copy":ex(c);return;
+      case "find":searchPanel(false);return;
+      case "replace":searchPanel(true);return;
+      case "selectAll":{page.focus();var rg=document.createRange();rg.selectNodeContents(page);var sl=window.getSelection();sl.removeAllRanges();sl.addRange(rg);return}
+      case "print":window.print();return;
+      case "shortcuts":alert("Raccourcis de l'éditeur AfriFloW (éditeur actif) :\nCtrl+S — Enregistrer\nCtrl+B — Gras\nCtrl+I — Italique\nCtrl+U — Souligné\nCtrl+Z / Ctrl+Y — Annuler / Rétablir\nCtrl+L / Ctrl+E / Ctrl+R — Alignements\nCtrl+J ou Ctrl+Alt+J — Justifier (Ctrl+J peut être réservé aux téléchargements du navigateur)\nCtrl+F — Rechercher\nCtrl+H — Rechercher et remplacer\nCtrl+A — Tout sélectionner dans le document");return;
       case "table":{
         var p=(prompt("Lignes, colonnes ?","3,3")||"").split(",").map(Number),r=p[0],k=p[1];if(!(r>0&&k>0))return;
         r=Math.min(r,30);k=Math.min(k,12);var t="<table><tbody>";
@@ -6309,5 +6382,121 @@ window.dvWordEdit=function(path,orig){
 </style>
 <script src="document-excel-editor.js" defer></script>
 <script src="document-permissions.js" defer></script>
+
+<style id="af-embedded-office-style">
+/* Éditeur de documents dans la page AfriFloW, et non fenêtre plein écran */
+#dvView #dwApp{
+  position:relative!important;inset:auto!important;z-index:1!important;
+  width:100%;height:min(84vh,1150px);min-height:600px;
+  margin:16px 0 32px;border-radius:23px;overflow:hidden;
+  background:color-mix(in srgb,var(--card) 82%,transparent)!important;
+  color:var(--ink)!important;
+  border:1px solid color-mix(in srgb,var(--ink) 14%,transparent);
+  box-shadow:0 18px 50px rgba(0,0,0,.15);
+  -webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);
+}
+#dvView #dwApp .dw-top{
+  height:58px;min-height:58px;gap:10px;padding:10px 18px;
+  background:color-mix(in srgb,var(--card) 78%,transparent)!important;
+  color:var(--ink)!important;border-bottom:1px solid var(--line);
+}
+#dvView #dwApp .dw-name{font-weight:800;font-size:1rem;text-align:left}
+#dvView #dwApp .dw-top .dw-st{font-weight:650}
+#dvView #dwApp .dw-top .dw-q{
+  color:var(--ink);background:color-mix(in srgb,var(--card) 90%,transparent);
+  border:1px solid var(--line);border-radius:10px;min-width:36px;height:36px
+}
+#dvView #dwApp .dw-top .dw-q:hover{background:color-mix(in srgb,var(--ink) 12%,var(--card))}
+#dvView #dwApp .dw-top .dw-q svg{stroke:currentColor}
+#dvView #dwApp .dw-tabs{
+  background:transparent!important;color:var(--ink)!important;
+  padding:10px 14px 0;gap:6px;overflow-x:auto;flex-shrink:0;
+}
+#dvView #dwApp .dw-tab{
+  color:var(--ink);font-size:14px;font-weight:700;
+  background:color-mix(in srgb,var(--card) 74%,transparent);
+  border:1px solid var(--line);border-radius:12px 12px 0 0;
+  padding:9px 16px;white-space:nowrap;
+}
+#dvView #dwApp .dw-tab.on{
+  color:var(--ink);background:color-mix(in srgb,var(--card) 94%,transparent);
+  border-bottom-color:transparent;
+}
+#dvView #dwApp .dw-rib{
+  flex-shrink:0;min-height:116px;max-height:184px;
+  background:color-mix(in srgb,var(--card) 88%,transparent)!important;
+  border:1px solid var(--line);margin:0 14px 12px;
+  border-radius:0 15px 15px 15px;padding:9px 11px;overflow:auto;
+}
+#dvView #dwApp .dw-pane{min-width:max-content;gap:6px}
+#dvView #dwApp .dw-g{border-color:var(--line)}
+#dvView #dwApp .dw-gl{color:var(--muted)}
+#dvView #dwApp .dw-row{gap:5px}
+#dvView #dwApp .dw-b{
+  color:var(--ink);border:1px solid var(--line);
+  background:color-mix(in srgb,var(--card) 92%,transparent);
+  padding:4px 9px;border-radius:10px;height:34px;min-width:34px;
+}
+#dvView #dwApp .dw-b:hover{background:color-mix(in srgb,var(--ink) 12%,var(--card))}
+#dvView #dwApp .dw-b.on{background:color-mix(in srgb,var(--green) 28%,var(--card));border-color:var(--green)}
+#dvView #dwApp select,#dvView #dwApp input:not([type="color"]){
+  background:var(--card);color:var(--ink);border:1px solid var(--line);
+  min-height:32px;border-radius:10px;padding:4px 9px;
+}
+#dvView #dwApp .dw-shortcut-strip{
+  display:flex;align-items:center;gap:12px;overflow-x:auto;
+  flex-shrink:0;padding:8px 14px;color:var(--ink);
+  background:color-mix(in srgb,var(--green) 9%,var(--card));
+  border-bottom:1px solid var(--line);white-space:nowrap;font-size:11px
+}
+#dvView #dwApp .dw-shortcut-strip strong{
+  padding:5px 9px;border-radius:8px;
+  background:var(--green);color:#fff;font-size:11px
+}
+#dvView #dwApp .dw-shortcut-strip button{
+  border:1px solid var(--line);border-radius:8px;
+  background:var(--card);color:var(--ink);padding:5px 9px;font-size:11px
+}
+#dvView #dwApp .dw-find{
+  display:flex;align-items:center;gap:8px;flex-wrap:wrap;
+  padding:8px 16px;background:var(--card);
+  border-bottom:1px solid var(--line);flex-shrink:0
+}
+#dvView #dwApp .dw-find[hidden]{display:none!important}
+#dvView #dwApp .dw-find label{display:flex;align-items:center;gap:8px}
+#dvView #dwApp .dw-find button{
+  background:color-mix(in srgb,var(--card) 87%,transparent);
+  border:1px solid var(--line);color:var(--ink);
+  border-radius:8px;padding:7px 10px
+}
+#dvView #dwApp .dw-canvas{
+  flex:1;min-height:220px;background:color-mix(in srgb,var(--bg) 85%,#ddd);
+  padding:28px 18px 55px;overflow:auto
+}
+#dvView #dwApp .dw-page{
+  background:#fff;color:#111;width:min(794px,100%);margin:0 auto;
+  border-radius:3px;min-height:1123px;
+  box-shadow:0 3px 25px rgba(0,0,0,.15)
+}
+#dvView #dwApp .dw-status{
+  flex-shrink:0;height:33px;padding:0 16px;background:var(--card)!important;
+  color:var(--ink)!important;border-top:1px solid var(--line)
+}
+@media(max-width:750px){
+  #dvView #dwApp{height:78vh;min-height:460px}
+  #dvView #dwApp .dw-top{padding:8px 10px;min-height:52px}
+  #dvView #dwApp .dw-rib{margin:0 8px 8px;min-height:105px}
+  #dvView #dwApp .dw-canvas{padding:12px 8px 28px}
+  #dvView #dwApp .dw-page{min-height:650px;padding:30px 20px}
+}
+@media print{
+  body.af-editor-mode *{visibility:hidden!important}
+  #dwApp,#dwApp .dw-canvas,#dwApp .dw-page,#dwApp .dw-page *{visibility:visible!important}
+  #dwApp{position:static!important;border:0!important;box-shadow:none!important;height:auto!important}
+  #dwApp .dw-canvas{position:absolute;left:0;top:0;width:100%;padding:0!important;background:#fff!important;overflow:visible!important}
+  #dwApp .dw-page{width:100%!important;min-height:0!important;padding:0!important;box-shadow:none!important}
+  #dwApp .dw-rib,#dwApp .dw-tabs,#dwApp .dw-top,#dwApp .dw-status,#dwApp .dw-find,#dwApp .dw-shortcut-strip{display:none!important}
+}
+</style>
 </body>
 </html>
