@@ -282,7 +282,8 @@ table.xl input:focus{outline:2px solid var(--green);outline-offset:-2px;backgrou
 <link rel="apple-touch-icon" href="./logo.png">
 <style>
 /* AfriFloW PWA installation styles, scoped to new elements */
-.af-pwa-install-area{display:flex;justify-content:flex-end;margin:-10px 0 18px}
+.af-pwa-install-area{position:sticky;top:calc(env(safe-area-inset-top, 0px) + 6px);z-index:200;display:flex;justify-content:flex-end;margin:-12px 0 12px;pointer-events:none}
+.af-pwa-install-button{pointer-events:auto}
 .af-pwa-install-area[hidden],.af-pwa-dialog[hidden]{display:none!important}
 .af-pwa-install-button{display:inline-flex;align-items:center;justify-content:center;gap:8px;background:#1f5d3a;color:white;border:1px solid #1f5d3a;border-radius:12px;padding:11px 18px;font:600 14px system-ui,-apple-system,"Segoe UI",sans-serif;cursor:pointer;min-height:44px;box-shadow:0 4px 14px rgba(31,93,58,.12)}
 .af-pwa-install-button:hover{background:#28734a}
@@ -384,17 +385,17 @@ window.ic=function(n,s){return '<svg class="ic"'+(s?' style="width:'+s+';height:
 </div>
 
 <div class="wrap" id="view-home">
+  <!-- AfriFloW PWA install button -->
+  <div id="afPwaInstallArea" class="af-pwa-install-area" hidden>
+    <button id="afPwaInstallBtn" class="af-pwa-install-button" type="button" aria-haspopup="dialog" aria-controls="afPwaHelp" aria-label="Installer AfriFloW sur cet appareil">↓ Installer AfriFloW</button>
+  </div>
+
   <div class="brand">
     <img class="logo-img" src="logo.png" alt="Logo AfriFloW" onerror="this.onerror=null;this.src='https://placehold.co/78x78/ffffff/1f5d3a?text=A'">
     <div>
       <h1>Afri<span>FloW</span> · Journal de Bord & Feuille de Route</h1>
       <p class="sub">Cliquez sur un cadran pour consulter les articles détaillés au format journal.</p>
     </div>
-  </div>
-
-  <!-- AfriFloW PWA install button -->
-  <div id="afPwaInstallArea" class="af-pwa-install-area" hidden>
-    <button id="afPwaInstallBtn" class="af-pwa-install-button" type="button" aria-haspopup="dialog" aria-controls="afPwaHelp" aria-label="Installer AfriFloW sur cet appareil">↓ Installer AfriFloW</button>
   </div>
 
   <div class="toolbar">
