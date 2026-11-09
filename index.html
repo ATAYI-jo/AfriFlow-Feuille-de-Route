@@ -5909,46 +5909,118 @@ window.dvWordEdit=function(path,orig){
 <script id="afriflow-avatar-integration">
 (function(){
   "use strict";
+  // Images extraites de la planche fournie par l'utilisateur. Fallback original si elles manquent.
+  var base="avatar-3d/poses/";
+  var images={
+    idle:base+"idle.webp",
+    greeting:base+"greeting.webp",
+    surprised:base+"surprised.webp",
+    answering:base+"answering.webp",
+    listening:base+"listening.webp",
+    thinking:base+"thinking.webp"
+  };
+  var fallback="avatar.jpg",pose="idle",timer=null;
+  var panelImg=null,liveImg=null,box=null;
+  var available={};
+  Object.keys(images).forEach(function(k){
+    var im=new Image();
+    im.onload=function(){available[k]=true;if(pose===k)render()};
+    im.onerror=function(){available[k]=false};
+    im.src=images[k];
+  });
+  var labels={idle:"Au repos",greeting:"Bienvenue",surprised:"À votre écoute",answering:"Je vous réponds",listening:"Je vous écoute",thinking:"Je réfléchis"};
+  function render(){
+    var src=available[pose]?images[pose]:fallback;
+    if(panelImg && panelImg.getAttribute("src")!==src)panelImg.src=src;
+    if(liveImg && liveImg.getAttribute("src")!==src)liveImg.src=src;
+    var lab=document.getElementById("afPoseLabel");
+    if(lab)lab.textContent=labels[pose]||labels.idle;
+  }
+  function setPose(next,delay){
+    if(!images[next])next="idle";
+    if(timer){clearTimeout(timer);timer=null}
+    pose=next;render();
+    if(delay)timer=setTimeout(function(){pose="idle";render()},delay);
+  }
+  function addLiveImage(){
+    var stage=document.getElementById("aiStage");
+    if(!stage||document.getElementById("afLivePose"))return;
+    liveImg=document.createElement("img");
+    liveImg.id="afLivePose";
+    liveImg.alt="Assistante AfriFloW : expression correspondant à la conversation";
+    liveImg.style.cssText="position:absolute;inset:0;width:100%;height:100%;object-fit:contain;object-position:center;background:#f2f8f3;pointer-events:none;z-index:1";
+    liveImg.onerror=function(){if(liveImg.src.indexOf("avatar.jpg")<0)liveImg.src=fallback};
+    stage.insertBefore(liveImg,stage.firstChild);
+    var lbl=document.getElementById("aiLbl"),hang=document.getElementById("aiHang");
+    if(lbl)lbl.style.zIndex="3";
+    if(hang)hang.style.zIndex="3";
+    if(lbl){
+      function updateLabel(){
+        var s=lbl.textContent.toLowerCase();
+        if(/écoute|micro|parlez|listening/.test(s))setPose("listening");
+        else if(/réfléch|connexion|attente|thinking/.test(s))setPose("thinking");
+        else if(/parle|répond|speaking/.test(s))setPose("answering");
+      }
+      new MutationObserver(updateLabel).observe(lbl,{childList:true,subtree:true,characterData:true});
+      updateLabel();
+    }
+    render();
+  }
   function initialize(){
-    var box=document.getElementById('aiBox');
-    if(!box||document.getElementById('afAvatarToggle'))return;
+    box=document.getElementById("aiBox");
+    if(!box||document.getElementById("afAvatarToggle"))return;
     var header=box.firstElementChild;
-    var btn=document.createElement('button');
-    btn.id='afAvatarToggle';btn.type='button';btn.textContent='Avatar 3D';
-    btn.title='Afficher ou masquer l’avatar AfriFloW';
-    btn.style.cssText='font-size:12px;padding:5px 9px;margin-left:auto;border-radius:12px';
+    var btn=document.createElement("button");
+    btn.id="afAvatarToggle";btn.type="button";btn.textContent="Assistante";
+    btn.title="Afficher ou masquer les expressions de l'assistante AfriFloW";
+    btn.style.cssText="font-size:12px;padding:5px 9px;margin-left:auto;border-radius:12px";
     header.insertBefore(btn,header.lastElementChild);
-    var pane=document.createElement('div');pane.id='afAvatarPanel';pane.hidden=true;
-    pane.style.cssText='flex:0 0 235px;min-height:0;border:1px solid var(--line);border-radius:12px;overflow:hidden;background:#f5faf7';
-    var frame=document.createElement('iframe');frame.id='afAvatarFrame';
-    frame.title='Assistante AfriFloW en 3D';frame.loading='lazy';
-    frame.style.cssText='height:100%;width:100%;border:0;background:transparent';
-    pane.appendChild(frame);header.after(pane);
-    btn.addEventListener('click',function(){
-      pane.hidden=!pane.hidden;pane.style.display=pane.hidden?'none':'block';
-      if(!pane.hidden && !frame.src)frame.src='avatar-3d/index.html';
+    var pane=document.createElement("div");pane.id="afAvatarPanel";pane.hidden=true;
+    pane.style.cssText="flex:0 0 225px;min-height:0;border:1px solid var(--line);border-radius:12px;overflow:hidden;background:#f2f8f3;position:relative;text-align:center";
+    panelImg=document.createElement("img");panelImg.alt="Assistante AfriFloW";
+    panelImg.style.cssText="width:100%;height:100%;min-height:205px;max-height:235px;object-fit:contain;display:block";
+    panelImg.onerror=function(){if(panelImg.src.indexOf("avatar.jpg")<0)panelImg.src=fallback};
+    var lab=document.createElement("span");lab.id="afPoseLabel";
+    lab.style.cssText="position:absolute;left:12px;top:10px;border-radius:16px;background:#fffffff0;padding:5px 11px;font-size:12px;font-weight:700;color:#17583e";
+    pane.appendChild(panelImg);pane.appendChild(lab);header.after(pane);
+    render();
+    btn.addEventListener("click",function(){
+      pane.hidden=!pane.hidden;
+      pane.style.display=pane.hidden?"none":"block";
+      if(!pane.hidden)setPose("greeting",2300);
     });
-    var log=document.getElementById('aiLog');
-    if(!log)return;
-    // Only read a completed assistant answer when the user has explicitly opened the 3D avatar.
-    // Avoid double playback with existing read-aloud and live mode.
-    new MutationObserver(function(mutations){
-      if(pane.hidden||!frame.contentWindow||box.classList.contains('ai-live'))return;
-      var read=document.getElementById('aiRead');
-      if(read && read.classList.contains('on'))return;
-      mutations.forEach(function(mu){
+    var log=document.getElementById("aiLog");
+    if(log)new MutationObserver(function(ms){
+      ms.forEach(function(mu){
         mu.addedNodes.forEach(function(n){
-          if(n.nodeType!==1 || !n.children || n.children.length<2)return;
-          var speaker=n.firstElementChild&&n.firstElementChild.textContent||'';
-          if(!/^AfriFlow/i.test(speaker))return;
-          var msg=n.children[1].textContent||'';
-          if(!msg||/je réfléchis/i.test(msg))return;
-          frame.contentWindow.postMessage({type:'AFRIFLOW_SPEAK',text:msg},location.origin);
+          if(n.nodeType!==1)return;
+          var speaker=n.firstElementChild&&n.firstElementChild.textContent||"";
+          if(/^AfriFlow/i.test(speaker)){
+            var msg=n.children&&n.children[1]?n.children[1].textContent||"":"";
+            if(/je réfléchis/i.test(msg))setPose("thinking");
+            else if(msg.trim())setPose("answering",6000);
+          }else if(/vous|you/i.test(speaker)){setPose("thinking")}
         });
       });
     }).observe(log,{childList:true});
+    var send=document.getElementById("aiGo");
+    if(send)send.addEventListener("click",function(){setPose("thinking")});
+    var input=document.getElementById("aiIn");
+    if(input)input.addEventListener("keydown",function(e){if(e.key==="Enter"&&!e.shiftKey)setPose("thinking")});
+    ["aiMic","aiVoice"].forEach(function(id){
+      var el=document.getElementById(id);
+      if(el)el.addEventListener("click",function(){setPose("listening")});
+    });
+    new MutationObserver(function(){
+      if(box.classList.contains("ai-live"))addLiveImage();
+      else if(liveImg){liveImg=null;setPose("idle")}
+    }).observe(box,{attributes:true,attributeFilter:["class"],childList:true});
+    // Si la scène Live a été créée avant l'ouverture du panneau.
+    addLiveImage();
+    window.AfriFlowPose={set:setPose,get:function(){return pose}};
   }
-  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',initialize);else initialize();
+  if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",initialize);
+  else initialize();
 })();
 </script>
 </body>
