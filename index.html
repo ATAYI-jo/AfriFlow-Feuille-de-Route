@@ -5195,6 +5195,7 @@ if(typeof old==="function")window.setAuthMode=function(m){old(m);paint(m==="regi
 "use strict";
 var $=function(i){return document.getElementById(i)};
 var live=false,readAll=false,rec=null,speaking=false,spk=0,ctx=null,curSrc=null,empties=0;
+var ttsPausedUntil=0; // Ne pas multiplier les requêtes Google en cas de quota épuisé.
 function toast(m){(window.toast||alert)(m)}
 function stat(t){var s=$("aiStat");if(s)s.textContent=t||""}
 function paint(){var m=$("aiMic"),v=$("aiVoice"),r=$("aiRead");if(m)m.classList.toggle("on",!!rec);if(v)v.classList.toggle("on",live);if(r)r.classList.toggle("on",readAll||live)}
@@ -5283,14 +5284,26 @@ function play(a){return new Promise(function(ok){
   var s=c.createBufferSource();s.buffer=buf;s.connect(c.destination);curSrc=s;s.onended=ok;s.start();
 })}
 function browserSpeak(t){return new Promise(function(ok){
-  if(!window.speechSynthesis)return ok(true);
-  var u=new SpeechSynthesisUtterance(plain(t));u.lang="fr-FR";u.onend=u.onerror=function(){ok(true)};speechSynthesis.speak(u);
+  if(!window.speechSynthesis||!window.SpeechSynthesisUtterance){stat("Synthèse vocale indisponible sur ce navigateur.");return ok(true)}
+  try{
+    speechSynthesis.cancel();
+    var u=new SpeechSynthesisUtterance(plain(t));u.lang="fr-FR";u.rate=.95;
+    var vs=speechSynthesis.getVoices();var fr=vs.find(function(v){return /^fr/i.test(v.lang)});if(fr)u.voice=fr;
+    u.onend=u.onerror=function(){ok(true)};
+    speechSynthesis.speak(u);
+  }catch(e){stat("Voix du navigateur indisponible.");ok(true)}
 })}
 function stopSpeak(){spk++;speaking=false;try{if(curSrc)curSrc.stop()}catch(e){}try{if(window.speechSynthesis)speechSynthesis.cancel()}catch(e){}}
 async function speak(text){
   stopSpeak();var my=spk,ps=parts(text),q=[];
   if(!ps.length)return false;
   speaking=true;stat("Je parle…");
+  // Contournement sans frais API quand la synthèse Gemini est temporairement limitée.
+  if(Date.now()<ttsPausedUntil){
+    stat("Voix de secours du navigateur…");await browserSpeak(text);
+    if(my!==spk)return false;
+    speaking=false;stat("");return true;
+  }
   function get(i){return q[i]||(q[i]=call({op:"tts",text:ps[i]}).then(function(d){return d.audio}))}
   try{
     get(0);
@@ -5301,7 +5314,12 @@ async function speak(text){
       await play(a);
     }
   }catch(e){
-    if(my===spk){toast("Voix naturelle indisponible, voix du navigateur utilisée : "+(e.message||e));await browserSpeak(text)}
+    if(my===spk){
+      var message=String(e&&e.message||e);
+      if(/(?:429|quota|RESOURCE_EXHAUSTED|rate.limit)/i.test(message))ttsPausedUntil=Date.now()+30*60*1000;
+      stat("Voix Gemini limitée : utilisation de la voix du navigateur.");
+      await browserSpeak(text);
+    }
   }
   if(my!==spk)return false;
   speaking=false;stat("");return true;
@@ -5506,7 +5524,16 @@ function buildHead(cv,getLevel,getState){
 }
 
 /* ================= Conversation en direct (API Live) ================= */
-var LV=null;
+var LV=null, fallbackVoiceMode=false;
+function fallbackVoice(reason){
+  // Le mode de secours préexistant utilise micro -> transcription -> chat -> lecture navigateur.
+  if(fallbackVoiceMode)return;
+  fallbackVoiceMode=true;stopLive();
+  var s=document.getElementById("aiStat");
+  if(s)s.textContent="Mode vocal de secours : conversation possible sans Gemini Live.";
+  var b=document.getElementById("aiVoice");
+  if(b)b.click(); // Les autres écouteurs vocaux déjà présents prennent le relais.
+}
 function stage(){
   if($("aiStage"))return;
   var s=document.createElement("div");s.id="aiStage";
@@ -5550,8 +5577,13 @@ async function startLive(){
     ws.onerror=function(){console.warn("WebSocket vocal : erreur (détail dans l'événement de fermeture)")};
     ws.onclose=function(ev){
       if(LV!==me||me.closing)return;
-      toast(me.ready?"Conversation terminée (limite de durée atteinte ou connexion perdue).":"Connexion vocale refusée (code "+ev.code+") : "+(ev.reason||"aucun détail. Vérifiez le modèle GEMINI_LIVE_MODEL et la clé GEMINI_API_KEY."));
-      stopLive();
+      console.warn("Gemini Live terminé :",ev.code,ev.reason||"");
+      if(!me.ready){
+        fallbackVoice("Connexion Live refusée");
+      }else{
+        toast("Conversation Live interrompue. Le mode vocal de secours est disponible.");
+        fallbackVoice("Connexion Live perdue");
+      }
     };
     function play(b){
       var bin=atob(b),n=bin.length>>1,bf=ctx.createBuffer(1,n,24000),ch=bf.getChannelData(0);
@@ -5572,8 +5604,11 @@ async function startLive(){
       ws.send(JSON.stringify({realtimeInput:{audio:{data:b64(o.buffer),mimeType:"audio/pcm;rate=16000"}}}));
     };
   }catch(e){
-    var m=(e&&e.name==="NotAllowedError")?"Micro refusé : autorisez-le dans le navigateur.":"Conversation en direct impossible : "+(e&&e.message||e);
-    toast(m);stopLive();
+    if(e&&e.name==="NotAllowedError"){
+      toast("Micro refusé : autorisez-le dans le navigateur.");stopLive();return;
+    }
+    console.warn("Connexion Gemini Live indisponible :",e&&e.message||e);
+    fallbackVoice(e);
   }
 }
 function stopLive(){
@@ -5588,7 +5623,8 @@ function stopLive(){
 }
 /* phase de capture sur window : passe avant l'ancien code vocal */
 addEventListener("click",function(e){
-  if(e.target.closest("#aiVoice")){e.stopPropagation();e.preventDefault();LV?stopLive():startLive();return}
+  // En mode de secours, laisser le gestionnaire vocal classique traiter le clic.
+  if(e.target.closest("#aiVoice")){if(fallbackVoiceMode)return;e.stopPropagation();e.preventDefault();LV?stopLive():startLive();return}
   if(e.target.closest("#aiHang")){stopLive();return}
   if(LV&&e.target.closest("#aiClose,#aiBtn"))stopLive();
 },true);
