@@ -10,7 +10,7 @@ function respond(data: unknown, status = 200) {
 }
 const root = (Deno.env.get("DROPBOX_ROOT") || "").replace(/\/+$/, "");
 function validPath(raw: string) {
-  if (!raw || !raw.startsWith("/") || raw.includes("\\") || raw.split("/").some(p => p === ".." || p === "." || !p)) return false;
+  if (!raw || !raw.startsWith("/") || raw.includes("\\") || raw.slice(1).split("/").some(p => p === ".." || p === "." || !p)) return false;
   if (root && raw.toLowerCase() !== root.toLowerCase() && !raw.toLowerCase().startsWith(root.toLowerCase()+"/")) return false;
   return true;
 }
