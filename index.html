@@ -280,6 +280,21 @@ table.xl input:focus{outline:2px solid var(--green);outline-offset:-2px;backgrou
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="AfriFloW">
 <link rel="apple-touch-icon" href="./logo.png">
+<style>
+/* AfriFloW PWA installation styles, scoped to new elements */
+.af-pwa-install-area{display:flex;justify-content:flex-end;margin:-10px 0 18px}
+.af-pwa-install-area[hidden],.af-pwa-dialog[hidden]{display:none!important}
+.af-pwa-install-button{display:inline-flex;align-items:center;justify-content:center;gap:8px;background:#1f5d3a;color:white;border:1px solid #1f5d3a;border-radius:12px;padding:11px 18px;font:600 14px system-ui,-apple-system,"Segoe UI",sans-serif;cursor:pointer;min-height:44px;box-shadow:0 4px 14px rgba(31,93,58,.12)}
+.af-pwa-install-button:hover{background:#28734a}
+.af-pwa-install-button:focus-visible,.af-pwa-close:focus-visible{outline:3px solid #d98a1b;outline-offset:2px}
+.af-pwa-dialog{position:fixed;inset:0;z-index:100000;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;padding:20px}
+.af-pwa-box{position:relative;box-sizing:border-box;max-width:430px;width:100%;background:#fff;color:#1d2a22;padding:25px;border-radius:20px;box-shadow:0 16px 55px rgba(0,0,0,.22);font:15px/1.6 system-ui,-apple-system,"Segoe UI",sans-serif}
+.af-pwa-box h2{font-size:20px;margin:0 32px 12px 0;color:#1f5d3a}
+.af-pwa-box p{margin:0 0 12px}
+.af-pwa-box ol{padding-left:23px;margin:8px 0 0}
+.af-pwa-close{position:absolute;right:12px;top:10px;border:0;background:transparent;color:#1d2a22;font-size:28px;cursor:pointer;width:40px;height:40px}
+@media(max-width:600px){.af-pwa-install-area{justify-content:center;margin:0 0 16px}.af-pwa-install-button{width:100%}}
+</style>
 </head>
 <body class="ro">
   <!-- =====================================================================
@@ -375,6 +390,11 @@ window.ic=function(n,s){return '<svg class="ic"'+(s?' style="width:'+s+';height:
       <h1>Afri<span>FloW</span> · Journal de Bord & Feuille de Route</h1>
       <p class="sub">Cliquez sur un cadran pour consulter les articles détaillés au format journal.</p>
     </div>
+  </div>
+
+  <!-- AfriFloW PWA install button -->
+  <div id="afPwaInstallArea" class="af-pwa-install-area" hidden>
+    <button id="afPwaInstallBtn" class="af-pwa-install-button" type="button" aria-haspopup="dialog" aria-controls="afPwaHelp" aria-label="Installer AfriFloW sur cet appareil">↓ Installer AfriFloW</button>
   </div>
 
   <div class="toolbar">
@@ -6532,6 +6552,69 @@ window.dvWordEdit=function(path,orig){
  .dcard{min-width:0}
 }
 </style>
+
+
+<!-- AfriFloW PWA install guidance -->
+<div id="afPwaHelp" class="af-pwa-dialog" role="dialog" aria-modal="true" aria-labelledby="afPwaHelpTitle" hidden>
+  <div class="af-pwa-box">
+    <button id="afPwaHelpClose" class="af-pwa-close" type="button" aria-label="Fermer les instructions">×</button>
+    <h2 id="afPwaHelpTitle">Installer AfriFloW</h2>
+    <div id="afPwaHelpText"></div>
+  </div>
+</div>
+<script>
+(function () {
+  'use strict';
+  var promptEvent = null;
+  var area = document.getElementById('afPwaInstallArea');
+  var button = document.getElementById('afPwaInstallBtn');
+  var help = document.getElementById('afPwaHelp');
+  var helpText = document.getElementById('afPwaHelpText');
+  var close = document.getElementById('afPwaHelpClose');
+  if (!area || !button || !help || !helpText || !close) return;
+  function isStandalone() {
+    return window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+  }
+  function updateVisibility() { area.hidden = isStandalone(); }
+  function openHelp() {
+    var ua = navigator.userAgent || '';
+    var ios = /iPad|iPhone|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+    var safari = /Safari/.test(ua) && !/CriOS|FxiOS|EdgiOS|OPiOS/.test(ua);
+    if (ios) {
+      helpText.innerHTML = safari
+        ? '<p>Sur iPhone ou iPad, l’installation se fait depuis Safari :</p><ol><li>Appuyez sur <strong>Partager</strong> (carré avec flèche vers le haut).</li><li>Choisissez <strong>Sur l’écran d’accueil</strong>.</li><li>Activez <strong>Ouvrir comme app web</strong> si proposé, puis appuyez sur <strong>Ajouter</strong>.</li></ol>'
+        : '<p>Sur iPhone ou iPad, ouvrez cette page dans <strong>Safari</strong>, puis utilisez <strong>Partager → Sur l’écran d’accueil → Ajouter</strong>.</p>';
+    } else {
+      helpText.innerHTML = '<p>Ouvrez le menu du navigateur et choisissez <strong>Installer l’application</strong> ou <strong>Ajouter à l’écran d’accueil</strong>, si disponible.</p><p>Si cette option n’apparaît pas, l’installation n’est peut-être pas prise en charge dans ce navigateur.</p>';
+    }
+    help.hidden = false;
+    close.focus();
+  }
+  window.addEventListener('beforeinstallprompt', function (event) {
+    event.preventDefault();
+    promptEvent = event;
+    updateVisibility();
+  });
+  window.addEventListener('appinstalled', function () {
+    promptEvent = null;
+    help.hidden = true;
+    updateVisibility();
+  });
+  button.addEventListener('click', async function () {
+    if (isStandalone()) { updateVisibility(); return; }
+    if (!promptEvent) { openHelp(); return; }
+    var event = promptEvent;
+    promptEvent = null;
+    try { await event.prompt(); await event.userChoice; } catch (error) { openHelp(); }
+  });
+  close.addEventListener('click', function () { help.hidden = true; button.focus(); });
+  help.addEventListener('click', function (event) { if (event.target === help) { help.hidden = true; button.focus(); } });
+  document.addEventListener('keydown', function (event) { if (event.key === 'Escape' && !help.hidden) { help.hidden = true; button.focus(); } });
+  var mode = window.matchMedia('(display-mode: standalone)');
+  if (mode.addEventListener) mode.addEventListener('change', updateVisibility);
+  updateVisibility();
+}());
+</script>
 
 <!-- AfriFloW PWA: registration without request interception -->
 <script>
