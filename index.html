@@ -4861,7 +4861,13 @@ async function onClick(e){
     if(card&&!b){if(window.dvOpenItem)window.dvOpenItem(+card.dataset.dvCard);else openFile(+card.dataset.dvCard)}
     else if(entry&&!b){
       if(entry.dataset.dvfolder==="1")browse(entry.dataset.dventry);
-      else{var it=items.findIndex(function(x){return x.path.toLowerCase()===entry.dataset.dventry.toLowerCase()});if(it>=0&&window.dvOpenItem)window.dvOpenItem(it);else window.askDlg("Afficher ce fichier",[{id:"t",l:"Titre affiché sur le site"}],function(v){var path=entry.dataset.dventry,name=entry.dataset.dvname;items.push({path:path,title:v.t||name,at:Date.now()});saveItems().then(function(){toast("Fichier ajouté.");render();browse(cwd)}).catch(function(x){items.pop();toast(x.message||x)})});}
+      else{
+        var path=entry.dataset.dventry,name=entry.dataset.dvname;
+        var it=items.findIndex(function(x){return x.path.toLowerCase()===path.toLowerCase()});
+        if(it>=0&&window.dvOpenItem)window.dvOpenItem(it);
+        else if(window.dvPreviewPath)window.dvPreviewPath(path,name);
+        else toast("Prévisualisation indisponible.");
+      }
     }
     else if(d.dvopen!=null)window.dvOpenItem?window.dvOpenItem(+d.dvopen):openFile(+d.dvopen);
     else if(d.dvrm!=null){if(confirm("Retirer ce fichier de l'affichage du site ? (il reste dans la Dropbox)")){items.splice(+d.dvrm,1);await saveItems();render()}}
@@ -5051,16 +5057,29 @@ async function relocate(path){
   var e=(d.entries||[]).filter(function(x){return !x.dir&&nrm(x.name)===name})[0];
   return e?e.path:null;
 }
-async function getBlob(path){
+var resolvedPaths={};
+async function resolvePath(path,id){
+  var actual=resolvedPaths[path]||path;
+  try {
+    var found=await call({action:"resolve",path:actual,id:id||undefined});
+    if(found&&found.path){resolvedPaths[path]=found.path;return found.path}
+  }catch(err){
+    var msg=String(err.message||err);
+    if(/plusieurs fichiers|renommé|introuvable|not_found|ambigu/i.test(msg))throw new Error(msg);
+    throw err;
+  }
+  throw new Error("Chemin Dropbox introuvable : vérifie le fichier depuis l'explorateur.");
+}
+async function getBlob(path,id){
   if(cache[path])return cache[path];
-  var d;
-  try{d=await call({action:"stream",path:path})}
+  var d,actual=resolvedPaths[path]||path;
+  try{d=await call({action:"stream",path:actual})}
   catch(err){
     if(!/not_found/i.test(String(err.message||err)))throw err;
-    var p2=await relocate(path);if(!p2)throw err;
-    d=await call({action:"stream",path:p2});
+    actual=await resolvePath(path,id);
+    d=await call({action:"stream",path:actual});
   }
-  if(!(d instanceof Blob))throw new Error("Réponse inattendue : redéployez la fonction dropbox-view.");
+  if(!(d instanceof Blob))throw new Error("Réponse Dropbox inattendue. Réessaie ou télécharge le fichier.");
   cache[path]=d;keys.push(path);while(keys.length>4)delete cache[keys.shift()];
   return d;
 }
@@ -5097,7 +5116,7 @@ async function show(i){
     box.innerHTML='<div class="toolbar"><b>'+name+'</b><div class="toolbar-actions"><button type="button" data-dvp-edit="1">Modifier</button><a href="'+esc(l.link)+'" target="_blank" rel="noopener noreferrer"><button type="button">Télécharger</button></a></div></div><iframe src="https://view.officeapps.live.com/op/embed.aspx?src='+encodeURIComponent(l.link)+'" title="'+name+'"></iframe>';
     return;
   }
-  var blob=await getBlob(it.path);if(my!==token)return;
+  var blob=await getBlob(it.path,it.id);if(my!==token)return;
   var dlu=mkUrl(blob);
   var edBtn=/^(docx|xlsx|pdf)$/.test(e)?'<button type="button" class="p" data-dvp-edit="1">Modifier</button>':'';
 var bar='<div class="toolbar"><b>'+name+'</b><div class="toolbar-actions">'+edBtn+'<a href="'+dlu+'" download="'+fname+'"><button type="button">Télécharger</button></a><button type="button" data-dvp-refresh="1">Actualiser</button></div></div>';
@@ -5114,7 +5133,11 @@ var bar='<div class="toolbar"><b>'+name+'</b><div class="toolbar-actions">'+edBt
   }else if(/^(xlsx|xls|csv)$/.test(e)){
     await lib("xlsx");var wb=window.XLSX.read(await blob.arrayBuffer(),{type:"array"});if(my!==token)return;window.__dvWorkbook=wb;
     box.innerHTML=bar+'<div class="auth-tabs" id="dvTabs" style="max-width:none;flex-wrap:wrap">'+wb.SheetNames.map(function(n,k){return '<button type="button" data-sh="'+k+'" class="'+(k?'':'on')+'">'+esc(n)+'</button>'}).join("")+'</div><div class="dv-sheet" id="dvSheet"></div>';
-    var showS=function(k){$("dvSheet").innerHTML=window.XLSX.utils.sheet_to_html(wb.Sheets[wb.SheetNames[k]]);$("dvTabs").querySelectorAll("button").forEach(function(b){b.classList.toggle("on",+b.dataset.sh===k)})};
+    var showS=function(k){
+      var sheet=wb.Sheets[wb.SheetNames[k]],html=window.XLSX.utils.sheet_to_html(sheet,{editable:false});
+      $("dvSheet").innerHTML=clean(html);
+      $("dvTabs").querySelectorAll("button").forEach(function(b){b.classList.toggle("on",+b.dataset.sh===k)});
+    };
     showS(0);$("dvTabs").onclick=function(ev){var b=ev.target.closest("[data-sh]");if(b)showS(+b.dataset.sh)};
   }else if(/^(txt|md|json|html|xml)$/.test(e)){
     box.innerHTML=bar+'<div class="dv-txt" id="dvTx"></div>';$("dvTx").textContent=await blob.text();
@@ -5128,7 +5151,32 @@ document.addEventListener("click",function(e){
   if(r){e.preventDefault();e.stopPropagation();delete cache[cur.path];show(cur.i).catch(fail);return}
   var b=e.target.closest("button[data-dvopen]");if(!b)return;
   e.preventDefault();e.stopPropagation();show(+b.dataset.dvopen).catch(fail);
-},true); window.dvReload=function(){delete cache[cur.path];show(cur.i).catch(fail)};
+},true);
+window.dvOpenItem=function(i){show(i).catch(fail)};
+window.dvPreviewPath=async function(path,title){
+  var box=$("dvView");if(!box)return;
+  var i=++token;freeUrls();box.innerHTML='<p>Chargement du document…</p>';
+  try{
+    var e=ext(path),resolved=await resolvePath(path),name=esc(title||path.split("/").pop());
+    if(i!==token)return;
+    var blob=await getBlob(resolved);if(i!==token)return;
+    var url=mkUrl(blob),bar='<div class="toolbar"><b>'+name+'</b><div class="toolbar-actions"><a href="'+url+'" download="'+esc(path.split("/").pop())+'">Télécharger</a></div></div>';
+    if(e==="pdf"){box.innerHTML=bar+'<div class="dvp" id="dvpBox"></div>';await renderPdf(blob,$("dvpBox"),i)}
+    else if(e==="xlsx"||e==="xls"||e==="csv"){
+      await lib("xlsx");var wb=window.XLSX.read(await blob.arrayBuffer(),{type:"array"});
+      box.innerHTML=bar+'<div class="auth-tabs" id="dvTabs">'+wb.SheetNames.map(function(n,k){return '<button type="button" data-sh="'+k+'" class="'+(k?'':'on')+'">'+esc(n)+'</button>'}).join("")+'</div><div class="dv-sheet" id="dvSheet"></div>';
+      function select(k){$("dvSheet").innerHTML=clean(window.XLSX.utils.sheet_to_html(wb.Sheets[wb.SheetNames[k]]));$("dvTabs").querySelectorAll("button").forEach(function(b){b.classList.toggle("on",+b.dataset.sh===k)})}
+      select(0);$("dvTabs").onclick=function(ev){var b=ev.target.closest("[data-sh]");if(b)select(+b.dataset.sh)};
+    }else if(e==="docx"){
+      await lib("mammoth");var conv=await window.mammoth.convertToHtml({arrayBuffer:await blob.arrayBuffer()});
+      box.innerHTML=bar+'<div class="wpage">'+clean(conv.value)+'</div>';
+    }else if(/^(png|jpg|jpeg|webp|gif)$/.test(e)){box.innerHTML=bar+'<img src="'+url+'" alt="'+name+'">'}
+    else if(/^(txt|md|json|html|xml)$/.test(e)){box.innerHTML=bar+'<div class="dv-txt"></div>';box.querySelector(".dv-txt").textContent=await blob.text()}
+    else{box.innerHTML=bar+'<p>Prévisualisation non disponible pour ce format. Utilise Télécharger.</p>'}
+    box.scrollIntoView({block:"start",behavior:"smooth"});
+  }catch(err){fail(err)}
+};
+window.dvReload=function(){delete cache[cur.path];show(cur.i).catch(fail)};
 })();
 </script>
   <style>
