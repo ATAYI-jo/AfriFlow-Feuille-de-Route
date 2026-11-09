@@ -5131,6 +5131,7 @@ var bar='<div class="toolbar"><b>'+name+'</b><div class="toolbar-actions">'+edBt
     await lib("mammoth");var r=await window.mammoth.convertToHtml({arrayBuffer:await blob.arrayBuffer()});if(my!==token)return;
     box.innerHTML=bar+'<div class="wpage">'+clean(r.value)+'</div>';
   }else if(/^(xlsx|xls|csv)$/.test(e)){
+    try{
     await lib("xlsx");var wb=window.XLSX.read(await blob.arrayBuffer(),{type:"array"});if(my!==token)return;window.__dvWorkbook=wb;
     box.innerHTML=bar+'<div class="auth-tabs" id="dvTabs" style="max-width:none;flex-wrap:wrap">'+wb.SheetNames.map(function(n,k){return '<button type="button" data-sh="'+k+'" class="'+(k?'':'on')+'">'+esc(n)+'</button>'}).join("")+'</div><div class="dv-sheet" id="dvSheet"></div>';
     var showS=function(k){
@@ -5139,11 +5140,19 @@ var bar='<div class="toolbar"><b>'+name+'</b><div class="toolbar-actions">'+edBt
       $("dvTabs").querySelectorAll("button").forEach(function(b){b.classList.toggle("on",+b.dataset.sh===k)});
     };
     showS(0);$("dvTabs").onclick=function(ev){var b=ev.target.closest("[data-sh]");if(b)showS(+b.dataset.sh)};
+    }catch(err){box.innerHTML=bar+'<div class="dv-fail" role="alert"><strong>Prévisualisation Excel impossible</strong><p>'+esc(err.message||err)+'</p><p>Tu peux toujours télécharger le classeur d’origine.</p></div>'}
   }else if(/^(txt|md|json|html|xml)$/.test(e)){
     box.innerHTML=bar+'<div class="dv-txt" id="dvTx"></div>';$("dvTx").textContent=await blob.text();
   }else box.innerHTML=bar+'<p>Aperçu indisponible pour ce format : utilisez « Télécharger ».</p>';
 }
-function fail(x){var b=$("dvView");if(b)b.innerHTML='<p style="color:#c0392b">Impossible d\'afficher : '+esc(x&&x.message||x)+'</p>'}
+function fail(x){
+  var b=$("dvView");if(!b)return;
+  b.innerHTML='<div class="dv-fail" role="alert"><strong>Prévisualisation indisponible</strong><p>'+esc(x&&x.message||x)+'</p><p>Vérifie le fichier dans Dropbox ou utilise le téléchargement si un lien est disponible.</p><button type="button" data-dvp-refresh="1">Réessayer</button></div>';
+  if(cur&&cur.path)call({action:"link",path:resolvedPaths[cur.path]||cur.path}).then(function(d){
+    if(!b.querySelector(".dv-fail")||!d.link)return;
+    var a=document.createElement("a");a.href=d.link;a.target="_blank";a.rel="noopener noreferrer";a.textContent="Télécharger le fichier";b.querySelector(".dv-fail").appendChild(a);
+  }).catch(function(){});
+}
 document.addEventListener("click",function(e){
   var ed=e.target.closest("button[data-dvp-edit]");
   if(ed){e.preventDefault();e.stopPropagation();if(window.dvRequestEdit)window.dvRequestEdit(cur.path);return}
@@ -6549,6 +6558,72 @@ window.dvWordEdit=function(path,orig){
   #dwApp .dw-canvas{position:absolute;left:0;top:0;width:100%;padding:0!important;background:#fff!important;overflow:visible!important}
   #dwApp .dw-page{width:100%!important;min-height:0!important;padding:0!important;box-shadow:none!important}
   #dwApp .dw-rib,#dwApp .dw-tabs,#dwApp .dw-top,#dwApp .dw-status,#dwApp .dw-find,#dwApp .dw-shortcut-strip{display:none!important}
+}
+</style>
+
+<style id="af-mobile-readable-documents">
+/* Panneaux de messagerie opaques, contrastés et accessibles au clavier mobile */
+#aiBox{
+  background:#fffefb!important;color:#18251c!important;
+  border:1px solid #d6ddd5!important;
+  -webkit-backdrop-filter:none!important;backdrop-filter:none!important;
+  box-shadow:0 18px 55px rgba(0,0,0,.24)!important;
+  isolation:isolate;z-index:1250!important;
+}
+#aiBox::before,#aiBox::after{display:none!important}
+#aiBox #aiLog{background:#fffefb!important;color:#18251c!important;min-height:0;overscroll-behavior:contain}
+#aiBox #aiLog > div{
+  background:#f0f5f0!important;color:#17251c!important;
+  border:1px solid #e0e9e0!important;
+  -webkit-backdrop-filter:none!important;backdrop-filter:none!important;
+  opacity:1!important;
+}
+#aiBox #aiIn{
+  background:#fff!important;color:#14231b!important;border:1.5px solid #879c8b!important;
+  -webkit-backdrop-filter:none!important;backdrop-filter:none!important;opacity:1!important;
+  min-height:65px!important;max-height:25dvh;resize:vertical!important;
+}
+#aiBox .aibar,#aiBox .aichips,#aiBox #aiStat{flex-shrink:0}
+#aiBox .aibar button,#aiBox #aiClose,#aiBox #aiClear,#aiBox #aiGo{
+  background:#f7f9f7!important;color:#17251c!important;border:1px solid #d0dcd2!important;
+  -webkit-backdrop-filter:none!important;backdrop-filter:none!important;
+  opacity:1!important;min-height:42px;
+}
+#aiBox #aiGo{background:#1f5d3a!important;color:#fff!important;border-color:#1f5d3a!important}
+#aiBox #aiTitle,#aiBox a{color:#165b36!important}
+#aiBox #aiStat{color:#455b4b!important}
+#aiBtn{z-index:1240!important}
+.dv-clickable{cursor:pointer;touch-action:manipulation;transition:background .15s ease,transform .15s ease}
+.dv-clickable:hover,.dv-clickable:focus-visible{background:color-mix(in srgb,var(--green) 9%,var(--card))!important;outline:2px solid var(--green);outline-offset:2px}
+.dv-clickable:active{transform:scale(.995)}
+.dv-clickable .dv-file-title,.dv-row-name{overflow-wrap:anywhere;word-break:break-word;min-width:0;max-width:100%}
+.dv-grid{min-width:0;grid-template-columns:repeat(auto-fill,minmax(min(240px,100%),1fr))}
+.dv-grid .dcard{min-width:0}
+.dv-row{min-width:0;gap:10px}.dv-row .dv-row-name{flex:1 1 180px}
+.dv-row .dact,.dv-row button{flex-shrink:0}
+.dv-crumb{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 12px;align-items:center}
+.dv-crumb button{max-width:100%;white-space:normal;overflow-wrap:anywhere}
+.dv-row-hint{font-size:1.5em;color:var(--ink)}
+.dv-sheet{max-width:100%;overflow:auto;max-height:72dvh;overscroll-behavior:contain}
+.dv-sheet table{width:max-content;min-width:100%;border-collapse:separate;border-spacing:0}
+.dv-sheet td,.dv-sheet th{background:#fff!important;color:#1a1a1a!important;white-space:pre-wrap!important;min-width:82px;max-width:360px;overflow-wrap:anywhere;vertical-align:top}
+.dv-sheet th{background:#eaf0e9!important;position:sticky;top:0;z-index:1}
+#dvTabs{display:flex;gap:6px;overflow-x:auto;padding:6px 0;scrollbar-width:thin}
+#dvTabs button{white-space:nowrap;min-height:38px}
+.dv-fail{border:1px solid #dbaca1;background:#fff9f6;color:#6a271b;padding:18px;border-radius:14px;overflow-wrap:anywhere}
+.dv-fail a,.dv-fail button{display:inline-flex;margin:8px 10px 0 0;padding:9px 13px;border-radius:8px}
+@media(max-width:700px){
+ #aiBox{right:8px!important;left:8px!important;width:auto!important;
+   bottom:calc(env(safe-area-inset-bottom,0px) + 65px)!important;
+   height:min(72dvh,640px)!important;max-height:calc(100dvh - 110px)!important;
+   padding:10px!important;gap:6px!important;border-radius:20px!important}
+ #aiBox .aibar{gap:5px!important}
+ #aiBox .aibar button{padding:8px 10px!important;flex-shrink:0}
+ .dv-row{align-items:flex-start;flex-wrap:wrap;padding:12px!important}
+ .dv-row .dv-row-name{flex-basis:100%}
+ .dv-row button{margin-top:6px}
+ .dv-grid .dcard{padding:16px!important}
+ .dv-grid .dact{flex-wrap:wrap;gap:8px}
 }
 </style>
 </body>
