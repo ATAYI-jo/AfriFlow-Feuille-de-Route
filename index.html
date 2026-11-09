@@ -265,6 +265,13 @@ table.xl input:focus{outline:2px solid var(--green);outline-offset:-2px;backgrou
 #reqBtn{margin-right:5px}
 @media (max-width:480px){.auth-box{padding:24px 18px}.auth-box img{height:56px;width:56px;margin-bottom:8px}}
 </style>
+<style>
+/* 2026-11-09 : logo toujours visible au premier plan */
+#view-home .brand { isolation:isolate; }
+#view-home .brand .logo-img { position:relative!important; z-index:3!important; display:block!important; visibility:visible!important; opacity:1!important; background:#fff!important; object-fit:contain!important; }
+#view-home .brand::before,#view-home .brand::after { z-index:0!important; }
+#view-home .brand > div { z-index:2; }
+</style>
 </head>
 <body class="ro">
   <!-- =====================================================================
@@ -5341,15 +5348,11 @@ if(window.__sb&&window.__sb.functions){
 /* Accueil : logo seul, en cercle, grand et centré */
 .brand{justify-content:center!important;padding:30px 20px!important}
 .brand>div:not(.logo-img){position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
-.brand .logo-img {
-  width: clamp(170px, 34vw, 320px) !important;
-  height: clamp(170px, 34vw, 320px) !important;
-  object-fit: contain;
-  padding: 0 !important;
-  border-radius: 0 !important;
-  background: transparent !important;
-  box-shadow: none !important;
-}
+.brand .logo-img{
+ width:clamp(170px,34vw,320px)!important;height:clamp(170px,34vw,320px)!important;
+ box-sizing:border-box;padding:clamp(22px,4.5vw,46px)!important;object-fit:contain;
+ border-radius:50%!important;background:#fff;
+ box-shadow:0 10px 30px rgba(0,0,0,.18)!important}
 @media (max-width:640px){.brand{padding:22px 14px!important}}
 
 /* Rectangle en verre : l'image choisie reste toujours en verre dépoli */
@@ -5607,213 +5610,7 @@ if(log)new MutationObserver(function(ms){ms.forEach(function(m){m.addedNodes.for
 })})}).observe(log,{childList:true});
 })();
 </script>
-<script>
-(function(){
-"use strict";
-var $=function(i){return document.getElementById(i)};
-var THREE_URL="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js";
-var KATEX_JS="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js",KATEX_CSS="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css";
-function toast(m){(window.toast||alert)(m)}
-function js(u){return new Promise(function(ok,ko){var s=document.createElement("script");s.src=u;s.onload=ok;s.onerror=function(){ko(new Error("Module indisponible"))};document.head.appendChild(s)})}
-async function call(b){
-  var r=await window.__sb.functions.invoke("admin-ai",{body:b});
-  if(r.error){var m=r.error.message||"Erreur";try{var j=await r.error.context.json();if(j&&j.error)m=j.error}catch(e){}throw new Error(m)}
-  if(r.data&&r.data.error)throw new Error(r.data.error);return r.data;
-}
-function b64(buf){var b=new Uint8Array(buf),s="",k=0x8000;for(var i=0;i<b.length;i+=k)s+=String.fromCharCode.apply(null,b.subarray(i,i+k));return btoa(s)}
 
-/* ================= Grande tête 3D ================= */
-var HEAD=null,raf=0,px=0,py=0;
-addEventListener("pointermove",function(e){px=(e.clientX/innerWidth)*2-1;py=(e.clientY/innerHeight)*2-1},{passive:true});
-function buildHead(cv,getLevel,getState){
-  var T=window.THREE,R=new T.WebGLRenderer({canvas:cv,alpha:true,antialias:true});
-  R.setPixelRatio(Math.min(devicePixelRatio||1,2));
-  var S=new T.Scene(),C=new T.PerspectiveCamera(32,1,.1,60);C.position.set(0,0,10);
-  S.add(new T.AmbientLight(0xffffff,.75));
-  var dl=new T.DirectionalLight(0xffffff,.95);dl.position.set(3,4,6);S.add(dl);
-  var rim=new T.PointLight(0x4fa874,1.4,40);rim.position.set(-5,2,-3);S.add(rim);
-  var G=new T.Group();S.add(G);
-  var skin=new T.MeshStandardMaterial({color:0xa8683a,roughness:.5,metalness:.05});
-  var head=new T.Mesh(new T.SphereGeometry(2,64,48),skin);head.scale.set(1,1.1,1);G.add(head);
-  function eye(x){
-    var g=new T.Group();g.position.set(x,.45,1.7);
-    var w=new T.Mesh(new T.SphereGeometry(.42,32,24),new T.MeshStandardMaterial({color:0xffffff,roughness:.2}));w.scale.z=.55;g.add(w);
-    var p=new T.Mesh(new T.SphereGeometry(.2,24,16),new T.MeshStandardMaterial({color:0x1a1209,roughness:.2}));p.position.z=.2;g.add(p);
-    G.add(g);return {g:g,p:p};
-  }
-  var eL=eye(-.8),eR=eye(.8);
-  function brow(x,r){var m=new T.Mesh(new T.BoxGeometry(.9,.13,.16),new T.MeshStandardMaterial({color:0x2a1608}));m.position.set(x,1.15,1.55);m.rotation.z=r;G.add(m);return m}
-  var bL=brow(-.8,.1),bR=brow(.8,-.1);
-  var nose=new T.Mesh(new T.SphereGeometry(.32,24,16),skin);nose.scale.set(1,1.1,.9);nose.position.set(0,-.2,2.0);G.add(nose);
-  var mouth=new T.Mesh(new T.SphereGeometry(.55,32,16),new T.MeshStandardMaterial({color:0x3a0f0f,roughness:.6}));mouth.position.set(0,-1,1.72);mouth.scale.set(1,.08,.35);G.add(mouth);
-  var smile=new T.Mesh(new T.TorusGeometry(.5,.07,12,32,Math.PI),new T.MeshStandardMaterial({color:0x5a1d1d}));smile.position.set(0,-.7,1.82);smile.rotation.z=Math.PI;G.add(smile);
-  var aura=new T.Mesh(new T.RingGeometry(2.75,2.9,96),new T.MeshBasicMaterial({color:0x4fa874,transparent:true,opacity:.6,side:T.DoubleSide}));aura.position.z=-1;S.add(aura);
-  var COL={listen:0x4fa874,think:0xd98a1b,speak:0x4a90c2},blinkAt=0,nextBlink=1500,W=0,Hh=0;
-  function frame(ms){
-    raf=requestAnimationFrame(frame);
-    var w=cv.clientWidth,h=cv.clientHeight;
-    if(w&&h&&(w!==W||h!==Hh)){W=w;Hh=h;R.setSize(w,h,false);C.aspect=w/h;C.updateProjectionMatrix()}
-    var st=getState(),lv=getLevel();
-    mouth.scale.y=.08+lv*.95;mouth.scale.x=1-lv*.18;smile.visible=lv<.12;
-    if(ms>nextBlink){blinkAt=ms;nextBlink=ms+2500+Math.random()*3000}
-    var bt=ms-blinkAt,k=bt<160?1-Math.sin(bt/160*Math.PI)*.92:1;eL.g.scale.y=eR.g.scale.y=k;
-    G.rotation.y+=(px*.35-G.rotation.y)*.06;G.rotation.x+=(py*.2-G.rotation.x)*.06;
-    G.position.y=Math.sin(ms/900)*.06;
-    eL.p.position.x=eR.p.position.x=px*.1;eL.p.position.y=eR.p.position.y=-py*.08+(st==="think"?.1:0);
-    bL.position.y=bR.position.y=1.15+(st==="think"?.14:0)+lv*.06;
-    aura.material.color.setHex(COL[st]||COL.listen);
-    aura.scale.setScalar(1+.04*Math.sin(ms/300)+(st==="listen"?api.mic*.5:lv*.3));
-    R.render(S,C);
-  }
-    var api={dispose:function(){cancelAnimationFrame(raf);R.dispose()},mic:0};
-  frame(0);
-  return api;
-}
-
-/* ================= Conversation en direct (API Live) ================= */
-var LV=null;
-function stage(){
-  if($("aiStage"))return;
-  var s=document.createElement("div");s.id="aiStage";
-  s.innerHTML='<canvas id="aiCv"></canvas><button type="button" id="aiHang" aria-label="Terminer la conversation"><svg viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></svg></button>';
-  $("aiBox").appendChild(s);
-}
-async function startLive(){
-  if(LV)return;
-  var box=$("aiBox");if(!box||box.style.display!=="flex"){var b=$("aiBtn");if(b)b.click()}
-  box=$("aiBox");box.classList.add("ai-live");stage();
-  var AC=window.AudioContext||window.webkitAudioContext,ctx=new AC();
-  LV={ctx:ctx,ws:null,ready:false,srcs:[],next:0,mic:0,lastVoice:0,lastOut:0,an:null,stream:null,pr:null};
-  var me=LV;
-  try{
-    if(!window.THREE)await js(THREE_URL);
-    me.an=ctx.createAnalyser();me.an.fftSize=512;me.an.connect(ctx.destination);
-    var buf=new Uint8Array(me.an.fftSize);
-    function speaking(){return me.next>ctx.currentTime+.02}
-    function level(){if(!speaking())return 0;me.an.getByteTimeDomainData(buf);var s=0;for(var i=0;i<buf.length;i++){var v=(buf[i]-128)/128;s+=v*v}return Math.min(1,Math.sqrt(s/buf.length)*5)}
-    function state(){if(!me.ready)return "think";if(speaking())return "speak";var n=Date.now();if(me.lastVoice>me.lastOut&&n-me.lastVoice>500&&n-me.lastVoice<5000)return "think";return "listen"}
-    HEAD=buildHead($("aiCv"),level,state);
-    var d=await call({op:"live_token",tz:new Date().getTimezoneOffset()});
-    me.stream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true,autoGainControl:true,channelCount:1}});
-    await ctx.resume();
-    var ws=new WebSocket("wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1alpha.GenerativeService.BidiGenerateContentConstrained?access_token="+encodeURIComponent(d.token));
-    me.ws=ws;
-    ws.onopen=function(){ws.send(JSON.stringify({setup:{model:"models/"+d.model,
-      generationConfig:{responseModalities:["AUDIO"],speechConfig:{voiceConfig:{prebuiltVoiceConfig:{voiceName:d.voice}}}},
-      systemInstruction:{parts:[{text:d.system}]}}}))};
-    ws.onmessage=async function(ev){
-      var m;try{m=JSON.parse(typeof ev.data==="string"?ev.data:await ev.data.text())}catch(e){return}
-      if(m.setupComplete){me.ready=true;return}
-      var sc=m.serverContent;if(!sc)return;
-      if(sc.interrupted){me.srcs.forEach(function(s){try{s.stop()}catch(e){}});me.srcs=[];me.next=0}
-      var ps=(sc.modelTurn&&sc.modelTurn.parts)||[];
-      ps.forEach(function(p){if(p.inlineData&&p.inlineData.data)play(p.inlineData.data)});
-    };
-    ws.onerror=function(){if(LV===me){toast("Connexion vocale interrompue.");stopLive()}};
-    ws.onclose=function(){if(LV===me&&!me.closing){stopLive()}};
-    function play(b){
-      var bin=atob(b),n=bin.length>>1,bf=ctx.createBuffer(1,n,24000),ch=bf.getChannelData(0);
-      for(var i=0;i<n;i++){var v=(bin.charCodeAt(2*i+1)<<8)|bin.charCodeAt(2*i);if(v>=32768)v-=65536;ch[i]=v/32768}
-      var s=ctx.createBufferSource();s.buffer=bf;s.connect(me.an);
-      var t=Math.max(ctx.currentTime+.03,me.next);s.start(t);me.next=t+bf.duration;me.lastOut=Date.now();me.srcs.push(s);
-      s.onended=function(){me.srcs=me.srcs.filter(function(x){return x!==s})};
-    }
-    var src=ctx.createMediaStreamSource(me.stream),pr=ctx.createScriptProcessor(2048,1,1),z=ctx.createGain();z.gain.value=0;
-    me.pr=pr;src.connect(pr);pr.connect(z);z.connect(ctx.destination);
-    pr.onaudioprocess=function(e){
-      var d0=e.inputBuffer.getChannelData(0),sum=0,i,j;
-      for(i=0;i<d0.length;i++)sum+=d0[i]*d0[i];
-      me.mic=Math.sqrt(sum/d0.length);if(HEAD)HEAD.mic=Math.min(1,me.mic*6);;if(me.mic>.02)me.lastVoice=Date.now();
-      if(!me.ready||ws.readyState!==1)return;
-      var r=ctx.sampleRate/16000,n=Math.floor(d0.length/r),o=new Int16Array(n);
-      for(i=0;i<n;i++){var a=0,s0=Math.floor(i*r),s1=Math.max(s0+1,Math.floor((i+1)*r));for(j=s0;j<s1&&j<d0.length;j++)a+=d0[j];a/=(s1-s0);a=Math.max(-1,Math.min(1,a));o[i]=a<0?a*32768:a*32767}
-      ws.send(JSON.stringify({realtimeInput:{audio:{data:b64(o.buffer),mimeType:"audio/pcm;rate=16000"}}}));
-    };
-  }catch(e){
-    toast("Conversation en direct impossible : "+(e&&e.message||e));stopLive();
-  }
-}
-function stopLive(){
-  var me=LV;if(!me)return;me.closing=true;LV=null;
-  try{me.ws&&me.ws.close()}catch(e){}
-  try{me.pr&&me.pr.disconnect()}catch(e){}
-  try{me.stream&&me.stream.getTracks().forEach(function(t){t.stop()})}catch(e){}
-  me.srcs.forEach(function(s){try{s.stop()}catch(e){}});
-  try{me.ctx.close()}catch(e){}
-  if(HEAD){HEAD.dispose();HEAD=null}
-  var b=$("aiBox");if(b)b.classList.remove("ai-live");
-}
-/* phase de capture sur window : passe avant l'ancien code vocal */
-addEventListener("click",function(e){
-  if(e.target.closest("#aiVoice")){e.stopPropagation();e.preventDefault();LV?stopLive():startLive();return}
-  if(e.target.closest("#aiHang")){stopLive();return}
-  if(LV&&e.target.closest("#aiClose,#aiBtn"))stopLive();
-},true);
-addEventListener("keydown",function(e){if(e.key==="Escape"&&LV)stopLive()});
-
-/* ================= Formules (KaTeX) + images / vidéos générées ================= */
-var kp=null,RX=/\$\$([\s\S]+?)\$\$|\\\[([\s\S]+?)\\\]|\\\(([\s\S]+?)\\\)/g;
-function loadKatex(){
-  if(window.katex)return Promise.resolve();
-  if(!kp){var l=document.createElement("link");l.rel="stylesheet";l.href=KATEX_CSS;document.head.appendChild(l);kp=js(KATEX_JS)}
-  return kp;
-}
-function mathify(root){
-  var w=document.createTreeWalker(root,NodeFilter.SHOW_TEXT),L=[],n;
-  while((n=w.nextNode())){if(n.parentNode.closest("pre,code,.katex"))continue;if(/\$\$|\\\[|\\\(/.test(n.nodeValue))L.push(n)}
-  if(!L.length)return;
-  loadKatex().then(function(){L.forEach(function(n){
-    var s=n.nodeValue,f=document.createDocumentFragment(),last=0,m;RX.lastIndex=0;
-    while((m=RX.exec(s))){
-      if(m.index>last)f.appendChild(document.createTextNode(s.slice(last,m.index)));
-      var sp=document.createElement(m[3]?"span":"div");
-      try{sp.innerHTML=window.katex.renderToString((m[1]||m[2]||m[3]).trim(),{displayMode:!m[3],throwOnError:false})}catch(e){sp.textContent=m[0]}
-      f.appendChild(sp);last=RX.lastIndex;
-    }
-    if(last<s.length)f.appendChild(document.createTextNode(s.slice(last)));
-    n.parentNode.replaceChild(f,n);
-  })}).catch(function(){});
-}
-var PEND=null;
-(function(){
-  var f=window.__sb&&window.__sb.functions;if(!f)return;
-  var o=f.invoke.bind(f);
-  f.invoke=function(n,opt){var p=o(n,opt);
-    if(n==="admin-ai"&&opt&&opt.body&&opt.body.messages)p.then(function(r){var d=r&&r.data;if(d&&((d.images&&d.images.length)||(d.videos&&d.videos.length)))PEND={images:d.images||[],videos:d.videos||[]}}).catch(function(){});
-    return p};
-})();
-function dl(name,url){return '<a href="'+url+'" download="'+name+'" style="display:inline-block;margin-top:4px;color:var(--green);font-weight:700">Télécharger</a>'}
-function addMedia(node,P){
-  P.images.forEach(function(im,i){
-    var u="data:"+im.mime+";base64,"+im.data,d=document.createElement("div");
-    d.innerHTML='<img src="'+u+'" alt="Image générée" style="max-width:100%;border-radius:12px;margin-top:8px;display:block">'+dl("image-afriflow-"+(i+1)+".png",u);
-    node.appendChild(d);
-  });
-  P.videos.forEach(function(v){
-    var d=document.createElement("div");d.style.marginTop="8px";d.textContent="Création de la vidéo en cours (1 à 3 minutes)…";node.appendChild(d);
-    var t=setInterval(async function(){
-      try{
-        var r=await call({op:"video_status",name:v.op});
-        if(r.done){
-          clearInterval(t);
-          var bin=atob(r.data),u8=new Uint8Array(bin.length);for(var i=0;i<u8.length;i++)u8[i]=bin.charCodeAt(i);
-          var url=URL.createObjectURL(new Blob([u8],{type:"video/mp4"}));
-          d.innerHTML='<video controls src="'+url+'" style="max-width:100%;border-radius:12px;display:block"></video>'+dl("video-afriflow.mp4",url);
-        }
-      }catch(e){clearInterval(t);d.textContent="Vidéo impossible : "+(e.message||e)}
-    },8000);
-  });
-}
-var log=$("aiLog");
-if(log)new MutationObserver(function(ms){ms.forEach(function(m){m.addedNodes.forEach(function(n){
-  if(n.nodeType!==1||!n.children[1]||n.dataset.mx)return;
-  var who=n.firstElementChild.textContent;if(!/^AfriFlow/.test(who))return;
-  var t=n.children[1].textContent;if(/^je réfléchis/.test(t))return;
-  n.dataset.mx="1";mathify(n.children[1]);
-  if(PEND){var P=PEND;PEND=null;addMedia(n,P)}
-})})}).observe(log,{childList:true});
-})();
-</script>
   <!-- =====================================================================
   MODULE AFRIFLOW · Éditeur type Word pour les fichiers Dropbox (.docx)
   À COLLER juste avant </body>, après tous les autres modules.
@@ -6106,6 +5903,52 @@ window.dvWordEdit=function(path,orig){
   var t=document.querySelector("#dvView .toolbar b");
   build(String(path),orig||null,clean(src.innerHTML),t?t.textContent:String(path).split("/").pop());
 };
+})();
+</script>
+
+<script id="afriflow-avatar-integration">
+(function(){
+  "use strict";
+  function initialize(){
+    var box=document.getElementById('aiBox');
+    if(!box||document.getElementById('afAvatarToggle'))return;
+    var header=box.firstElementChild;
+    var btn=document.createElement('button');
+    btn.id='afAvatarToggle';btn.type='button';btn.textContent='Avatar 3D';
+    btn.title='Afficher ou masquer l’avatar AfriFloW';
+    btn.style.cssText='font-size:12px;padding:5px 9px;margin-left:auto;border-radius:12px';
+    header.insertBefore(btn,header.lastElementChild);
+    var pane=document.createElement('div');pane.id='afAvatarPanel';pane.hidden=true;
+    pane.style.cssText='flex:0 0 235px;min-height:0;border:1px solid var(--line);border-radius:12px;overflow:hidden;background:#f5faf7';
+    var frame=document.createElement('iframe');frame.id='afAvatarFrame';
+    frame.title='Assistante AfriFloW en 3D';frame.loading='lazy';
+    frame.style.cssText='height:100%;width:100%;border:0;background:transparent';
+    pane.appendChild(frame);header.after(pane);
+    btn.addEventListener('click',function(){
+      pane.hidden=!pane.hidden;pane.style.display=pane.hidden?'none':'block';
+      if(!pane.hidden && !frame.src)frame.src='avatar-3d/index.html';
+    });
+    var log=document.getElementById('aiLog');
+    if(!log)return;
+    // Only read a completed assistant answer when the user has explicitly opened the 3D avatar.
+    // Avoid double playback with existing read-aloud and live mode.
+    new MutationObserver(function(mutations){
+      if(pane.hidden||!frame.contentWindow||box.classList.contains('ai-live'))return;
+      var read=document.getElementById('aiRead');
+      if(read && read.classList.contains('on'))return;
+      mutations.forEach(function(mu){
+        mu.addedNodes.forEach(function(n){
+          if(n.nodeType!==1 || !n.children || n.children.length<2)return;
+          var speaker=n.firstElementChild&&n.firstElementChild.textContent||'';
+          if(!/^AfriFlow/i.test(speaker))return;
+          var msg=n.children[1].textContent||'';
+          if(!msg||/je réfléchis/i.test(msg))return;
+          frame.contentWindow.postMessage({type:'AFRIFLOW_SPEAK',text:msg},location.origin);
+        });
+      });
+    }).observe(log,{childList:true});
+  }
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',initialize);else initialize();
 })();
 </script>
 </body>
