@@ -6382,5 +6382,121 @@ window.dvWordEdit=function(path,orig){
 </style>
 <script src="document-excel-editor.js" defer></script>
 <script src="document-permissions.js" defer></script>
+
+<style id="af-embedded-office-style">
+/* Éditeur de documents dans la page AfriFloW, et non fenêtre plein écran */
+#dvView #dwApp{
+  position:relative!important;inset:auto!important;z-index:1!important;
+  width:100%;height:min(84vh,1150px);min-height:600px;
+  margin:16px 0 32px;border-radius:23px;overflow:hidden;
+  background:color-mix(in srgb,var(--card) 82%,transparent)!important;
+  color:var(--ink)!important;
+  border:1px solid color-mix(in srgb,var(--ink) 14%,transparent);
+  box-shadow:0 18px 50px rgba(0,0,0,.15);
+  -webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);
+}
+#dvView #dwApp .dw-top{
+  height:58px;min-height:58px;gap:10px;padding:10px 18px;
+  background:color-mix(in srgb,var(--card) 78%,transparent)!important;
+  color:var(--ink)!important;border-bottom:1px solid var(--line);
+}
+#dvView #dwApp .dw-name{font-weight:800;font-size:1rem;text-align:left}
+#dvView #dwApp .dw-top .dw-st{font-weight:650}
+#dvView #dwApp .dw-top .dw-q{
+  color:var(--ink);background:color-mix(in srgb,var(--card) 90%,transparent);
+  border:1px solid var(--line);border-radius:10px;min-width:36px;height:36px
+}
+#dvView #dwApp .dw-top .dw-q:hover{background:color-mix(in srgb,var(--ink) 12%,var(--card))}
+#dvView #dwApp .dw-top .dw-q svg{stroke:currentColor}
+#dvView #dwApp .dw-tabs{
+  background:transparent!important;color:var(--ink)!important;
+  padding:10px 14px 0;gap:6px;overflow-x:auto;flex-shrink:0;
+}
+#dvView #dwApp .dw-tab{
+  color:var(--ink);font-size:14px;font-weight:700;
+  background:color-mix(in srgb,var(--card) 74%,transparent);
+  border:1px solid var(--line);border-radius:12px 12px 0 0;
+  padding:9px 16px;white-space:nowrap;
+}
+#dvView #dwApp .dw-tab.on{
+  color:var(--ink);background:color-mix(in srgb,var(--card) 94%,transparent);
+  border-bottom-color:transparent;
+}
+#dvView #dwApp .dw-rib{
+  flex-shrink:0;min-height:116px;max-height:184px;
+  background:color-mix(in srgb,var(--card) 88%,transparent)!important;
+  border:1px solid var(--line);margin:0 14px 12px;
+  border-radius:0 15px 15px 15px;padding:9px 11px;overflow:auto;
+}
+#dvView #dwApp .dw-pane{min-width:max-content;gap:6px}
+#dvView #dwApp .dw-g{border-color:var(--line)}
+#dvView #dwApp .dw-gl{color:var(--muted)}
+#dvView #dwApp .dw-row{gap:5px}
+#dvView #dwApp .dw-b{
+  color:var(--ink);border:1px solid var(--line);
+  background:color-mix(in srgb,var(--card) 92%,transparent);
+  padding:4px 9px;border-radius:10px;height:34px;min-width:34px;
+}
+#dvView #dwApp .dw-b:hover{background:color-mix(in srgb,var(--ink) 12%,var(--card))}
+#dvView #dwApp .dw-b.on{background:color-mix(in srgb,var(--green) 28%,var(--card));border-color:var(--green)}
+#dvView #dwApp select,#dvView #dwApp input:not([type="color"]){
+  background:var(--card);color:var(--ink);border:1px solid var(--line);
+  min-height:32px;border-radius:10px;padding:4px 9px;
+}
+#dvView #dwApp .dw-shortcut-strip{
+  display:flex;align-items:center;gap:12px;overflow-x:auto;
+  flex-shrink:0;padding:8px 14px;color:var(--ink);
+  background:color-mix(in srgb,var(--green) 9%,var(--card));
+  border-bottom:1px solid var(--line);white-space:nowrap;font-size:11px
+}
+#dvView #dwApp .dw-shortcut-strip strong{
+  padding:5px 9px;border-radius:8px;
+  background:var(--green);color:#fff;font-size:11px
+}
+#dvView #dwApp .dw-shortcut-strip button{
+  border:1px solid var(--line);border-radius:8px;
+  background:var(--card);color:var(--ink);padding:5px 9px;font-size:11px
+}
+#dvView #dwApp .dw-find{
+  display:flex;align-items:center;gap:8px;flex-wrap:wrap;
+  padding:8px 16px;background:var(--card);
+  border-bottom:1px solid var(--line);flex-shrink:0
+}
+#dvView #dwApp .dw-find[hidden]{display:none!important}
+#dvView #dwApp .dw-find label{display:flex;align-items:center;gap:8px}
+#dvView #dwApp .dw-find button{
+  background:color-mix(in srgb,var(--card) 87%,transparent);
+  border:1px solid var(--line);color:var(--ink);
+  border-radius:8px;padding:7px 10px
+}
+#dvView #dwApp .dw-canvas{
+  flex:1;min-height:220px;background:color-mix(in srgb,var(--bg) 85%,#ddd);
+  padding:28px 18px 55px;overflow:auto
+}
+#dvView #dwApp .dw-page{
+  background:#fff;color:#111;width:min(794px,100%);margin:0 auto;
+  border-radius:3px;min-height:1123px;
+  box-shadow:0 3px 25px rgba(0,0,0,.15)
+}
+#dvView #dwApp .dw-status{
+  flex-shrink:0;height:33px;padding:0 16px;background:var(--card)!important;
+  color:var(--ink)!important;border-top:1px solid var(--line)
+}
+@media(max-width:750px){
+  #dvView #dwApp{height:78vh;min-height:460px}
+  #dvView #dwApp .dw-top{padding:8px 10px;min-height:52px}
+  #dvView #dwApp .dw-rib{margin:0 8px 8px;min-height:105px}
+  #dvView #dwApp .dw-canvas{padding:12px 8px 28px}
+  #dvView #dwApp .dw-page{min-height:650px;padding:30px 20px}
+}
+@media print{
+  body *{visibility:hidden!important}
+  #dwApp,#dwApp .dw-canvas,#dwApp .dw-page,#dwApp .dw-page *{visibility:visible!important}
+  #dwApp{position:static!important;border:0!important;box-shadow:none!important;height:auto!important}
+  #dwApp .dw-canvas{position:absolute;left:0;top:0;width:100%;padding:0!important;background:#fff!important;overflow:visible!important}
+  #dwApp .dw-page{width:100%!important;min-height:0!important;padding:0!important;box-shadow:none!important}
+  #dwApp .dw-rib,#dwApp .dw-tabs,#dwApp .dw-top,#dwApp .dw-status,#dwApp .dw-find,#dwApp .dw-shortcut-strip{display:none!important}
+}
+</style>
 </body>
 </html>
