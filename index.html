@@ -5140,6 +5140,7 @@ var U={pdf:"https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js",w
  mammoth:"https://cdn.jsdelivr.net/npm/mammoth@1.6.0/mammoth.browser.min.js",xlsx:"https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"};
 var MIME={png:"image/png",jpg:"image/jpeg",jpeg:"image/jpeg",gif:"image/gif",webp:"image/webp",svg:"image/svg+xml",mp4:"video/mp4",webm:"video/webm",mp3:"audio/mpeg",pdf:"application/pdf"};
 var cache={},keys=[],urls=[],token=0,libs={},cur={i:-1,path:""};
+window.dvCurrentPath=function(){return cur.path||""};
 function esc(s){return String(s==null?"":s).replace(/[&<>"']/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]})}
 function ext(p){var m=/\.([a-z0-9]+)$/i.exec(p||"");return m?m[1].toLowerCase():""}
 function freeUrls(){urls.forEach(function(u){URL.revokeObjectURL(u)});urls=[]}
@@ -6544,6 +6545,7 @@ window.dvWordEdit=function(path,orig){
 </style>
 <script src="document-excel-editor.js" defer></script>
 <script src="document-permissions.js" defer></script>
+<script src="document-urgency.js" defer></script>
 
 <style id="af-embedded-office-style">
 /* Éditeur de documents dans la page AfriFloW, et non fenêtre plein écran */
