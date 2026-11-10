@@ -4,6 +4,7 @@
 (function () {
   'use strict';
   var sb = null, account = '', firstMessages = true, known = new Set();
+  var knownMeetings = new Set(), firstMeetings = true;
   var audio = null, ringTimer = null, activeMeeting = null, lastToast = 0, busy = false;
   var ring = null, toast = null, toggle = null;
   var settingsKey = 'afriflow_alerts_enabled_v1';
@@ -56,6 +57,16 @@
     });
     updateButton();
   }
+  function unlockAudio() {
+    if (!enabled || audio) return;
+    try {
+      var C=window.AudioContext || window.webkitAudioContext;
+      if (C) {audio=new C();audio.resume().catch(function(){});}
+    } catch (e) {}
+  }
+  // Browser audio requires a user gesture, even when alert preference is remembered.
+  document.addEventListener('pointerdown',unlockAudio,{passive:true});
+  document.addEventListener('keydown',unlockAudio);
   function updateButton() {
     if (!toggle) return;
     toggle.style.display = account ? 'block' : 'none';
@@ -125,9 +136,9 @@
     if (busy) return;
     var user=String(window.loggedUserEmail||'').toLowerCase();
     if (!user || !window.__sb) {
-      account='';firstMessages=true;known.clear();endCall();updateButton();return;
+      account='';firstMessages=true;known.clear();firstMeetings=true;knownMeetings.clear();endCall();updateButton();return;
     }
-    if (account!==user){account=user;known.clear();firstMessages=true;updateButton();}
+    if (account!==user){account=user;known.clear();knownMeetings.clear();firstMessages=true;firstMeetings=true;updateButton();}
     if (!navigator.onLine) return;
     busy=true;
     sb=window.__sb;
@@ -151,6 +162,17 @@
       var meets=queries[1].status==='fulfilled'&&!queries[1].value.error?(queries[1].value.data||[]):[];
       var conf=queries[2].status==='fulfilled'&&!queries[2].value.error?queries[2].value.data?.value||{}:{};
       var n=Date.now();
+      var currentMeetings=new Set(meets.filter(function(row){return row.value&&row.value.id}).map(function(row){return row.value.id}));
+      if (!firstMeetings) {
+        meets.forEach(function(row){
+          var m=row.value;
+          if(m&&m.id&&!knownMeetings.has(m.id)&&+m.start>Date.now()) {
+            notice('Réunion programmée',m.title+' · '+new Date(+m.start).toLocaleString('fr-FR',{dateStyle:'short',timeStyle:'short'}),'afri-new-meeting-'+m.id);
+          }
+        });
+      }
+      knownMeetings=currentMeetings;
+      firstMeetings=false;
       meets.forEach(function(row) {
         var m=row.value;
         if(!m || !Number.isFinite(+m.start)||!m.id)return;
