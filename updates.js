@@ -1,75 +1,88 @@
-/* AfriFloW: automatic web updates, without app-store updates.
-   No credential storage and no interception of Supabase/Dropbox requests.
-   The running page refreshes only when a new site build is detected AND
-   the user is idle, to avoid disrupting forms or document editing. */
+/* AfriFloW: sync the deployed website with installed Windows, Android and PWA shells.
+   These shells open the live HTTPS site. Detect changes in HTML AND external
+   JavaScript files without intercepting Supabase, OAuth or Dropbox requests.
+   Recheck when the app returns to the foreground; never interrupt editors. */
 (function () {
   'use strict';
-  var KEY = 'afriflow_site_build_hash_v1';
+
+  var KEY = 'afriflow_site_fingerprint_v2';
+  var WATCH = [
+    './', './updates.js', './document-excel-editor.js',
+    './document-permissions.js', './document-urgency.js',
+    './afriflow-push.js', './afriflow-alerts.js',
+    './afriflow-first-use.js'
+  ];
+  WATCH = Array.from(new Set(WATCH));
   var lastInput = Date.now();
-  var checking = false;
-  var pending = false;
-  var baseline = null;
+  var checking = false, pending = false, baseline = null;
+  var inProgress = false, lastFetch = 0;
 
   ['pointerdown', 'keydown', 'input', 'touchstart'].forEach(function (name) {
-    document.addEventListener(name, function () { lastInput = Date.now(); }, { passive: true });
+    document.addEventListener(name, function () { lastInput = Date.now(); }, {passive:true});
   });
+  window.addEventListener('beforeunload', function () { inProgress = true; });
 
   function editing() {
     var focused = document.activeElement;
     if (focused && (focused.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(focused.tagName))) return true;
     if (document.querySelector('[contenteditable="true"]:focus, [contenteditable=""]:focus')) return true;
-    // Do not interrupt document editing or opened dialog windows.
-    if (document.querySelector('.dw-app:not([hidden]), .dw-modal.on, #xm.on, #ov.on')) return true;
+    if (document.querySelector('.dw-app:not([hidden]), .dw-modal.on, #xm.on, #ov.on, #afExcel, #afPermOverlay, #af-first-use:not([hidden]), #auth-screen:not(.off)')) return true;
     return false;
   }
   function safeToReload() {
-    return navigator.onLine && !document.hidden && !editing() &&
+    return !inProgress && navigator.onLine && !document.hidden && !editing() &&
       Date.now() - lastInput > 45000 &&
       !/(?:^|[?#&])(?:code|access_token|error_description)=/.test(location.search + '&' + location.hash);
   }
-  function hash(text) {
-    var bytes = new TextEncoder().encode(text);
-    return crypto.subtle.digest('SHA-256', bytes).then(function (buffer) {
-      return Array.from(new Uint8Array(buffer)).map(function (byte) {
-        return byte.toString(16).padStart(2, '0');
-      }).join('');
-    });
+  async function fingerprint(content) {
+    var bytes = new TextEncoder().encode(content);
+    var dig = await crypto.subtle.digest('SHA-256', bytes);
+    return Array.from(new Uint8Array(dig)).map(function (b) {return b.toString(16).padStart(2,'0')}).join('');
+  }
+  async function fetchFingerprint() {
+    // Only watch same-origin source files: the installed app always uses the live site.
+    // If deployment temporarily returns 404/500, do NOT consider that an update.
+    var values = await Promise.all(WATCH.map(async function (name) {
+      var url = new URL(name, location.href);
+      if (url.origin !== location.origin) throw new Error('cross-origin update source');
+      var res = await fetch(url.href, {cache:'no-store', credentials:'same-origin'});
+      if (!res.ok) throw new Error('update source unavailable: ' + res.status);
+      return name + ':' + await fingerprint(await res.text());
+    }));
+    return fingerprint(values.join('|'));
   }
   function refreshIfSafe() {
     if (!pending || !safeToReload()) return;
     pending = false;
-    // Loads the newest HTML while preserving Supabase/Dropbox account storage.
+    // Avoid stale HTML after a deployment; no app installer is involved.
     location.reload();
   }
-  function check() {
-    if (checking || !navigator.onLine || document.hidden) return;
+  async function check(force) {
+    if (checking || !navigator.onLine || (document.hidden && !force)) return;
+    if (!force && Date.now()-lastFetch < 30000) {refreshIfSafe();return}
     checking = true;
-    // Same-origin HTML re-fetch bypasses HTTP cache; no private API is queried.
-    fetch(location.pathname, { cache: 'no-store', credentials: 'same-origin' })
-      .then(function (response) { if (!response.ok) throw new Error('site unavailable'); return response.text(); })
-      .then(hash)
-      .then(function (current) {
-        if (!baseline) {
-          try { baseline = localStorage.getItem(KEY); } catch (error) {}
-        }
-        if (baseline && baseline !== current) pending = true;
-        baseline = current;
-        try { localStorage.setItem(KEY, current); } catch (error) {}
-        refreshIfSafe();
-      })
-      .catch(function () { /* A network failure must never interrupt the application. */ })
-      .finally(function () { checking = false; });
+    try {
+      var current = await fetchFingerprint();
+      lastFetch=Date.now();
+      if (baseline === null) {
+        try {baseline=localStorage.getItem(KEY)} catch (_) {}
+      }
+      if (baseline && baseline !== current) pending = true;
+      baseline = current;
+      try {localStorage.setItem(KEY,current)}catch (_) {}
+      refreshIfSafe();
+    } catch (_) {
+      // A partially deployed site or poor connectivity must not close a document.
+    } finally {checking=false}
   }
-  window.addEventListener('online', function () { check(); });
-  window.addEventListener('focus', function () { check(); refreshIfSafe(); });
+  window.addEventListener('online', function () {check(true)});
+  window.addEventListener('focus', function () {check(true);refreshIfSafe()});
+  window.addEventListener('afriflow:refresh', function () {check(true)});
   document.addEventListener('visibilitychange', function () {
-    if (!document.hidden) { check(); refreshIfSafe(); }
+    if (!document.hidden) {check(true);refreshIfSafe()}
   });
-  setInterval(function () { check(); refreshIfSafe(); }, 300000);
-  // Run the first build check shortly after the site starts.
+  setInterval(function () {check(false);refreshIfSafe()}, 120000);
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', check, { once: true });
-  } else {
-    check();
-  }
+    document.addEventListener('DOMContentLoaded', function () {check(true)}, {once:true});
+  } else check(true);
 })();
