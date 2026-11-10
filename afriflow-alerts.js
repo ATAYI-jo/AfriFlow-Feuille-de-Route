@@ -206,6 +206,7 @@
     setInterval(poll,30000);
     document.addEventListener('visibilitychange',function(){if(!document.hidden)poll()});
     window.addEventListener('online',poll);
+    window.addEventListener('afriflow:refresh',poll);
     poll();
   }
   if (document.readyState==='loading') document.addEventListener('DOMContentLoaded',start);
