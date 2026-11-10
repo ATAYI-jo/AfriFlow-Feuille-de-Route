@@ -19,12 +19,15 @@ self.addEventListener('push', function(event){
         teamsUrl=parsed.href;
       }
     }catch(e){}
-    await self.registration.showNotification(String(data.title).slice(0,100),{
+    var incomingCall=data.kind==='meeting'&&!!teamsUrl;
+    await self.registration.showNotification(incomingCall?'📞 Appel Teams entrant':String(data.title).slice(0,100),{
       body:body,
       icon:new URL('logo.png',self.registration.scope).href,
       badge:new URL('logo.png',self.registration.scope).href,
-      tag:String(data.tag||'afriflow').slice(0,150),
+      tag:incomingCall?'afriflow-incoming-call':String(data.tag||'afriflow').slice(0,150),
       renotify:true,
+      silent:false,
+      requireInteraction:incomingCall,
       data:{url:url,teamsUrl:teamsUrl,kind:data.kind||''},
       actions:teamsUrl?[{action:'join',title:'Répondre dans Teams'}]:[],
     });

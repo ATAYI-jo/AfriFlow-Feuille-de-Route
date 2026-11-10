@@ -73,19 +73,24 @@
     try {
       if (audio.state === 'suspended') return;
       var t=audio.currentTime;
-      // Original AfriFloW audio signature: ascending major-sixth with a soft fifth.
-      var notes=type==='call' ? [392,587.33,493.88,659.25] : [523.25,659.25,783.99];
-      notes.forEach(function(freq,i) {
+      var call=type==='call';
+      // A clear two-burst call pattern: audible without mimicking a telephone brand.
+      var notes=call
+        ? [[523.25,0],[659.25,.18],[523.25,.78],[659.25,.96]]
+        : [[523.25,0],[659.25,.15],[783.99,.30]];
+      notes.forEach(function(note) {
+        var freq=note[0], offset=note[1], length=call?.38:.22;
         var osc=audio.createOscillator(),gain=audio.createGain();
-        osc.type='sine';
-        osc.frequency.setValueAtTime(freq,t+i*.15);
-        gain.gain.setValueAtTime(0.0001,t+i*.15);
-        gain.gain.exponentialRampToValueAtTime(type==='call'?.09:.055,t+i*.15+.025);
-        gain.gain.exponentialRampToValueAtTime(.0001,t+i*.15+(type==='call'?.29:.19));
+        osc.type=call?'triangle':'sine';
+        osc.frequency.setValueAtTime(freq,t+offset);
+        gain.gain.setValueAtTime(0.0001,t+offset);
+        gain.gain.exponentialRampToValueAtTime(call?.16:.07,t+offset+.035);
+        gain.gain.exponentialRampToValueAtTime(.0001,t+offset+length);
         osc.connect(gain).connect(audio.destination);
-        osc.start(t+i*.15);
-        osc.stop(t+i*.15+.33);
+        osc.start(t+offset);
+        osc.stop(t+offset+length+.02);
       });
+      if(call && navigator.vibrate)navigator.vibrate([220,110,220,110,220]);
     } catch(e) {}
   }
   function notifyNative(title,body,teamsUrl,meetingTitle) {
@@ -138,7 +143,7 @@
     ring.hidden=false;
     document.getElementById('af-meet-accept').focus();
     tone('call');
-    ringTimer=setInterval(function(){if(!ring.hidden)tone('call')},2800);
+    ringTimer=setInterval(function(){if(!ring.hidden)tone('call')},2400);
     setTimeout(function(){if(!ring.hidden)endCall()},120000);
     if('Notification' in window && Notification.permission==='granted'){
       try {new Notification('Appel Teams entrant',{body:(m.title||'Réunion AfriFloW')+' · Ouvrez AfriFloW pour répondre.',icon:'./logo.png',tag:'af-meeting-'+(m.id||'now')})}catch(e){}
