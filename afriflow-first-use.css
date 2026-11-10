@@ -1,0 +1,17 @@
+/* AfriFloW first-use modal */
+#af-first-use[hidden]{display:none!important}
+#af-first-use{position:fixed;inset:0;z-index:30000;display:flex;align-items:center;justify-content:center;padding:16px;background:rgba(7,27,18,.76);-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px);font:15px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif;overflow:auto}
+.af-first-use-active{overflow:hidden}
+.af-first-use-card{width:min(620px,100%);max-height:93dvh;overflow:auto;box-sizing:border-box;padding:clamp(20px,3vw,34px);background:#fff;color:#1c3126;border-radius:25px;box-shadow:0 24px 75px rgba(0,0,0,.28);border:1px solid #e6ad55}
+.af-first-use-logo{display:block;width:78px;height:78px;object-fit:contain;margin:0 auto 12px}
+.af-first-use-card h2{text-align:center;color:#155e3a;margin:0 0 12px;font-size:clamp(22px,4vw,29px)}
+.af-first-use-card>p{margin:8px 0 15px}
+.af-first-use-terms{background:#f6f9f6;border:1px solid #dbe6df;padding:15px;border-radius:13px;max-height:190px;overflow:auto;font-size:13px}
+.af-first-use-terms p{margin:8px 0}
+.af-first-use-choice{display:flex;gap:12px;align-items:flex-start;margin:15px 0;cursor:pointer}
+.af-first-use-choice input{flex:none;width:20px;height:20px;accent-color:#176d41;margin-top:2px}
+.af-first-use-note{font-size:12px;color:#59695f}
+#af-first-use-error{min-height:16px;color:#b73238;font-size:13px}
+#af-first-use-accept{display:block;width:100%;border:1px solid #e6a245;border-radius:13px;background:#176940;color:#fff;padding:14px 16px;cursor:pointer;font-weight:750;font-size:15px}
+#af-first-use-accept:disabled{cursor:not-allowed;opacity:.5}
+@media(max-height:640px){.af-first-use-card{max-height:calc(100dvh - 20px)}}
