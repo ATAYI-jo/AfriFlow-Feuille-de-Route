@@ -8,7 +8,11 @@ import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.net.Uri;
 import android.webkit.CookieManager;
-import android.webkit.JavascriptInterface;
+import androidx.webkit.WebViewCompat;
+import androidx.webkit.WebViewFeature;
+import androidx.webkit.WebMessageCompat;
+import androidx.webkit.JavaScriptReplyProxy;
+import java.util.Collections;
 import android.webkit.WebChromeClient;
 import android.webkit.WebResourceRequest;
 import android.webkit.WebSettings;
@@ -40,20 +44,24 @@ public class MainActivity extends Activity {
         ("afriflow-africa.onrender.com".equals(u.getHost()) || "atayi-jo.github.io".equals(u.getHost()));
     }catch(Exception e){return false;}
   }
-  private final class NativeBridge {
-    @JavascriptInterface public void enablePush(String accessToken) {
-      runOnUiThread(()->{
-        if(web==null || !allowed(web.getUrl()))return;
-        if(!FirebaseApp.getApps(MainActivity.this).isEmpty() &&
-          accessToken!=null && accessToken.length()>30 && accessToken.length()<6000) {
-          if(Build.VERSION.SDK_INT>=33 &&
-            checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS)!=PackageManager.PERMISSION_GRANTED) {
-            requestPermissions(new String[]{Manifest.permission.POST_NOTIFICATIONS},NOTIFICATION_PERMISSION);
-          }
-          FirebaseMessaging.getInstance().getToken().addOnSuccessListener(token->
-            worker.execute(()->registerDevice(token,accessToken)));
-        }
-      });
+  private String pendingAuthToken;
+  private void enablePush(String accessToken) {
+    if(web==null || !allowed(web.getUrl()))return;
+    if(FirebaseApp.getApps(this).isEmpty() || accessToken==null || accessToken.length()<30 || accessToken.length()>6000)return;
+    if(Build.VERSION.SDK_INT>=33 &&
+        checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS)!=PackageManager.PERMISSION_GRANTED){
+      pendingAuthToken=accessToken;
+      requestPermissions(new String[]{Manifest.permission.POST_NOTIFICATIONS},NOTIFICATION_PERMISSION);
+      return;
+    }
+    FirebaseMessaging.getInstance().getToken().addOnSuccessListener(token->
+      worker.execute(()->registerDevice(token,accessToken)));
+  }
+  @Override public void onRequestPermissionsResult(int requestCode,String[] permissions,int[] grantResults){
+    super.onRequestPermissionsResult(requestCode,permissions,grantResults);
+    if(requestCode==NOTIFICATION_PERMISSION){
+      String jwt=pendingAuthToken;pendingAuthToken=null;
+      if(jwt!=null && grantResults.length>0 && grantResults[0]==PackageManager.PERMISSION_GRANTED)enablePush(jwt);
     }
   }
   private void registerDevice(String token, String jwt) {
@@ -87,8 +95,21 @@ public class MainActivity extends Activity {
     settings.setAllowFileAccess(false);
     settings.setMixedContentMode(WebSettings.MIXED_CONTENT_NEVER_ALLOW);
     CookieManager.getInstance().setAcceptThirdPartyCookies(web, true);
-    // Only allow privileged registration when top-level WebView URL is trusted.
-    web.addJavascriptInterface(new NativeBridge(),"AfriFlowAndroid");
+    // Origin-scoped bridge: never expose privileged APIs to cross-origin iframes.
+    if(WebViewFeature.isFeatureSupported(WebViewFeature.WEB_MESSAGE_LISTENER)){
+      java.util.Set<String> origins=new java.util.HashSet<>();
+      origins.add("https://afriflow-africa.onrender.com");
+      origins.add("https://atayi-jo.github.io");
+      WebViewCompat.addWebMessageListener(web,"AfriFlowAndroid",origins,
+        (view,message,sourceOrigin,isMainFrame,replyProxy)->{
+          if(!isMainFrame || !allowed(sourceOrigin.toString()))return;
+          try{
+            JSONObject json=new JSONObject(message.getData());
+            if("enablePush".equals(json.optString("action")))
+              runOnUiThread(()->enablePush(json.optString("accessToken")));
+          }catch(Exception e){android.util.Log.w("AfriFloW","Invalid native bridge request");}
+        });
+    }
     web.setWebViewClient(new WebViewClient() {
       @Override public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
         Uri uri = request.getUrl();
