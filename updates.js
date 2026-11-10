@@ -9,7 +9,6 @@
   var checking = false;
   var pending = false;
   var baseline = null;
-  var pollTimer = null;
 
   ['pointerdown', 'keydown', 'input', 'touchstart'].forEach(function (name) {
     document.addEventListener(name, function () { lastInput = Date.now(); }, { passive: true });
@@ -66,7 +65,7 @@
   document.addEventListener('visibilitychange', function () {
     if (!document.hidden) { check(); refreshIfSafe(); }
   });
-  pollTimer = setInterval(function () { check(); refreshIfSafe(); }, 60000);
+  setInterval(function () { check(); refreshIfSafe(); }, 300000);
   // Run the first build check shortly after the site starts.
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', check, { once: true });
