@@ -10,24 +10,28 @@ window.dvExcelEdit=function(path){
  if(!confirm("Cet éditeur Excel est simplifié. Macros, graphiques, tableaux croisés et certaines mises en forme peuvent être altérés. Une sauvegarde de l'original sera créée dans Dropbox avant chaque enregistrement. Continuer ?"))return;
  if($("afExcel"))$("afExcel").remove();
  var modal=document.createElement("section");modal.id="afExcel";modal.setAttribute("role","dialog");modal.setAttribute("aria-label","Édition Excel");
- modal.innerHTML='<header><strong>Excel · '+txt(path.split("/").pop())+'</strong><button id="afExcelSave" type="button">Enregistrer dans Dropbox</button><button id="afExcelClose" type="button">Fermer</button></header><p>Éditeur simplifié — modifier les cellules, puis enregistrer.</p><nav id="afExcelTabs"></nav><div class="afExcelGrid" id="afExcelGrid"></div><footer id="afExcelStatus">Prêt</footer>';
+ modal.innerHTML='<header><strong>Excel · '+txt(path.split("/").pop())+'</strong><button id="afExcelSave" type="button">Enregistrer dans Dropbox</button><button id="afExcelClose" type="button">Fermer</button></header><p>Éditeur simplifié — modifier les cellules, puis enregistrer.</p><nav id="afExcelTabs"></nav><div id="afExcelPaging" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding:8px 12px;background:#f5fbf5"></div><div class="afExcelGrid" id="afExcelGrid"></div><footer id="afExcelStatus">Prêt</footer>';
  document.body.appendChild(modal);
- var old=document.body.style.overflow;document.body.style.overflow="hidden";var sheetN=0,dirty=false,busy=false;
+ var old=document.body.style.overflow;document.body.style.overflow="hidden";var sheetN=0,dirty=false,busy=false,rowStart=0,colStart=0;
  function render(){
    $("afExcelTabs").innerHTML=wb.SheetNames.map(function(n,i){return '<button type="button" data-sheet="'+i+'"'+(i===sheetN?' class="on"':'')+'>'+txt(n)+'</button>'}).join("");
    var sh=wb.Sheets[wb.SheetNames[sheetN]],range=X.utils.decode_range(sh["!ref"]||"A1");
-   var rows=Math.min(Math.max(30,range.e.r+1),200),cols=Math.min(Math.max(10,range.e.c+1),26);
-   var out='<table><thead><tr><th></th>';for(var j=0;j<cols;j++)out+='<th>'+X.utils.encode_col(j)+'</th>';out+='</tr></thead><tbody>';
-   for(var r=0;r<rows;r++){
+   var rows=Math.max(30,range.e.r+1),cols=Math.max(10,range.e.c+1);
+   var rowEnd=Math.min(rows,rowStart+100),colEnd=Math.min(cols,colStart+20);
+   var pg=$("afExcelPaging");
+   pg.innerHTML='<button type="button" data-pg="rp">← 100 lignes</button><button type="button" data-pg="rn">100 lignes →</button><button type="button" data-pg="cp">← 20 colonnes</button><button type="button" data-pg="cn">20 colonnes →</button><span>Lignes '+(rowStart+1)+'–'+rowEnd+' / '+rows+' · Colonnes '+X.utils.encode_col(colStart)+'–'+X.utils.encode_col(colEnd-1)+' / '+cols+'</span>';
+   pg.onclick=function(e){var b=e.target.closest("[data-pg]");if(!b)return;var a=b.dataset.pg;if(a==="rp")rowStart=Math.max(0,rowStart-100);if(a==="rn")rowStart+=100;if(a==="cp")colStart=Math.max(0,colStart-20);if(a==="cn")colStart+=20;render()};
+   var out='<table><thead><tr><th></th>';for(var j=colStart;j<colEnd;j++)out+='<th>'+X.utils.encode_col(j)+'</th>';out+='</tr></thead><tbody>';
+   for(var r=rowStart;r<rowEnd;r++){
      out+='<tr><th>'+(r+1)+'</th>';
-     for(var c=0;c<cols;c++){
+     for(var c=colStart;c<colEnd;c++){
        var a=X.utils.encode_cell({r:r,c:c}),cell=sh[a],v=cell?(cell.f?"="+cell.f:(cell.v==null?"":String(cell.v))):"";
        out+='<td><input type="text" aria-label="'+a+'" data-cell="'+a+'" value="'+txt(v)+'"></td>';
      }
      out+='</tr>';
    }
    $("afExcelGrid").innerHTML=out+'</tbody></table>';
-   $("afExcelTabs").onclick=function(e){var b=e.target.closest("[data-sheet]");if(b){sheetN=+b.dataset.sheet;render()}};
+   $("afExcelTabs").onclick=function(e){var b=e.target.closest("[data-sheet]");if(b){sheetN=+b.dataset.sheet;rowStart=0;colStart=0;render()}};
    $("afExcelGrid").onchange=function(e){
      var input=e.target;if(!input.dataset.cell)return;
      var a=input.dataset.cell,v=input.value,sh=wb.Sheets[wb.SheetNames[sheetN]];
