@@ -1,0 +1,16 @@
+/* AfriFloW: in-app alerts and Teams call overlay */
+#af-notice-control{position:fixed;top:calc(env(safe-area-inset-top,0px) + 72px);right:14px;z-index:800;max-width:230px;display:none}
+#af-notice-control button{padding:8px 12px;border:1px solid #dd9734;border-radius:999px;background:#155b38;color:#fff;font:600 12px system-ui;box-shadow:0 4px 12px #10291c3b;cursor:pointer}
+#af-alert-toast{position:fixed;right:16px;bottom:80px;z-index:14500;display:none;max-width:min(390px,calc(100vw - 32px));border-radius:16px;background:#fff;color:#173b29;padding:15px 18px;box-shadow:0 12px 40px #0003;border-left:5px solid #e99d36;font:14px/1.5 system-ui}
+#af-meet-call[hidden]{display:none!important}
+#af-meet-call{position:fixed;inset:0;z-index:20000;display:flex;align-items:center;justify-content:center;padding:20px;background:rgba(10,33,25,.77);-webkit-backdrop-filter:blur(15px);backdrop-filter:blur(15px)}
+#af-meet-panel{width:min(450px,100%);border-radius:28px;padding:30px 25px;background:linear-gradient(160deg,#fff,#ecf6ef);color:#18452c;text-align:center;box-shadow:0 20px 75px #0005;border:1px solid #fff;font:16px/1.5 system-ui}
+#af-meet-panel img{width:126px;height:126px;border-radius:28px;object-fit:contain;background:#fff;padding:12px;box-shadow:0 5px 30px #134a2d24}
+#af-meet-panel h2{margin:18px 0 6px;font-size:24px;color:#145d38}
+#af-meet-panel p{overflow-wrap:anywhere;margin:6px 0}
+#af-meet-actions{display:flex;justify-content:space-evenly;gap:22px;margin-top:25px}
+#af-meet-actions button{min-width:120px;border:0;padding:15px 14px;border-radius:18px;font-weight:750;color:#fff;cursor:pointer;font-size:16px}
+#af-meet-reject{background:#b83339}
+#af-meet-accept{background:#197b48}
+#af-meet-panel small{display:block;margin-top:16px;color:#68786d}
+@media(max-width:600px){#af-notice-control{top:auto;bottom:70px;left:16px;right:auto}}
