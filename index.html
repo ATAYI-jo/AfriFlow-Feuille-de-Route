@@ -2292,6 +2292,7 @@ buildNav();
   /* Petit témoin visible de l'état de synchronisation */
   var badge = document.createElement('div');
   badge.style.cssText = 'position:fixed;left:12px;bottom:12px;z-index:9999;padding:6px 10px;border-radius:999px;font:12px system-ui,sans-serif;background:rgba(0,0,0,.65);color:#fff;pointer-events:none';
+  badge.id = 'afCloudSyncBadge';
   document.body.appendChild(badge);
   function setBadge(ok, txt){ badge.textContent = txt; badge.style.borderLeft = '4px solid ' + (ok ? '#4cc38a' : '#d76767'); }
   setBadge(false, 'Synchronisation…');
@@ -6817,6 +6818,51 @@ window.dvWordEdit=function(path,orig){
 }
 </style>
 
+<style id="af-profile-mobile-flat-20261110">
+/* Profile is a full-screen view; contain its children on narrow devices. */
+#profilePanel,#profilePanel *{box-sizing:border-box}
+#profilePanel{width:100%;max-width:100%;overflow-x:hidden;overscroll-behavior:contain}
+#profilePanel .profile-top,#profilePanel .profile-main,#profilePanel .profile-card,
+#profilePanel .profile-grid,#profilePanel .profile-form,#profilePanel .profile-tabs{min-width:0;max-width:100%}
+#profilePanel .profile-main{width:min(1120px,100%);box-sizing:border-box}
+#profilePanel .profile-card{overflow-wrap:anywhere}
+#profilePanel .profile-form input,#profilePanel .profile-form textarea,
+#profilePanel .profile-form select{width:100%;max-width:100%;min-width:0;box-sizing:border-box}
+#profilePanel .profile-form .wide{min-width:0}
+#profilePanel .profile-tabs button{min-width:0;white-space:normal;line-height:1.25;text-align:center}
+#profilePanel .avatar-choice{grid-template-columns:repeat(6,minmax(0,1fr));min-width:0}
+#profilePanel .avatar-choice button{min-width:0;aspect-ratio:1;touch-action:manipulation}
+#profilePanel .pf-flat{background:none!important;color:inherit;border-color:rgba(39,75,54,.16);box-shadow:0 2px 9px rgba(0,0,0,.10)}
+#profilePanel .pf-flat svg,#sideAvatar .pf-flat svg,.member-card .pf-flat svg{width:100%;height:100%;display:block;stroke:none;fill:none}
+#sideAvatar .pf-flat,.member-card .pf-flat{background:none!important}
+body.af-profile-open{overflow:hidden}
+body.af-profile-open #afCloudSyncBadge{visibility:hidden!important}
+@media(max-width:720px){
+ #profilePanel{height:100dvh;inset:0;overflow-y:auto;-webkit-overflow-scrolling:touch}
+ #profilePanel .profile-top{padding:calc(env(safe-area-inset-top,0px) + 12px) 16px 12px;min-height:72px;gap:10px}
+ #profilePanel .profile-top h2{font-size:clamp(19px,5.4vw,24px);line-height:1.2}
+ #profilePanel .profile-close{min-height:44px;padding:9px 12px!important;font-size:14px!important}
+ #profilePanel .profile-main{width:100%;padding:16px 12px calc(env(safe-area-inset-bottom,0px) + 32px);margin:0}
+ #profilePanel .profile-grid{display:grid;grid-template-columns:minmax(0,1fr);gap:14px}
+ #profilePanel .profile-card{padding:16px 14px;border-radius:16px}
+ #profilePanel .profile-card h3{font-size:clamp(19px,5.5vw,24px)}
+ #profilePanel .profile-tabs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-bottom:16px}
+ #profilePanel .profile-tabs button{width:100%;padding:12px 8px!important;min-height:48px;font-size:clamp(12px,3.4vw,15px)!important}
+ #profilePanel .profile-form{grid-template-columns:minmax(0,1fr);gap:12px}
+ #profilePanel .profile-form label{font-size:14px}
+ #profilePanel .profile-form input,#profilePanel .profile-form select,#profilePanel .profile-form textarea{font-size:16px!important;min-height:48px;padding:12px!important}
+ #profilePanel .profile-note{font-size:14px;line-height:1.5}
+ #profilePanel .profile-status{font-size:14px;line-height:1.5}
+ #profilePanel .avatar-choice{grid-template-columns:repeat(3,minmax(0,1fr));gap:9px}
+ #profilePanel .avatar-choice .pf-avatar{width:64px;height:64px;max-width:100%;margin:auto}
+ #profilePanel .directory-grid{grid-template-columns:minmax(0,1fr)}
+ #profilePanel .member-card{min-width:0}
+ #profilePanel .member-card>div{min-width:0;overflow-wrap:anywhere}
+ #profilePanel .profile-actions button{width:100%;min-height:48px}
+}
+@media(max-width:360px){#profilePanel .profile-tabs{grid-template-columns:1fr}}
+</style>
+
 <!-- Profil personnel et annuaire interne -->
 <style id="af-profile-css">
 .export-add{display:inline-flex!important;margin-top:9px!important;padding:7px 10px!important;border-radius:9px!important;font-size:.78rem!important;color:var(--green)!important;background:color-mix(in srgb,var(--green) 10%,var(--card))!important;border:1px solid color-mix(in srgb,var(--green) 30%,var(--line))!important;box-shadow:none!important}
@@ -6840,10 +6886,36 @@ function esc(s){return String(s==null?"":s).replace(/[&<>\"']/g,function(c){retu
 function photo(v){return typeof v==="string"&&/^data:image\/(png|jpe?g|webp);base64,/i.test(v)}
 function avatar(kind,value,label){
   if(kind==="photo"&&photo(value))return '<span class="pf-avatar"><img src="'+value+'" alt="'+esc(label||"Photo de profil")+'"></span>';
+  // Stable 2D portraits: preserve existing avatar_value stored for each member.
   var c=flat.indexOf(value)>=0?value:"forest";
-  return '<span class="pf-avatar pf-flat '+c+'"><svg viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="17" r="8"/><path d="M9 42c1.8-9 8-14 15-14s13.2 5 15 14"/></svg></span>';
+  var portraits={
+    forest:{bg:"#ede1db",skin:"#bf7e58",hair:"#2a2528",shirt:"#537b55",style:0},
+    ocean:{bg:"#eadbd9",skin:"#f0b58b",hair:"#24232c",shirt:"#ed6e53",style:1},
+    sunset:{bg:"#ede4dc",skin:"#c7835f",hair:"#292126",shirt:"#eeb54e",style:2},
+    sand:{bg:"#e8ddd8",skin:"#dfaa81",hair:"#4b302c",shirt:"#a27d71",style:3},
+    violet:{bg:"#ebdfdd",skin:"#9e5b43",hair:"#242128",shirt:"#7465b6",style:4},
+    copper:{bg:"#eee0d8",skin:"#f3b39a",hair:"#a84437",shirt:"#d86a49",style:5}
+  };
+  var d=portraits[c],hair=[
+    '<path d="M16 30C9 18 14 8 25 8c11 0 16 8 13 22-2-10-5-13-13-13-7 0-10 4-9 13Z"/>',
+    '<path d="M11 54c-3-10-1-27 5-37C22 5 36 7 41 17c4 10 5 27 2 37H34V23c-4-6-12-8-17 0v31Z"/>',
+    '<path d="M12 24c-3-12 8-18 16-17 7 1 14 7 12 17-5-2-9-5-10-10-4 6-10 8-18 10Z"/><circle cx="15" cy="11" r="6"/><circle cx="23" cy="9" r="7"/>',
+    '<path d="M13 27c-4-12 5-21 17-19 12 1 14 12 10 20-4-8-8-11-15-12-4 6-8 7-12 11Z"/>',
+    '<path d="M11 49c-5-11-5-29 4-36 9-9 24-5 29 7 5 10 4 20 1 29h-8V27c-4-7-12-8-19-2v24Z"/>',
+    '<path d="M13 28c-4-11 3-20 14-20 9 0 14 6 14 15-5-3-9-9-10-13-4 7-11 13-18 18Z"/><circle cx="32" cy="7" r="8"/>'
+  ][d.style];
+  var svg='<svg viewBox="0 0 64 64" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg">'
+    +'<circle cx="32" cy="32" r="32" fill="'+d.bg+'"/>'
+    +'<path d="M4 64c3-17 13-23 28-23s25 6 28 23" fill="'+d.shirt+'"/>'
+    +'<path d="M27 39h10v10c-3 4-7 4-10 0Z" fill="'+d.skin+'"/>'
+    +'<path d="M18 29c0-11 6-17 14-17s14 6 14 17c0 12-6 20-14 20s-14-8-14-20Z" fill="'+d.skin+'"/>'
+    +'<g fill="'+d.hair+'">'+hair+'</g>'
+    +'<g fill="#2d2728"><circle cx="26" cy="30" r="1.2"/><circle cx="38" cy="30" r="1.2"/></g>'
+    +'<path d="M28 38q4 3 8 0" fill="none" stroke="#92564b" stroke-width="1.5" stroke-linecap="round"/>'
+    +'</svg>';
+  return '<span class="pf-avatar pf-flat '+c+'" role="img" aria-label="'+esc(label||"Avatar illustré")+'">'+svg+'</span>';
 }
-function close(){var p=$("profilePanel");p.classList.remove("open");p.setAttribute("aria-hidden","true")}
+function close(){var p=$("profilePanel");p.classList.remove("open");p.setAttribute("aria-hidden","true");document.body.classList.remove("af-profile-open");var b=$("profileOpen");if(b)b.focus()}
 function dayText(d){var n=Math.ceil((new Date(d).getTime()-Date.now())/86400000);return n<0?"Le délai est dépassé.":n===0?"Le délai se termine aujourd’hui.":"Il reste "+n+" jour"+(n>1?"s":"")+"."}
 function localName(){return String(window.USER_NAME||"").trim().split(/\s+/)[0]||""}
 function updateHeader(p,d){
@@ -6904,7 +6976,7 @@ async function saveProfile(){
     current.profile=profile;current.directory=pub;window.USER_NAME=display;updateHeader(profile,pub);if(window.toast)toast("Profil enregistré.");profilePage();
   }catch(e){err.textContent="Enregistrement impossible : "+(e.message||e)}finally{btn.disabled=false}
 }
-async function open(){var p=$("profilePanel");p.classList.add("open");p.setAttribute("aria-hidden","false");try{await load();profilePage()}catch(e){$("profileMain").innerHTML='<section class="profile-card"><h3>Profil indisponible</h3><p class="profile-note">'+esc(e.message||e)+'</p></section>'}}
+async function open(){var p=$("profilePanel");p.classList.add("open");p.setAttribute("aria-hidden","false");document.body.classList.add("af-profile-open");p.scrollTop=0;try{await load();profilePage()}catch(e){$("profileMain").innerHTML='<section class="profile-card"><h3>Profil indisponible</h3><p class="profile-note">'+esc(e.message||e)+'</p></section>'}}
 $("profileOpen").onclick=open;$("profileClose").onclick=close;document.addEventListener("keydown",function(e){if(e.key==="Escape"&&$("profilePanel").classList.contains("open"))close()});
 var prior=window.onRole;window.onRole=function(){if(prior)prior();if(window.loggedUserEmail)load().catch(function(){})};
 var priorLogout=window.logout;window.logout=function(message){current=null;updateReminder(false);if(priorLogout)priorLogout(message)};
