@@ -57,8 +57,17 @@
           if('Notification' in window && Notification.permission==='default'){
             await Notification.requestPermission();
           }
+          if(window.AfriFlowPush && window.AfriFlowPush.supported() && Notification.permission==='granted'){
+            var pushResult=await window.AfriFlowPush.subscribe();
+            if(!pushResult.ok){
+              console.warn('AfriFloW: installation des notifications push différée : '+pushResult.reason);
+            }
+          }
         }catch(e){}
-      } else if(window.AfriFlowAlerts) window.AfriFlowAlerts.disable();
+      } else {
+        if(window.AfriFlowAlerts) window.AfriFlowAlerts.disable();
+        if(window.AfriFlowPush) await window.AfriFlowPush.unsubscribe();
+      }
       // A choice on another app or device does not count as approval here.
       try {localStorage.setItem(key(email),'accepted')}catch(e){
         modal.querySelector('#af-first-use-error').textContent='Impossible de mémoriser ce choix sur cet appareil. Vérifiez les paramètres de stockage du navigateur.';
