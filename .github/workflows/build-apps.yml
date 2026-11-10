@@ -1,4 +1,6 @@
 name: Build AfriFloW Android and Windows
+permissions:
+  contents: write
 on:
   workflow_dispatch:
   push:
@@ -45,3 +47,29 @@ jobs:
           name: AfriFloW-Windows-EXE-test
           path: desktop/dist/AfriFloW-Windows-Setup.exe
           if-no-files-found: error
+  release:
+    needs: [android, windows]
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: AfriFloW-Android-APK-test
+          path: release/android
+      - uses: actions/download-artifact@v4
+        with:
+          name: AfriFloW-Windows-EXE-test
+          path: release/windows
+      - name: Prepare release files
+        run: |
+          mv release/android/app-debug.apk release/AfriFloW-Android-test.apk
+          mv release/windows/AfriFloW-Windows-Setup.exe release/AfriFloW-Windows-Setup.exe
+      - name: Publish prerelease
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if gh release view v0.1.0-beta --repo "${{ github.repository }}" >/dev/null 2>&1; then
+            gh release upload v0.1.0-beta release/AfriFloW-Android-test.apk release/AfriFloW-Windows-Setup.exe --clobber --repo "${{ github.repository }}"
+          else
+            gh release create v0.1.0-beta release/AfriFloW-Android-test.apk release/AfriFloW-Windows-Setup.exe --prerelease --latest=false --title "AfriFloW applications - version test" --notes "Versions de test non validées. L'application charge le site AfriFloW en ligne. Sur Windows, installateur non signé. Sur Android, APK signé en mode debug. Les connexions OAuth, téléchargements, caméra et autres fonctions devront être vérifiés." --repo "${{ github.repository }}"
+          fi
