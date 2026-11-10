@@ -3668,13 +3668,6 @@ async function onClick(e){
 }
 
 /* ---------- Ouverture de la page + entrée de menu ---------- */
-window.afRelinkDropbox=async function(index){
- if(window.USER_ROLE!=="admin"){toast("Seul l'administrateur peut réassocier un fichier.");return}
- window.__afRelinkIndex=index;
- await openPage();
- browse("");
- setTimeout(function(){var b=$("dvBrowser");if(b)b.scrollIntoView({behavior:"smooth",block:"start"})},300);
-};
 async function openPage(){
   var home=document.querySelector('#navList .nv[data-id="home"]');
   if(home)home.click();            /* laisse le site nettoyer la vue précédente */
@@ -4125,6 +4118,13 @@ function injectAdmin(){
 
 /* ---------- Page « Censeur » ---------- */
 function mark2(){var nl=$("navList");if(nl)nl.querySelectorAll(".nv").forEach(function(b){b.classList.toggle("on",b.hasAttribute("data-cs-nav"))})}
+window.afRelinkDropbox=async function(index){
+ if(window.USER_ROLE!=="admin"){toast("Seul l'administrateur peut réassocier un fichier.");return}
+ window.__afRelinkIndex=index;
+ await openPage();
+ browse("");
+ setTimeout(function(){var b=$("dvBrowser");if(b)b.scrollIntoView({behavior:"smooth",block:"start"})},300);
+};
 async function openPage(){
   var home=document.querySelector('#navList .nv[data-id="home"]');if(home)home.click();
   active=true;$("view-home").style.display="none";$("viewHost").style.display="";
@@ -5301,7 +5301,7 @@ var bar='<div class="toolbar"><b>'+name+'</b><div class="toolbar-actions">'+edBt
     box.innerHTML=bar+'<div class="dv-txt" id="dvTx"></div>';$("dvTx").textContent=await blob.text();
   }else box.innerHTML=bar+'<p>Aperçu indisponible pour ce format : utilisez « Télécharger ».</p>';
 }
-function fail(x){var b=$("dvView");if(b)b.innerHTML='<div class="dv-error" role="alert"><p>Impossible de prévisualiser : '+esc(x&&x.message||x)+'</p><button type="button" data-dvp-refresh="1">Réessayer</button><button type="button" data-dvp-dl-fail="1">Télécharger</button>'+(window.USER_ROLE==="admin"?'<button type="button" data-dvp-relink="1">Réassocier depuis Dropbox</button>':'')+'</div>'}
+function fail(x){var b=$("dvView");if(!b)return;var message=String(x&&x.message||x);if(/path\\/not_found|not_found|fichier.*introuvable/i.test(message))message="Ce document n'est plus disponible à son ancien emplacement Dropbox. Réassociez le fichier depuis votre Dropbox.";else if(/Connexion requise|401|403/.test(message))message="Votre session a expiré ou vous n'avez pas accès à ce fichier.";else if(message.length>280)message="Erreur de lecture Dropbox. Réessayez ou réassociez le fichier.";b.innerHTML='<div class="dv-error" role="alert"><p>Impossible de prévisualiser : '+esc(message)+'</p><button type="button" data-dvp-refresh="1">Réessayer</button><button type="button" data-dvp-dl-fail="1">Télécharger</button>'+(window.USER_ROLE==="admin"?'<button type="button" data-dvp-relink="1">Réassocier depuis Dropbox</button>':'')+'</div>'}
 document.addEventListener("click",function(e){
   var relink=e.target.closest("button[data-dvp-relink]");
   if(relink){e.preventDefault();e.stopPropagation();if(window.afRelinkDropbox)window.afRelinkDropbox(cur.i);return}
