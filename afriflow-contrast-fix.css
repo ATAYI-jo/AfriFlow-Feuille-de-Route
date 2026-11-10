@@ -1,50 +1,38 @@
-/* AfriFloW readability pass: opaque navigation, clear contrast and visible controls.
-   Scoped to navigation/onboarding so the road map theme remains unchanged. */
+/* Keep the earlier AfriFloW glassmorphism menu. Preserve contrast fixes only for first-use consent. */
 #side {
-  background: #ffffff !important;
-  color: #193a29 !important;
-  opacity: 1 !important;
-  -webkit-backdrop-filter: none !important;
-  backdrop-filter: none !important;
-  box-shadow: 8px 0 36px rgba(5, 29, 18, .25) !important;
+  background: color-mix(in srgb, var(--card) 57%, transparent) !important;
+  -webkit-backdrop-filter: blur(22px) saturate(165%) !important;
+  backdrop-filter: blur(22px) saturate(165%) !important;
+  border-right: 1px solid color-mix(in srgb, #ffffff 55%, transparent) !important;
+  box-shadow: 10px 0 35px rgba(12, 35, 25, .17) !important;
 }
-#side .side-h b { color: #155b36 !important; }
 #side .nv {
-  color: #183d2a !important;
-  background: #f5f8f5 !important;
-  font-weight: 650 !important;
-  border: 1px solid #d4e2d7 !important;
-  opacity: 1 !important;
-  text-shadow: none !important;
-  -webkit-text-fill-color: currentColor;
-  min-height: 48px;
+  color: var(--ink) !important;
+  -webkit-text-fill-color: currentColor !important;
+  background: transparent !important;
+  border: 1px solid transparent !important;
+  font-weight: 650;
 }
-#side .nv.on, #side .nv:focus-visible {
+#side .nv:hover,
+#side .nv:focus-visible {
+  background: color-mix(in srgb, var(--green) 11%, transparent) !important;
+}
+#side .nv.on {
+  background: color-mix(in srgb, var(--green) 17%, transparent) !important;
+  color: var(--ink) !important;
+}
+#side #addNav {
   color: #ffffff !important;
-  background: #17613e !important;
-  border-color: #17613e !important;
-}
-#side #addNav, #side #admBox .p {
-  display: block;
-  width: 100%;
-  background: #17613e !important;
-  border: 2px solid #0e4b2c !important;
-  color: #fff !important;
-  -webkit-text-fill-color: #fff !important;
-  opacity: 1 !important;
-  box-shadow: none !important;
+  -webkit-text-fill-color: #ffffff !important;
+  background: #175d3b !important;
+  border: 1px solid #175d3b !important;
   font-weight: 750 !important;
-  font-size: 16px !important;
-  text-shadow: none !important;
-}
-#side .af-push-menu {
-  color: #fff !important;
-  -webkit-text-fill-color: #fff !important;
-  background: #165c3b !important;
-  font-weight: 700 !important;
   opacity: 1 !important;
 }
-#side button:focus-visible { outline: 3px solid #df9b35 !important; outline-offset: 2px; }
+#side button:focus-visible {outline: 3px solid #df9b35 !important;outline-offset:2px;}
+@media (prefers-reduced-transparency: reduce) {
+  #side {background: var(--card) !important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important;}
+}
 #af-first-use .af-first-use-card {
   background: #ffffff !important;
   color: #173a28 !important;
