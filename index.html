@@ -3668,6 +3668,13 @@ async function onClick(e){
 }
 
 /* ---------- Ouverture de la page + entrée de menu ---------- */
+window.afRelinkDropbox=async function(index){
+ if(window.USER_ROLE!=="admin"){toast("Seul l'administrateur peut réassocier un fichier.");return}
+ window.__afRelinkIndex=index;
+ await openPage();
+ browse("");
+ setTimeout(function(){var b=$("dvBrowser");if(b)b.scrollIntoView({behavior:"smooth",block:"start"})},300);
+};
 async function openPage(){
   var home=document.querySelector('#navList .nv[data-id="home"]');
   if(home)home.click();            /* laisse le site nettoyer la vue précédente */
@@ -4993,7 +5000,7 @@ async function browse(p){
     var crumb='<button type="button" data-dvdir="">Racine</button>'+parts.map(function(s){acc+="/"+s;return ' › <button type="button" data-dvdir="'+esc(acc)+'">'+esc(s)+'</button>'}).join("");
     b.innerHTML='<div class="dact" style="margin:0 0 10px">'+crumb+'</div>'+(d.entries.length?d.entries.map(function(e){
       var shown=items.some(function(x){return String(x.path).toLowerCase()===e.path.toLowerCase()});
-      return '<div class="dv-row '+(e.dir?"af-clickable":"")+'" '+(e.dir?'data-dvdir="'+esc(e.path)+'" role="button" tabindex="0"':"")+'><span class="af-file-name">'+ic(e.dir?"folder":"file")+' '+esc(e.name)+'</span>'+(e.dir?'<span aria-hidden="true">›</span>':(shown?'<small style="color:var(--muted)">Déjà affiché</small>':'<button type="button" class="p" data-dvadd="'+esc(e.path)+'" data-n="'+esc(e.name)+'">Afficher sur le site</button>'))+'</div>';
+      return '<div class="dv-row '+(e.dir?"af-clickable":"")+'" '+(e.dir?'data-dvdir="'+esc(e.path)+'" role="button" tabindex="0"':"")+'><span class="af-file-name">'+ic(e.dir?"folder":"file")+' '+esc(e.name)+'</span>'+(e.dir?'<span aria-hidden="true">›</span>':(shown&&!window.__afRelinkIndex?'<small style="color:var(--muted)">Déjà affiché</small>':'<button type="button" class="p" data-dvadd="'+esc(e.path)+'" data-dvid="'+esc(e.id||"")+'" data-n="'+esc(e.name)+'">'+(window.__afRelinkIndex!=null?'Réassocier ce fichier':'Afficher sur le site')+'</button>'))+'</div>';
     }).join(""):'<p style="color:var(--muted)">Dossier vide.</p>');
   }catch(x){b.innerHTML='<p style="color:#c0392b">'+esc(x.message||x)+'<br><small>Vérifiez que la fonction « dropbox-view » est déployée et que les secrets DROPBOX_APP_KEY / DROPBOX_REFRESH_TOKEN sont définis.</small></p>'}
 }
@@ -5006,8 +5013,17 @@ async function onClick(e){
     else if(d.dvdir!=null)browse(d.dvdir);
     else if(d.dvadd){
       var path=d.dvadd,name=d.n;
+      if(window.__afRelinkIndex!=null){
+        var index=window.__afRelinkIndex,previous=items[index];
+        if(!previous){window.__afRelinkIndex=null;throw new Error("Document non retrouvé dans la liste.")}
+        if(!confirm("Réassocier « "+previous.title+" » au fichier Dropbox « "+name+" » ?"))return;
+        items[index]=Object.assign({},previous,{path:path,id:d.dvid||null});
+        try{await saveItems();window.__afRelinkIndex=null;toast("Fichier réassocié. Ouvrez-le à nouveau.");render()}
+        catch(err){items[index]=previous;throw err}
+        return;
+      }
       window.askDlg("Afficher ce fichier",[{id:"t",l:"Titre affiché sur le site"}],function(v){
-        items.push({path:path,title:v.t||name,at:Date.now()});
+        items.push({path:path,id:d.dvid||null,title:v.t||name,at:Date.now()});
         saveItems().then(function(){toast("Fichier affiché sur le site.");render();browse(cwd)}).catch(function(x){items.pop();toast("Échec : "+(x.message||x))});
       });
       var f=$("xf_t");if(f){f.value=name.replace(/\.[^.]+$/,"");f.select()}
@@ -5285,8 +5301,10 @@ var bar='<div class="toolbar"><b>'+name+'</b><div class="toolbar-actions">'+edBt
     box.innerHTML=bar+'<div class="dv-txt" id="dvTx"></div>';$("dvTx").textContent=await blob.text();
   }else box.innerHTML=bar+'<p>Aperçu indisponible pour ce format : utilisez « Télécharger ».</p>';
 }
-function fail(x){var b=$("dvView");if(b)b.innerHTML='<div class="dv-error" role="alert"><p>Impossible de prévisualiser : '+esc(x&&x.message||x)+'</p><button type="button" data-dvp-refresh="1">Réessayer</button><button type="button" data-dvp-dl-fail="1">Télécharger</button></div>'}
+function fail(x){var b=$("dvView");if(b)b.innerHTML='<div class="dv-error" role="alert"><p>Impossible de prévisualiser : '+esc(x&&x.message||x)+'</p><button type="button" data-dvp-refresh="1">Réessayer</button><button type="button" data-dvp-dl-fail="1">Télécharger</button>'+(window.USER_ROLE==="admin"?'<button type="button" data-dvp-relink="1">Réassocier depuis Dropbox</button>':'')+'</div>'}
 document.addEventListener("click",function(e){
+  var relink=e.target.closest("button[data-dvp-relink]");
+  if(relink){e.preventDefault();e.stopPropagation();if(window.afRelinkDropbox)window.afRelinkDropbox(cur.i);return}
   var ed=e.target.closest("button[data-dvp-edit]");
   if(ed){e.preventDefault();e.stopPropagation();if(window.dvRequestEdit)window.dvRequestEdit(cur.path);return}
   var download=e.target.closest("[data-dvp-dl-fail]");if(download){e.preventDefault();getBlob(cur.path).then(function(b){var u=mkUrl(b),a=document.createElement("a");a.href=u;a.download=cur.path.split("/").pop()||"document";a.click()}).catch(function(x){fail(x)});return}
