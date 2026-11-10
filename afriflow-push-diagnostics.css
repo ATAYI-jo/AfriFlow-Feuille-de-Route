@@ -1,0 +1,10 @@
+#side .af-push-menu{display:block;width:calc(100% - 28px);margin:12px 14px;padding:12px;border-radius:12px;border:1px solid #d89d42;background:#175d3b;color:white;font-size:13px;font-weight:650;text-align:left;cursor:pointer}
+.af-push-diagnostics[hidden]{display:none!important}
+.af-push-diagnostics{position:fixed;inset:0;z-index:31000;display:flex;align-items:center;justify-content:center;padding:18px;background:rgba(8,33,21,.73);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px)}
+.af-push-diagnostics-card{box-sizing:border-box;background:#fff;color:#183325;border:1px solid #dfa54c;border-radius:22px;padding:24px;width:min(540px,100%);box-shadow:0 24px 70px #0004;font:15px/1.5 system-ui}
+.af-push-diagnostics-card h2{font-size:23px;margin:0 0 9px;color:#155d37}
+.af-push-help{color:#496153}
+.af-push-status{white-space:pre-wrap;overflow-wrap:anywhere;min-height:50px;background:#f1f7f2;padding:12px;border-radius:12px;margin:16px 0}
+.af-push-actions{display:flex;flex-wrap:wrap;gap:9px}
+.af-push-actions button{border:1px solid #cba05f;background:#165e3a;color:#fff;padding:10px 13px;border-radius:10px;cursor:pointer;font-weight:650}
+.af-push-actions button:last-child{background:#fff;color:#174b30;border-color:#b6caba}
