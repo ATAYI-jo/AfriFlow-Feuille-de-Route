@@ -3,6 +3,7 @@
 <head>
   <script>
       window.__oauthReturn = location.hash;
+      window.__oauthQuery = location.search;
   </script>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
@@ -314,7 +315,13 @@ table.xl input:focus{outline:2px solid var(--green);outline-offset:-2px;backgrou
 #afPwaInstallArea #afDownloadPanel .af-download-link{background:#145c36!important;color:#fff!important;-webkit-text-fill-color:#fff!important}
 #afPwaInstallArea #afDownloadPanel .af-download-ios{color:#173b26!important;background:#f4f8f5!important;border:1px solid #7d9684!important;-webkit-text-fill-color:#173b26!important}
 </style>
-</head>
+<style>
+/* Téléchargements : icônes des plateformes, accessibles sans longs libellés */
+#afDownloadPanel .af-platform{display:inline-flex;align-items:center;justify-content:center;vertical-align:middle;width:calc(33.333% - 7px);min-width:64px;min-height:72px;margin:10px 4px 4px 0;padding:12px;border-radius:14px}
+#afDownloadPanel .af-platform svg{display:block;width:40px;height:40px;flex:none}
+#afDownloadPanel .af-sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+#afDownloadPanel .af-platform[hidden]{display:none!important}
+</style>\n</head>
 <body class="ro">
   <!-- =====================================================================
   ICÔNES AFRIFLOW (SVG intégrés, aucun fichier externe, aucune connexion requise)
@@ -409,10 +416,10 @@ window.ic=function(n,s){return '<svg class="ic"'+(s?' style="width:'+s+';height:
     <div id="afDownloadPanel" class="af-download-panel" hidden>
       <strong>Application AfriFloW</strong>
       <p>Choisissez votre appareil. Versions de test : connexion Internet nécessaire.</p>
-      <a id="afDownloadAndroid" class="af-download-link" hidden rel="noopener noreferrer">Télécharger Android (.apk) — test</a>
-      <a id="afDownloadWindows" class="af-download-link" hidden rel="noopener noreferrer">Télécharger Windows (.exe) — test</a>
+      <a id="afDownloadAndroid" class="af-download-link af-platform" hidden rel="noopener noreferrer" title="Télécharger AfriFloW pour Android" aria-label="Télécharger AfriFloW pour Android (.apk)"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path fill="currentColor" d="m6.4 7.2-1.2-2.1.9-.5 1.3 2.2A8 8 0 0 1 12 5.6c1.7 0 3.2.4 4.6 1.2l1.3-2.2.9.5-1.2 2.1a7.7 7.7 0 0 1 2.4 4.5H4a7.7 7.7 0 0 1 2.4-4.5ZM8 9a.8.8 0 1 0 0 1.6A.8.8 0 0 0 8 9Zm8 0a.8.8 0 1 0 0 1.6A.8.8 0 0 0 16 9ZM4 12.8h16v4.7c0 .7-.6 1.3-1.3 1.3H18V21h-2v-2.2H8V21H6v-2.2h-.7c-.7 0-1.3-.6-1.3-1.3z"/></svg><span class="af-sr-only">Android</span></a>
+      <a id="afDownloadWindows" class="af-download-link af-platform" hidden rel="noopener noreferrer" title="Télécharger AfriFloW pour Windows" aria-label="Télécharger AfriFloW pour Windows (.exe)"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path fill="currentColor" d="M2 4.3 11 3v8H2V4.3Zm10-1.5L22 1v10H12V2.8ZM2 12h9v8l-9-1.3V12Zm10 0h10v10l-10-1.6V12Z"/></svg><span class="af-sr-only">Windows</span></a>
       <p id="afDownloadStatus" role="status">Recherche des versions disponibles…</p>
-      <button id="afDownloadIos" class="af-download-ios" type="button">Installer sur iPhone (Safari)</button>
+      <button id="afDownloadIos" class="af-download-ios af-platform" type="button" title="Installer sur iPhone avec Safari" aria-label="Installer AfriFloW sur iPhone avec Safari"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path fill="currentColor" d="M17.1 12.1c0-2 1.6-3 1.7-3.1-.9-1.4-2.4-1.6-2.9-1.6-1.3-.2-2.6.8-3.3.8s-1.8-.8-2.9-.8C8.2 7.4 6.8 8.2 6 9.5c-1.7 2.8-.4 7 1.2 9.3.8 1.1 1.6 2.3 2.8 2.2 1.1 0 1.5-.7 2.9-.7s1.8.7 2.9.7c1.2 0 2-1.1 2.7-2.2.9-1.2 1.2-2.4 1.2-2.5-2.5-.9-2.6-3.6-2.6-4.2ZM15.3 5.9c.6-.8 1.1-1.8 1-2.9-1 0-2.1.7-2.8 1.5-.6.7-1.2 1.8-1.1 2.8 1.1.1 2.2-.5 2.9-1.4Z"/></svg><span class="af-sr-only">iPhone</span></button>
     </div>
   </div>
 
@@ -2481,36 +2488,79 @@ function openReq(){
 }
 var prev=window.onRole;
 window.onRole=function(){if(prev)prev();if(loggedUserEmail)AFRI.start(loggedUserEmail,USER_ROLE,USER_NAME);reqUI();if(window.cloudLoad)cloudLoad()};
-  /* --- Connexion via fournisseur externe --- */
-document.querySelectorAll(".oauth").forEach(function(b){
-  b.onclick = function(){
-    if(!SB()){ document.getElementById("authError").textContent = "Service indisponible."; return; }
-    SB().auth.signInWithOAuth({provider:b.dataset.p, options:{redirectTo:location.origin+location.pathname}});
-  };
-});
-(async function oauthResume(){
-  var h = window.__oauthReturn || "", err = document.getElementById("authError");
-  if(/error_description=/.test(h)){ err.textContent = "Connexion refusée ou annulée."; history.replaceState(null,"",location.pathname); return; }
-  if(!/access_token=/.test(h) || !SB()) return;
-  try{
-    var us = null;
-    for(var i = 0; i < 10 && !us; i++){
-      var r = await SB().auth.getSession(); us = r.data && r.data.session && r.data.session.user;
-      if(!us) await new Promise(function(ok){ setTimeout(ok, 300); });
-    }
-    if(!us || !us.email) return;
-    var x = await finish(us);
-    history.replaceState(null,"",location.pathname);
-    enterApp(x.email, x.role, x.name, x.grants);
-    recordUserAction("Connexion via " + ((us.app_metadata && us.app_metadata.provider) || "fournisseur externe"));
-  }catch(e){ err.textContent = fail(e); }
-})();
-window.AFRI=AFRI;
-/* Reprise de session : seulement si l'activité date de moins de 15 min ; sinon on ferme la session serveur */
-if(!/access_token=/.test(window.__oauthReturn || "")){
-  if(window.__resume) AFRI.resume().then(function(ok){ if(!ok){ try{ localStorage.removeItem(SESSION_KEY); }catch(e){} } });
-  else AFRI.signOut();
+  /* --- Connexion OAuth : erreurs affichées et reprise de session après redirection --- */
+var oauthBusy = false;
+var oauthReturning = /(?:^|[?#&])(?:code|access_token|error|error_description)=/.test(
+  (window.__oauthQuery || '') + '&' + (window.__oauthReturn || '')
+);
+function oauthError(message) {
+  var el = document.getElementById('authError');
+  if (el) el.textContent = message || 'Connexion externe impossible.';
 }
+function oauthRedirect() { return location.origin + location.pathname; }
+async function loginOAuth(provider) {
+  if (!SB()) { oauthError('Service de connexion indisponible. Rechargez la page.'); return; }
+  if (oauthBusy) return;
+  oauthBusy = true;
+  oauthError('');
+  try {
+    var options = { redirectTo: oauthRedirect() };
+    if (provider === 'azure') options.scopes = 'email';
+    var response = await SB().auth.signInWithOAuth({provider:provider, options:options});
+    if (response.error) throw response.error;
+    if (!response.data || !response.data.url) throw new Error('Aucune redirection OAuth reçue. Vérifiez la configuration du fournisseur dans Supabase.');
+  } catch (error) {
+    oauthBusy = false;
+    oauthError('Connexion ' + provider + ' : ' + fail(error));
+  }
+}
+window.afriOAuthLogin = loginOAuth;
+document.querySelectorAll('.oauth').forEach(function(button) {
+  button.onclick = function() { loginOAuth(button.dataset.p); };
+});
+var oauthHandled = false;
+async function finishOAuthUser(user) {
+  if (oauthHandled || !user || !user.email) return;
+  oauthHandled = true;
+  try {
+    var info = await finish(user);
+    enterApp(info.email, info.role, info.name, info.grants);
+    recordUserAction('Connexion via ' + ((user.app_metadata && user.app_metadata.provider) || 'fournisseur externe'));
+    if (oauthReturning) history.replaceState(null, '', location.pathname);
+  } catch (error) {
+    oauthHandled = false;
+    oauthError('Compte connecté, mais ouverture AfriFloW impossible : ' + fail(error));
+  }
+}
+(async function oauthResume() {
+  if (!SB()) return;
+  var params = new URLSearchParams((window.__oauthReturn || '').replace(/^#/, ''));
+  var query = new URLSearchParams((window.__oauthQuery || '').replace(/^\?/, ''));
+  var oauthFailure = params.get('error_description') || query.get('error_description') ||
+                     params.get('error') || query.get('error');
+  if (oauthFailure) {
+    oauthError('Connexion externe refusée : ' + oauthFailure);
+    return;
+  }
+  if (oauthReturning) {
+    // Supabase peut récupérer une session OAuth depuis le fragment ou un code PKCE.
+    for (var attempt = 0; attempt < 16 && !oauthHandled; attempt++) {
+      var result = await SB().auth.getSession();
+      if (result.error) { oauthError('Session OAuth : ' + fail(result.error)); break; }
+      var user = result.data && result.data.session && result.data.session.user;
+      if (user) { await finishOAuthUser(user); break; }
+      await new Promise(function(resolve) { setTimeout(resolve, 350); });
+    }
+    if (!oauthHandled && !document.getElementById('authError').textContent) {
+      oauthError('Retour de connexion reçu, mais aucune session. Vérifiez les fournisseurs et les URL de redirection dans Supabase.');
+    }
+  } else if (window.__resume) {
+    AFRI.resume().then(function(ok) {
+      if (!ok) { try { localStorage.removeItem(SESSION_KEY); } catch (e) {} }
+    });
+  }
+})();
+window.AFRI = AFRI;
 })();
 </script>
 
@@ -4337,7 +4387,7 @@ if(fb&&!document.querySelector('.oauth[data-p="azure"]')){
   fb.after(mb);
   mb.onclick=function(){
     if(!SB()){$("authError").textContent="Service indisponible.";return}
-    SB().auth.signInWithOAuth({provider:"azure",options:{redirectTo:location.origin+location.pathname,scopes:"email"}});
+    if (window.afriOAuthLogin) window.afriOAuthLogin("azure");
   };
 }
 
