@@ -87,7 +87,7 @@
     } catch(e) {}
   }
   function notifyNative(title,body,teamsUrl) {
-    if(!window.AfriFlowNative || !document.hidden) return false;
+    if(!window.AfriFlowNative || !window.AfriFlowNative.isBackground || !window.AfriFlowNative.isBackground()) return false;
     try {
       window.AfriFlowNative.notify({title:title,body:body,teamsUrl:teamsUrl||''});
       return true;
