@@ -91,7 +91,7 @@
       var data=await window.__sb.auth.getSession();
       var session=data.data?.session;
       if(!session?.access_token||String(session.user?.email||'').toLowerCase()!==who)return;
-      window.AfriFlowAndroid.enablePush(session.access_token);
+      window.AfriFlowAndroid.postMessage(JSON.stringify({action:'enablePush',accessToken:session.access_token}));
     }catch(e){status('Inscription Android indisponible : '+e.message);}
   }
   async function autoRegister(){
