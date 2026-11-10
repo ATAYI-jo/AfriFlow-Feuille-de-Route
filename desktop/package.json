@@ -16,7 +16,8 @@
     "productName": "AfriFloW",
     "files": [
       "main.js",
-      "package.json"
+      "package.json",
+      "assets/**/*"
     ],
     "directories": {
       "output": "dist"
@@ -25,11 +26,15 @@
       "target": [
         "nsis"
       ],
-      "artifactName": "AfriFloW-Windows-Setup.exe"
+      "artifactName": "AfriFloW-Windows-Setup.exe",
+      "icon": "assets/icon.ico"
     },
     "nsis": {
       "oneClick": false,
-      "allowToChangeInstallationDirectory": true
+      "allowToChangeInstallationDirectory": true,
+      "installerIcon": "assets/icon.ico",
+      "uninstallerIcon": "assets/icon.ico",
+      "installerHeaderIcon": "assets/icon.ico"
     }
   }
 }

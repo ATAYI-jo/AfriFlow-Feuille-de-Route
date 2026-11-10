@@ -1,4 +1,5 @@
 const { app, BrowserWindow, shell } = require('electron');
+const path = require('path');
 const HOME = 'https://afriflow-africa.onrender.com/';
 const allowed = new Set(['afriflow-africa.onrender.com','atayi-jo.github.io']);
 function safeUrl(url) {
@@ -9,6 +10,7 @@ function start() {
   const win = new BrowserWindow({
     width: 1200, height: 840, minWidth: 360, minHeight: 540,
     title: 'AfriFloW', autoHideMenuBar: true,
+    icon: path.join(__dirname, 'assets', 'icon.png'),
     webPreferences: { nodeIntegration: false, contextIsolation: true, sandbox: true }
   });
   win.webContents.setWindowOpenHandler(({url}) => {

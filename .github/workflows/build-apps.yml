@@ -8,6 +8,8 @@ on:
     paths:
       - 'desktop/**'
       - 'android/**'
+      - 'tools/generate_app_icons.py'
+      - 'logo.png'
       - '.github/workflows/build-apps.yml'
 jobs:
   android:
@@ -34,6 +36,13 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.9'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Generate AfriFloW Android launcher icons
+        run: |
+          python -m pip install Pillow==11.3.0
+          python tools/generate_app_icons.py
       - name: Build installable test APK
         run: gradle -p android assembleDebug --no-daemon
       - uses: actions/upload-artifact@v4
@@ -51,6 +60,13 @@ jobs:
       - name: Install dependencies
         working-directory: desktop
         run: npm install --no-audit --no-fund
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Generate AfriFloW Windows icons
+        run: |
+          python -m pip install Pillow==11.3.0
+          python tools/generate_app_icons.py
       - name: Build Windows installer
         working-directory: desktop
         run: npm run dist
