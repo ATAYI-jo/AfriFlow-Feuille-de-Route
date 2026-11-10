@@ -24,16 +24,18 @@
     if (ring) return;
     // No floating alert toggle. Notification preference is collected during first use.
     toast = element('div',{id:'af-alert-toast',role:'status','aria-live':'polite'},document.body);
-    ring = element('div',{id:'af-meet-call',role:'dialog','aria-modal':'true','aria-labelledby':'af-meet-title',hidden:''},document.body);
+    ring = element('div',{id:'af-meet-call',role:'alertdialog','aria-modal':'true','aria-labelledby':'af-meet-title',hidden:''},document.body);
     var panel=element('div',{id:'af-meet-panel'},ring);
+    element('div',{id:'af-meet-incoming',text:'Appel entrant'},panel);
     element('img',{src:'./logo.png',alt:'AfriFloW'},panel);
-    element('h2',{id:'af-meet-title',text:'Réunion AfriFloW'},panel);
+    element('h2',{id:'af-meet-title',text:'Appel Teams entrant'},panel);
+    element('p',{id:'af-meet-source',text:'AfriFloW · via Teams'},panel);
     element('p',{id:'af-meet-info'},panel);
     element('p',{id:'af-meet-time'},panel);
     var actions=element('div',{id:'af-meet-actions'},panel);
-    var decline=element('button',{type:'button',id:'af-meet-reject',text:'✕ Rejeter'},actions);
-    var accept=element('button',{type:'button',id:'af-meet-accept',text:'✓ Prendre'},actions);
-    element('small',{text:'Sonnerie et alertes disponibles lorsque AfriFloW est ouvert.'},panel);
+    var decline=element('button',{type:'button',id:'af-meet-reject','aria-label':'Refuser l’appel Teams',text:'Refuser'},actions);
+    var accept=element('button',{type:'button',id:'af-meet-accept','aria-label':'Répondre et ouvrir Teams',text:'Répondre'},actions);
+    element('small',{text:'Répondre ouvre Teams. Sonnerie et alertes disponibles lorsque AfriFloW est actif.'},panel);
     decline.addEventListener('click',endCall);
     accept.addEventListener('click',function(){
       var m=activeMeeting;endCall();
@@ -86,10 +88,10 @@
       });
     } catch(e) {}
   }
-  function notifyNative(title,body,teamsUrl) {
+  function notifyNative(title,body,teamsUrl,meetingTitle) {
     if(!window.AfriFlowNative || !window.AfriFlowNative.isBackground || !window.AfriFlowNative.isBackground()) return false;
     try {
-      window.AfriFlowNative.notify({title:title,body:body,teamsUrl:teamsUrl||''});
+      window.AfriFlowNative.notify({title:title,body:body,teamsUrl:teamsUrl||'',meetingTitle:meetingTitle||''});
       return true;
     }catch(e) { return false; }
   }
@@ -118,22 +120,34 @@
     clearInterval(ringTimer);
     ringTimer=null;
   }
-  function callMeeting(m,url) {
-    if (!enabled || !ring || !ring.hidden) return;
-    if(seen('meet_'+m.id))return;
-    if(notifyNative('Réunion AfriFloW : '+(m.title||'Réunion'),
-      'La réunion commence. Cliquez pour rejoindre Teams.',url))return;
+  function showMeetingCall(m,url) {
+    if (!ring || !ring.hidden || !/^https:\/\//i.test(url)) return;
     activeMeeting={url:url};
     document.getElementById('af-meet-info').textContent=m.title||'Réunion en ligne';
-    document.getElementById('af-meet-time').textContent=new Date(+m.start).toLocaleString('fr-FR',{dateStyle:'long',timeStyle:'short'});
+    document.getElementById('af-meet-time').textContent=m.start
+      ? new Date(+m.start).toLocaleString('fr-FR',{dateStyle:'long',timeStyle:'short'})
+      : 'Prête à rejoindre maintenant';
     ring.hidden=false;
     document.getElementById('af-meet-accept').focus();
     tone('call');
     ringTimer=setInterval(function(){if(!ring.hidden)tone('call')},2800);
     setTimeout(function(){if(!ring.hidden)endCall()},120000);
     if('Notification' in window && Notification.permission==='granted'){
-      try {new Notification('Réunion AfriFloW : '+(m.title||''),{body:'La réunion commence. Ouvrez AfriFloW pour répondre.',icon:'./logo.png',tag:'af-meeting-'+m.id})}catch(e){}
+      try {new Notification('Appel Teams entrant',{body:(m.title||'Réunion AfriFloW')+' · Ouvrez AfriFloW pour répondre.',icon:'./logo.png',tag:'af-meeting-'+(m.id||'now')})}catch(e){}
     }
+  }
+  function callMeeting(m,url) {
+    if (!enabled || !ring || !ring.hidden) return;
+    if(seen('meet_'+m.id))return;
+    if(notifyNative('Appel Teams entrant',
+      (m.title||'Réunion AfriFloW')+' · Cliquez pour répondre ou refuser.',url,m.title||''))return;
+    showMeetingCall(m,url);
+  }
+  if(window.AfriFlowNative && typeof window.AfriFlowNative.onIncomingMeeting==='function'){
+    window.AfriFlowNative.onIncomingMeeting(function(details){
+      if(!details || !/^https:\/\//i.test(String(details.teamsUrl||'')))return;
+      showMeetingCall({title:String(details.title||'Réunion AfriFloW'),id:'windows-'+Date.now()},String(details.teamsUrl));
+    });
   }
   async function poll() {
     if (busy) return;

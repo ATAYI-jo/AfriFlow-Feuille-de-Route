@@ -61,13 +61,17 @@ function notifyFromRenderer(event, details) {
   const title = String(details.title || 'AfriFloW').slice(0, 120);
   const body = String(details.body || '').slice(0, 350);
   const teams = teamsUrl(String(details.teamsUrl || ''));
+  const meetingTitle = String(details.meetingTitle || '').slice(0, 160);
   const notification = new Notification({
     title, body, icon: path.join(__dirname,'assets','icon.png'),
     silent: false
   });
   notification.on('click', () => {
     reveal();
-    if (teams) shell.openExternal(teams).catch(()=>{});
+    // Keep the decision visible: the user can answer or decline before Teams opens.
+    if (teams && win && !win.isDestroyed()) {
+      win.webContents.send('afriflow:incoming-meeting', { title: meetingTitle || title, teamsUrl: teams });
+    }
   });
   notification.show();
 }

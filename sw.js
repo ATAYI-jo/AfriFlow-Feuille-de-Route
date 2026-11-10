@@ -26,7 +26,7 @@ self.addEventListener('push', function(event){
       tag:String(data.tag||'afriflow').slice(0,150),
       renotify:true,
       data:{url:url,teamsUrl:teamsUrl,kind:data.kind||''},
-      actions:teamsUrl?[{action:'join',title:'Rejoindre Teams'}]:[],
+      actions:teamsUrl?[{action:'join',title:'Répondre dans Teams'}]:[],
     });
   })());
 });
