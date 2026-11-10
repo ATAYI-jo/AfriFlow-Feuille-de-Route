@@ -17,8 +17,8 @@ dependencies {
     implementation 'androidx.core:core:1.15.0'
     implementation 'androidx.webkit:webkit:1.12.1'
 }
-// Firebase is enabled only when the real project's google-services.json is provided.
-// Builds without it remain installable but CANNOT receive background FCM notifications.
-if (file('google-services.json').exists()) {
-    apply plugin: 'com.google.gms.google-services'
+// Native notifications require Firebase. Never publish an APK with push silently disabled.
+if (!file('google-services.json').exists()) {
+    throw new GradleException('AfriFloW Android: google-services.json missing. Configure AFRIFLOW_FIREBASE_GOOGLE_SERVICES_JSON_B64 in GitHub Actions before building.')
 }
+apply plugin: 'com.google.gms.google-services'
