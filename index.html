@@ -6832,9 +6832,6 @@ window.dvWordEdit=function(path,orig){
 #profilePanel .profile-tabs button{min-width:0;white-space:normal;line-height:1.25;text-align:center}
 #profilePanel .avatar-choice{grid-template-columns:repeat(6,minmax(0,1fr));min-width:0}
 #profilePanel .avatar-choice button{min-width:0;aspect-ratio:1;touch-action:manipulation}
-#profilePanel .pf-flat{background:none!important;color:inherit;border-color:rgba(39,75,54,.16);box-shadow:0 2px 9px rgba(0,0,0,.10)}
-#profilePanel .pf-flat svg,#sideAvatar .pf-flat svg,.member-card .pf-flat svg{width:100%;height:100%;display:block;stroke:none;fill:none}
-#sideAvatar .pf-flat,.member-card .pf-flat{background:none!important}
 body.af-profile-open{overflow:hidden}
 body.af-profile-open #afCloudSyncBadge{visibility:hidden!important}
 @media(max-width:720px){
@@ -6869,7 +6866,7 @@ body.af-profile-open #afCloudSyncBadge{visibility:hidden!important}
 .side-profile{border:0!important;padding:0!important;background:transparent!important;box-shadow:none!important;flex:none}
 #sideAvatar,.pf-avatar{display:grid;place-items:center;width:46px;height:46px;overflow:hidden;border-radius:50%;background:linear-gradient(135deg,#e6f0e8,#c8dfcd);color:var(--green);border:2px solid color-mix(in srgb,var(--green) 36%,#fff);box-shadow:0 3px 12px rgba(17,63,38,.16)}
 #sideAvatar .ic{width:25px;height:25px}#sideAvatar .pf-avatar{width:100%;height:100%;border:0;box-shadow:none}.side-profile.needs-profile #sideAvatar{outline:3px solid color-mix(in srgb,var(--amber) 58%,transparent);outline-offset:3px}
-.pf-avatar{width:58px;height:58px;flex:none}.pf-avatar img{width:100%;height:100%;object-fit:cover}.pf-flat{color:#fff}.pf-flat svg{width:72%;height:72%;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}.pf-flat.forest{background:linear-gradient(135deg,#12644a,#56a66e)}.pf-flat.ocean{background:linear-gradient(135deg,#166e8a,#73c5d4)}.pf-flat.sunset{background:linear-gradient(135deg,#b65332,#e6a64c)}.pf-flat.sand{background:linear-gradient(135deg,#91723f,#d3b66d)}.pf-flat.violet{background:linear-gradient(135deg,#5d4b89,#a78ccb)}.pf-flat.copper{background:linear-gradient(135deg,#8d4335,#d77a56)}
+.pf-avatar{width:58px;height:58px;flex:none}.pf-avatar img{width:100%;height:100%;object-fit:cover;background:#edf4ef}
 .profile-panel{position:fixed;inset:0;z-index:1400;display:flex;flex-direction:column;visibility:hidden;pointer-events:none;transform:translateX(-100%);background:var(--bg);color:var(--ink);transition:transform .34s ease,visibility 0s linear .34s;overflow:auto}.profile-panel.open{visibility:visible;pointer-events:auto;transform:translateX(0);transition-delay:0s}.profile-top{position:sticky;top:0;z-index:2;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:max(16px,env(safe-area-inset-top)) clamp(18px,5vw,72px) 16px;background:color-mix(in srgb,var(--bg) 90%,transparent);backdrop-filter:blur(18px);border-bottom:1px solid var(--line)}.profile-top h2{margin:0;font-size:clamp(1.2rem,3vw,1.7rem)}.profile-close{display:inline-flex!important;align-items:center;gap:8px}.profile-close .ic{width:18px;height:18px}.profile-main{width:min(1120px,100%);margin:0 auto;padding:clamp(20px,5vw,56px) clamp(16px,5vw,72px) 56px}.profile-tabs{display:flex;gap:8px;margin:0 0 20px;flex-wrap:wrap}.profile-tabs button.on{background:var(--green)!important;color:#fff!important;border-color:var(--green)!important}.profile-grid{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(270px,.65fr);gap:24px}.profile-card{border:1px solid var(--line);border-radius:18px;padding:clamp(16px,3vw,28px);background:var(--card);box-shadow:0 10px 28px rgba(18,55,34,.08)}.profile-card h3{margin:0 0 8px}.profile-note{margin:0 0 18px;color:var(--muted);line-height:1.55}.profile-status{margin:0 0 18px;padding:11px 13px;border-left:4px solid var(--amber);border-radius:8px;background:color-mix(in srgb,var(--amber) 11%,var(--card));font-size:.92rem}.profile-form{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:13px}.profile-form label{display:flex;flex-direction:column;gap:6px;font-size:.84rem;font-weight:700;color:var(--muted)}.profile-form input,.profile-form textarea,.profile-form select{font:inherit;color:var(--ink)}.profile-form .wide{grid-column:1/-1}.profile-form textarea{min-height:82px;resize:vertical}.avatar-choice{display:grid;grid-template-columns:repeat(6,minmax(44px,1fr));gap:9px;margin:10px 0 4px}.avatar-choice button{display:grid!important;place-items:center;padding:5px!important;border:2px solid transparent!important;background:transparent!important;box-shadow:none!important}.avatar-choice button.selected{border-color:var(--green)!important;background:color-mix(in srgb,var(--green) 8%,transparent)!important}.avatar-choice .pf-avatar{width:46px;height:46px}.profile-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:20px;flex-wrap:wrap}.directory-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px}.member-card{display:flex;align-items:flex-start;gap:12px;border:1px solid var(--line);border-radius:14px;padding:14px;background:var(--card)}.member-card .pf-avatar{width:48px;height:48px}.member-card b,.member-card small{display:block}.member-card small{color:var(--muted);margin-top:3px}.m-preview{position:fixed;inset:0;z-index:1600;display:grid;place-items:center;padding:18px;background:rgba(12,28,19,.62);backdrop-filter:blur(7px)}.m-preview-card{width:min(900px,100%);max-height:92vh;display:flex;flex-direction:column;border-radius:16px;background:var(--card);color:var(--ink);box-shadow:0 20px 64px rgba(0,0,0,.34);overflow:hidden}.m-preview-head,.m-preview-actions{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 16px;border-bottom:1px solid var(--line)}.m-preview-actions{justify-content:flex-end;border-bottom:0;border-top:1px solid var(--line)}.m-preview-body{min-height:180px;overflow:auto;padding:16px;background:color-mix(in srgb,var(--ink) 3%,var(--card))}.m-preview-body img{display:block;max-width:100%;max-height:68vh;margin:auto}.m-preview-body iframe{display:block;width:100%;height:68vh;border:0;background:#fff}.m-preview-body pre{margin:0;white-space:pre-wrap;overflow-wrap:anywhere;font:13px ui-monospace,SFMono-Regular,Consolas,monospace}.file-actions{display:flex;gap:7px;align-items:center;flex-wrap:wrap}.file-actions button{padding:6px 9px!important;font-size:.82rem!important}
 .profile-reminder{position:fixed;z-index:890;right:18px;bottom:86px;max-width:min(360px,calc(100vw - 36px));display:flex!important;align-items:flex-start!important;gap:9px!important;text-align:left!important;padding:11px 13px!important;border-radius:13px!important;background:var(--card)!important;color:var(--ink)!important;border:1px solid color-mix(in srgb,var(--amber) 55%,var(--line))!important;box-shadow:0 10px 30px rgba(18,55,34,.18)!important}.profile-reminder strong,.profile-reminder span{display:block}.profile-reminder span{font-size:.81rem;color:var(--muted);font-weight:400;line-height:1.35}
 @media(max-width:720px){.profile-grid{grid-template-columns:1fr}.profile-form{grid-template-columns:1fr}.profile-top{padding-left:16px;padding-right:16px}.avatar-choice{grid-template-columns:repeat(6,1fr)}.profile-main{padding:20px 14px 34px}.m-preview{padding:8px}.m-preview-body iframe{height:60vh}}
@@ -6881,39 +6878,13 @@ body.af-profile-open #afCloudSyncBadge{visibility:hidden!important}
 <script>
 (function(){
 "use strict";
-var $=function(id){return document.getElementById(id)},flat=["forest","ocean","sunset","sand","violet","copper"],current=null,chosen={kind:"flat",value:"forest"};
+var $=function(id){return document.getElementById(id)},portraitVariants=["01","02","03","04","05","06"],current=null,chosen={kind:"dicebear",value:""};
 function esc(s){return String(s==null?"":s).replace(/[&<>\"']/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]})}
 function photo(v){return typeof v==="string"&&/^data:image\/(png|jpe?g|webp);base64,/i.test(v)}
+function diceUrl(seed){return "https://api.dicebear.com/10.x/lorelei/svg?seed="+encodeURIComponent(seed||"afriflow")}
 function avatar(kind,value,label){
   if(kind==="photo"&&photo(value))return '<span class="pf-avatar"><img src="'+value+'" alt="'+esc(label||"Photo de profil")+'"></span>';
-  // Stable 2D portraits: preserve existing avatar_value stored for each member.
-  var c=flat.indexOf(value)>=0?value:"forest";
-  var portraits={
-    forest:{bg:"#ede1db",skin:"#bf7e58",hair:"#2a2528",shirt:"#537b55",style:0},
-    ocean:{bg:"#eadbd9",skin:"#f0b58b",hair:"#24232c",shirt:"#ed6e53",style:1},
-    sunset:{bg:"#ede4dc",skin:"#c7835f",hair:"#292126",shirt:"#eeb54e",style:2},
-    sand:{bg:"#e8ddd8",skin:"#dfaa81",hair:"#4b302c",shirt:"#a27d71",style:3},
-    violet:{bg:"#ebdfdd",skin:"#9e5b43",hair:"#242128",shirt:"#7465b6",style:4},
-    copper:{bg:"#eee0d8",skin:"#f3b39a",hair:"#a84437",shirt:"#d86a49",style:5}
-  };
-  var d=portraits[c],hair=[
-    '<path d="M16 30C9 18 14 8 25 8c11 0 16 8 13 22-2-10-5-13-13-13-7 0-10 4-9 13Z"/>',
-    '<path d="M11 54c-3-10-1-27 5-37C22 5 36 7 41 17c4 10 5 27 2 37H34V23c-4-6-12-8-17 0v31Z"/>',
-    '<path d="M12 24c-3-12 8-18 16-17 7 1 14 7 12 17-5-2-9-5-10-10-4 6-10 8-18 10Z"/><circle cx="15" cy="11" r="6"/><circle cx="23" cy="9" r="7"/>',
-    '<path d="M13 27c-4-12 5-21 17-19 12 1 14 12 10 20-4-8-8-11-15-12-4 6-8 7-12 11Z"/>',
-    '<path d="M11 49c-5-11-5-29 4-36 9-9 24-5 29 7 5 10 4 20 1 29h-8V27c-4-7-12-8-19-2v24Z"/>',
-    '<path d="M13 28c-4-11 3-20 14-20 9 0 14 6 14 15-5-3-9-9-10-13-4 7-11 13-18 18Z"/><circle cx="32" cy="7" r="8"/>'
-  ][d.style];
-  var svg='<svg viewBox="0 0 64 64" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg">'
-    +'<circle cx="32" cy="32" r="32" fill="'+d.bg+'"/>'
-    +'<path d="M4 64c3-17 13-23 28-23s25 6 28 23" fill="'+d.shirt+'"/>'
-    +'<path d="M27 39h10v10c-3 4-7 4-10 0Z" fill="'+d.skin+'"/>'
-    +'<path d="M18 29c0-11 6-17 14-17s14 6 14 17c0 12-6 20-14 20s-14-8-14-20Z" fill="'+d.skin+'"/>'
-    +'<g fill="'+d.hair+'">'+hair+'</g>'
-    +'<g fill="#2d2728"><circle cx="26" cy="30" r="1.2"/><circle cx="38" cy="30" r="1.2"/></g>'
-    +'<path d="M28 38q4 3 8 0" fill="none" stroke="#92564b" stroke-width="1.5" stroke-linecap="round"/>'
-    +'</svg>';
-  return '<span class="pf-avatar pf-flat '+c+'" role="img" aria-label="'+esc(label||"Avatar illustré")+'">'+svg+'</span>';
+  return '<span class="pf-avatar"><img src="'+diceUrl(value)+'" alt="'+esc(label||"Portrait généré")+'" referrerpolicy="no-referrer"></span>';
 }
 function close(){var p=$("profilePanel");p.classList.remove("open");p.setAttribute("aria-hidden","true");document.body.classList.remove("af-profile-open");var b=$("profileOpen");if(b)b.focus()}
 function dayText(d){var n=Math.ceil((new Date(d).getTime()-Date.now())/86400000);return n<0?"Le délai est dépassé.":n===0?"Le délai se termine aujourd’hui.":"Il reste "+n+" jour"+(n>1?"s":"")+"."}
@@ -6921,7 +6892,7 @@ function localName(){return String(window.USER_NAME||"").trim().split(/\s+/)[0]|
 function updateHeader(p,d){
   var first=(p&&p.first_name)||localName(),g=$("sideGreeting"),a=$("sideAvatar"),b=$("profileOpen");
   if(g)g.textContent=first?"Hey "+first:"Hey";
-  if(a)a.innerHTML=avatar((d&&d.avatar_kind)||"flat",(d&&d.avatar_value)||"forest",first);
+  if(a)a.innerHTML=avatar((d&&d.avatar_kind)||"dicebear",(d&&d.avatar_value)||"afriflow",first);
   var incomplete=!(p&&p.profile_completed_at&&d&&d.avatar_kind);if(b)b.classList.toggle("needs-profile",!!window.loggedUserEmail&&incomplete);
   updateReminder(incomplete,p&&p.profile_due_at);
 }
@@ -6937,11 +6908,13 @@ async function load(){
   if(pr.error)throw pr.error;if(di.error)throw di.error;
   current={user:user,profile:pr.data||{},directory:di.data||{}};
   var name=String((current.profile.first_name||"")+" "+(current.profile.last_name||"")).trim()||String(window.USER_NAME||"");
-  chosen={kind:current.directory.avatar_kind||"flat",value:current.directory.avatar_value||"forest"};updateHeader(current.profile,current.directory);
+  var storedSeed=current.directory.avatar_value||"";
+  if(!storedSeed||storedSeed===current.user.id)storedSeed=current.user.id+"-lorelei-01";
+  chosen={kind:current.directory.avatar_kind||"dicebear",value:storedSeed};updateHeader(current.profile,current.directory);
   return {name:name};
 }
 function field(label,id,value,type,wide,ph){return '<label class="'+(wide?"wide":"")+'">'+label+'<input id="pf_'+id+'" type="'+(type||"text")+'" value="'+esc(value||"")+'" placeholder="'+esc(ph||"")+'"></label>'}
-function avatarChoices(){return '<div class="avatar-choice" id="pfAvatars">'+flat.map(function(c){return '<button type="button" data-avatar="'+c+'"'+(chosen.kind==="flat"&&chosen.value===c?' class="selected"':'')+' aria-label="Avatar '+c+'">'+avatar("flat",c,"")+'</button>'}).join("")+'</div>'}
+function avatarChoices(){var base=current&&current.user&&current.user.id||"afriflow";return '<div class="avatar-choice" id="pfAvatars">'+portraitVariants.map(function(n){var seed=base+"-lorelei-"+n;return '<button type="button" data-avatar="'+esc(seed)+'"'+(chosen.kind==="dicebear"&&chosen.value===seed?' class="selected"':'')+' aria-label="Portrait généré '+n+'">'+avatar("dicebear",seed,"Portrait généré "+n)+'</button>'}).join("")+'</div>'}
 function profilePage(){
   var p=current.profile,d=current.directory,complete=!!p.profile_completed_at&&!!d.avatar_kind,notice=complete?'Votre profil est complet. Vous pourrez le modifier à tout moment.':'Complétez les informations demandées et choisissez un avatar. '+dayText(p.profile_due_at||new Date(Date.now()+15*86400000).toISOString());
   $("profileMain").innerHTML='<div class="profile-tabs"><button type="button" class="on" data-profile-tab="me">Mon profil</button><button type="button" data-profile-tab="directory">Annuaire des membres</button></div><div class="profile-grid"><section class="profile-card"><h3>Mes informations</h3><p class="profile-status">'+esc(notice)+'</p><p class="profile-note">Le nom, la fonction, le pays, la ville et l’avatar sont visibles dans l’annuaire. Les coordonnées personnelles restent privées.</p><div class="profile-form">'
@@ -6950,7 +6923,7 @@ function profilePage(){
     +field("Pays *","country",p.country||d.country,"text",false,"Ex. Togo")+field("Ville *","city",p.city||d.city,"text",false,"Ex. Lomé")+field("Adresse *","address",p.address,"text",true,"Quartier, rue, numéro")
     +field("Fonction","job",p.job_title||d.job_title,"text",false,"Ex. Responsable export")+field("Département","department",p.department||d.department,"text",false,"Ex. Opérations")+field("Organisation","organization",p.organization||d.organization,"text",true,"Ex. AfriFloW")
     +field("Langues","languages",p.languages,"text",true,"Ex. Français, anglais")+field("Contact d’urgence","emergencyName",p.emergency_name,"text",false,"Nom")+field("Téléphone d’urgence","emergencyPhone",p.emergency_phone,"tel",false,"Numéro")
-    +'<label class="wide">Présentation publique<textarea id="pf_bio" maxlength="360" placeholder="Présentez brièvement votre expertise ou votre rôle.">'+esc(d.bio||"")+'</textarea></label><div class="wide"><b style="font-size:.84rem;color:var(--muted)">Avatar * </b>'+avatarChoices()+'<label style="margin-top:10px">ou ajouter une photo publique<input id="pf_photo" type="file" accept="image/png,image/jpeg,image/webp"></label><small style="display:block;color:var(--muted);margin-top:5px">La photo est réduite automatiquement avant l’enregistrement.</small></div></div><div id="pfErr" role="alert" style="color:#b43b35;min-height:1.3em;margin-top:12px"></div><div class="profile-actions"><button type="button" id="pfSave" class="p">Enregistrer mon profil</button></div></section><aside class="profile-card"><h3>Informations proposées</h3><p class="profile-note">Pour un profil professionnel utile, vous pouvez aussi renseigner :</p><ul style="line-height:1.65;margin:0;padding-left:19px"><li>fonction et département ;</li><li>organisation et langues ;</li><li>ville et pays ;</li><li>une courte présentation ;</li><li>un contact d’urgence privé.</li></ul></aside></div>';
+    +'<label class="wide">Présentation publique<textarea id="pf_bio" maxlength="360" placeholder="Présentez brièvement votre expertise ou votre rôle.">'+esc(d.bio||"")+'</textarea></label><div class="wide"><b style="font-size:.84rem;color:var(--muted)">Portrait généré DiceBear * </b>'+avatarChoices()+'<label style="margin-top:10px">ou ajouter une photo publique<input id="pf_photo" type="file" accept="image/png,image/jpeg,image/webp"></label><small style="display:block;color:var(--muted);margin-top:5px">Les portraits générés utilisent DiceBear Lorelei. La photo est réduite automatiquement avant l’enregistrement.</small></div></div><div id="pfErr" role="alert" style="color:#b43b35;min-height:1.3em;margin-top:12px"></div><div class="profile-actions"><button type="button" id="pfSave" class="p">Enregistrer mon profil</button></div></section><aside class="profile-card"><h3>Informations proposées</h3><p class="profile-note">Pour un profil professionnel utile, vous pouvez aussi renseigner :</p><ul style="line-height:1.65;margin:0;padding-left:19px"><li>fonction et département ;</li><li>organisation et langues ;</li><li>ville et pays ;</li><li>une courte présentation ;</li><li>un contact d’urgence privé.</li></ul></aside></div>';
   bindProfile();
 }
 function directoryPage(){
@@ -6961,13 +6934,13 @@ function directoryPage(){
 function readPhoto(file){return new Promise(function(resolve,reject){var r=new FileReader();r.onload=function(){var im=new Image();im.onload=function(){var s=Math.min(1,320/Math.max(im.width,im.height)),c=document.createElement("canvas");c.width=Math.max(1,Math.round(im.width*s));c.height=Math.max(1,Math.round(im.height*s));c.getContext("2d").drawImage(im,0,0,c.width,c.height);resolve(c.toDataURL("image/jpeg",.82))};im.onerror=function(){reject(new Error("Photo illisible."))};im.src=r.result};r.onerror=function(){reject(new Error("Lecture de la photo impossible."))};r.readAsDataURL(file)})}
 function bindProfile(){
   $("profileMain").querySelectorAll("[data-profile-tab]").forEach(function(b){b.onclick=function(){directoryPage()}});
-  $("pfAvatars").onclick=function(e){var b=e.target.closest("[data-avatar]");if(!b)return;chosen={kind:"flat",value:b.dataset.avatar};$("pfAvatars").innerHTML=avatarChoices().replace(/^[\s\S]*?<div[^>]*>|<\/div>$/g,"")};
+  $("pfAvatars").onclick=function(e){var b=e.target.closest("[data-avatar]");if(!b)return;chosen={kind:"dicebear",value:b.dataset.avatar};$("pfAvatars").innerHTML=avatarChoices().replace(/^[\s\S]*?<div[^>]*>|<\/div>$/g,"")};
   $("pf_photo").onchange=function(){var f=this.files[0];if(!f)return;readPhoto(f).then(function(data){chosen={kind:"photo",value:data};$("pfAvatars").querySelectorAll("button").forEach(function(b){b.classList.remove("selected")})}).catch(function(e){$("pfErr").textContent=e.message})};
   $("pfSave").onclick=saveProfile;
 }
 async function saveProfile(){
   var p=current.profile,d=current.directory,err=$("pfErr"),v=function(id){var x=$("pf_"+id);return x?x.value.trim():""},first=v("first"),last=v("last"),phone=v("phone"),birth=v("birth"),country=v("country"),city=v("city"),address=v("address");
-  if(!first||!last||!phone||!birth||!country||!city||!address||!chosen.kind){err.textContent="Renseignez les champs marqués d’un astérisque et choisissez un avatar.";return}
+  if(!first||!last||!phone||!birth||!country||!city||!address||!chosen.kind||!chosen.value){err.textContent="Renseignez les champs marqués d’un astérisque et choisissez un portrait.";return}
   var btn=$("pfSave");btn.disabled=true;err.textContent="";var now=new Date().toISOString(),display=(first+" "+last).trim(),due=p.profile_due_at||new Date(Date.now()+15*86400000).toISOString();
   try{
     var profile={user_id:current.user.id,email:String(current.user.email).toLowerCase(),first_name:first,last_name:last,phone:phone,address:address,birth_date:birth,country:country,city:city,job_title:v("job"),department:v("department"),organization:v("organization"),languages:v("languages"),emergency_name:v("emergencyName"),emergency_phone:v("emergencyPhone"),profile_completed_at:now,profile_due_at:due,updated_at:now};
