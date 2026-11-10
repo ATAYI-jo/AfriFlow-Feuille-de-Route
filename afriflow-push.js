@@ -5,7 +5,7 @@
   'use strict';
   var KEY='afriflow_push_status_v1';
   var URL='https://jgvwdpzevghfavmpjbqp.supabase.co/functions/v1/afriflow-push';
-  var inflight=null;
+  var inflight=null, lastCheck=0;
   function account(){return String(window.loggedUserEmail||'').toLowerCase().trim()}
   function supported(){
     return !!(window.isSecureContext &&
@@ -88,7 +88,34 @@
     var last='';
     try{last=localStorage.getItem(KEY)||''}catch(e){}
     // On another browser/new installation, re-register even when consent exists elsewhere.
-    if(last!==email)await register();
+    if(last!==email || Date.now()-lastCheck>5*60*1000){lastCheck=Date.now();await register();}
+  }
+  async function diagnostics() {
+    var out={secure:window.isSecureContext,supported:supported(),
+      permission:('Notification' in window?Notification.permission:'unsupported'),
+      registered:false,server:false,error:null};
+    if(!out.supported)return out;
+    try{
+      var sw=await navigator.serviceWorker.ready;
+      var sub=await sw.pushManager.getSubscription();
+      out.registered=!!sub;
+      var response=await fetch(URL,{method:'GET',cache:'no-store'});
+      out.server=response.ok;
+    }catch(e){out.error=e.message||String(e)}
+    return out;
+  }
+  async function testNotification() {
+    var result=await register();
+    if(!result.ok) return {ok:false,reason:result.reason};
+    var session=await window.__sb.auth.getSession();
+    var jwt=session.data?.session?.access_token;
+    if(!jwt)return {ok:false,reason:'Aucune session Supabase Auth active.'};
+    var response=await fetch(URL,{method:'POST',headers:{
+      'Content-Type':'application/json','Authorization':'Bearer '+jwt
+    },body:JSON.stringify({action:'test'})});
+    var data=await response.json();
+    return {ok:response.ok && (data.sent>0 || data.already_sent>0),
+      reason:data.error||'',...data};
   }
   function start(){
     // Registration after system permission was expressly approved, not silently at page load.
@@ -98,7 +125,8 @@
     document.addEventListener('visibilitychange',function(){if(!document.hidden)autoRegister()});
     autoRegister();
   }
-  window.AfriFlowPush={subscribe:register,unsubscribe:unregister,supported:supported};
+  window.AfriFlowPush={subscribe:register,unsubscribe:unregister,supported:supported,
+    diagnostics:diagnostics,test:testNotification};
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start);
   else start();
 })();
