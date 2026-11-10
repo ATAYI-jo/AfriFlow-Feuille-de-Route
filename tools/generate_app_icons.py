@@ -5,7 +5,7 @@ Android launchers and desktop docks can mask/crop its edges. We place the
 complete original inside a padded square to preserve the wordmark.
 """
 from pathlib import Path
-from PIL import Image
+from PIL import Image, ImageDraw
 
 ROOT = Path(__file__).resolve().parents[1]
 source = ROOT / "logo.png"
@@ -24,6 +24,14 @@ canvas.alpha_composite(
     logo,
     ((MASTER_SIZE - logo.width) // 2, (MASTER_SIZE - logo.height) // 2),
 )
+# A white, subtly rounded support plate; transparent outside the corners.
+mask = Image.new("L", (MASTER_SIZE, MASTER_SIZE), 0)
+ImageDraw.Draw(mask).rounded_rectangle(
+    (16, 16, MASTER_SIZE - 17, MASTER_SIZE - 17),
+    radius=176,
+    fill=255,
+)
+canvas.putalpha(mask)
 
 windows = ROOT / "desktop" / "assets"
 windows.mkdir(parents=True, exist_ok=True)
