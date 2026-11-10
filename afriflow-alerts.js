@@ -6,7 +6,7 @@
   var sb = null, account = '', firstMessages = true, known = new Set();
   var knownMeetings = new Set(), firstMeetings = true;
   var audio = null, ringTimer = null, activeMeeting = null, lastToast = 0, busy = false;
-  var ring = null, toast = null, toggle = null;
+  var ring = null, toast = null;
   var settingsKey = 'afriflow_alerts_enabled_v1';
   var enabled = false;
   try { enabled = localStorage.getItem(settingsKey) === 'yes'; } catch (e) {}
@@ -22,20 +22,7 @@
   }
   function build() {
     if (ring) return;
-    toggle = element('div',{id:'af-notice-control'},document.body);
-    var b = element('button',{type:'button',text:'🔔 Activer les alertes AfriFloW'},toggle);
-    b.addEventListener('click',async function() {
-      enabled = true;
-      try {localStorage.setItem(settingsKey,'yes')}catch(e){}
-      try {
-        var C = window.AudioContext || window.webkitAudioContext;
-        if (C) {audio = audio || new C(); await audio.resume(); tone('notification');}
-      } catch (e) {}
-      if ('Notification' in window && Notification.permission === 'default') {
-        try { await Notification.requestPermission(); } catch (e) {}
-      }
-      updateButton();
-    });
+    // No floating alert toggle. Notification preference is collected during first use.
     toast = element('div',{id:'af-alert-toast',role:'status','aria-live':'polite'},document.body);
     ring = element('div',{id:'af-meet-call',role:'dialog','aria-modal':'true','aria-labelledby':'af-meet-title',hidden:''},document.body);
     var panel=element('div',{id:'af-meet-panel'},ring);
@@ -67,12 +54,18 @@
   // Browser audio requires a user gesture, even when alert preference is remembered.
   document.addEventListener('pointerdown',unlockAudio,{passive:true});
   document.addEventListener('keydown',unlockAudio);
-  function updateButton() {
-    if (!toggle) return;
-    toggle.style.display = account ? 'block' : 'none';
-    var b=toggle.querySelector('button');
-    if (b) b.textContent = enabled ? '🔔 Alertes AfriFloW activées' : '🔔 Activer les alertes AfriFloW';
+  function enableAlerts() {
+    enabled = true;
+    try { localStorage.setItem(settingsKey,'yes'); } catch(e) {}
+    unlockAudio();
   }
+  function disableAlerts() {
+    enabled = false;
+    try { localStorage.setItem(settingsKey,'no'); } catch(e) {}
+  }
+  window.AfriFlowAlerts = { enable: enableAlerts, disable: disableAlerts,
+    enabled: function(){return enabled} };
+  function updateButton() { /* Preference is managed in first-use consent. */ }
   function tone(type) {
     if (!enabled || !audio) return;
     try {
