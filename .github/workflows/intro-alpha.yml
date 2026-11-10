@@ -1,0 +1,50 @@
+name: AfriFloW - Transparent Intro
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'afriflow-intro.mp4'
+      - '.github/workflows/intro-alpha.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  build-transparent-intro:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+      - name: Install FFmpeg
+        run: |
+          if ! command -v ffmpeg >/dev/null 2>&1; then
+            sudo apt-get update -qq
+            sudo apt-get install -y ffmpeg
+          fi
+          ffmpeg -version | head -n 1
+      - name: Create transparent WebM without changing the motion or audio
+        run: |
+          set -eu
+          test -s afriflow-intro.mp4
+          ffmpeg -hide_banner -loglevel warning -y \
+            -i afriflow-intro.mp4 \
+            -filter_complex "[0:v]format=rgba,colorkey=0xFFFFFF:0.15:0.07,format=yuva420p[v]" \
+            -map "[v]" -map 0:a? \
+            -c:v libvpx-vp9 -pix_fmt yuva420p -auto-alt-ref 0 -b:v 0 -crf 28 -deadline good -cpu-used 4 \
+            -c:a libopus -b:a 128k \
+            -metadata:s:v:0 alpha_mode=1 \
+            afriflow-intro-alpha.webm
+          test -s afriflow-intro-alpha.webm
+          ffprobe -v error -show_entries stream=codec_name,pix_fmt:format=duration -of json afriflow-intro-alpha.webm
+      - name: Preserve source and publish the new transparent video on GitHub Pages
+        run: |
+          set -eu
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add afriflow-intro-alpha.webm
+          if ! git diff --cached --quiet; then
+            git commit -m "build(intro): update transparent AfriFloW animation [skip ci]"
+            git push origin HEAD:main
+          fi
