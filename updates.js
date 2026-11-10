@@ -10,7 +10,7 @@
     './', './updates.js', './document-excel-editor.js',
     './document-permissions.js', './document-urgency.js',
     './afriflow-push.js', './afriflow-alerts.js',
-    './afriflow-first-use.js', './document-excel-editor.js'
+    './afriflow-first-use.js'
   ];
   WATCH = Array.from(new Set(WATCH));
   var lastInput = Date.now();
@@ -26,7 +26,7 @@
     var focused = document.activeElement;
     if (focused && (focused.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(focused.tagName))) return true;
     if (document.querySelector('[contenteditable="true"]:focus, [contenteditable=""]:focus')) return true;
-    if (document.querySelector('.dw-app:not([hidden]), .dw-modal.on, #xm.on, #ov.on, #afExcel, #afPermOverlay, #af-first-use:not([hidden]), [role="dialog"][aria-modal="true"]:not([hidden])')) return true;
+    if (document.querySelector('.dw-app:not([hidden]), .dw-modal.on, #xm.on, #ov.on, #afExcel, #afPermOverlay, #af-first-use:not([hidden]), #auth-screen:not(.off)')) return true;
     return false;
   }
   function safeToReload() {
