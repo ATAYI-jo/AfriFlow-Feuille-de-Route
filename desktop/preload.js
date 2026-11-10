@@ -21,5 +21,12 @@ contextBridge.exposeInMainWorld('AfriFlowNative', Object.freeze({
   },
   onIncomingMeeting: (handler) => {
     incomingMeetingHandler = typeof handler === 'function' ? handler : null;
+  },
+  presentIncomingMeeting: (payload) => {
+    if (!payload || typeof payload !== 'object') return;
+    ipcRenderer.send('afriflow:present-incoming-meeting', {
+      meetingTitle:String(payload.meetingTitle || '').slice(0,160),
+      teamsUrl:String(payload.teamsUrl || '').slice(0,1600)
+    });
   }
 }));

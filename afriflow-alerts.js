@@ -95,6 +95,14 @@
       return true;
     }catch(e) { return false; }
   }
+  function presentNativeMeeting(meetingTitle,teamsUrl) {
+    if(!window.AfriFlowNative || !window.AfriFlowNative.isBackground || !window.AfriFlowNative.isBackground()) return false;
+    if(typeof window.AfriFlowNative.presentIncomingMeeting!=='function') return false;
+    try {
+      window.AfriFlowNative.presentIncomingMeeting({meetingTitle:meetingTitle||'',teamsUrl:teamsUrl||''});
+      return true;
+    }catch(e) { return false; }
+  }
   function notice(title,body,tag) {
     if (!enabled || !account) return;
     if (Date.now()-lastToast>1800 && toast) {
@@ -139,8 +147,7 @@
   function callMeeting(m,url) {
     if (!enabled || !ring || !ring.hidden) return;
     if(seen('meet_'+m.id))return;
-    if(notifyNative('Appel Teams entrant',
-      (m.title||'Réunion AfriFloW')+' · Cliquez pour répondre ou refuser.',url,m.title||''))return;
+    if(presentNativeMeeting(m.title||'',url))return;
     showMeetingCall(m,url);
   }
   if(window.AfriFlowNative && typeof window.AfriFlowNative.onIncomingMeeting==='function'){

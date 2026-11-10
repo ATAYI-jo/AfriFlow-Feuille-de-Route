@@ -76,6 +76,19 @@ function notifyFromRenderer(event, details) {
   notification.show();
 }
 ipcMain.on('afriflow:notify',notifyFromRenderer);
+function presentIncomingMeeting(event, details) {
+  // Only the trusted AfriFloW renderer can ask the desktop app to present a call.
+  if (!event.sender || !parseSafeUrl(event.sender.getURL())) return;
+  if (!details || typeof details !== 'object') return;
+  const teams = teamsUrl(String(details.teamsUrl || ''));
+  if (!teams) return;
+  const title = String(details.meetingTitle || 'Réunion AfriFloW').slice(0, 160);
+  reveal();
+  if (win && !win.isDestroyed()) {
+    win.webContents.send('afriflow:incoming-meeting', { title, teamsUrl: teams });
+  }
+}
+ipcMain.on('afriflow:present-incoming-meeting',presentIncomingMeeting);
 function createWindow() {
   win = new BrowserWindow({
     width:1200, height:840, minWidth:360, minHeight:540,
