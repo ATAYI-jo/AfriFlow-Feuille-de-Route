@@ -50,6 +50,13 @@
       var email=getAccount();
       if(!email||email!==showingFor||!agree.checked)return;
       var opted=modal.querySelector('#af-notify-agree').checked;
+      // Commit first-use approval before asking for OS permissions or contacting a server.
+      // A rejected permission or temporary network outage must never reopen the terms.
+      try {localStorage.setItem(key(email),'accepted')}catch(e){
+        modal.querySelector('#af-first-use-error').textContent='Impossible de mémoriser ce choix sur cet appareil. Vérifiez les paramètres de stockage du navigateur.';
+        return;
+      }
+      accept.disabled=true;
       // User initiation allows optional browser notification permission prompt.
       if(opted) {
         if(window.AfriFlowAlerts)window.AfriFlowAlerts.enable();
@@ -69,10 +76,6 @@
         if(window.AfriFlowPush) await window.AfriFlowPush.unsubscribe();
       }
       // A choice on another app or device does not count as approval here.
-      try {localStorage.setItem(key(email),'accepted')}catch(e){
-        modal.querySelector('#af-first-use-error').textContent='Impossible de mémoriser ce choix sur cet appareil. Vérifiez les paramètres de stockage du navigateur.';
-        return;
-      }
       showingFor='';
       modal.hidden=true;
       document.body.classList.remove('af-first-use-active');
