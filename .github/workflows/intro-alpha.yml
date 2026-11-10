@@ -45,6 +45,6 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add afriflow-intro-alpha.webm
           if ! git diff --cached --quiet; then
-            git commit -m "build(intro): update transparent AfriFloW animation [skip ci]"
+            git commit -m "build(intro): update transparent AfriFloW animation"
             git push origin HEAD:main
           fi
