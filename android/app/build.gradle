@@ -14,6 +14,7 @@ android {
 }
 dependencies {
     implementation 'com.google.firebase:firebase-messaging:24.1.2'
+    implementation 'androidx.core:core:1.15.0'
 }
 // Firebase is enabled only when the real project's google-services.json is provided.
 // Builds without it remain installable but CANNOT receive background FCM notifications.
