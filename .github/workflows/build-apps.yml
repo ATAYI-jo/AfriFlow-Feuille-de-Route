@@ -51,7 +51,8 @@ jobs:
             echo "$GOOGLE_SERVICES_B64" | base64 -d > android/app/google-services.json
             echo "Firebase Android configuration supplied."
           else
-            echo "::warning::No Firebase configuration secret. APK will build but native push will be unavailable."
+            echo "::error::Firebase configuration missing: set AFRIFLOW_FIREBASE_GOOGLE_SERVICES_JSON_B64 in GitHub Actions secrets. Refusing to publish an APK that cannot register for native notifications."
+            exit 1
           fi
       - name: Build installable test APK
         run: gradle -p android assembleDebug --no-daemon

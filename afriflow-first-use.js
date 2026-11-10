@@ -64,10 +64,15 @@
           if('Notification' in window && Notification.permission==='default'){
             await Notification.requestPermission();
           }
-          if(window.AfriFlowPush && window.AfriFlowPush.supported() && Notification.permission==='granted'){
-            var pushResult=await window.AfriFlowPush.subscribe();
-            if(!pushResult.ok){
-              console.warn('AfriFloW: installation des notifications push différée : '+pushResult.reason);
+          if(window.AfriFlowPush){
+            if(window.AfriFlowAndroid && window.AfriFlowPush.registerAndroidNative){
+              // Android WebView has no browser PushManager; register native FCM instead.
+              await window.AfriFlowPush.registerAndroidNative();
+            }else if(window.AfriFlowPush.supported() && Notification.permission==='granted'){
+              var pushResult=await window.AfriFlowPush.subscribe();
+              if(!pushResult.ok){
+                console.warn('AfriFloW: installation des notifications push différée : '+pushResult.reason);
+              }
             }
           }
         }catch(e){}
