@@ -147,7 +147,9 @@ app.whenReady().then(()=>{
   configureStartup();
   createTray();
   createWindow();
-  powerMonitor.on('resume',()=>recover('PC wake from sleep'));
+  powerMonitor.on('resume',()=>{
+    if(win&&!win.isDestroyed())win.webContents.send('afriflow:refresh');
+  });
 });
 app.on('window-all-closed',()=>{ /* Stay in tray until explicit Quit */ });
 app.on('activate',reveal);
