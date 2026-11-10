@@ -86,6 +86,13 @@
       });
     } catch(e) {}
   }
+  function notifyNative(title,body,teamsUrl) {
+    if(!window.AfriFlowNative || !document.hidden) return false;
+    try {
+      window.AfriFlowNative.notify({title:title,body:body,teamsUrl:teamsUrl||''});
+      return true;
+    }catch(e) { return false; }
+  }
   function notice(title,body,tag) {
     if (!enabled || !account) return;
     if (Date.now()-lastToast>1800 && toast) {
@@ -94,6 +101,7 @@
       toast.style.display='block';
       setTimeout(function(){if(toast)toast.style.display='none'},7500);
     }
+    if(notifyNative(title,body,''))return;
     tone('notification');
     if ('Notification' in window && Notification.permission==='granted') {
       try {new Notification(title,{body:body,icon:'./logo.png',tag:tag||title});}catch(e){}
@@ -113,6 +121,8 @@
   function callMeeting(m,url) {
     if (!enabled || !ring || !ring.hidden) return;
     if(seen('meet_'+m.id))return;
+    if(notifyNative('Réunion AfriFloW : '+(m.title||'Réunion'),
+      'La réunion commence. Cliquez pour rejoindre Teams.',url))return;
     activeMeeting={url:url};
     document.getElementById('af-meet-info').textContent=m.title||'Réunion en ligne';
     document.getElementById('af-meet-time').textContent=new Date(+m.start).toLocaleString('fr-FR',{dateStyle:'long',timeStyle:'short'});
