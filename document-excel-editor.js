@@ -17,7 +17,7 @@ window.dvExcelEdit=function(path){
    $("afExcelTabs").innerHTML=wb.SheetNames.map(function(n,i){return '<button type="button" data-sheet="'+i+'"'+(i===sheetN?' class="on"':'')+'>'+txt(n)+'</button>'}).join("");
    var sh=wb.Sheets[wb.SheetNames[sheetN]],range=X.utils.decode_range(sh["!ref"]||"A1");
    var rows=Math.max(30,range.e.r+1),cols=Math.max(10,range.e.c+1);
-   var rowEnd=Math.min(rows,rowStart+100),colEnd=Math.min(cols,colStart+20);
+   var rowEnd=Math.max(Math.min(rows,rowStart+100),rowStart+1),colEnd=Math.max(Math.min(cols,colStart+20),colStart+1);
    var pg=$("afExcelPaging");
    pg.innerHTML='<button type="button" data-pg="rp">← 100 lignes</button><button type="button" data-pg="rn">100 lignes →</button><button type="button" data-pg="cp">← 20 colonnes</button><button type="button" data-pg="cn">20 colonnes →</button><span>Lignes '+(rowStart+1)+'–'+rowEnd+' / '+rows+' · Colonnes '+X.utils.encode_col(colStart)+'–'+X.utils.encode_col(colEnd-1)+' / '+cols+'</span>';
    pg.onclick=function(e){var b=e.target.closest("[data-pg]");if(!b)return;var a=b.dataset.pg;if(a==="rp")rowStart=Math.max(0,rowStart-100);if(a==="rn")rowStart+=100;if(a==="cp")colStart=Math.max(0,colStart-20);if(a==="cn")colStart+=20;render()};
@@ -35,10 +35,11 @@ window.dvExcelEdit=function(path){
    $("afExcelGrid").onchange=function(e){
      var input=e.target;if(!input.dataset.cell)return;
      var a=input.dataset.cell,v=input.value,sh=wb.Sheets[wb.SheetNames[sheetN]];
+     var cell=sh[a]||{t:"s"};
      if(!v)delete sh[a];
-     else if(v.startsWith("="))sh[a]={t:"n",f:v.slice(1)};
-     else if(/^[-+]?\d+(\.\d+)?$/.test(v))sh[a]={t:"n",v:Number(v)};
-     else sh[a]={t:"s",v:v};
+     else if(v.startsWith("=")){cell.t="n";cell.f=v.slice(1);delete cell.v;delete cell.w;sh[a]=cell}
+     else if(/^[-+]?\\d+(\\.\\d+)?$/.test(v)){cell.t="n";cell.v=Number(v);delete cell.f;delete cell.w;sh[a]=cell}
+     else{cell.t="s";cell.v=v;delete cell.f;delete cell.w;sh[a]=cell}
      var r=X.utils.decode_range(sh["!ref"]||"A1"),pos=X.utils.decode_cell(a);
      r.e.r=Math.max(r.e.r,pos.r);r.e.c=Math.max(r.e.c,pos.c);
      sh["!ref"]=X.utils.encode_range(r);dirty=true;$("afExcelStatus").textContent="Modifications non enregistrées";
