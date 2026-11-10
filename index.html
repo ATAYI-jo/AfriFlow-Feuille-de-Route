@@ -1850,7 +1850,7 @@ async function dbxDialog(){
      if(window.USER_ROLE!=="admin")throw new Error("Accès réservé à l’administrateur.");
      var state=await dbxBackend("status");
      afDbxServerRoot=(state.root&&state.root!=="/")?state.root:afDbxServerRoot;
-     $("dkStatus").textContent=state.connected?"Dropbox centralisé : connecté. Accessible sur vos appareils avec votre compte administrateur.":"Dropbox serveur non configuré : les secrets doivent être renseignés dans Supabase.";
+     $("dkStatus").textContent=state.connected?"Dropbox centralisé : configuration enregistrée sur le serveur. Accessible depuis vos appareils après connexion administrateur.":"Dropbox serveur non configuré : les secrets doivent être renseignés dans Supabase.";
      $("dkPassword").value="";
    }catch(e){$("xerr").textContent=e.message||String(e);$("dkPassword").value=""}
    finally{btn.disabled=false}
@@ -5000,7 +5000,7 @@ async function browse(p){
     var crumb='<button type="button" data-dvdir="">Racine</button>'+parts.map(function(s){acc+="/"+s;return ' › <button type="button" data-dvdir="'+esc(acc)+'">'+esc(s)+'</button>'}).join("");
     b.innerHTML='<div class="dact" style="margin:0 0 10px">'+crumb+'</div>'+(d.entries.length?d.entries.map(function(e){
       var shown=items.some(function(x){return String(x.path).toLowerCase()===e.path.toLowerCase()});
-      return '<div class="dv-row '+(e.dir?"af-clickable":"")+'" '+(e.dir?'data-dvdir="'+esc(e.path)+'" role="button" tabindex="0"':"")+'><span class="af-file-name">'+ic(e.dir?"folder":"file")+' '+esc(e.name)+'</span>'+(e.dir?'<span aria-hidden="true">›</span>':(shown&&!window.__afRelinkIndex?'<small style="color:var(--muted)">Déjà affiché</small>':'<button type="button" class="p" data-dvadd="'+esc(e.path)+'" data-dvid="'+esc(e.id||"")+'" data-n="'+esc(e.name)+'">'+(window.__afRelinkIndex!=null?'Réassocier ce fichier':'Afficher sur le site')+'</button>'))+'</div>';
+      return '<div class="dv-row '+(e.dir?"af-clickable":"")+'" '+(e.dir?'data-dvdir="'+esc(e.path)+'" role="button" tabindex="0"':"")+'><span class="af-file-name">'+ic(e.dir?"folder":"file")+' '+esc(e.name)+'</span>'+(e.dir?'<span aria-hidden="true">›</span>':(shown&&window.__afRelinkIndex==null?'<small style="color:var(--muted)">Déjà affiché</small>':'<button type="button" class="p" data-dvadd="'+esc(e.path)+'" data-dvid="'+esc(e.id||"")+'" data-n="'+esc(e.name)+'">'+(window.__afRelinkIndex!=null?'Réassocier ce fichier':'Afficher sur le site')+'</button>'))+'</div>';
     }).join(""):'<p style="color:var(--muted)">Dossier vide.</p>');
   }catch(x){b.innerHTML='<p style="color:#c0392b">'+esc(x.message||x)+'<br><small>Vérifiez que la fonction « dropbox-view » est déployée et que les secrets DROPBOX_APP_KEY / DROPBOX_REFRESH_TOKEN sont définis.</small></p>'}
 }
