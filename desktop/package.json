@@ -1,0 +1,35 @@
+{
+  "name": "afriflow-desktop",
+  "version": "0.1.0",
+  "description": "AfriFloW Desktop",
+  "main": "main.js",
+  "private": true,
+  "scripts": {
+    "dist": "electron-builder --win nsis --x64"
+  },
+  "devDependencies": {
+    "electron": "^39.0.0",
+    "electron-builder": "^26.0.12"
+  },
+  "build": {
+    "appId": "africa.afriflow.desktop",
+    "productName": "AfriFloW",
+    "files": [
+      "main.js",
+      "package.json"
+    ],
+    "directories": {
+      "output": "dist"
+    },
+    "win": {
+      "target": [
+        "nsis"
+      ],
+      "artifactName": "AfriFloW-Windows-Setup.exe"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
+    }
+  }
+}
