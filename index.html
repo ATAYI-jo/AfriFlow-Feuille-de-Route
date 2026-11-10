@@ -1808,51 +1808,58 @@ function wkClean(){ if(W.sl){document.removeEventListener("selectionchange",W.sl
 document.addEventListener("keydown",function(e){ if((e.ctrlKey||e.metaKey)&&String(e.key).toLowerCase()==="s"&&W.open&&cep(W.page)){e.preventDefault();saveDoc()} });
 
 /* ----- Dropbox (OAuth PKCE : aucune clé secrète dans la page) ----- */
-function dbxCfg(){try{return JSON.parse(localStorage.getItem(DK)||"{}")}catch(e){return {}}}
-function dbxSet(o){try{localStorage.setItem(DK,JSON.stringify(o))}catch(e){}}
-function dbxReady(){var c=dbxCfg();return !!(c.key&&c.refresh)}
-function redir(){return location.origin+location.pathname}
-function b64u(buf){var s="",b=new Uint8Array(buf);for(var i=0;i<b.length;i++)s+=String.fromCharCode(b[i]);return btoa(s).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/,"")}
-async function dbxConnect(key,folder){
-  var v=b64u(crypto.getRandomValues(new Uint8Array(48))), ch=b64u(await crypto.subtle.digest("SHA-256",new TextEncoder().encode(v)));
-  sessionStorage.setItem("afriflow_pkce",JSON.stringify({v:v,key:key}));
-  var c=dbxCfg(); c.key=key; c.folder=folder; dbxSet(c);
-  location.href="https://www.dropbox.com/oauth2/authorize?"+new URLSearchParams({client_id:key,response_type:"code",code_challenge:ch,code_challenge_method:"S256",token_access_type:"offline",redirect_uri:redir()});
+/* Dropbox server connection: NO OAuth refresh/access tokens or app keys on the device. */
+try{localStorage.removeItem(DK);sessionStorage.removeItem("afriflow_pkce")}catch(e){}
+var afDbxServerRoot="/AfriFlow";
+function dbxReady(){return window.USER_ROLE==="admin" && !!window.__sb}
+async function dbxBackend(action,body){
+  if(!window.__sb)throw new Error("Connectez-vous à AfriFloW.");
+  var r=await window.__sb.functions.invoke("afriflow-dropbox-admin",{body:Object.assign({action:action},body||{})});
+  if(r.error){var message=r.error.message||"Service indisponible";try{var details=await r.error.context.json();if(details.error)message=details.error}catch(e){}throw new Error(message)}
+  if(r.data&&r.data.error)throw new Error(r.data.error);
+  return r.data;
 }
-(function(){
-  var code=new URLSearchParams(location.search).get("code"),st=null; try{st=JSON.parse(sessionStorage.getItem("afriflow_pkce")||"null")}catch(e){}
-  if(!code||!st)return; sessionStorage.removeItem("afriflow_pkce"); history.replaceState(null,"",location.pathname);
-  fetch("https://api.dropboxapi.com/oauth2/token",{method:"POST",headers:{"Content-Type":"application/x-www-form-urlencoded"},body:new URLSearchParams({code:code,grant_type:"authorization_code",code_verifier:st.v,client_id:st.key,redirect_uri:redir()})})
-  .then(function(r){return r.json()}).then(function(j){
-    if(!j.access_token||!j.refresh_token)throw new Error(j.error_description||j.error||"réponse inattendue");
-    var c=dbxCfg(); c.key=st.key; c.access=j.access_token; c.refresh=j.refresh_token; c.exp=Date.now()+j.expires_in*1000; dbxSet(c); toast("Dropbox connecté. Les enregistrements partent maintenant dans votre Dropbox.");
-  }).catch(function(e){toast("Connexion Dropbox échouée : "+e.message)});
-})();
-async function dbxToken(){
-  var c=dbxCfg(); if(c.access&&c.exp>Date.now()+60000)return c.access; if(!c.refresh)throw new Error("Dropbox non connecté");
-  var r=await fetch("https://api.dropboxapi.com/oauth2/token",{method:"POST",headers:{"Content-Type":"application/x-www-form-urlencoded"},body:new URLSearchParams({grant_type:"refresh_token",refresh_token:c.refresh,client_id:c.key})}), j=await r.json();
-  if(!r.ok)throw new Error(j.error_description||j.error||"jeton refusé"); c.access=j.access_token; c.exp=Date.now()+j.expires_in*1000; dbxSet(c); return c.access;
-}
+function dbxB64(blob){return new Promise(function(ok,fail){var r=new FileReader();r.onload=function(){ok(String(r.result).split(",")[1])};r.onerror=fail;r.readAsDataURL(blob)})}
 async function dbxUpload(path,blob){
-  var t=await dbxToken(), arg=JSON.stringify({path:path,mode:"overwrite",autorename:false,mute:true}).replace(/[\u007f-\uffff]/g,function(ch){return "\\u"+("0000"+ch.charCodeAt(0).toString(16)).slice(-4)});
-  var r=await fetch("https://content.dropboxapi.com/2/files/upload",{method:"POST",headers:{Authorization:"Bearer "+t,"Dropbox-API-Arg":arg,"Content-Type":"application/octet-stream"},body:blob});
-  if(!r.ok){var tx=await r.text(); throw new Error(tx.replace(/\s+/g," ").slice(0,160))}
+  if(!dbxReady())throw new Error("Accès administrateur requis.");
+  await dbxBackend("upload",{path:path,data:await dbxB64(blob)});
 }
-function dbxPath(d,pg){var f=(dbxCfg().folder||"/AfriFloW").replace(/\\/g,"/").replace(/\/+$/,""); if(f[0]!=="/")f="/"+f; return f+"/"+safeName(pageName(pg||W.page))+"/"+safeName(d.name)+extOf(d)}
-function dbxDialog(){
-  var c=dbxCfg(), b=$("xmBox");
-  b.innerHTML='<h2 style="margin-top:0">Connexion à Dropbox</h2><p style="font-size:.85rem;color:var(--muted);margin-top:0">Statut : <b>'+(dbxReady()?"connecté":"non connecté")+'</b></p>'
-  +'<ol style="font-size:.85rem;padding-left:18px;line-height:1.5"><li>Sur dropbox.com/developers/apps : « Create app », accès « Scoped access ».</li><li>Onglet Permissions : cochez <b>files.content.write</b>, puis « Submit ».</li><li>Onglet Settings : ajoutez cette URL de redirection :<br><code style="word-break:break-all;user-select:all">'+esc(redir())+'</code></li><li>Copiez l\'« App key » ci-dessous, puis « Se connecter ».</li></ol>'
-  +'<p style="font-size:.84rem;line-height:1.5;border:1px solid var(--line);padding:12px;border-radius:10px;background:var(--card);color:var(--ink)"><strong>Important :</strong> votre connexion Dropbox est actuellement mémorisée uniquement sur cet appareil et pour cette adresse du site. Sur un autre navigateur, ordinateur ou téléphone, vous devrez reconnecter Dropbox. Pour une connexion réellement partagée entre appareils, une autorisation centralisée et sécurisée sur serveur est nécessaire. Ne partagez jamais vos jetons d\'accès.</p>'
-  +'<div class="fm"><label for="dkKey">App key Dropbox</label><input id="dkKey" autocomplete="off" value="'+esc(c.key||"")+'"></div><div class="fm"><label for="dkFol">Dossier de destination</label><input id="dkFol" autocomplete="off" value="'+esc(c.folder||"/AfriFloW")+'"></div><div id="xerr" role="alert" style="color:#c0392b;min-height:1.2em;font-size:.85rem"></div>'
-  +'<div style="display:flex;gap:10px;flex-wrap:wrap"><button type="button" class="p" id="dkGo" style="flex:1">Se connecter</button>'+(dbxReady()?'<button type="button" class="danger" id="dkOut">Déconnecter</button>':'')+'<button type="button" id="xno">Fermer</button></div>';
-  b.onkeydown=null; $("xm").classList.add("on");
-  $("xno").onclick=function(){$("xm").classList.remove("on")};
-  $("dkFol").onchange=function(){var k=dbxCfg();k.folder=this.value.trim()||"/AfriFloW";dbxSet(k)};
-  $("dkGo").onclick=function(){var k=$("dkKey").value.trim();if(!k){$("xerr").textContent="Collez l'App key de votre application Dropbox.";return}dbxConnect(k,$("dkFol").value.trim()||"/AfriFloW").catch(function(e){$("xerr").textContent="Erreur : "+e.message})};
-  if($("dkOut"))$("dkOut").onclick=function(){var k=dbxCfg();dbxSet({key:k.key,folder:k.folder});$("xm").classList.remove("on");if(W.page)renEd(W.page)};
+function dbxPath(d,pg){return afDbxServerRoot+"/"+safeName(pageName(pg||W.page))+"/"+safeName(d.name)+extOf(d)}
+async function dbxDialog(){
+ if(!dbxReady()){toast("Réservé à l'administrateur connecté.");return}
+ var b=$("xmBox");
+ b.innerHTML='<h2 style="margin-top:0">Dropbox · Connexion sécurisée</h2>'
+  +'<p>La connexion Dropbox est centralisée dans Supabase. Aucune clé ni aucun jeton n’est enregistré sur cet appareil.</p>'
+  +'<p>Pour consulter les réglages, confirmez le mot de passe de votre compte administrateur AfriFloW.</p>'
+  +'<div class="fm"><label for="dkPassword">Mot de passe administrateur</label><input id="dkPassword" type="password" autocomplete="current-password"></div>'
+  +'<div id="xerr" role="alert" style="color:#c0392b;min-height:1.5em"></div>'
+  +'<div id="dkStatus" aria-live="polite"></div>'
+  +'<div style="display:flex;gap:10px;flex-wrap:wrap"><button type="button" class="p" id="dkGo">Déverrouiller</button><button type="button" id="xno">Fermer</button></div>';
+ $("xm").classList.add("on");
+ $("xno").onclick=function(){$("dkPassword").value="";$("xm").classList.remove("on")};
+ $("dkGo").onclick=async function(){
+   var password=$("dkPassword").value,btn=this;
+   if(!password){$("xerr").textContent="Saisissez votre mot de passe AfriFloW.";return}
+   btn.disabled=true;$("xerr").textContent="";
+   try{
+     var me=await window.__sb.auth.getUser();
+     var address=me.data&&me.data.user&&me.data.user.email;
+     if(!address)throw new Error("Session administrateur expirée.");
+     var check=await window.__sb.auth.signInWithPassword({email:address,password:password});
+     if(check.error)throw new Error("Mot de passe incorrect ou vérification refusée.");
+     if(window.USER_ROLE!=="admin")throw new Error("Accès réservé à l’administrateur.");
+     var state=await dbxBackend("status");
+     afDbxServerRoot=(state.root&&state.root!=="/")?state.root:afDbxServerRoot;
+     $("dkStatus").textContent=state.connected?"Dropbox centralisé : connecté. Accessible sur vos appareils avec votre compte administrateur.":"Dropbox serveur non configuré : les secrets doivent être renseignés dans Supabase.";
+     $("dkPassword").value="";
+   }catch(e){$("xerr").textContent=e.message||String(e);$("dkPassword").value=""}
+   finally{btn.disabled=false}
+ };
 }
-window.DBX={ready:dbxReady,dialog:dbxDialog,put:dbxUpload,upload:async function(sub,name,blob){var f=(dbxCfg().folder||"/AfriFloW").replace(/\\/g,"/").replace(/\/+$/,"");if(f[0]!=="/")f="/"+f;await dbxUpload(f+"/"+String(sub).split("/").map(safeName).join("/")+"/"+safeName(name),blob)}};
+window.DBX={ready:dbxReady,dialog:dbxDialog,put:dbxUpload,upload:async function(sub,name,blob){
+  var path=afDbxServerRoot+"/"+String(sub).split("/").filter(Boolean).map(safeName).join("/")+"/"+safeName(name);
+  await dbxUpload(path,blob);
+}};
 
 /* ----- Tableur : formules simples ----- */
 function colName(i){var s="";i++;while(i>0){var m=(i-1)%26;s=String.fromCharCode(65+m)+s;i=Math.floor((i-1)/26)}return s}
