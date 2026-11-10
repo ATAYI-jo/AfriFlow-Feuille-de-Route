@@ -2493,6 +2493,8 @@ var oauthBusy = false;
 var oauthReturning = /(?:^|[?#&])(?:code|access_token|error|error_description)=/.test(
   (window.__oauthQuery || '') + '&' + (window.__oauthReturn || '')
 );
+var oauthPending = false;
+try { oauthPending = sessionStorage.getItem('afriflow_oauth_pending') === '1'; } catch (error) {}
 function oauthError(message) {
   var el = document.getElementById('authError');
   if (el) el.textContent = message || 'Connexion externe impossible.';
@@ -2506,11 +2508,13 @@ async function loginOAuth(provider) {
   try {
     var options = { redirectTo: oauthRedirect() };
     if (provider === 'azure') options.scopes = 'email';
+    try { sessionStorage.setItem('afriflow_oauth_pending', '1'); } catch (error) {}
     var response = await SB().auth.signInWithOAuth({provider:provider, options:options});
     if (response.error) throw response.error;
     if (!response.data || !response.data.url) throw new Error('Aucune redirection OAuth reçue. Vérifiez la configuration du fournisseur dans Supabase.');
   } catch (error) {
     oauthBusy = false;
+    try { sessionStorage.removeItem('afriflow_oauth_pending'); } catch (ignore) {}
     oauthError('Connexion ' + provider + ' : ' + fail(error));
   }
 }
@@ -2526,6 +2530,7 @@ async function finishOAuthUser(user) {
     var info = await finish(user);
     enterApp(info.email, info.role, info.name, info.grants);
     recordUserAction('Connexion via ' + ((user.app_metadata && user.app_metadata.provider) || 'fournisseur externe'));
+    try { sessionStorage.removeItem('afriflow_oauth_pending'); } catch (error) {}
     if (oauthReturning) history.replaceState(null, '', location.pathname);
   } catch (error) {
     oauthHandled = false;
@@ -2539,10 +2544,17 @@ async function finishOAuthUser(user) {
   var oauthFailure = params.get('error_description') || query.get('error_description') ||
                      params.get('error') || query.get('error');
   if (oauthFailure) {
+    try { sessionStorage.removeItem('afriflow_oauth_pending'); } catch (error) {}
     oauthError('Connexion externe refusée : ' + oauthFailure);
     return;
   }
-  if (oauthReturning) {
+  // OAuth session recovery may finish after the callback's URL has been cleaned.
+  // onAuthStateChange catches it without treating regular email/password sign-ins as OAuth.
+  SB().auth.onAuthStateChange(function (event, session) {
+    if (event !== 'SIGNED_IN' || !(oauthReturning || oauthPending) || !session || !session.user) return;
+    setTimeout(function () { finishOAuthUser(session.user); }, 0);
+  });
+  if (oauthReturning || oauthPending) {
     // Supabase peut récupérer une session OAuth depuis le fragment ou un code PKCE.
     for (var attempt = 0; attempt < 16 && !oauthHandled; attempt++) {
       var result = await SB().auth.getSession();
@@ -2552,7 +2564,7 @@ async function finishOAuthUser(user) {
       await new Promise(function(resolve) { setTimeout(resolve, 350); });
     }
     if (!oauthHandled && !document.getElementById('authError').textContent) {
-      oauthError('Retour de connexion reçu, mais aucune session. Vérifiez les fournisseurs et les URL de redirection dans Supabase.');
+      oauthError('Authentification Google terminée mais session introuvable sur ce navigateur. Vérifiez le retour OAuth et les URL de redirection.');
     }
   } else if (window.__resume) {
     AFRI.resume().then(function(ok) {
