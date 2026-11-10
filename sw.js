@@ -20,7 +20,7 @@ self.addEventListener('push', function(event){
       }
     }catch(e){}
     var incomingCall=data.kind==='meeting'&&!!teamsUrl;
-    await self.registration.showNotification(incomingCall?'📞 Appel Teams entrant':String(data.title).slice(0,100),{
+    await self.registration.showNotification(incomingCall?'Appel Teams entrant':String(data.title).slice(0,100),{
       body:body,
       icon:new URL('logo.png',self.registration.scope).href,
       badge:new URL('logo.png',self.registration.scope).href,

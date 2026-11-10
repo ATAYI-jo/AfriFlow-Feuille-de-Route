@@ -4,9 +4,10 @@
 #af-alert-toast{position:fixed;right:16px;bottom:80px;z-index:14500;display:none;max-width:min(390px,calc(100vw - 32px));border-radius:16px;background:#fff;color:#173b29;padding:15px 18px;box-shadow:0 12px 40px #0003;border-left:5px solid #e99d36;font:14px/1.5 system-ui}
 #af-meet-call[hidden]{display:none!important}
 #af-meet-call{position:fixed;inset:0;z-index:20000;display:flex;align-items:center;justify-content:center;padding:20px;background:radial-gradient(circle at 50% 15%,rgba(42,185,106,.32),transparent 34%),rgba(5,23,15,.88);-webkit-backdrop-filter:blur(16px);backdrop-filter:blur(16px)}
-#af-meet-panel{width:min(420px,100%);border-radius:32px;padding:30px 24px 25px;background:linear-gradient(155deg,#174f34,#0b2b1d);color:#fff;text-align:center;box-shadow:0 24px 80px rgba(0,0,0,.48);border:1px solid rgba(255,255,255,.24);font:16px/1.5 system-ui,sans-serif}
+#af-meet-panel{position:relative;isolation:isolate;overflow:hidden;width:min(420px,100%);border-radius:32px;padding:30px 24px 25px;background:linear-gradient(155deg,#17543a,#092719);color:#fff;text-align:center;box-shadow:0 24px 80px rgba(0,0,0,.48),inset 0 1px 0 rgba(255,255,255,.13);border:1px solid rgba(255,255,255,.24);font:16px/1.5 system-ui,sans-serif}
+#af-meet-panel::before{content:'';position:absolute;z-index:-1;inset:0;background:radial-gradient(circle at 88% 0,rgba(82,232,149,.17),transparent 37%);pointer-events:none}
 #af-meet-incoming{display:inline-flex;align-items:center;gap:8px;margin:0 0 17px;padding:7px 13px;border-radius:999px;background:rgba(255,255,255,.16);color:#f5fff8;font-size:12px;font-weight:800;letter-spacing:.09em;text-transform:uppercase}
-#af-meet-incoming::before{content:'●';color:#73f8a7;font-size:15px;animation:af-meet-pulse 1.1s ease-in-out infinite}
+#af-meet-incoming::before{content:'';width:8px;height:8px;border-radius:50%;background:#73f8a7;box-shadow:0 0 0 4px rgba(115,248,167,.16);animation:af-meet-pulse 1.1s ease-in-out infinite}
 #af-meet-panel img{width:104px;height:104px;border-radius:50%;object-fit:contain;background:#fff;padding:11px;box-shadow:0 0 0 9px rgba(255,255,255,.12),0 10px 28px rgba(0,0,0,.28)}
 #af-meet-panel h2{margin:22px 0 4px;font-size:28px;line-height:1.12;color:#fff}
 #af-meet-panel p{overflow-wrap:anywhere;margin:6px 0}
@@ -14,14 +15,12 @@
 #af-meet-info{font-size:18px;font-weight:750;color:#fff}
 #af-meet-time{color:#d5e8dc;font-size:14px}
 #af-meet-actions{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:27px}
-#af-meet-actions button{min-height:66px;border:2px solid transparent;padding:13px 12px;border-radius:20px;font-weight:850;color:#fff;cursor:pointer;font-size:17px;line-height:1.15;box-shadow:0 8px 18px rgba(0,0,0,.22);transition:transform .16s ease,filter .16s ease}
-#af-meet-actions button::before{display:block;margin-bottom:4px;font-size:22px;line-height:1}
-#af-meet-actions button:hover{filter:brightness(1.08);transform:translateY(-1px)}
+#af-meet-actions button{display:flex!important;flex-direction:column;align-items:center;justify-content:center;gap:6px;min-height:78px;border:2px solid transparent;padding:12px;border-radius:20px;font-weight:850;color:#fff!important;cursor:pointer;font-size:17px;line-height:1.15;text-shadow:none!important;-webkit-appearance:none!important;appearance:none!important;box-shadow:0 10px 22px rgba(0,0,0,.25)!important;transition:transform .16s ease,filter .16s ease}
+.af-meet-action-icon{width:23px;height:23px;display:block;flex:none;stroke:currentColor}
+#af-meet-actions button:hover{filter:brightness(1.08)!important;transform:translateY(-1px)}
 #af-meet-actions button:focus-visible{outline:4px solid #fff;outline-offset:3px}
-#af-meet-reject{background:#d94d5d;border-color:#ffb7bf!important}
-#af-meet-reject::before{content:'✕'}
-#af-meet-accept{background:#17a965;border-color:#b5ffd3!important}
-#af-meet-accept::before{content:'☎'}
+#af-meet-actions button#af-meet-reject{background:linear-gradient(180deg,#e85d6c,#bb3042)!important;border-color:#ffbac2!important}
+#af-meet-actions button#af-meet-accept{background:linear-gradient(180deg,#2ac27c,#0e7a49)!important;border-color:#b8f6d3!important}
 #af-meet-panel small{display:block;margin-top:18px;color:#d9ebe0;font-size:13px}
 @keyframes af-meet-pulse{50%{opacity:.35;transform:scale(.78)}}
 @media(max-width:390px){#af-meet-panel{padding:25px 17px 21px}#af-meet-panel h2{font-size:25px}#af-meet-actions{gap:10px}#af-meet-actions button{font-size:15px}}

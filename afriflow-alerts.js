@@ -20,6 +20,25 @@
     if (parent) parent.appendChild(n);
     return n;
   }
+  function callActionIcon(kind) {
+    var ns='http://www.w3.org/2000/svg';
+    var icon=document.createElementNS(ns,'svg');
+    icon.setAttribute('class','af-meet-action-icon');
+    icon.setAttribute('viewBox','0 0 24 24');
+    icon.setAttribute('aria-hidden','true');
+    icon.setAttribute('focusable','false');
+    var path=document.createElementNS(ns,'path');
+    path.setAttribute('fill','none');
+    path.setAttribute('stroke','currentColor');
+    path.setAttribute('stroke-width','2.25');
+    path.setAttribute('stroke-linecap','round');
+    path.setAttribute('stroke-linejoin','round');
+    path.setAttribute('d',kind==='answer'
+      ? 'M7.2 3.8 4.8 6.2c-.5.5-.6 1.2-.3 1.8 1.8 3.9 4.9 7 8.8 8.8.6.3 1.3.2 1.8-.3l2.4-2.4-3.3-3.3-1.9 1.4c-1.2-.6-2.2-1.6-2.8-2.8l1.4-1.9z'
+      : 'M7 7l10 10M17 7 7 17');
+    icon.appendChild(path);
+    return icon;
+  }
   function build() {
     if (ring) return;
     // No floating alert toggle. Notification preference is collected during first use.
@@ -35,6 +54,8 @@
     var actions=element('div',{id:'af-meet-actions'},panel);
     var decline=element('button',{type:'button',id:'af-meet-reject','aria-label':'Refuser l’appel Teams',text:'Refuser'},actions);
     var accept=element('button',{type:'button',id:'af-meet-accept','aria-label':'Répondre et ouvrir Teams',text:'Répondre'},actions);
+    decline.insertBefore(callActionIcon('decline'),decline.firstChild);
+    accept.insertBefore(callActionIcon('answer'),accept.firstChild);
     element('small',{text:'Répondre ouvre Teams. Sonnerie et alertes disponibles lorsque AfriFloW est actif.'},panel);
     decline.addEventListener('click',endCall);
     accept.addEventListener('click',function(){
