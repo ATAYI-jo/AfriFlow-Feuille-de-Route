@@ -10,8 +10,8 @@
     // Keep their first-use approvals separate when their display modes differ.
     if(window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) return 'installed';
     if(navigator.standalone === true) return 'installed';
-    if(/Electron\\//i.test(navigator.userAgent)) return 'electron';
-    if(/; wv\\)/i.test(navigator.userAgent)) return 'android-webview';
+    if(String(navigator.userAgent).includes('Electron/')) return 'electron';
+    if(String(navigator.userAgent).includes('; wv)')) return 'android-webview';
     return 'browser';
   }
   function key(email){return 'afriflow_terms_'+VERSION+'_'+installationContext()+'_'+email}
