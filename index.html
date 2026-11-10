@@ -304,6 +304,15 @@ table.xl input:focus{outline:2px solid var(--green);outline-offset:-2px;backgrou
 .af-download-ios{background:transparent;color:var(--ink,#1d2a22);border-color:var(--line,#ddd)}
 #afDownloadStatus{font-size:12px}
 @media(max-width:600px){.af-pwa-install-area{align-items:stretch}.af-download-panel{width:100%}}
+
+/* Lisibilité renforcée du téléchargement sur fonds sombres et clairs */
+#afPwaInstallArea #afPwaInstallBtn{background:#145c36!important;color:#ffffff!important;border:2px solid #ffffff!important;opacity:1!important;filter:none!important;text-shadow:none!important;box-shadow:0 4px 18px rgba(0,0,0,.35)!important;-webkit-text-fill-color:#ffffff!important}
+#afPwaInstallArea #afPwaInstallBtn:hover{background:#0d4829!important}
+#afPwaInstallArea #afDownloadPanel{background:#ffffff!important;color:#17251c!important;opacity:1!important;filter:none!important;border:1px solid #cad5cc!important}
+#afPwaInstallArea #afDownloadPanel strong{color:#173b26!important}
+#afPwaInstallArea #afDownloadPanel p{color:#33483b!important}
+#afPwaInstallArea #afDownloadPanel .af-download-link{background:#145c36!important;color:#fff!important;-webkit-text-fill-color:#fff!important}
+#afPwaInstallArea #afDownloadPanel .af-download-ios{color:#173b26!important;background:#f4f8f5!important;border:1px solid #7d9684!important;-webkit-text-fill-color:#173b26!important}
 </style>
 </head>
 <body class="ro">
@@ -1805,6 +1814,7 @@ function dbxDialog(){
   var c=dbxCfg(), b=$("xmBox");
   b.innerHTML='<h2 style="margin-top:0">Connexion à Dropbox</h2><p style="font-size:.85rem;color:var(--muted);margin-top:0">Statut : <b>'+(dbxReady()?"connecté":"non connecté")+'</b></p>'
   +'<ol style="font-size:.85rem;padding-left:18px;line-height:1.5"><li>Sur dropbox.com/developers/apps : « Create app », accès « Scoped access ».</li><li>Onglet Permissions : cochez <b>files.content.write</b>, puis « Submit ».</li><li>Onglet Settings : ajoutez cette URL de redirection :<br><code style="word-break:break-all;user-select:all">'+esc(redir())+'</code></li><li>Copiez l\'« App key » ci-dessous, puis « Se connecter ».</li></ol>'
+  +'<p style="font-size:.84rem;line-height:1.5;border:1px solid var(--line);padding:12px;border-radius:10px;background:var(--card);color:var(--ink)"><strong>Important :</strong> votre connexion Dropbox est actuellement mémorisée uniquement sur cet appareil et pour cette adresse du site. Sur un autre navigateur, ordinateur ou téléphone, vous devrez reconnecter Dropbox. Pour une connexion réellement partagée entre appareils, une autorisation centralisée et sécurisée sur serveur est nécessaire. Ne partagez jamais vos jetons d\'accès.</p>'
   +'<div class="fm"><label for="dkKey">App key Dropbox</label><input id="dkKey" autocomplete="off" value="'+esc(c.key||"")+'"></div><div class="fm"><label for="dkFol">Dossier de destination</label><input id="dkFol" autocomplete="off" value="'+esc(c.folder||"/AfriFloW")+'"></div><div id="xerr" role="alert" style="color:#c0392b;min-height:1.2em;font-size:.85rem"></div>'
   +'<div style="display:flex;gap:10px;flex-wrap:wrap"><button type="button" class="p" id="dkGo" style="flex:1">Se connecter</button>'+(dbxReady()?'<button type="button" class="danger" id="dkOut">Déconnecter</button>':'')+'<button type="button" id="xno">Fermer</button></div>';
   b.onkeydown=null; $("xm").classList.add("on");
