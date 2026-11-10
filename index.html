@@ -172,10 +172,14 @@ svg.road-svg{position:absolute;top:0;left:0;width:100%;height:100%;pointer-event
 @keyframes st2{0%,100%{transform:rotate(18deg)}50%{transform:rotate(-18deg)}}
 @keyframes bob{50%{transform:translateY(-.8px)}}
 @keyframes hoe2{0%,100%{transform:rotate(-32deg)}50%{transform:rotate(18deg)}}
-#intro{position:fixed;inset:0;z-index:10000;background:#fff;display:flex;align-items:center;justify-content:center;transition:opacity .6s ease}
+#intro{position:fixed;inset:0;z-index:10000;isolation:isolate;background:linear-gradient(135deg,#f4f9f5 0%,#fff 42%,#e9f3ed 100%);display:flex;align-items:center;justify-content:center;transition:opacity .6s ease;overflow:hidden}
+#intro::before{content:"";position:absolute;inset:clamp(12px,3vw,40px);border-radius:clamp(20px,3vw,40px);background:linear-gradient(130deg,rgba(255,255,255,.80),rgba(255,255,255,.42));border:1px solid rgba(255,255,255,.92);box-shadow:0 20px 85px rgba(20,80,52,.10),inset 0 1px 0 rgba(255,255,255,.95);-webkit-backdrop-filter:blur(22px);backdrop-filter:blur(22px);pointer-events:none}
+#intro::after{content:"";position:absolute;z-index:-1;width:min(75vw,680px);aspect-ratio:1;right:-15%;bottom:-48%;border-radius:50%;background:radial-gradient(circle,rgba(74,155,103,.17),transparent 70%);filter:blur(28px);pointer-events:none}
 #intro.out{opacity:0;pointer-events:none}
 /* Affichage immersif : même vidéo, mêmes images, même durée et même son. */
-#intro video{display:block;width:100%;height:100%;object-fit:contain;background:#fff;border:0;outline:0;box-shadow:none;pointer-events:none}
+#intro video{position:relative;z-index:1;display:block;width:min(94vw,1200px);height:min(89dvh,900px);max-width:100%;max-height:100%;object-fit:contain;background:transparent;border:0;outline:0;box-shadow:none;pointer-events:none}
+@supports not (height: 89dvh){#intro video{height:89vh}}
+@media(max-width:640px){#intro::before{inset:12px;border-radius:24px}#intro video{width:100vw;height:91dvh}}
 #intro video::-webkit-media-controls,
 #intro video::-webkit-media-controls-enclosure,
 #intro video::-webkit-media-controls-panel{display:none!important}
@@ -390,7 +394,10 @@ window.ic=function(n,s){return '<svg class="ic"'+(s?' style="width:'+s+';height:
 
 <div id="bgLayer" aria-hidden="true"></div>
 <div id="intro" aria-label="Animation d'ouverture AfriFloW">
-  <video id="introVideo" src="afriflow-intro.mp4" playsinline webkit-playsinline preload="auto" disablepictureinpicture disableremoteplayback controlslist="nodownload noplaybackrate noremoteplayback" aria-label="Animation d'introduction AfriFloW"></video>
+  <video id="introVideo" playsinline webkit-playsinline preload="auto" disablepictureinpicture disableremoteplayback controlslist="nodownload noplaybackrate noremoteplayback" aria-label="Animation d'introduction AfriFloW">
+    <source src="./afriflow-intro-alpha.webm" type="video/webm">
+    <source src="./afriflow-intro.mp4" type="video/mp4">
+  </video>
   <button type="button" id="introSnd" title="Couper le son" aria-label="Couper le son">🔊</button>
   <button type="button" id="introSkip">Passer ›</button>
 </div>
