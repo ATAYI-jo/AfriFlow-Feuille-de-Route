@@ -7,6 +7,9 @@ self.addEventListener('push', function(event){
     var data={};
     try{data=event.data?event.data.json():{}}catch(e){return}
     if(!data||!data.title)return;
+    // Prevent duplicate notifications when AfriFloW is already visible.
+    var active=await self.clients.matchAll({type:'window',includeUncontrolled:true});
+    if(active.some(function(c){return c.visibilityState==='visible' && c.url.startsWith(self.registration.scope)}))return;
     var body=String(data.body||'').slice(0,240);
     var url=new URL('./',self.registration.scope).href;
     var teamsUrl=null;
