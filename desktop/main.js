@@ -69,6 +69,12 @@ function createWindow() {
       if(/^https:\/\//i.test(url))shell.openExternal(url).catch(()=>{});
     }
   });
+  win.on('hide',()=>{
+    if(!win.isDestroyed())win.webContents.send('afriflow:window-visibility',true);
+  });
+  win.on('show',()=>{
+    if(!win.isDestroyed())win.webContents.send('afriflow:window-visibility',false);
+  });
   win.on('close',(event)=>{
     if(!quitting){
       event.preventDefault();
