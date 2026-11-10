@@ -16,6 +16,7 @@
     "productName": "AfriFloW",
     "files": [
       "main.js",
+      "preload.js",
       "package.json",
       "assets/**/*"
     ],

@@ -80,7 +80,22 @@
       try{localStorage.removeItem(KEY)}catch(e){}
     }catch(e){status('Désinscription indisponible : '+(e.message||e))}
   }
+  var lastNativeAttempt=0;
+  async function registerAndroidNative(){
+    if(!window.AfriFlowAndroid || !window.AfriFlowAlerts || !window.AfriFlowAlerts.enabled())return;
+    if(Date.now()-lastNativeAttempt<120000)return;
+    var who=account();
+    if(!who || !window.__sb?.auth)return;
+    lastNativeAttempt=Date.now();
+    try{
+      var data=await window.__sb.auth.getSession();
+      var session=data.data?.session;
+      if(!session?.access_token||String(session.user?.email||'').toLowerCase()!==who)return;
+      window.AfriFlowAndroid.postMessage(JSON.stringify({action:'enablePush',accessToken:session.access_token}));
+    }catch(e){status('Inscription Android indisponible : '+e.message);}
+  }
   async function autoRegister(){
+    if(window.AfriFlowAndroid) {await registerAndroidNative();return;}
     if(!supported() || Notification.permission!=='granted')return;
     if(!window.AfriFlowAlerts || !window.AfriFlowAlerts.enabled())return;
     var email=account();
@@ -125,7 +140,7 @@
     document.addEventListener('visibilitychange',function(){if(!document.hidden)autoRegister()});
     autoRegister();
   }
-  window.AfriFlowPush={subscribe:register,unsubscribe:unregister,supported:supported,
+  window.AfriFlowPush={subscribe:register,unsubscribe:unregister,supported:supported,registerAndroidNative:registerAndroidNative,
     diagnostics:diagnostics,test:testNotification};
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start);
   else start();

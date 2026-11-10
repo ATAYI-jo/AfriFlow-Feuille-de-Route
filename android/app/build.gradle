@@ -12,3 +12,13 @@ android {
     compileOptions { sourceCompatibility JavaVersion.VERSION_17; targetCompatibility JavaVersion.VERSION_17 }
     buildTypes { release { minifyEnabled false } }
 }
+dependencies {
+    implementation 'com.google.firebase:firebase-messaging:24.1.2'
+    implementation 'androidx.core:core:1.15.0'
+    implementation 'androidx.webkit:webkit:1.12.1'
+}
+// Firebase is enabled only when the real project's google-services.json is provided.
+// Builds without it remain installable but CANNOT receive background FCM notifications.
+if (file('google-services.json').exists()) {
+    apply plugin: 'com.google.gms.google-services'
+}
