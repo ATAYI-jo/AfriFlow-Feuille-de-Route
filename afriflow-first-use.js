@@ -3,6 +3,7 @@
 (function(){
   'use strict';
   var VERSION='2026-11-v1', modal=null, showingFor='', timer=null;
+  var checkedRemoteFor='', checkingRemote=false, remoteApproved=false;
   function getAccount(){return String(window.loggedUserEmail||'').trim().toLowerCase()}
   function key(email){return 'afriflow_terms_'+VERSION+'_'+email}
   function accepted(email) {
@@ -49,6 +50,21 @@
           }
         }catch(e){}
       } else if(window.AfriFlowAlerts) window.AfriFlowAlerts.disable();
+      // Persist consent to the signed-in Supabase user profile when available.
+      // This lets the user's own choice follow them to another device.
+      if(window.__sb && window.__sb.auth){
+        try {
+          var authState=await window.__sb.auth.getUser();
+          if(authState.data && authState.data.user && String(authState.data.user.email||'').toLowerCase()===email){
+            var m=authState.data.user.user_metadata||{};
+            var save=await window.__sb.auth.updateUser({data:Object.assign({},m,{afriflow_terms_version:VERSION,afriflow_notifications_opt_in:opted,afriflow_terms_accepted_at:new Date().toISOString()})});
+            if(save.error)throw save.error;
+          }
+        }catch(error){
+          // Local choice is retained, but cross-device persistence cannot be guaranteed.
+          console.warn('AfriFloW: consent sync unavailable',error.message);
+        }
+      }
       try {localStorage.setItem(key(email),'accepted')}catch(e){
         modal.querySelector('#af-first-use-error').textContent='Impossible de mémoriser ce choix sur cet appareil. Vérifiez les paramètres de stockage du navigateur.';
         return;
@@ -58,19 +74,35 @@
       document.body.classList.remove('af-first-use-active');
     });
   }
-  function check(){
+  async function check(){
     var email=getAccount();
     if(!email){
+      checkedRemoteFor='';remoteApproved=false;
       if(modal)modal.hidden=true;
       showingFor='';
       document.body.classList.remove('af-first-use-active');
       return;
     }
-    if(accepted(email)){
+    if(accepted(email)|| (checkedRemoteFor===email && remoteApproved)){
       if(modal)modal.hidden=true;
       showingFor='';
       document.body.classList.remove('af-first-use-active');
       return;
+    }
+    if(checkedRemoteFor!==email){
+      if(checkingRemote)return;
+      checkingRemote=true;
+      try {
+        var state=window.__sb && window.__sb.auth ? await window.__sb.auth.getUser() : null;
+        var user=state && state.data && state.data.user;
+        if(user && String(user.email||'').toLowerCase()===email && user.user_metadata && user.user_metadata.afriflow_terms_version===VERSION){
+          remoteApproved=true;
+          if(user.user_metadata.afriflow_notifications_opt_in && window.AfriFlowAlerts)window.AfriFlowAlerts.enable();
+          else if(window.AfriFlowAlerts)window.AfriFlowAlerts.disable();
+          try {localStorage.setItem(key(email),'accepted')}catch(e){}
+        }
+      }catch(e){}finally{checkedRemoteFor=email;checkingRemote=false;}
+      if(remoteApproved)return;
     }
     if(showingFor===email)return;
     create();
