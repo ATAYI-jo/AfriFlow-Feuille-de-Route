@@ -91,6 +91,7 @@
     }
     if(checkedRemoteFor!==email){
       if(checkingRemote)return;
+      remoteApproved=false;
       checkingRemote=true;
       try {
         var state=window.__sb && window.__sb.auth ? await window.__sb.auth.getUser() : null;
