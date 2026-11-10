@@ -128,10 +128,21 @@ function createTray() {
       {label:'Ouvrir AfriFloW',click:reveal},
       {label:'Lancer au démarrage de Windows',type:'checkbox',checked:startAtLogin,
         click:(item)=>{startAtLogin=item.checked;savePreferences();configureStartup();updateMenu();}},
-      {label:'Vérifier les notifications',click:()=>{reveal();win.webContents.executeJavaScript(
-        "document.querySelector('.af-push-menu')?.click()",
-        true
-      ).catch(()=>{});}},
+      {label:'Tester une notification Windows',click:()=>{
+        if(!Notification.isSupported()){
+          console.warn('Notifications système Windows non prises en charge sur cet ordinateur');
+          reveal();
+          return;
+        }
+        const test=new Notification({
+          title:'AfriFloW — test de notification',
+          body:'Les alertes Windows fonctionnent. AfriFloW continue en arrière-plan.',
+          icon:path.join(__dirname,'assets','icon.png'),
+          silent:false
+        });
+        test.on('click',reveal);
+        test.show();
+      }},
       {type:'separator'},
       {label:'Quitter complètement',click:()=>{quitting=true;app.quit();}}
     ]));
