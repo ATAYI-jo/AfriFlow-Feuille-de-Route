@@ -1,6 +1,9 @@
 const { contextBridge, ipcRenderer } = require('electron');
 let background = false;
 ipcRenderer.on('afriflow:window-visibility', (_event, hidden) => { background = !!hidden; });
+ipcRenderer.on('afriflow:refresh', () => {
+  window.dispatchEvent(new Event('afriflow:refresh'));
+});
 contextBridge.exposeInMainWorld('AfriFlowNative', Object.freeze({
   isBackground: () => background,
   notify: (payload) => {

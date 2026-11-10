@@ -1,10 +1,35 @@
-const { app, BrowserWindow, shell, Tray, Menu, Notification, ipcMain, nativeImage } = require('electron');
+const { app, BrowserWindow, shell, Tray, Menu, Notification, ipcMain, nativeImage, powerMonitor } = require('electron');
 const path = require('path');
+const fs = require('fs');
 const HOME = 'https://afriflow-africa.onrender.com/';
 const allowed = new Set(['afriflow-africa.onrender.com','atayi-jo.github.io']);
 const teamsHosts = new Set(['teams.microsoft.com','teams.live.com','teams.microsoft.us']);
 const single = app.requestSingleInstanceLock();
 let win, tray, quitting = false;
+let startAtLogin = true;
+let lastRecovery = 0;
+function preferencesPath(){return path.join(app.getPath('userData'),'desktop-preferences.json');}
+function readPreferences(){
+  try {
+    const saved=JSON.parse(fs.readFileSync(preferencesPath(),'utf8'));
+    if(typeof saved.startAtLogin==='boolean')startAtLogin=saved.startAtLogin;
+  }catch(_){}
+}
+function savePreferences(){
+  try{fs.mkdirSync(app.getPath('userData'),{recursive:true});fs.writeFileSync(preferencesPath(),JSON.stringify({startAtLogin}));}
+  catch(err){console.warn('AfriFloW settings could not be saved:',err.message);}
+}
+function configureStartup(){
+  if(process.platform!=='win32'||!app.isPackaged)return;
+  try{app.setLoginItemSettings({openAtLogin:startAtLogin,path:process.execPath,args:['--hidden'],name:'AfriFloW'});}
+  catch(err){console.warn('AfriFloW startup registration failed:',err.message);}
+}
+function recover(reason){
+  if(quitting||!win||win.isDestroyed()||Date.now()-lastRecovery<12000)return;
+  lastRecovery=Date.now();
+  console.warn('AfriFloW background recovery:',reason);
+  win.webContents.loadURL(HOME).catch(err=>console.warn('AfriFloW reload failed:',err.message));
+}
 
 function parseSafeUrl(raw) {
   try {
@@ -63,6 +88,13 @@ function createWindow() {
     if (/^https:\/\//i.test(url)) shell.openExternal(url).catch(()=>{});
     return {action:'deny'};
   });
+  win.webContents.on('did-finish-load',()=>{
+    if(!win.isDestroyed())win.webContents.send('afriflow:window-visibility',!win.isVisible());
+  });
+  win.webContents.on('render-process-gone',(_event,details)=>recover('renderer: '+details.reason));
+  win.webContents.on('did-fail-load',(_event,code,description,validatedURL,isMainFrame)=>{
+    if(isMainFrame&&code!==-3)console.warn('AfriFloW page not loaded:',description,validatedURL);
+  });
   win.webContents.on('will-navigate',(event,url)=>{
     if(!parseSafeUrl(url)){
       event.preventDefault();
@@ -87,26 +119,37 @@ function createWindow() {
   win.loadURL(HOME);
 }
 function createTray() {
-  const file = path.join(__dirname,'assets','icon.png');
-  const icon = nativeImage.createFromPath(file).resize({width:20,height:20});
-  tray = new Tray(icon);
-  tray.setToolTip('AfriFloW — notifications actives');
-  tray.setContextMenu(Menu.buildFromTemplate([
-    {label:'Ouvrir AfriFloW', click:reveal},
-    {label:'Quitter complètement', click:()=>{quitting=true;app.quit()}}
-  ]));
+  const file=path.join(__dirname,'assets','icon.png');
+  const icon=nativeImage.createFromPath(file).resize({width:20,height:20});
+  tray=new Tray(icon);
+  tray.setToolTip('AfriFloW — actif en arrière-plan');
+  function updateMenu(){
+    tray.setContextMenu(Menu.buildFromTemplate([
+      {label:'Ouvrir AfriFloW',click:reveal},
+      {label:'Lancer au démarrage de Windows',type:'checkbox',checked:startAtLogin,
+        click:(item)=>{startAtLogin=item.checked;savePreferences();configureStartup();updateMenu();}},
+      {label:'Vérifier les notifications',click:()=>{reveal();win.webContents.executeJavaScript(
+        "document.querySelector('.af-push-menu')?.click()",
+        true
+      ).catch(()=>{});}},
+      {type:'separator'},
+      {label:'Quitter complètement',click:()=>{quitting=true;app.quit();}}
+    ]));
+  }
+  updateMenu();
   tray.on('double-click',reveal);
 }
 app.whenReady().then(()=>{
   if(!single)return;
-  if(process.platform==='win32'){
-    app.setAppUserModelId('africa.afriflow.desktop');
-    if(app.isPackaged){
-      app.setLoginItemSettings({openAtLogin:true,args:['--hidden']});
-    }
-  }
+  if(process.platform==='win32')app.setAppUserModelId('africa.afriflow.desktop');
+  readPreferences();
+  // Enable background launch by default on the first run, but honor manual opt-out.
+  configureStartup();
   createTray();
   createWindow();
+  powerMonitor.on('resume',()=>{
+    if(win&&!win.isDestroyed())win.webContents.send('afriflow:refresh');
+  });
 });
 app.on('window-all-closed',()=>{ /* Stay in tray until explicit Quit */ });
 app.on('activate',reveal);
