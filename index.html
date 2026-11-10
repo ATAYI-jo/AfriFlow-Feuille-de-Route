@@ -295,6 +295,15 @@ table.xl input:focus{outline:2px solid var(--green);outline-offset:-2px;backgrou
 .af-pwa-box ol{padding-left:23px;margin:8px 0 0}
 .af-pwa-close{position:absolute;right:12px;top:10px;border:0;background:transparent;color:#1d2a22;font-size:28px;cursor:pointer;width:40px;height:40px}
 @media(max-width:600px){.af-pwa-install-area{justify-content:center;margin:0 0 16px}.af-pwa-install-button{width:100%}}
+
+.af-pwa-install-area{flex-direction:column;align-items:flex-end}
+.af-download-panel[hidden],.af-download-link[hidden]{display:none!important}
+.af-download-panel{width:min(100%,400px);box-sizing:border-box;margin-top:8px;padding:18px;border-radius:16px;border:1px solid var(--line,#ddd);background:var(--card,#fff);color:var(--ink,#1d2a22);box-shadow:0 10px 28px rgba(0,0,0,.18);pointer-events:auto;font-size:14px}
+.af-download-panel p{margin:7px 0 12px;color:var(--muted,#66726a)}
+.af-download-link,.af-download-ios{box-sizing:border-box;display:block;width:100%;border:1px solid #1f5d3a;background:#1f5d3a;color:white;text-align:center;text-decoration:none;border-radius:10px;padding:12px;font:600 14px system-ui,sans-serif;margin-top:10px;cursor:pointer}
+.af-download-ios{background:transparent;color:var(--ink,#1d2a22);border-color:var(--line,#ddd)}
+#afDownloadStatus{font-size:12px}
+@media(max-width:600px){.af-pwa-install-area{align-items:stretch}.af-download-panel{width:100%}}
 </style>
 </head>
 <body class="ro">
@@ -385,9 +394,17 @@ window.ic=function(n,s){return '<svg class="ic"'+(s?' style="width:'+s+';height:
 </div>
 
 <div class="wrap" id="view-home">
-  <!-- AfriFloW PWA install button -->
+  <!-- AfriFloW distribution: downloads appear only after verified GitHub release assets -->
   <div id="afPwaInstallArea" class="af-pwa-install-area" hidden>
-    <button id="afPwaInstallBtn" class="af-pwa-install-button" type="button" aria-haspopup="dialog" aria-controls="afPwaHelp" aria-label="Installer AfriFloW sur cet appareil">↓ Installer AfriFloW</button>
+    <button id="afPwaInstallBtn" class="af-pwa-install-button" type="button" aria-controls="afDownloadPanel" aria-expanded="false">↓ Télécharger AfriFloW</button>
+    <div id="afDownloadPanel" class="af-download-panel" hidden>
+      <strong>Application AfriFloW</strong>
+      <p>Choisissez votre appareil. Versions de test : connexion Internet nécessaire.</p>
+      <a id="afDownloadAndroid" class="af-download-link" hidden rel="noopener noreferrer">Télécharger Android (.apk) — test</a>
+      <a id="afDownloadWindows" class="af-download-link" hidden rel="noopener noreferrer">Télécharger Windows (.exe) — test</a>
+      <p id="afDownloadStatus" role="status">Recherche des versions disponibles…</p>
+      <button id="afDownloadIos" class="af-download-ios" type="button">Installer sur iPhone (Safari)</button>
+    </div>
   </div>
 
   <div class="brand">
@@ -6601,12 +6618,40 @@ window.dvWordEdit=function(path,orig){
     help.hidden = true;
     updateVisibility();
   });
-  button.addEventListener('click', async function () {
-    if (isStandalone()) { updateVisibility(); return; }
-    if (!promptEvent) { openHelp(); return; }
-    var event = promptEvent;
-    promptEvent = null;
-    try { await event.prompt(); await event.userChoice; } catch (error) { openHelp(); }
+  var panel = document.getElementById('afDownloadPanel');
+  var iosButton = document.getElementById('afDownloadIos');
+  var androidLink = document.getElementById('afDownloadAndroid');
+  var windowsLink = document.getElementById('afDownloadWindows');
+  var status = document.getElementById('afDownloadStatus');
+  button.addEventListener('click', function () {
+    panel.hidden = !panel.hidden;
+    button.setAttribute('aria-expanded', String(!panel.hidden));
+  });
+  iosButton.addEventListener('click', openHelp);
+  // Only show download buttons when actual release assets exist.
+  fetch('https://api.github.com/repos/ATAYI-jo/AfriFlow-Feuille-de-Route/releases/tags/v0.1.0-beta', {
+    headers: { Accept: 'application/vnd.github+json' }
+  }).then(function (response) {
+    if (!response.ok) throw new Error('No published release');
+    return response.json();
+  }).then(function (release) {
+    var assets = release.assets || [];
+    function setAsset(link, name) {
+      var asset = assets.find(function (a) { return a.name === name && a.size > 0; });
+      if (asset && asset.browser_download_url) {
+        link.href = asset.browser_download_url;
+        link.hidden = false;
+        return true;
+      }
+      return false;
+    }
+    var a = setAsset(androidLink, 'AfriFloW-Android-test.apk');
+    var w = setAsset(windowsLink, 'AfriFloW-Windows-Setup.exe');
+    status.textContent = (a || w)
+      ? 'Versions expérimentales : l’installation demande une confirmation. Certaines fonctions, notamment la connexion externe, peuvent ne pas fonctionner.'
+      : 'Fichiers en cours de préparation : aucun téléchargement disponible pour le moment.';
+  }).catch(function () {
+    status.textContent = 'Les installateurs Android et Windows ne sont pas encore publiés. Réessayez plus tard.';
   });
   close.addEventListener('click', function () { help.hidden = true; button.focus(); });
   help.addEventListener('click', function (event) { if (event.target === help) { help.hidden = true; button.focus(); } });
