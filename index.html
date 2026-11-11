@@ -185,6 +185,10 @@ svg.road-svg{position:absolute;top:0;left:0;width:100%;height:100%;pointer-event
 #intro video::-webkit-media-controls-enclosure,
 #intro video::-webkit-media-controls-panel{display:none!important}
 #intro #introSnd,#intro #introSkip{display:none!important}
+/* Toute la surface est cliquable pour le son, jamais pour passer la vidéo. */
+#intro{cursor:pointer}
+#intro video{pointer-events:none!important}
+#intro #introSkip{pointer-events:none!important}
 #intro button{position:absolute;bottom:calc(20px + env(safe-area-inset-bottom,0px));background:rgba(255,255,255,.92);color:#1d2a22;border:1px solid #d8d4cc;border-radius:99px;padding:10px 18px;box-shadow:0 4px 14px rgba(0,0,0,.12)}
 #introSkip{right:calc(16px + env(safe-area-inset-right,0px))}
 #intro #introSnd{top:calc(14px + env(safe-area-inset-top,0px));left:14px;bottom:auto;right:auto;width:34px;height:34px;padding:0;display:flex;align-items:center;justify-content:center;font-size:.9rem;line-height:1;border-radius:50%;opacity:.5;box-shadow:none;transition:opacity .2s}
@@ -1574,15 +1578,19 @@ function initIntro(){
   var box = $("intro"), v = $("introVideo"), snd = $("introSnd");
   if(!box || document.documentElement.classList.contains("no-intro")) return;
   var done = false, fs = setTimeout(finish, 120000);
-  var gestures = ["pointerdown","keydown","touchstart","wheel"];
+  var gestures = []; // Les clics sur l’introduction contrôlent uniquement le son.
   function paint(){
     var l = v.muted ? "Activer le son" : "Couper le son";
     snd.innerHTML = ic(v.muted ? "volume-off" : "volume"); snd.title = l; snd.setAttribute("aria-label", l);
   }
   function stopGestures(){ gestures.forEach(function(ev){ window.removeEventListener(ev, onGesture, true); }); }
-  function onGesture(e){
-    if(snd.contains(e.target)) return;
-    stopGestures(); v.muted = false; v.volume = 1; paint();
+  function toggleIntroSound(e){
+    if(e){e.preventDefault();e.stopPropagation();}
+    if(done)return;
+    v.muted=!v.muted;
+    if(!v.muted)v.volume=1;
+    paint();
+    if(v.paused && !v.ended){var play=v.play();if(play&&play.catch)play.catch(function(){});}
   }
   function finish(){
     if(done) return; done = true; clearTimeout(fs); stopGestures();
@@ -1590,8 +1598,9 @@ function initIntro(){
     box.classList.add("out"); v.pause(); document.documentElement.classList.add("af-intro-finished");
     setTimeout(function(){ box.style.display = "none"; }, 700);
   }
-  $("introSkip").onclick = function(e){ e.stopPropagation(); finish(); };
-  snd.onclick = function(e){ e.stopPropagation(); stopGestures(); v.muted = !v.muted; if(!v.muted) v.volume = 1; paint(); };
+  $("introSkip").onclick = function(e){ e.preventDefault(); e.stopPropagation(); toggleIntroSound(); };
+  snd.onclick = toggleIntroSound;
+  box.addEventListener("click",toggleIntroSound);
   // Preserve every source frame; allow a quiet 850 ms hold before the existing fade.
   v.addEventListener("ended", function(){setTimeout(finish,850)});
   v.addEventListener("error", finish);
@@ -1601,8 +1610,7 @@ function initIntro(){
   if(p && p.catch) p.catch(function(){
     /* son refusé par le navigateur : lecture muette, le son s'active au 1er geste ou via le petit bouton */
     v.muted = true; paint();
-    v.play().catch(finish);
-    gestures.forEach(function(ev){ window.addEventListener(ev, onGesture, true); });
+    v.play().catch(function(){ /* Conserver l’introduction visible en cas de lecture bloquée. */ });
   });
 }
 /* ---------- Démarrage : on charge AVANT toute écriture ---------- */
@@ -2853,7 +2861,7 @@ if(loggedUserEmail)setTimeout(poll,1500);
 (function(){
 "use strict";
 var $g=function(i){return document.getElementById(i)};
-var H=[],busy=false,atts=[],voice=false,autoRead=false,rec=null,listening=false,speaking=false,greeted=false;
+var H=[],busy=false,atts=[],voice=false,autoRead=true,rec=null,listening=false,speaking=false,greeted=false;
 var MAX_FILES=4,MAX_B64=5*1024*1024;
 
 /* ---------- Icônes (SVG intégrés) ---------- */
