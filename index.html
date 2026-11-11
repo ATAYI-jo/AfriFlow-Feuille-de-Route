@@ -1573,7 +1573,7 @@ window.addEventListener("pagehide", function(){ saveSession(true); });
 function initIntro(){
   var box = $("intro"), v = $("introVideo"), snd = $("introSnd");
   if(!box || document.documentElement.classList.contains("no-intro")) return;
-  var done = false, fs = setTimeout(finish, 30000);
+  var done = false, fs = setTimeout(finish, 120000);
   var gestures = ["pointerdown","keydown","touchstart","wheel"];
   function paint(){
     var l = v.muted ? "Activer le son" : "Couper le son";
@@ -1587,7 +1587,7 @@ function initIntro(){
   function finish(){
     if(done) return; done = true; clearTimeout(fs); stopGestures();
     try { sessionStorage.setItem(INTRO_KEY, "1"); } catch(e){}
-    box.classList.add("out"); v.pause();
+    box.classList.add("out"); v.pause(); document.documentElement.classList.add("af-intro-finished");
     setTimeout(function(){ box.style.display = "none"; }, 700);
   }
   $("introSkip").onclick = function(e){ e.stopPropagation(); finish(); };
@@ -6906,6 +6906,71 @@ body.af-profile-open #afCloudSyncBadge{visibility:hidden!important}
 .avatar-builder{display:grid;grid-template-columns:88px minmax(0,1fr);gap:15px;align-items:start;margin-top:10px;padding:14px;border:1px solid var(--line);border-radius:14px;background:color-mix(in srgb,var(--green) 4%,var(--card))}.avatar-builder-preview{display:grid;place-items:center;gap:7px;text-align:center;font-size:.76rem;color:var(--muted)}.avatar-builder-preview .pf-avatar{width:76px;height:76px}.avatar-tuning{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}.avatar-tuning label{min-width:0}.avatar-tuning input[type="color"]{width:100%;height:40px;padding:3px;border:1px solid var(--line);border-radius:9px;background:var(--card);cursor:pointer}.avatar-toggles{display:flex;gap:9px;flex-wrap:wrap;grid-column:1/-1}.avatar-toggles label{display:inline-flex;flex-direction:row;align-items:center;gap:7px;padding:8px 10px;border:1px solid var(--line);border-radius:9px;background:var(--card);cursor:pointer}.avatar-toggles input{inline-size:17px;block-size:17px}.avatar-editor-actions{display:flex;gap:8px;flex-wrap:wrap;grid-column:1/-1}.avatar-editor-actions button{padding:8px 10px!important;font-size:.82rem!important}.avatar-editor-actions .quiet{background:transparent!important;color:var(--green)!important;border:1px solid var(--green)!important}
 #memberHub{position:fixed;right:22px;bottom:78px;z-index:905;display:grid;place-items:center;width:62px;height:62px;padding:0;border:0;border-radius:50%;background:transparent!important;box-shadow:0 7px 22px rgba(16,57,34,.24)!important;cursor:pointer}#memberHub[hidden]{display:none!important}#memberHub .pf-avatar{width:62px;height:62px;border:3px solid #fff;box-shadow:0 0 0 2px color-mix(in srgb,var(--green) 55%,transparent),0 7px 22px rgba(16,57,34,.22)}#memberHub .member-hub-count{position:absolute;right:-4px;top:-5px;min-width:22px;height:22px;padding:0 5px;display:grid;place-items:center;border:2px solid #fff;border-radius:999px;background:#d62c2c;color:#fff;font-size:.72rem;font-weight:800;line-height:1;box-shadow:0 2px 7px rgba(0,0,0,.22)}body.af-profile-open #memberHub,#afCloudSyncBadge{display:none!important}.member-shell{display:grid;grid-template-columns:minmax(240px,.78fr) minmax(0,1.42fr);gap:18px;align-items:start}.member-list-card,.member-detail-card{min-height:440px}.member-list{display:grid;gap:8px;max-height:63vh;overflow:auto;padding-right:3px}.member-list-item{display:flex!important;align-items:center!important;gap:10px!important;width:100%;padding:10px!important;text-align:left!important;background:transparent!important;border:1px solid var(--line)!important;box-shadow:none!important}.member-list-item:hover,.member-list-item.on{background:color-mix(in srgb,var(--green) 8%,var(--card))!important;border-color:color-mix(in srgb,var(--green) 38%,var(--line))!important}.member-list-item .pf-avatar{width:48px;height:48px}.member-list-item b,.member-list-item small{display:block}.member-list-item small{margin-top:2px;color:var(--muted);font-weight:500}.member-detail-empty{display:grid;place-items:center;min-height:360px;text-align:center;color:var(--muted)}.member-identity{display:flex;gap:16px;align-items:center;padding-bottom:18px;border-bottom:1px solid var(--line)}.member-identity .pf-avatar{width:88px;height:88px}.member-identity h3{margin:0 0 4px}.member-public-info{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:18px 0}.member-public-info div{padding:10px 12px;border-radius:10px;background:color-mix(in srgb,var(--ink) 3%,var(--card))}.member-public-info small{display:block;color:var(--muted);font-weight:700;margin-bottom:3px}.member-bio{margin:14px 0;color:var(--ink);line-height:1.55;white-space:pre-wrap}.member-chat{display:flex;flex-direction:column;min-height:410px}.member-chat-head{display:flex;align-items:center;gap:10px;padding-bottom:12px;border-bottom:1px solid var(--line)}.member-chat-head .pf-avatar{width:50px;height:50px}.member-chat-log{flex:1;min-height:260px;max-height:47vh;overflow:auto;display:flex;flex-direction:column;gap:8px;padding:16px 4px}.member-bubble{max-width:min(82%,520px);padding:9px 12px;border-radius:15px 15px 15px 4px;background:color-mix(in srgb,var(--green) 8%,var(--card));border:1px solid color-mix(in srgb,var(--green) 15%,var(--line));line-height:1.4;white-space:pre-wrap;overflow-wrap:anywhere}.member-bubble.mine{align-self:flex-end;border-radius:15px 15px 4px 15px;background:var(--green);border-color:var(--green);color:#fff}.member-bubble small{display:block;margin-top:5px;opacity:.76;font-size:.72rem}.member-chat-compose{display:flex;gap:9px;align-items:flex-end;padding-top:10px;border-top:1px solid var(--line)}.member-chat-compose textarea{flex:1;min-height:48px;max-height:120px;resize:vertical}.member-chat-compose button{min-height:48px}.profile-back{margin-bottom:14px}.profile-reminder{position:fixed;z-index:890;right:18px;bottom:86px;max-width:min(360px,calc(100vw - 36px));display:flex!important;align-items:flex-start!important;gap:9px!important;text-align:left!important;padding:11px 13px!important;border-radius:13px!important;background:var(--card)!important;color:var(--ink)!important;border:1px solid color-mix(in srgb,var(--amber) 55%,var(--line))!important;box-shadow:0 10px 30px rgba(18,55,34,.18)!important}.profile-reminder strong,.profile-reminder span{display:block}.profile-reminder span{font-size:.81rem;color:var(--muted);font-weight:400;line-height:1.35}
 @media(max-width:720px){.profile-grid{grid-template-columns:1fr}.profile-form{grid-template-columns:1fr}.profile-top{padding-left:16px;padding-right:16px}.avatar-choice{grid-template-columns:repeat(6,1fr)}.profile-main{padding:20px 14px 34px}.avatar-builder{grid-template-columns:1fr}.avatar-builder-preview{justify-items:start;text-align:left}.avatar-tuning{grid-template-columns:1fr}.member-shell{grid-template-columns:1fr}.member-list-card,.member-detail-card{min-height:0}.member-list{max-height:280px}.member-public-info{grid-template-columns:1fr}.member-identity .pf-avatar{width:74px;height:74px}.member-chat{min-height:360px}.member-chat-log{max-height:42vh}.m-preview{padding:8px}.m-preview-body iframe{height:60vh}}
+
+/* AfriFloW mobile UX — 2026-11-11 : correctifs non destructifs. */
+#profilePanel.member-hub-mode{
+  inset:0!important;z-index:1515!important;display:flex!important;
+  visibility:hidden;pointer-events:none;transform:none!important;
+  justify-content:center;align-items:center;padding:calc(12px + env(safe-area-inset-top,0px)) 12px calc(12px + env(safe-area-inset-bottom,0px));
+  background:rgba(15,35,26,.24)!important;-webkit-backdrop-filter:blur(11px);backdrop-filter:blur(11px);
+}
+#profilePanel.member-hub-mode.open{visibility:visible;pointer-events:auto}
+#profilePanel.member-hub-mode .profile-top,#profilePanel.member-hub-mode .profile-main{
+  width:min(850px,100%)!important;max-width:100%;flex:none;
+  background:rgba(249,253,250,.88)!important;
+  -webkit-backdrop-filter:blur(28px) saturate(145%);backdrop-filter:blur(28px) saturate(145%);
+}
+#profilePanel.member-hub-mode .profile-top{
+  border:1px solid rgba(255,255,255,.84);border-bottom:0;border-radius:22px 22px 0 0;
+  padding:14px 18px!important;box-shadow:0 16px 50px rgba(14,52,34,.17);position:relative;top:auto;
+}
+#profilePanel.member-hub-mode .profile-main{
+  height:min(72dvh,650px);min-height:0;overflow:auto;overscroll-behavior:contain;
+  padding:14px!important;border:1px solid rgba(255,255,255,.84);border-top:0;
+  border-radius:0 0 22px 22px;box-shadow:0 20px 55px rgba(14,52,34,.19);
+}
+#profilePanel.member-hub-mode .profile-main>.profile-card{background:transparent;border:0;box-shadow:none;padding:0}
+#profilePanel.member-hub-mode .member-shell{grid-template-columns:minmax(0,.82fr) minmax(0,1.18fr);gap:12px}
+#profilePanel.member-hub-mode .member-list-card,#profilePanel.member-hub-mode .member-detail-card{
+  min-width:0;min-height:0;background:rgba(255,255,255,.66);border:1px solid rgba(255,255,255,.84);
+}
+#profilePanel.member-hub-mode .member-list{max-height:48dvh}
+#profilePanel.member-hub-mode .member-chat{min-height:0}
+#profilePanel.member-hub-mode .member-chat-log{max-height:37dvh}
+#profilePanel.member-hub-mode .member-chat-compose textarea{font-size:16px;min-width:0}
+#profilePanel.member-hub-mode .profile-top h2{font-size:1.1rem}
+#profilePanel.member-hub-mode .profile-close{min-height:40px}
+#msgBox.msg-box{
+  background:rgba(249,253,250,.89)!important;
+  -webkit-backdrop-filter:blur(25px) saturate(150%);backdrop-filter:blur(25px) saturate(150%);
+  border:1px solid rgba(255,255,255,.85)!important;
+}
+#msgBox .toolbar{background:rgba(249,253,250,.94)!important}
+#msgBox textarea,#msgBox input{font-size:16px}
+#memberHub .pf-avatar,#sideAvatar .pf-avatar{border-radius:50%!important}
+#memberHub .pf-avatar img,#sideAvatar .pf-avatar img{border-radius:50%!important}
+#wGrid{min-width:0;max-width:100%;overflow:hidden}
+#wGrid .xlw{width:100%;max-width:100%;max-height:min(67dvh,720px);overflow:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;touch-action:pan-x pan-y}
+#wGrid table.xl{width:max-content;max-width:none;table-layout:fixed}
+#wGrid table.xl th{min-width:38px;white-space:nowrap}
+#wGrid table.xl td{min-width:100px;max-width:150px}
+#wGrid table.xl input{display:block;width:100%;min-width:0;padding:8px 6px;font-size:16px;text-overflow:ellipsis}
+#wGrid table.xl thead th{position:sticky;top:0;z-index:2}
+#wGrid table.xl tbody th{position:sticky;left:0;z-index:1}
+#wGrid table.xl thead th:first-child{left:0;z-index:3}
+@media(max-width:720px){
+  #profilePanel.member-hub-mode{padding:calc(8px + env(safe-area-inset-top,0px)) 8px calc(8px + env(safe-area-inset-bottom,0px))}
+  #profilePanel.member-hub-mode .profile-top{padding:10px 12px!important}
+  #profilePanel.member-hub-mode .profile-main{height:min(75dvh,680px);padding:10px!important}
+  #profilePanel.member-hub-mode .member-shell{grid-template-columns:minmax(0,1fr)}
+  #profilePanel.member-hub-mode .member-list-card,#profilePanel.member-hub-mode .member-detail-card{padding:12px}
+  #profilePanel.member-hub-mode .member-list{max-height:17dvh}
+  #profilePanel.member-hub-mode .member-chat-log{max-height:25dvh}
+  #profilePanel.member-hub-mode .member-detail-card{min-height:170px}
+  #msgBox.msg-box{width:calc(100vw - 16px);max-height:calc(100dvh - 32px - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px))}
+  #wGrid table.xl td{min-width:102px}
+  #wGrid table.xl input{font-size:16px}
+}
 </style>
 <section id="profilePanel" class="profile-panel" aria-hidden="true" aria-label="Profil et annuaire">
   <div class="profile-top"><h2>Profil AfriFloW</h2><button type="button" id="profileClose" class="profile-close"><svg class="ic" aria-hidden="true"><use href="#i-close"/></svg> Fermer</button></div>
@@ -6937,7 +7002,7 @@ function avatar(kind,value,label){
   if(kind==="photo"&&photo(value))return '<span class="pf-avatar"><img src="'+value+'" alt="'+esc(label||"Photo de profil")+'"></span>';
   return '<span class="pf-avatar pf-dicebear"><img src="'+diceUrl(value)+'" alt="'+esc(label||"Portrait généré")+'" referrerpolicy="no-referrer"></span>';
 }
-function close(){var p=$("profilePanel");p.classList.remove("open");p.setAttribute("aria-hidden","true");document.body.classList.remove("af-profile-open");var b=$("profileOpen");if(b)b.focus()}
+function close(){var p=$("profilePanel");p.classList.remove("member-hub-mode");p.classList.remove("open");p.setAttribute("aria-hidden","true");document.body.classList.remove("af-profile-open");var b=$("profileOpen");if(b)b.focus()}
 function dayText(d){var n=Math.ceil((new Date(d).getTime()-Date.now())/86400000);return n<0?"Le délai est dépassé.":n===0?"Le délai se termine aujourd’hui.":"Il reste "+n+" jour"+(n>1?"s":"")+"."}
 function localName(){return String(window.USER_NAME||"").trim().split(/\s+/)[0]||""}
 function updateHeader(p,d){
@@ -7020,9 +7085,9 @@ async function sendDirect(peer,text){
 }
 async function openMemberHub(){
   if(!window.loggedUserEmail){if(window.toast)toast("Connectez-vous pour consulter les membres.");return}
-  var panel=$("profilePanel");panel.classList.add("open");panel.setAttribute("aria-hidden","false");document.body.classList.add("af-profile-open");panel.scrollTop=0;
+  var panel=$("profilePanel");panel.classList.add("member-hub-mode","open");panel.setAttribute("aria-hidden","false");document.body.classList.add("af-profile-open");panel.scrollTop=0;
   $("profileMain").innerHTML='<section class="profile-card"><div class="profile-tabs"><button type="button" class="on">Membres et messages</button><button type="button" id="memberHubProfile">Mon profil</button></div><div class="member-shell"><section class="profile-card member-list-card"><h3>Membres AfriFloW</h3><p class="profile-note">Sélectionnez un membre pour consulter son profil professionnel ou lui écrire.</p><div id="memberHubList" class="member-list"><p class="profile-note">Chargement…</p></div></section><section id="memberHubDetail" class="profile-card member-detail-card"><div class="member-detail-empty">Choisissez un membre dans l’annuaire.</div></section></div></section>';
-  $("memberHubProfile").onclick=async function(){try{await load();profilePage()}catch(e){if(window.toast)toast("Profil indisponible.")}};
+  $("memberHubProfile").onclick=async function(){try{panel.classList.remove("member-hub-mode");await load();profilePage()}catch(e){if(window.toast)toast("Profil indisponible.")}};
   try{
     var list=(await window.AFRI.listMembers()).filter(function(m){return m.email&&m.email!==String(window.loggedUserEmail||"").toLowerCase()});
     var box=$("memberHubList");box.innerHTML=list.length?list.map(function(m,i){return '<button type="button" class="member-list-item" data-member="'+i+'">'+avatar(m.avatar_kind,m.avatar_value,m.name)+'<span><b>'+esc(m.name||"Membre AfriFloW")+'</b><small>'+esc([m.job_title,m.department].filter(Boolean).join(" · ")||"Membre AfriFloW")+'</small></span></button>'}).join(""):'<p class="profile-note">Aucun autre membre inscrit pour le moment.</p>';
@@ -7035,6 +7100,9 @@ function showMemberDetail(member){
   card.innerHTML='<div class="member-identity">'+avatar(member.avatar_kind,member.avatar_value,member.name)+'<div><h3>'+esc(member.name||"Membre AfriFloW")+'</h3><p class="profile-note">'+esc(member.job_title||"Membre AfriFloW")+'</p></div></div><div class="member-public-info"><div><small>Département</small>'+esc(member.department||"Non renseigné")+'</div><div><small>Organisation</small>'+esc(member.organization||"AfriFloW")+'</div><div><small>Pays</small>'+esc(member.country||"Non renseigné")+'</div><div><small>Ville</small>'+esc(member.city||"Non renseignée")+'</div></div>'+(member.bio?'<p class="member-bio">'+esc(member.bio)+'</p>':'')+'<div class="profile-actions" style="justify-content:flex-start"><button type="button" class="p" id="memberWrite">Écrire à '+esc((member.name||"").split(" ")[0])+'</button></div>';
   $("memberWrite").onclick=function(){openDirectChat(member)};
 }
+
+// Ne jamais ouvrir automatiquement le clavier mobile : seule une action explicite sur la zone de saisie l'active.
+// Aucun focus() sur le textarea à l'ouverture ou après chargement.
 async function openDirectChat(member){
   var card=$("memberHubDetail");if(!card)return;
   card.innerHTML='<div class="member-chat"><div class="member-chat-head">'+avatar(member.avatar_kind,member.avatar_value,member.name)+'<div><b>'+esc(member.name||"Membre AfriFloW")+'</b><small>Discussion privée</small></div></div><div id="memberChatLog" class="member-chat-log"><p class="profile-note">Chargement…</p></div><div class="member-chat-compose"><textarea id="memberChatText" maxlength="5000" placeholder="Écrire un message…"></textarea><button type="button" class="p" id="memberChatSend">Envoyer</button></div></div>';
