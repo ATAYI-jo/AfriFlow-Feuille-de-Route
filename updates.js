@@ -67,7 +67,10 @@
       if (baseline === null) {
         try {baseline=localStorage.getItem(KEY)} catch (_) {}
       }
-      if (baseline && baseline !== current) pending = true;
+      if (baseline && baseline !== current) {
+        pending = true;
+        window.dispatchEvent(new CustomEvent('afriflow-update-ready'));
+      }
       baseline = current;
       try {localStorage.setItem(KEY,current)}catch (_) {}
       refreshIfSafe();

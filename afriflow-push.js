@@ -97,7 +97,6 @@
   async function autoRegister(){
     if(window.AfriFlowAndroid) {await registerAndroidNative();return;}
     if(!supported() || Notification.permission!=='granted')return;
-    if(!window.AfriFlowAlerts || !window.AfriFlowAlerts.enabled())return;
     var email=account();
     if(!email)return;
     var last='';
@@ -132,6 +131,20 @@
     return {ok:response.ok && (data.sent>0 || data.already_sent>0),
       reason:data.error||'',...data};
   }
+  async function notifyMessage(messageKey) {
+    var email=account();
+    if(!email || !window.__sb)return {ok:false,reason:'not_authenticated'};
+    // A granted system permission is enough to keep this device enrolled; it does not
+    // re-open the permission prompt or change the user's alert preference.
+    var enrolled=await register();
+    if(!enrolled.ok)return enrolled;
+    var session=await window.__sb.auth.getSession();
+    var jwt=session.data&&session.data.session&&session.data.session.access_token;
+    if(!jwt)return {ok:false,reason:'not_authenticated'};
+    var response=await fetch(URL,{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+jwt},body:JSON.stringify({action:'message',message_key:String(messageKey||'')})});
+    var data={};try{data=await response.json()}catch(e){}
+    return {ok:response.ok,reason:data.error||'',...data};
+  }
   function start(){
     // Registration after system permission was expressly approved, not silently at page load.
     var timer=setInterval(autoRegister,20000);
@@ -141,7 +154,7 @@
     autoRegister();
   }
   window.AfriFlowPush={subscribe:register,unsubscribe:unregister,supported:supported,registerAndroidNative:registerAndroidNative,
-    diagnostics:diagnostics,test:testNotification};
+    diagnostics:diagnostics,test:testNotification,notifyMessage:notifyMessage};
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start);
   else start();
 })();
