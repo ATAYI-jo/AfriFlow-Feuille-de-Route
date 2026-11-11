@@ -3144,7 +3144,7 @@ async function send(){
     $g("aiStat").textContent="Votre message a été conservé : vous pouvez le renvoyer.";
     after();
   }
-  busy=false;$g("aiGo").disabled=false;if(!voice)inp.focus();
+  busy=false;$g("aiGo").disabled=false;if(!voice&&!window.matchMedia("(pointer:coarse)").matches)inp.focus();
 }
 
 /* ---------- Événements ---------- */
@@ -3155,7 +3155,7 @@ function hello(){
     :"Bonjour, je suis AfriFlow. Posez-moi vos questions, joignez un fichier à analyser, demandez-moi un document à télécharger, ou parlez-moi avec le micro.");
 }
 function closeBox(){box.style.display="none";voice=false;stopListen();stopSpeak();paint()}
-btn.onclick=function(){if(box.style.display==="flex")closeBox();else{box.style.display="flex";hello();$g("aiIn").focus()}};
+btn.onclick=function(){if(box.style.display==="flex")closeBox();else{box.style.display="flex";hello();if(!window.matchMedia("(pointer:coarse)").matches)$g("aiIn").focus()}};
 $g("aiClose").onclick=closeBox;
 $g("aiClear").onclick=function(){H=[];atts=[];drawChips();stopListen();stopSpeak();voice=false;paint();$g("aiLog").textContent="";greeted=false;hello()};
 $g("aiGo").onclick=send;
