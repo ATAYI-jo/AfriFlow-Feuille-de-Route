@@ -6974,7 +6974,15 @@ body.af-profile-open #afCloudSyncBadge{visibility:hidden!important}
   #profilePanel.member-hub-mode .member-list-card,#profilePanel.member-hub-mode .member-detail-card{padding:12px}
   #profilePanel.member-hub-mode .member-list{max-height:17dvh}
   #profilePanel.member-hub-mode .member-chat-log{max-height:25dvh}
-  #profilePanel.member-hub-mode .member-detail-card{min-height:170px}
+  /* Sur téléphone, la liste des participants occupe l’espace jusqu’à la sélection. */
+  #profilePanel.member-hub-mode .member-list-card>h3,
+  #profilePanel.member-hub-mode .member-list-card>.profile-note{display:none!important}
+  #profilePanel.member-hub-mode .member-list{max-height:57dvh;overflow-y:auto;gap:7px}
+  #profilePanel.member-hub-mode .member-list-card{padding:8px!important}
+  #profilePanel.member-hub-mode .member-detail-card{display:none;min-height:0}
+  #profilePanel.member-hub-mode.member-selected .member-detail-card{display:block;min-height:170px}
+  #profilePanel.member-hub-mode.member-selected .member-list{max-height:17dvh}
+  #profilePanel.member-hub-mode .profile-main{height:min(78dvh,740px)}
   #msgBox.msg-box{width:calc(100vw - 16px);max-height:calc(100dvh - 32px - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px))}
   #wGrid table.xl td{min-width:102px}
   #wGrid table.xl input{font-size:16px}
@@ -7093,7 +7101,7 @@ async function sendDirect(peer,text){
 }
 async function openMemberHub(){
   if(!window.loggedUserEmail){if(window.toast)toast("Connectez-vous pour consulter les membres.");return}
-  var panel=$("profilePanel");panel.classList.add("member-hub-mode","open");panel.setAttribute("aria-hidden","false");document.body.classList.add("af-profile-open");panel.scrollTop=0;
+  var panel=$("profilePanel");panel.classList.remove("member-selected");panel.classList.add("member-hub-mode","open");panel.setAttribute("aria-hidden","false");document.body.classList.add("af-profile-open");panel.scrollTop=0;
   $("profileMain").innerHTML='<section class="profile-card"><div class="profile-tabs"><button type="button" class="on">Membres et messages</button><button type="button" id="memberHubProfile">Mon profil</button></div><div class="member-shell"><section class="profile-card member-list-card"><h3>Membres AfriFloW</h3><p class="profile-note">Sélectionnez un membre pour consulter son profil professionnel ou lui écrire.</p><div id="memberHubList" class="member-list"><p class="profile-note">Chargement…</p></div></section><section id="memberHubDetail" class="profile-card member-detail-card"><div class="member-detail-empty">Choisissez un membre dans l’annuaire.</div></section></div></section>';
   $("memberHubProfile").onclick=async function(){try{panel.classList.remove("member-hub-mode");await load();profilePage()}catch(e){if(window.toast)toast("Profil indisponible.")}};
   try{
@@ -7104,6 +7112,7 @@ async function openMemberHub(){
 }
 function showMemberDetail(member){
   var card=$("memberHubDetail");if(!card||!member)return;
+  $("profilePanel").classList.add("member-selected");
   $("memberHubList").querySelectorAll(".member-list-item").forEach(function(b){b.classList.toggle("on",Number(b.dataset.member)>=0&&b.textContent.indexOf(member.name||"")>=0)});
   card.innerHTML='<div class="member-identity">'+avatar(member.avatar_kind,member.avatar_value,member.name)+'<div><h3>'+esc(member.name||"Membre AfriFloW")+'</h3><p class="profile-note">'+esc(member.job_title||"Membre AfriFloW")+'</p></div></div><div class="member-public-info"><div><small>Département</small>'+esc(member.department||"Non renseigné")+'</div><div><small>Organisation</small>'+esc(member.organization||"AfriFloW")+'</div><div><small>Pays</small>'+esc(member.country||"Non renseigné")+'</div><div><small>Ville</small>'+esc(member.city||"Non renseignée")+'</div></div>'+(member.bio?'<p class="member-bio">'+esc(member.bio)+'</p>':'')+'<div class="profile-actions" style="justify-content:flex-start"><button type="button" class="p" id="memberWrite">Écrire à '+esc((member.name||"").split(" ")[0])+'</button></div>';
   $("memberWrite").onclick=function(){openDirectChat(member)};
