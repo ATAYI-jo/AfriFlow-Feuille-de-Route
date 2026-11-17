@@ -1,6 +1,6 @@
 /* AfriFloW Market — public catalogue, intentionally separate from the workspace. */
-#market-view{display:none;min-height:100dvh;background:radial-gradient(800px 560px at 12% 0%,color-mix(in srgb,var(--green) 24%,transparent),transparent 62%),radial-gradient(700px 520px at 100% 100%,color-mix(in srgb,var(--amber) 20%,transparent),transparent 60%),var(--bg);color:var(--ink);font-family:system-ui,-apple-system,"Segoe UI",sans-serif}
-body.af-market-mode{background:radial-gradient(800px 560px at 12% 0%,color-mix(in srgb,var(--green) 24%,transparent),transparent 62%),radial-gradient(700px 520px at 100% 100%,color-mix(in srgb,var(--amber) 20%,transparent),transparent 60%),var(--bg)}
+#market-view{display:none;min-height:100dvh;background:#fff;color:var(--ink);font-family:system-ui,-apple-system,"Segoe UI",sans-serif}
+body.af-market-mode{background:#fff}
 body.af-market-mode>#view-home,body.af-market-mode>#viewHost,body.af-market-mode>#menuBtn,body.af-market-mode>#side,body.af-market-mode>#scrim,body.af-market-mode>#memberHub,body.af-market-mode>.wrap:not(#market-view){display:none!important}
 body.af-market-mode #market-view{display:block}
 .af-market-top{position:sticky;top:0;z-index:100;background:#113a2d;color:#fff;box-shadow:0 2px 8px #0004}
