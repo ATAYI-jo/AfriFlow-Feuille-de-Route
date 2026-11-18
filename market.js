@@ -4,7 +4,7 @@
   var DEF_TITLE = "AfriFloW – De l’Afrique vers le monde", HERO_KEY = "pub:markethero", HERO_LS = "afriflow_markethero_v1", EXT = ["jpg", "jpeg", "webp", "png"];
   function readHeroLocal() { try { return JSON.parse(localStorage.getItem(HERO_LS) || "{}") || {}; } catch (error) { return {}; } }
   /* Le bandeau est toujours repris depuis le serveur : aucune ancienne image locale ne réapparaît au rechargement. */
-  var state = { products: [], adminProducts: [], category: "", term: "", context: { kind: "public" }, timers: [], heroTimer: null, heroIdx: 0, imgs: {}, imgErr: {}, hero: {} };
+  var state = { products: [], adminProducts: [], category: "", term: "", context: { kind: "public" }, timers: [], heroTimer: null, rotationTimer: null, rotationStep: 0, heroIdx: 0, imgs: {}, imgErr: {}, hero: {} };
 
   function el(id) { return document.getElementById(id); }
   function esc(value) { return String(value == null ? "" : value).replace(/[&<>"']/g, function (char) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[char]; }); }
@@ -30,7 +30,7 @@
     document.body.classList.remove("af-market-mode");
     var box = el("market-view"); if (box) box.innerHTML = "";
   }
-  function clearTimers() { state.timers.forEach(function (t) { clearTimeout(t); }); state.timers = []; clearHero(); }
+  function clearTimers() { state.timers.forEach(function (t) { clearTimeout(t); }); state.timers = []; if (state.rotationTimer) { clearInterval(state.rotationTimer); state.rotationTimer = null; } clearHero(); }
   function clearHero() { if (state.heroTimer) { clearInterval(state.heroTimer); state.heroTimer = null; } }
   function open(context) {
     state.context = context || { kind: "public" }; hideWorkspace(); render();
@@ -69,10 +69,10 @@
     }
     return "";
   }
-  async function resolveImage(p) {
+  async function resolveImage(p, rotation) {
     if (sb()) {
       try {
-        var r = await sb().functions.invoke("afriflow-market-media", { body: { productId: p.id } });
+        var r = await sb().functions.invoke("afriflow-market-media", { body: { productId: p.id, rotation: rotation || 0 } });
         if (!r.error && r.data && r.data.url) { delete state.imgErr[p.id]; return r.data.url; }
         state.imgErr[p.id] = r.error ? String(r.error.message || r.error) : "aucune image trouvée dans Dropbox";
       } catch (error) { state.imgErr[p.id] = String(error && error.message || error); }
@@ -101,13 +101,14 @@
     });
   }
   function scheduleImages(force) {
-    state.timers.forEach(function (t) { clearTimeout(t); }); state.timers = [];
     state.products.forEach(function (p) {
       if (!force && state.imgs[p.id]) return;
-      resolveImage(p).then(function (url) { if (url) applyImage(p.id, url); else { var b = document.querySelector('[data-market-image="' + p.id + '"] .af-fb-hint'); if (!b && isAdmin()) render(); } });
+      resolveImage(p, state.rotationStep).then(function (url) { if (url) applyImage(p.id, url); else { var b = document.querySelector('[data-market-image="' + p.id + '"] .af-fb-hint'); if (!b && isAdmin()) render(); } });
     });
-    var untilNextHour = 3600000 - (Date.now() % 3600000) + 250;
-    state.timers.push(setTimeout(function () { if (document.body.classList.contains("af-market-mode")) scheduleImages(true); }, untilNextHour));
+    if (!state.rotationTimer) state.rotationTimer = setInterval(function () {
+      if (!document.body.classList.contains("af-market-mode") || document.hidden) return;
+      state.rotationStep += 1; scheduleImages(true);
+    }, 10000);
   }
 
   /* ---------- Bandeau éditable ---------- */

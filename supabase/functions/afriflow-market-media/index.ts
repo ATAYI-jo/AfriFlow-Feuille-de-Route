@@ -32,7 +32,7 @@ function headers(req: Request) {
     "Access-Control-Allow-Headers": "authorization, apikey, content-type, x-client-info",
     "Access-Control-Allow-Methods": "POST, OPTIONS",
     "Content-Type": "application/json",
-    "Cache-Control": "private, max-age=300",
+    "Cache-Control": "no-store",
   };
 }
 function json(req: Request, body: unknown, status = 200) {
@@ -62,7 +62,9 @@ Deno.serve(async (req: Request) => {
   try {
     const payload = await req.json();
     const productId = String(payload.productId || "");
+    const rotation = Number(payload.rotation || 0);
     if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(productId)) return json(req, { error: "Produit invalide" }, 400);
+    if (!Number.isSafeInteger(rotation) || rotation < 0 || rotation > 1000000) return json(req, { error: "Rotation invalide" }, 400);
     const service = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!, { auth: { persistSession: false, autoRefreshToken: false } });
     const product = await service.from("afriflow_market_products")
       .select("id,original_path,is_active").eq("id", productId).eq("is_active", true).maybeSingle();
@@ -73,10 +75,11 @@ Deno.serve(async (req: Request) => {
       .select("id,storage_path").eq("product_id", productId).eq("approval_status", "approved").order("approved_at", { ascending: true }).order("id", { ascending: true });
     if (variants.error) throw variants.error;
     const approved = variants.data || [];
-    const hour = Math.floor(Date.now() / 3_600_000);
-    const selected = approved.length ? approved[hour % approved.length] : null;
+    /* L’original et les variantes déjà approuvées tournent côté affichage, sans IA à la visite. */
+    const choices = [{ id: null, storage_path: product.data.original_path }].concat(approved);
+    const selected = choices[rotation % choices.length];
     const root = (Deno.env.get("DROPBOX_MARKET_ROOT") || `${Deno.env.get("DROPBOX_ROOT") || ""}/Market`).replace(/\/+$/, "");
-    const path = safeDropboxPath(selected?.storage_path || product.data.original_path, root);
+    const path = safeDropboxPath(selected.storage_path, root);
     const token = await dropboxToken(service);
     const response = await fetch("https://api.dropboxapi.com/2/files/get_temporary_link", {
       method: "POST",
@@ -85,7 +88,7 @@ Deno.serve(async (req: Request) => {
     });
     const link = await response.json();
     if (!response.ok || !link.link) throw new Error("Image temporairement indisponible");
-    return json(req, { url: link.link, variantId: selected?.id || null, fallback: !selected });
+    return json(req, { url: link.link, variantId: selected.id, fallback: !selected.id });
   } catch (error) {
     console.error("afriflow-market-media", error instanceof Error ? error.message : "error");
     return json(req, { error: "Image Market indisponible" }, 503);
