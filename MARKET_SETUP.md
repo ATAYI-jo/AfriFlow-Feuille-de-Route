@@ -25,7 +25,9 @@ Les fonctions utilisent des secrets Supabase existants et ne les exposent jamais
 - `DROPBOX_MARKET_ROOT` — recommandé, par exemple `/AfriFlow/Market`
 - `AFRIFLOW_ALLOWED_ORIGINS` — liste d’origines séparées par des virgules pour la production et la préproduction.
 
-Le panneau IA est volontairement opérationnel sans prétendre générer quoi que ce soit. Il indique l’absence de configuration et journalise une demande avec l’état `configuration_missing`. Avant de connecter un fournisseur, définir `AFRIFLOW_IMAGE_AI_URL` et `AFRIFLOW_IMAGE_AI_KEY`, puis relier un traitement serveur à la file `afriflow_market_variant_jobs`. Toute sortie doit être vérifiée et ajoutée comme variante avant approbation.
+L’IA d’images utilise le secret serveur existant `GEMINI_API_KEY` et, si besoin, `GEMINI_IMAGE_MODEL`. Elle reçoit l’original depuis Dropbox, demande une variante fidèle au produit, la replace dans Dropbox, puis la crée en statut `pending`. Elle n’est jamais rendue publique avant l’approbation manuelle par un administrateur.
+
+Si Dropbox affiche « doit être reconnecté », le jeton d’accès a perdu son autorisation. Renouveler alors `DROPBOX_REFRESH_TOKEN` (et, si nécessaire, `DROPBOX_APP_KEY` et `DROPBOX_APP_SECRET`) dans les secrets Supabase, sans jamais les placer dans le navigateur ou le dépôt.
 
 ## Déploiement
 

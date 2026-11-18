@@ -11,6 +11,7 @@ function out(req: Request, data: unknown, status = 200) { return new Response(JS
 function text(value: unknown, maximum: number) { return String(value || "").trim().slice(0, maximum); }
 function imageExtension(mime: string) { return ({ "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp" } as Record<string, string>)[mime] || ""; }
 function b64(value: unknown) { const data = String(value || ""); if (!/^[A-Za-z0-9+/]+={0,2}$/.test(data) || data.length > 10_500_000) throw new Error("Image invalide ou trop volumineuse"); const bytes = Uint8Array.from(atob(data), (char) => char.charCodeAt(0)); if (bytes.byteLength > 7 * 1024 * 1024) throw new Error("Image trop volumineuse (maximum 7 Mo)"); return bytes; }
+function bytesToB64(bytes: Uint8Array) { const chunks: string[] = []; for (let index = 0; index < bytes.length; index += 0x8000) chunks.push(String.fromCharCode(...bytes.subarray(index, index + 0x8000))); return btoa(chunks.join("")); }
 async function token() {
   const key = Deno.env.get("DROPBOX_APP_KEY") || "", refresh = Deno.env.get("DROPBOX_REFRESH_TOKEN") || "";
   if (!key || !refresh) throw new Error("Dropbox serveur non configurée");
@@ -21,7 +22,28 @@ async function token() {
 }
 async function upload(accessToken: string, path: string, bytes: Uint8Array) {
   const response = await fetch("https://content.dropboxapi.com/2/files/upload", { method: "POST", headers: { Authorization: `Bearer ${accessToken}`, "Dropbox-API-Arg": JSON.stringify({ path, mode: "add", autorename: false, mute: true }), "Content-Type": "application/octet-stream" }, body: bytes });
-  if (!response.ok) throw new Error("Dropbox a refusé l'enregistrement de l'image");
+  if (!response.ok) { const detail = (await response.text()).slice(0, 180); throw new Error(`Dropbox a refusé l'enregistrement (${response.status})${detail ? " : " + detail : ""}`); }
+}
+async function dropboxStatus() {
+  try {
+    const response = await fetch("https://api.dropboxapi.com/2/users/get_current_account", { method: "POST", headers: { Authorization: `Bearer ${await token()}` } });
+    return { connected: response.ok, message: response.ok ? "Dropbox est connecté." : "Dropbox doit être reconnecté." };
+  } catch { return { connected: false, message: "Dropbox doit être reconnecté." }; }
+}
+async function download(accessToken: string, path: string) {
+  const response = await fetch("https://content.dropboxapi.com/2/files/download", { method: "POST", headers: { Authorization: `Bearer ${accessToken}`, "Dropbox-API-Arg": JSON.stringify({ path }) } });
+  if (!response.ok) throw new Error("Original Dropbox indisponible pour la génération IA");
+  return new Uint8Array(await response.arrayBuffer());
+}
+async function generateImage(original: Uint8Array, mime: string, instruction: string) {
+  const key = Deno.env.get("GEMINI_API_KEY") || "", model = Deno.env.get("GEMINI_IMAGE_MODEL") || "gemini-2.5-flash-image";
+  if (!key) throw new Error("IA d'images non configurée");
+  const prompt = "Crée une variante commerciale fidèle de la photo produit fournie. Conserve exactement le produit, sa forme, sa matière, son emballage, ses couleurs et tout texte lisible. Ne change que le décor, l'éclairage ou la mise en scène selon cette consigne : " + instruction;
+  const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, { method: "POST", headers: { "x-goog-api-key": key, "content-type": "application/json" }, signal: AbortSignal.timeout(60000), body: JSON.stringify({ contents: [{ parts: [{ text: prompt.slice(0, 2800) }, { inlineData: { mimeType: mime, data: bytesToB64(original) } }] }], generationConfig: { responseModalities: ["IMAGE"] } }) });
+  const result = await response.json(); if (!response.ok) throw new Error("Génération IA indisponible");
+  const image = (result.candidates?.[0]?.content?.parts || []).find((part: { inlineData?: { data?: string } }) => part.inlineData?.data)?.inlineData;
+  if (!image?.data || !imageExtension(image.mimeType || "")) throw new Error("L'IA n'a renvoyé aucune image exploitable");
+  return { bytes: b64(image.data), mime: image.mimeType as string };
 }
 function isUuid(value: string) { return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value); }
 
@@ -38,8 +60,8 @@ Deno.serve(async (req: Request) => {
     const admin = await service.from("afriflow_admins").select("email").eq("email", user.email.toLowerCase()).maybeSingle();
     if (admin.error || !admin.data) return out(req, { error: "Accès réservé à l'administrateur" }, 403);
     const body = await req.json(); const action = String(body.action || "status");
-    const configured = Boolean(Deno.env.get("AFRIFLOW_IMAGE_AI_URL") && Deno.env.get("AFRIFLOW_IMAGE_AI_KEY"));
-    if (action === "status") return out(req, { dropboxConfigured: Boolean(Deno.env.get("DROPBOX_APP_KEY") && Deno.env.get("DROPBOX_REFRESH_TOKEN")), aiConfigured: configured, aiMode: configured ? "connector_required" : "not_configured" });
+    const configured = Boolean(Deno.env.get("GEMINI_API_KEY"));
+    if (action === "status") { const dropbox = await dropboxStatus(); return out(req, { dropboxConfigured: Boolean(Deno.env.get("DROPBOX_APP_KEY") && Deno.env.get("DROPBOX_REFRESH_TOKEN")), dropboxConnected: dropbox.connected, dropboxMessage: dropbox.message, aiConfigured: configured, aiMode: configured ? "gemini_image" : "not_configured" }); }
     if (action === "upload_original") {
       const product = body.product || {}, name = text(product.name, 160), description = text(product.description, 4000), category = text(product.category, 80) || "Découvrir";
       const price = product.price === "" || product.price == null ? null : Number(product.price);
@@ -64,10 +86,23 @@ Deno.serve(async (req: Request) => {
     }
     if (action === "request_ai_variant") {
       const productId = String(body.productId || ""), prompt = text(body.prompt, 2000); if (!isUuid(productId) || prompt.length < 8) return out(req, { error: "Produit et consigne détaillée requis" }, 400);
-      const job = await service.from("afriflow_market_variant_jobs").insert({ product_id: productId, requested_by: user.id, prompt, status: configured ? "queued" : "configuration_missing", error_message: configured ? null : "Aucun fournisseur IA sécurisé n'est configuré." }).select("id,status,error_message").single();
+      const job = await service.from("afriflow_market_variant_jobs").insert({ product_id: productId, requested_by: user.id, prompt, status: configured ? "processing" : "configuration_missing", error_message: configured ? null : "IA d'images non configurée." }).select("id,status,error_message").single();
       if (job.error) throw job.error;
-      // Intentionally no browser-side generation and no provider-specific guesswork.
-      return out(req, { job: job.data, generated: false, message: configured ? "Demande enregistrée pour le connecteur IA serveur." : "Aucune génération lancée : configurez d'abord le fournisseur IA côté serveur." }, configured ? 202 : 503);
+      if (!configured) return out(req, { job: job.data, generated: false, message: "Aucune génération lancée : configurez l'IA d'images côté serveur." }, 503);
+      try {
+        const product = await service.from("afriflow_market_products").select("id,original_path").eq("id", productId).maybeSingle(); if (product.error || !product.data?.original_path) throw new Error("Produit ou original introuvable");
+        const originalMime = product.data.original_path.endsWith(".png") ? "image/png" : product.data.original_path.endsWith(".webp") ? "image/webp" : "image/jpeg";
+        const generated = await generateImage(await download(await token(), product.data.original_path), originalMime, prompt), id = crypto.randomUUID(), root = (Deno.env.get("DROPBOX_MARKET_ROOT") || `${Deno.env.get("DROPBOX_ROOT") || ""}/Market`).replace(/\/+$/, ""), ext = imageExtension(generated.mime);
+        if (!root.startsWith("/")) throw new Error("Dossier Market Dropbox non configuré");
+        const path = `${root}/products/${productId}/variants/${id}.${ext}`; await upload(await token(), path, generated.bytes);
+        const variant = await service.from("afriflow_market_variants").insert({ id, product_id: productId, storage_path: path, source: "ai", prompt, approval_status: "pending" }).select("id,approval_status").single(); if (variant.error) throw variant.error;
+        await service.from("afriflow_market_variant_jobs").update({ status: "ready", error_message: null }).eq("id", job.data.id);
+        return out(req, { job: job.data, variant: variant.data, generated: true, message: "Variante IA créée et placée en attente d'approbation." });
+      } catch (generationError) {
+        const message = generationError instanceof Error ? generationError.message : "Erreur de génération IA";
+        await service.from("afriflow_market_variant_jobs").update({ status: "failed", error_message: message.slice(0, 500) }).eq("id", job.data.id);
+        throw new Error(message);
+      }
     }
     return out(req, { error: "Action non reconnue" }, 400);
   } catch (error) {
