@@ -7669,4 +7669,16 @@ run();
 })();
 </script>
 </body>
+  <script>
+(function(){
+  function h(){
+    document.querySelectorAll("#market-view *").forEach(function(e){
+      if(e.children.length===0 && /^\s*Image Dropbox\s*$/i.test(e.textContent))
+        e.style.setProperty("display","none","important");
+    });
+  }
+  new MutationObserver(h).observe(document.body,{childList:true,subtree:true});
+  h();
+})();
+</script>
 </html>
