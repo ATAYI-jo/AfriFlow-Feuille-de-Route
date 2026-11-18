@@ -7476,5 +7476,197 @@ if ('serviceWorker' in navigator) {
   });
 }
 </script>
+  <!-- =====================================================================
+  AFRIFLOW · Correctifs Marketplace
+  À COLLER dans index.html, juste avant </body>, APRÈS tous les autres blocs.
+  1. Intro vidéo : CSS simplifié (supprime les conflits)
+  2. Bandeau : nouveau titre, sous-titre supprimé, crayon ✎ (admin) pour
+     modifier le texte et l'image de fond
+  3. Produits : mise en page qui s'adapte au nombre (1, 2, 3… produits),
+     avec animations (entrée, flottement, reflet, zoom lent, inclinaison)
+====================================================================== -->
+<style id="af-market-fixes-css">
+/* ---------- 1. Intro vidéo ---------- */
+#intro{background:#fff!important}
+#intro .intro-video-backdrop{display:none!important}
+#intro::before,#intro::after{display:none!important}
+#intro #introVideo{
+  position:relative!important;z-index:2!important;
+  width:100vw!important;height:100dvh!important;max-width:100vw!important;max-height:100dvh!important;
+  object-fit:contain!important;background:#fff!important;
+  border:0!important;border-radius:0!important;box-shadow:none!important;
+  mix-blend-mode:normal!important;filter:none!important;
+  -webkit-backdrop-filter:none!important;backdrop-filter:none!important}
+
+/* ---------- 2. Crayon d'édition du bandeau ---------- */
+.afh-pencil{position:absolute;top:14px;right:14px;z-index:20;width:42px;height:42px;padding:0!important;border-radius:50%!important;
+  display:grid;place-items:center;background:#fff!important;color:#1f5d3a!important;border:1px solid rgba(0,0,0,.15)!important;
+  box-shadow:0 6px 18px rgba(0,0,0,.25)!important;cursor:pointer;font-size:20px;line-height:1}
+.afh-modal{position:fixed;inset:0;z-index:20000;display:grid;place-items:center;padding:16px;background:rgba(0,0,0,.55)}
+.afh-box{width:min(480px,100%);max-height:92vh;overflow:auto;background:#fff;color:#1d2a22;border-radius:18px;padding:22px;
+  box-shadow:0 20px 60px rgba(0,0,0,.35);font:15px/1.4 system-ui,sans-serif}
+.afh-box h3{margin:0 0 14px;color:#1f5d3a}
+.afh-box label{display:block;font-weight:700;font-size:.85rem;color:#55645b;margin:12px 0 6px}
+.afh-box input[type=text]{width:100%;padding:12px;border:1px solid #cfd8d2;border-radius:10px;font:inherit;background:#fff;color:#1d2a22}
+.afh-box img{max-width:100%;max-height:120px;border-radius:8px;margin-top:8px;display:block}
+.afh-row{display:flex;gap:10px;flex-wrap:wrap;margin-top:18px}
+.afh-row button{padding:11px 16px;border-radius:10px;border:1px solid #cfd8d2;background:#fff;color:#1d2a22;cursor:pointer;font-weight:700}
+.afh-row .p{background:#1f5d3a;color:#fff;border-color:#1f5d3a}
+
+/* ---------- 3. Produits : grille qui s'adapte + animations ---------- */
+.afp-grid{display:grid!important;grid-template-columns:repeat(auto-fit,minmax(240px,320px))!important;
+  justify-content:center!important;gap:28px!important}
+.afp-grid[data-n="1"]{grid-template-columns:minmax(0,440px)!important;padding:18px 0 30px}
+.afp-grid[data-n="2"]{grid-template-columns:repeat(2,minmax(240px,340px))!important}
+@media(max-width:640px){.afp-grid,.afp-grid[data-n="2"]{grid-template-columns:minmax(0,1fr)!important}}
+
+.afp-card{position:relative;overflow:hidden;
+  transform:perspective(900px) rotateX(var(--rx,0deg)) rotateY(var(--ry,0deg));
+  transition:transform .18s ease-out,box-shadow .3s;
+  animation:afpIn .8s cubic-bezier(.2,.8,.2,1) backwards,afpFloat 6s ease-in-out infinite;
+  animation-delay:calc(var(--i,0)*110ms),calc(.9s + var(--i,0)*110ms)}
+.afp-grid[data-n="1"] .afp-card{--amp:-12px;animation-duration:.9s,5s}
+.afp-card:hover{box-shadow:0 22px 50px rgba(0,0,0,.28)}
+.afp-card::after{content:"";position:absolute;inset:0;pointer-events:none;
+  background:linear-gradient(115deg,transparent 38%,rgba(255,255,255,.5) 50%,transparent 62%);
+  translate:-130% 0;animation:afpShine 5.5s ease-in-out infinite;animation-delay:calc(1.5s + var(--i,0)*400ms)}
+.afp-card img{animation:afpZoom 14s ease-in-out infinite alternate}
+.afp-card a,.afp-card button{animation:afpGlow 2.8s ease-in-out infinite}
+@keyframes afpIn{from{opacity:0;scale:.9;translate:0 34px}}
+@keyframes afpFloat{50%{translate:0 var(--amp,-7px)}}
+@keyframes afpShine{0%,55%{translate:-130% 0}100%{translate:130% 0}}
+@keyframes afpZoom{to{scale:1.12}}
+@keyframes afpGlow{50%{box-shadow:0 0 0 6px rgba(244,182,79,.28)}}
+@media(prefers-reduced-motion:reduce){
+  .afp-card,.afp-card::after,.afp-card img,.afp-card a,.afp-card button{animation:none!important}
+}
+</style>
+
+<script id="af-market-fixes-js">
+(function(){
+"use strict";
+var K="pub:markethero",LS="afriflow_markethero_v1",DEF="AfriFloW – De l’Afrique vers le monde",cfg={};
+try{cfg=JSON.parse(localStorage.getItem(LS)||"{}")||{}}catch(e){}
+function TB(){return window.__TABLE||"afriflow_state"}
+function esc(s){return String(s==null?"":s).replace(/[&<>"']/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]})}
+function root(){return document.getElementById("market-view")||document.body}
+function isAdmin(){return window.USER_ROLE==="admin"}
+function toast(m){(window.toast||alert)(m)}
+function okImg(d){return typeof d==="string"&&/^data:image\/(png|jpe?g|webp);base64,/.test(d)}
+
+/* ----- Lecture / enregistrement partagé ----- */
+async function pull(){
+  if(!window.__sb)return;
+  try{
+    var r=await window.__sb.from(TB()).select("value").eq("key",K).maybeSingle();
+    if(r.data&&r.data.value){cfg=r.data.value;try{localStorage.setItem(LS,JSON.stringify(cfg))}catch(e){}run()}
+  }catch(e){}
+}
+async function push(){
+  var r=await window.__sb.from(TB()).upsert({key:K,value:cfg,updated_at:new Date().toISOString()});
+  if(r.error)throw r.error;
+  try{localStorage.setItem(LS,JSON.stringify(cfg))}catch(e){}
+}
+
+/* ----- Bandeau ----- */
+function hero(){
+  var r=root(),t=r.querySelector('[data-afh="t"]');
+  if(!t){
+    [].some.call(r.querySelectorAll("h1,h2"),function(h){
+      if(/^\s*Le meilleur d.{0,2}Afri/i.test(h.textContent)){t=h;t.dataset.afh="t";return true}
+    });
+  }
+  if(!t)return;
+  var want=(cfg.title||DEF);
+  if(t.dataset.afhv!==want){
+    t.innerHTML=esc(want).replace(/(Afri)(Flo[wW])/,'$1<span style="color:#f4b64f">$2</span>');
+    t.dataset.afhv=want;
+  }
+  [].forEach.call(r.querySelectorAll("p"),function(p){
+    if(/^\s*Une Marketplace pens/i.test(p.textContent))p.style.setProperty("display","none","important");
+  });
+  var box=t.closest("section,header,[class*='hero' i]")||t.parentElement;
+  if(!box)return;
+  if(getComputedStyle(box).position==="static")box.style.position="relative";
+  var img=okImg(cfg.img)?cfg.img:"";
+  if(box.dataset.afhi!==img){
+    if(img)box.style.setProperty("background","linear-gradient(rgba(10,50,30,.55),rgba(10,50,30,.30)),url(\""+img+"\") center/cover no-repeat","important");
+    else box.style.removeProperty("background");
+    box.dataset.afhi=img;
+  }
+  var pen=box.querySelector(".afh-pencil");
+  if(isAdmin()&&!pen){
+    pen=document.createElement("button");pen.type="button";pen.className="afh-pencil";
+    pen.title="Modifier le texte et l’image du bandeau";pen.setAttribute("aria-label","Modifier le bandeau");pen.textContent="✎";
+    pen.onclick=editor;box.appendChild(pen);
+  }else if(!isAdmin()&&pen)pen.remove();
+}
+function shrink(f,cb){
+  var fr=new FileReader();
+  fr.onload=function(){var im=new Image();im.onload=function(){
+    var k=Math.min(1,1600/Math.max(im.width,im.height)),c=document.createElement("canvas");
+    c.width=Math.round(im.width*k);c.height=Math.round(im.height*k);c.getContext("2d").drawImage(im,0,0,c.width,c.height);
+    var q=.8,d=c.toDataURL("image/jpeg",q);while(d.length>600000&&q>.35){q-=.1;d=c.toDataURL("image/jpeg",q)}cb(d)};
+    im.onerror=function(){toast("Image illisible.")};im.src=fr.result};
+  fr.readAsDataURL(f);
+}
+function editor(){
+  if(!isAdmin())return;
+  var img=cfg.img||"",m=document.createElement("div");m.className="afh-modal";
+  m.innerHTML='<div class="afh-box" role="dialog" aria-modal="true"><h3>Modifier le bandeau</h3>'
+   +'<label for="afhT">Titre</label><input type="text" id="afhT" maxlength="90" autocomplete="off">'
+   +'<label for="afhF">Image de fond (facultatif)</label><input type="file" id="afhF" accept="image/*"><div id="afhP"></div>'
+   +'<div class="afh-row"><button type="button" class="p" id="afhOk">Enregistrer</button><button type="button" id="afhNo">Annuler</button><button type="button" id="afhRm">Retirer l’image</button><button type="button" id="afhRs">Texte d’origine</button></div></div>';
+  document.body.appendChild(m);
+  var T=m.querySelector("#afhT");T.value=cfg.title||DEF;
+  function prev(){m.querySelector("#afhP").innerHTML=okImg(img)?'<img src="'+img+'" alt="">':""}prev();
+  m.querySelector("#afhF").onchange=function(){var f=this.files[0];if(f)shrink(f,function(d){img=d;prev()})};
+  m.querySelector("#afhRm").onclick=function(){img="";prev()};
+  m.querySelector("#afhRs").onclick=function(){T.value=DEF};
+  m.querySelector("#afhNo").onclick=function(){m.remove()};
+  m.addEventListener("click",function(e){if(e.target===m)m.remove()});
+  m.querySelector("#afhOk").onclick=async function(){
+    var b=this;b.disabled=true;
+    cfg={title:T.value.trim()===DEF?"":T.value.trim(),img:img,at:Date.now()};
+    try{await push();toast("Bandeau enregistré pour tous les visiteurs.")}
+    catch(e){toast("Enregistré sur cet appareil seulement : "+(e.message||e))}
+    try{localStorage.setItem(LS,JSON.stringify(cfg))}catch(x){}
+    m.remove();run();
+  };
+  T.focus();
+}
+
+/* ----- Produits : grille adaptative ----- */
+function products(){
+  var btns=[].filter.call(root().querySelectorAll("a,button"),function(x){return /D[ée]couvrir ce produit/i.test(x.textContent)});
+  if(!btns.length)return;
+  var first=btns[0].closest("article,li,[class*='card' i],[class*='product' i]");
+  if(!first||!first.parentElement)return;
+  var grid=first.parentElement;grid.classList.add("afp-grid");
+  var cards=[].filter.call(grid.children,function(c){return btns.some(function(b){return c.contains(b)})});
+  grid.dataset.n=Math.min(cards.length,4);
+  cards.forEach(function(c,i){c.classList.add("afp-card");c.style.setProperty("--i",i)});
+}
+document.addEventListener("pointermove",function(e){
+  if(e.pointerType!=="mouse")return;
+  var c=e.target.closest&&e.target.closest(".afp-card");if(!c)return;
+  var r=c.getBoundingClientRect(),x=(e.clientX-r.left)/r.width-.5,y=(e.clientY-r.top)/r.height-.5;
+  c.style.setProperty("--ry",(x*10).toFixed(1)+"deg");c.style.setProperty("--rx",(-y*10).toFixed(1)+"deg");
+},{passive:true});
+document.addEventListener("pointerout",function(e){
+  var c=e.target.closest&&e.target.closest(".afp-card");
+  if(c&&!c.contains(e.relatedTarget)){c.style.setProperty("--rx","0deg");c.style.setProperty("--ry","0deg")}
+},{passive:true});
+
+/* ----- Boucle ----- */
+var raf=0;
+function run(){hero();products()}
+function sched(){if(raf)return;raf=requestAnimationFrame(function(){raf=0;run()})}
+new MutationObserver(sched).observe(document.body,{childList:true,subtree:true});
+setInterval(run,2000);
+setTimeout(pull,1500);setInterval(pull,120000);
+run();
+})();
+</script>
 </body>
 </html>
