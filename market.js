@@ -36,8 +36,8 @@
   }
   function openAuth() {
     var auth = el("auth-screen"); if (!auth) return;
+    if (window.setAuthMode) window.setAuthMode("login");
     auth.classList.remove("off");
-    var email = el("authEmailInput"); if (email) setTimeout(function () { email.focus(); }, 50);
   }
   function closeAuth() { var auth = el("auth-screen"); if (auth) auth.classList.add("off"); }
   function categoryList() { var seen = {}; state.products.forEach(function (product) { if (product.category) seen[product.category] = true; }); return Object.keys(seen).sort(); }
@@ -55,7 +55,9 @@
   }
   function catalogContent() {
     var products = filteredProducts();
-    return '<section class="af-market-hero"><div><h1>Le meilleur d’Afri<span>FloW</span>, à découvrir.</h1><p>Une Marketplace pensée comme une grande place de marché : découvrez les produits, comparez et prenez contact avec AfriFloW.</p></div></section>'
+    var member = state.context.kind === "authenticated";
+    var account = member ? '<section class="af-market-account"><div><b>Votre espace client AfriFloW</b><p>Vous restez dans la Marketplace. Vos informations de compte peuvent être mises à jour ici, sans revenir à l’espace collaborateur.</p></div><button type="button" class="af-market-secondary" id="afMarketProfile">Mettre à jour mes informations</button></section>' : "";
+    return account + '<section class="af-market-hero"><div><h1>Le meilleur d’Afri<span>FloW</span>, à découvrir.</h1><p>Une Marketplace pensée comme une grande place de marché : découvrez les produits, comparez et prenez contact avec AfriFloW.</p></div></section>'
       + '<div class="af-market-section-head"><h2>' + (state.category ? esc(state.category) : "Nos produits") + '</h2><p>' + (products.length ? products.length + " produit" + (products.length > 1 ? "s" : "") : "Catalogue en préparation") + '</p></div>'
       + '<section id="afMarketGrid" class="af-market-grid">' + (products.length ? products.map(productCard).join("") : '<div class="af-market-empty">Aucun produit ne correspond à votre recherche pour le moment.</div>') + '</section>'
       + (isAdmin() ? adminPanel() : "");
@@ -70,6 +72,7 @@
       + '<a class="af-market-brand" href="#" id="afMarketHome"><img src="logo.png" alt=""><b>Afri<span>FloW</span> Marketplace</b></a>'
       + '<form class="af-market-search" id="afMarketSearch"><input id="afMarketSearchInput" value="' + esc(state.term) + '" type="search" placeholder="Rechercher un produit, une catégorie…" aria-label="Rechercher dans la Marketplace"><button>Rechercher</button></form>'
       + (workspace ? '<button type="button" class="af-market-link" id="afMarketBack">Retour à mon espace</button>' : '')
+      + (state.context.kind === "authenticated" ? '<button type="button" class="af-market-link" id="afMarketAccount">Mon compte</button>' : '')
       + (state.context.kind === "public" ? '<button type="button" class="af-market-link" id="afMarketSignIn">Se connecter</button>' : (state.context.kind === "authenticated" ? '<button type="button" class="af-market-link" id="afMarketSignOut">Déconnexion</button>' : ''))
       + '</div><nav class="af-market-nav" aria-label="Catégories Marketplace"><button type="button" data-market-category="" class="' + (!state.category ? "on" : "") + '">Toute la Marketplace</button>'
       + categories.map(function (category) { return '<button type="button" data-market-category="' + esc(category) + '" class="' + (state.category === category ? "on" : "") + '">' + esc(category) + '</button>'; }).join("")
@@ -93,6 +96,7 @@
     var home = el("afMarketHome"); if (home) home.onclick = function (event) { event.preventDefault(); state.category = ""; state.term = ""; render(); loadCatalog(); };
     var back = el("afMarketBack"); if (back) back.onclick = closeToWorkspace;
     var signIn = el("afMarketSignIn"); if (signIn) signIn.onclick = openAuth;
+    [el("afMarketProfile"), el("afMarketAccount")].forEach(function(button) { if (button) button.onclick = function () { if (window.AfriProfileOpen) window.AfriProfileOpen(); else notice("Votre profil est indisponible pour le moment."); }; });
     var signOut = el("afMarketSignOut"); if (signOut) signOut.onclick = function () { if (window.logout) window.logout(); };
     var partner = el("afPartnerCatalog"); if (partner) partner.onclick = function () { state.context.market = { access_mode: "client" }; render(); loadCatalog(); };
     var search = el("afMarketSearch"); if (search) search.onsubmit = function (event) { event.preventDefault(); state.term = el("afMarketSearchInput").value; render(); loadCatalog(false); };

@@ -40,6 +40,8 @@ body{margin:0;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-a
 .auth-box .oauth{background:var(--card);color:var(--ink);border:1px solid var(--ink);margin-bottom:10px;font-weight:600}
 .auth-box .or{display:flex;align-items:center;gap:10px;color:var(--muted);font-size:.85rem;margin:6px 0 14px}
 .auth-box .or::before,.auth-box .or::after{content:"";flex:1;height:1px;background:var(--line)}
+.auth-progress{margin:0 0 10px!important;font-weight:700;color:var(--green)!important}
+.auth-wizard-actions{display:flex;gap:10px;margin-top:4px}.auth-wizard-actions button{flex:1}.auth-wizard-actions .auth-wizard-back{background:transparent;color:var(--green);border-color:var(--green)}
 
 .wrap{max-width:1200px;margin:0 auto;padding:28px 22px 80px;position:relative}
 .brand{padding:30px 32px;border-radius:24px;background:linear-gradient(120deg,#123d2a 0%,#1f5d3a 58%,#28734a 100%);color:#fff;box-shadow:0 16px 38px rgba(20,60,39,.16);display:flex;align-items:center;gap:20px;flex-wrap:wrap;margin-bottom:24px}
@@ -200,7 +202,7 @@ svg.road-svg{position:absolute;top:0;left:0;width:100%;height:100%;pointer-event
 #intro{background:#0b2f21!important}
 #intro .intro-video-backdrop{position:absolute!important;inset:-7%!important;z-index:0!important;display:block!important;width:114%!important;height:114%!important;max-width:none!important;max-height:none!important;object-fit:cover!important;filter:blur(28px) saturate(1.3) brightness(.72);opacity:.64;transform:scale(1.06);pointer-events:none!important}
 #intro::before{display:block!important;z-index:1!important;inset:0!important;border:0!important;border-radius:0!important;background:linear-gradient(135deg,rgba(4,28,18,.38),rgba(8,66,44,.18) 52%,rgba(225,155,45,.17))!important;box-shadow:none!important;-webkit-backdrop-filter:blur(9px)!important;backdrop-filter:blur(9px)!important}
-#intro #introVideo{z-index:2!important;width:min(92vw,1200px)!important;height:min(86dvh,900px)!important;border:1px solid rgba(255,255,255,.4)!important;border-radius:clamp(18px,3vw,34px)!important;background:rgba(8,37,25,.12)!important;box-shadow:0 22px 80px rgba(0,0,0,.32),inset 0 1px 0 rgba(255,255,255,.25)!important;-webkit-backdrop-filter:blur(5px)!important;backdrop-filter:blur(5px)!important}
+#intro #introVideo{z-index:2!important;width:min(92vw,1200px)!important;height:min(86dvh,900px)!important;border:1px solid rgba(255,255,255,.32)!important;border-radius:clamp(18px,3vw,34px)!important;background:transparent!important;box-shadow:0 22px 80px rgba(0,0,0,.32),inset 0 1px 0 rgba(255,255,255,.25)!important;-webkit-backdrop-filter:blur(5px)!important;backdrop-filter:blur(5px)!important;mix-blend-mode:multiply;filter:contrast(1.08) saturate(1.12)}
 @media(max-width:640px){#intro .intro-video-backdrop{inset:-14%!important;width:128%!important;height:128%!important;filter:blur(20px) saturate(1.25) brightness(.7)}#intro #introVideo{width:100vw!important;height:91dvh!important;border-radius:0!important;border-left:0!important;border-right:0!important}}
 .no-intro #intro{display:none}
 #bgLayer{position:fixed;inset:0;z-index:-1;pointer-events:none;background-size:cover;background-position:center;background-repeat:no-repeat}
@@ -432,6 +434,7 @@ window.ic=function(n,s){return '<svg class="ic"'+(s?' style="width:'+s+';height:
     <img src="logo.png" alt="AfriFloW" onerror="this.onerror=null;this.src='https://placehold.co/72x72/1f5d3a/ffffff?text=A'">
     <h2 id="authTitle">Accès AfriFloW</h2>
     <div class="auth-tabs"><button type="button" id="tabLogin" class="on">Se connecter</button><button type="button" id="tabReg">S'inscrire</button></div>
+    <p id="authProgress" class="auth-progress" aria-live="polite"></p>
     <p id="authHint">Connectez-vous avec votre email et votre mot de passe personnel.</p>
     <button type="button" class="oauth" data-p="google">Continuer avec Google</button>
     <button type="button" class="oauth" data-p="facebook">Continuer avec Facebook</button>
@@ -450,6 +453,7 @@ window.ic=function(n,s){return '<svg class="ic"'+(s?' style="width:'+s+';height:
       <button type="button" id="authResetBtn">Enregistrer le nouveau mot de passe</button>
     </div>
     <div id="authError" role="alert"></div>
+    <div class="auth-wizard-actions"><button type="button" id="authBack" class="auth-wizard-back">Retour</button><button type="button" id="authNext">Continuer</button></div>
     <button type="button" id="authBtn">Se connecter</button>
   </div>
 </div>
@@ -665,17 +669,45 @@ function recordUserAction(text){
 }
 
 /* ---------- Authentification (comptes Supabase Auth, droits contrôlés côté serveur) ---------- */
-var AUTH_MODE = "login";
+var AUTH_MODE = "login", AUTH_STEP = 1;
+function authFinalStep(){ return AUTH_MODE === "register" ? 4 : 3; }
+function authStepFocus(id){ setTimeout(function(){ var input=$(id); if(input) input.focus(); },0); }
+function renderAuthStep(){
+  if(AUTH_MODE === "recovery") return;
+  var register = AUTH_MODE === "register", finalStep = authFinalStep(), step = AUTH_STEP;
+  var roleStep = step === 1, nameStep = register && step === 2, emailStep = (!register && step === 2) || (register && step === 3), passwordStep = step === finalStep;
+  document.querySelectorAll("#auth-screen .oauth,.or").forEach(function(el){ el.style.display=roleStep ? "" : "none"; });
+  ["authMarketRole","authMarketRoleLabel"].forEach(function(id){ $(id).style.display=roleStep ? "" : "none"; });
+  $("authName").style.display=nameStep ? "" : "none";
+  $("authEmailInput").style.display=emailStep ? "" : "none";
+  $("authPasswordRow").style.display=passwordStep ? "" : "none";
+  $("authPassword2Row").style.display=register && passwordStep ? "" : "none";
+  $("authForgot").style.display=!register && passwordStep ? "" : "none";
+  $("authBtn").style.display=passwordStep ? "" : "none";
+  $("authNext").style.display=passwordStep ? "none" : "";
+  $("authBack").style.display=step > 1 ? "" : "none";
+  $("authProgress").style.display=""; $("authProgress").textContent="Étape "+step+" sur "+finalStep;
+  if(roleStep) $("authHint").textContent="Choisissez votre espace. Ce choix ne donne jamais de droits collaborateur.";
+  else if(nameStep) $("authHint").textContent="Comment devons-nous vous appeler ?";
+  else if(emailStep) $("authHint").textContent="Quelle est votre adresse email ?";
+  else $("authHint").textContent=register ? "Créez un mot de passe personnel d’au moins 8 caractères." : "Entrez votre mot de passe pour continuer.";
+  if(roleStep) authStepFocus("authMarketRole"); else if(nameStep) authStepFocus("authName"); else if(emailStep) authStepFocus("authEmailInput"); else authStepFocus("authPasswordInput");
+}
+function nextAuthStep(){
+  var register=AUTH_MODE === "register", err=$("authError"); err.textContent="";
+  if(AUTH_STEP === 2 && register && $("authName").value.trim().length < 2){ err.textContent="Indiquez votre nom complet."; return; }
+  var emailStep=(!register && AUTH_STEP === 2)||(register && AUTH_STEP === 3);
+  if(emailStep && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test($("authEmailInput").value.trim())){err.textContent="Adresse email invalide.";return;}
+  AUTH_STEP=Math.min(authFinalStep(),AUTH_STEP+1); renderAuthStep();
+}
 function setAuthMode(m){
-  AUTH_MODE = m; var reg = m === "register";
-  $("authRecoveryFields").style.display = "none"; $("tabLogin").parentNode.style.display = ""; document.querySelectorAll("#auth-screen .oauth,.or,#authMarketRole,#authMarketRoleLabel").forEach(function(el){ el.style.display=""; });
-  $("authName").style.display = reg ? "" : "none"; $("authPassword2Row").style.display = reg ? "" : "none";
+  AUTH_MODE = m; AUTH_STEP = 1; var reg = m === "register";
+  $("authRecoveryFields").style.display = "none"; $("tabLogin").parentNode.style.display = ""; $("authNext").parentNode.style.display="";
   $("authBtn").textContent = reg ? "S'inscrire" : "Se connecter";
-  $("authBtn").style.display = ""; $("authForgot").style.display = reg ? "none" : "";
   $("tabLogin").classList.toggle("on", !reg); $("tabReg").classList.toggle("on", reg);
   $("authPasswordInput").setAttribute("autocomplete", reg ? "new-password" : "current-password");
-  $("authHint").textContent = reg ? "Créez votre compte pour consulter la Marketplace. Votre choix d’espace ne donne jamais de droits collaborateur." : "Connectez-vous avec votre email et votre mot de passe personnel. Votre choix d’espace ne modifie pas vos droits collaborateur.";
   $("authError").textContent = "";
+  renderAuthStep();
 }
 function toggleAuthPassword(button){
   var input=$(button.dataset.passwordToggle); if(!input)return;
@@ -698,7 +730,7 @@ async function requestPasswordReset(){
 function showPasswordRecovery(){
   AUTH_MODE="recovery"; $("authTitle").textContent="Choisissez un nouveau mot de passe"; $("authHint").textContent="Utilisez un mot de passe d’au moins 8 caractères.";
   $("tabLogin").parentNode.style.display="none"; document.querySelectorAll("#auth-screen .oauth,.or,#authName,#authMarketRole,#authMarketRoleLabel,#authPasswordRow,#authPassword2Row,#authForgot").forEach(function(el){el.style.display="none";});
-  $("authEmailInput").style.display="none"; $("authBtn").style.display="none"; $("authRecoveryFields").style.display=""; $("authError").textContent="";
+  $("authEmailInput").style.display="none"; $("authBtn").style.display="none"; $("authRecoveryFields").style.display=""; $("authProgress").style.display="none"; $("authNext").parentNode.style.display="none"; $("authError").textContent="";
   $("auth-screen").classList.remove("off"); setTimeout(function(){$("authNewPassword").focus();},0);
   history.replaceState(null,"",location.pathname);
 }
@@ -1140,11 +1172,13 @@ $("bg-file").addEventListener("change", function(){
 
 /* ---------- Événements globaux ---------- */
 $("authBtn").onclick = verifyGlobalAuth;
+$("authNext").onclick = nextAuthStep;
+$("authBack").onclick = function(){ AUTH_STEP=Math.max(1,AUTH_STEP-1); $("authError").textContent=""; renderAuthStep(); };
 $("authForgot").onclick = requestPasswordReset;
 $("authResetBtn").onclick = saveRecoveredPassword;
 document.querySelectorAll(".auth-password-toggle").forEach(function(button){button.onclick=function(){toggleAuthPassword(button);};});
 $("authPasswordInput").addEventListener("keydown", function(e){ if(e.key === "Enter") verifyGlobalAuth(); });
-$("authEmailInput").addEventListener("keydown", function(e){ if(e.key === "Enter") $("authPasswordInput").focus(); });
+$("authEmailInput").addEventListener("keydown", function(e){ if(e.key === "Enter") nextAuthStep(); });
 $("authPassword2").addEventListener("keydown", function(e){ if(e.key === "Enter") verifyGlobalAuth(); });
 $("authNewPassword2").addEventListener("keydown", function(e){ if(e.key === "Enter") saveRecoveredPassword(); });
 $("authClose").onclick = function(){ if(window.AfriMarket) window.AfriMarket.closeAuth(); };
@@ -2702,6 +2736,12 @@ function oauthError(message) {
   var el = document.getElementById('authError');
   if (el) el.textContent = message || 'Connexion externe impossible.';
 }
+function oauthFriendlyError(message) {
+  var raw=String(message||"").toLowerCase();
+  if(raw.indexOf("redirect_uri")>-1||raw.indexOf("redirect")>-1) return "Google refuse le retour de connexion : l’adresse de retour doit être autorisée dans Google et Supabase.";
+  if(raw.indexOf("access_blocked")>-1||raw.indexOf("not configured")>-1||raw.indexOf("client")>-1) return "Connexion Google non finalisée côté administrateur. Vérifiez l’identifiant et le secret Google dans Supabase.";
+  return "Connexion Google refusée. Réessayez, ou contactez AfriFloW si le problème persiste.";
+}
 function oauthRedirect() { return location.origin + location.pathname; }
 async function loginOAuth(provider) {
   if (!SB()) { oauthError('Service de connexion indisponible. Rechargez la page.'); return; }
@@ -2719,7 +2759,7 @@ async function loginOAuth(provider) {
   } catch (error) {
     oauthBusy = false;
     try { sessionStorage.removeItem('afriflow_oauth_pending'); } catch (ignore) {}
-    oauthError('Connexion ' + provider + ' : ' + fail(error));
+    oauthError(provider === 'google' ? oauthFriendlyError(fail(error)) : 'Connexion ' + provider + ' : ' + fail(error));
   }
 }
 window.afriOAuthLogin = loginOAuth;
@@ -2751,7 +2791,7 @@ async function finishOAuthUser(user) {
                      params.get('error') || query.get('error');
   if (oauthFailure) {
     try { sessionStorage.removeItem('afriflow_oauth_pending'); } catch (error) {}
-    oauthError('Connexion externe refusée : ' + oauthFailure);
+    oauthError(oauthFriendlyError(oauthFailure));
     return;
   }
   // OAuth session recovery may finish after the callback's URL has been cleaned.
@@ -7268,7 +7308,7 @@ async function saveProfile(){
   }catch(e){err.textContent="Enregistrement impossible : "+(e.message||e)}finally{btn.disabled=false}
 }
 async function open(){var p=$("profilePanel");p.classList.add("open");p.setAttribute("aria-hidden","false");document.body.classList.add("af-profile-open");p.scrollTop=0;try{await load();profilePage()}catch(e){$("profileMain").innerHTML='<section class="profile-card"><h3>Profil indisponible</h3><p class="profile-note">'+esc(e.message||e)+'</p></section>'}}
-$("profileOpen").onclick=open;$("profileClose").onclick=close;document.addEventListener("keydown",function(e){if(e.key==="Escape"&&$("profilePanel").classList.contains("open"))close()});
+$("profileOpen").onclick=open;$("profileClose").onclick=close;window.AfriProfileOpen=open;document.addEventListener("keydown",function(e){if(e.key==="Escape"&&$("profilePanel").classList.contains("open"))close()});
 var prior=window.onRole;window.onRole=function(){if(prior)prior();if(window.loggedUserEmail)load().catch(function(){});mountMemberHub()};
 var priorLogout=window.logout;window.logout=function(message){current=null;updateReminder(false);mountMemberHub();if(priorLogout)priorLogout(message)};
 setInterval(function(){if(window.loggedUserEmail&&(!current||current.user.email!==window.loggedUserEmail))load().catch(function(){});mountMemberHub()},2000);
