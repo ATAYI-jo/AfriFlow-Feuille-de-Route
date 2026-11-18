@@ -19,6 +19,7 @@
 <meta property="og:image" content="https://afriflow-africa.onrender.com/logo.png">
 <meta name="twitter:card" content="summary">
 <meta name="description" content="Feuille de route interactive d’AfriFloW en mode journal avec registre START des connexions.">
+<script src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit" async defer></script>
 <script>try{if(sessionStorage.getItem("afriflow_intro_seen"))document.documentElement.classList.add("no-intro")}catch(e){}</script>
 <style>
 :root{--bg:#fcfbfa;--card:#fff;--ink:#1d2a22;--muted:#66726a;--green:#1f5d3a;--amber:#d98a1b;--line:#e2ded7;--done:#1f5d3a;--doing:#d98a1b;--todo:#7b8a93;--road-bg:#1a231e;--road-line:#fff;--font-family:system-ui,-apple-system,"Segoe UI",sans-serif;--journal-font:Georgia,"Times New Roman",serif}
@@ -38,6 +39,7 @@ body{margin:0;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-a
 .auth-box button{width:100%;padding:12px;background:var(--green);color:#fff;border-color:var(--green);font-size:1rem}
 #authError{color:#c0392b;font-size:.85rem;min-height:1.2em;margin:-4px 0 10px}
 .auth-box .oauth{background:var(--card);color:var(--ink);border:1px solid var(--ink);margin-bottom:10px;font-weight:600}
+.auth-captcha{display:flex;justify-content:center;min-height:65px;margin:6px 0 10px}
 .auth-box .or{display:flex;align-items:center;gap:10px;color:var(--muted);font-size:.85rem;margin:6px 0 14px}
 .auth-box .or::before,.auth-box .or::after{content:"";flex:1;height:1px;background:var(--line)}
 .auth-progress{margin:0 0 10px!important;font-weight:700;color:var(--green)!important}
@@ -454,6 +456,7 @@ window.ic=function(n,s){return '<svg class="ic"'+(s?' style="width:'+s+';height:
       <div class="auth-password-row"><input type="password" id="authNewPassword2" placeholder="Confirmez le nouveau mot de passe" autocomplete="new-password" autocapitalize="off" autocorrect="off" spellcheck="false"><button type="button" class="auth-password-toggle" data-password-toggle="authNewPassword2" aria-label="Afficher la confirmation du nouveau mot de passe" aria-pressed="false"><svg class="ic" aria-hidden="true"><use href="#i-eye"></use></svg></button></div>
       <button type="button" id="authResetBtn">Enregistrer le nouveau mot de passe</button>
     </div>
+    <div id="authCaptcha" class="auth-captcha" aria-live="polite"></div>
     <div id="authError" role="alert"></div>
     <div class="auth-wizard-actions"><button type="button" id="authBack" class="auth-wizard-back">Retour</button><button type="button" id="authNext">Continuer</button></div>
     <button type="button" id="authBtn">Se connecter</button>
@@ -672,6 +675,16 @@ function recordUserAction(text){
 
 /* ---------- Authentification (comptes Supabase Auth, droits contrôlés côté serveur) ---------- */
 var AUTH_MODE = "login", AUTH_STEP = 1;
+var TURNSTILE_SITE_KEY = "0x4AAAAAAGGdSaQPHSavzxha", turnstileWidgetId = null, turnstileToken = "";
+function mountCaptcha(){
+  var host=$("authCaptcha"); if(!host)return;
+  if(!window.turnstile){ setTimeout(mountCaptcha,250); return; }
+  if(turnstileWidgetId===null){
+    turnstileWidgetId=window.turnstile.render(host,{sitekey:TURNSTILE_SITE_KEY,theme:"light",callback:function(token){turnstileToken=token;$("authError").textContent="";},"expired-callback":function(){turnstileToken="";},"error-callback":function(){turnstileToken="";}});
+  }
+}
+function resetCaptcha(){turnstileToken="";if(window.turnstile&&turnstileWidgetId!==null)window.turnstile.reset(turnstileWidgetId);}
+function captchaProblem(){return turnstileToken?"":"Validez la vérification de sécurité avant de continuer.";}
 function authFinalStep(){ return AUTH_MODE === "register" ? 4 : 3; }
 function authStepFocus(id){ setTimeout(function(){ var input=$(id); if(input) input.focus(); },0); }
 function renderAuthStep(){
@@ -685,6 +698,7 @@ function renderAuthStep(){
   $("authPasswordRow").style.display=passwordStep ? "" : "none";
   $("authPassword2Row").style.display=register && passwordStep ? "" : "none";
   $("authForgot").style.display=!register && passwordStep ? "" : "none";
+  $("authCaptcha").style.display=""; setTimeout(mountCaptcha,0);
   $("authBtn").style.display=passwordStep ? "" : "none";
   $("authNext").style.display=passwordStep ? "none" : "";
   $("authBack").style.display=step > 1 ? "" : "none";
@@ -709,6 +723,7 @@ function setAuthMode(m){
   $("tabLogin").classList.toggle("on", !reg); $("tabReg").classList.toggle("on", reg);
   $("authPasswordInput").setAttribute("autocomplete", reg ? "new-password" : "current-password");
   $("authError").textContent = "";
+  resetCaptcha();
   renderAuthStep();
 }
 function toggleAuthPassword(button){
@@ -728,7 +743,8 @@ async function requestPasswordReset(){
   if(!SB()){err.textContent="Service de comptes indisponible.";return;}
   button.disabled=true; err.textContent="";
   try{
-    var result=await SB().auth.resetPasswordForEmail(email,{redirectTo:location.origin+location.pathname});
+    var captchaError=captchaProblem();if(captchaError){err.textContent=captchaError;return;}
+    var result=await SB().auth.resetPasswordForEmail(email,{redirectTo:location.origin+location.pathname,captchaToken:turnstileToken});
     if(result.error)throw result.error;
     err.style.color="#1f5d3a";err.textContent="Si cette adresse possède un compte, un lien sécurisé de réinitialisation vient d’être envoyé.";
   }catch(e){err.style.color="";err.textContent="Impossible d’envoyer le lien pour le moment. Réessayez dans quelques minutes.";}
@@ -755,12 +771,13 @@ async function verifyGlobalAuth(){
   try{sessionStorage.setItem("afriflow_market_intent",intent)}catch(e){}
   err.style.color = "";
   if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){ err.textContent = "Adresse email invalide."; return; }
+  var captchaError=captchaProblem(); if(captchaError){err.textContent=captchaError;return;}
   err.textContent = ""; btn.disabled = true;
   try {
     if(!window.AFRI){ err.textContent = "Service de comptes indisponible. Rechargez la page."; return; }
     if(AUTH_MODE === "login"){
       if(!pwd){ err.textContent = "Entrez votre mot de passe."; return; }
-      var r = await AFRI.login(email, pwd, intent);
+      var r = await AFRI.login(email, pwd, intent, turnstileToken);
       if(!r.ok){ err.textContent = r.error; return; }
       enterApp(r.email, r.role, r.name, r.grants, r.market); recordUserAction(r.role === "admin" ? "Connexion administrateur" : "Connexion réussie");
     } else {
@@ -768,12 +785,12 @@ async function verifyGlobalAuth(){
       if(name.length < 2){ err.textContent = "Indiquez votre nom complet."; return; }
       var passwordProblem = passwordSafetyMessage(pwd); if(passwordProblem){ err.textContent = passwordProblem; return; }
       if(pwd !== p2){ err.textContent = "Les deux mots de passe ne correspondent pas."; return; }
-      var r2 = await AFRI.register(email, name, pwd, intent);
+      var r2 = await AFRI.register(email, name, pwd, intent, turnstileToken);
       if(!r2.ok){ err.textContent = r2.error; return; }
       if(r2.confirm){ setAuthMode("login"); err.style.color = "#1f5d3a"; err.textContent = "Compte créé. Cliquez sur le lien reçu par email pour le confirmer, puis connectez-vous."; return; }
       enterApp(r2.email, r2.role, r2.name, r2.grants, r2.market); recordUserAction("Inscription et première connexion");
     }
-  } finally { btn.disabled = false; }
+  } finally { btn.disabled = false; resetCaptcha(); }
 }
 
 /* ---------- Route ---------- */
@@ -2581,10 +2598,10 @@ async function ensureMarketProfile(us,intent){
     return {access_mode:"collaborator",unavailable:true};
   }
 }
-AFRI.login=async function(email,pwd,intent){
+AFRI.login=async function(email,pwd,intent,captchaToken){
   try{
     if(!SB())return {ok:false,error:"Service de comptes indisponible."};
-    var r=await SB().auth.signInWithPassword({email:email,password:pwd});
+    var r=await SB().auth.signInWithPassword({email:email,password:pwd,options:{captchaToken:captchaToken}});
     if(r.error){
       var m=r.error.message||"";
       if(/not confirmed/i.test(m))return {ok:false,error:"Email non confirmé : cliquez sur le lien reçu par email."};
@@ -2594,12 +2611,12 @@ AFRI.login=async function(email,pwd,intent){
     return await finish(r.data.user,intent);
   }catch(e){return {ok:false,error:fail(e)}}
 };
-AFRI.register=async function(email,name,pwd,intent){
+AFRI.register=async function(email,name,pwd,intent,captchaToken){
   try{
     if(!SB())return {ok:false,error:"Service de comptes indisponible."};
     intent=/^(client|shareholder|partner)$/.test(intent||"")?intent:"client";
     try{sessionStorage.setItem("afriflow_market_intent",intent)}catch(e){}
-    var r=await SB().auth.signUp({email:email,password:pwd,options:{data:{full_name:name},emailRedirectTo:location.origin+location.pathname}});
+    var r=await SB().auth.signUp({email:email,password:pwd,options:{data:{full_name:name},emailRedirectTo:location.origin+location.pathname,captchaToken:captchaToken}});
     if(r.error){
       if(/already registered/i.test(r.error.message||""))return {ok:false,error:"Cet email est déjà inscrit. Connectez-vous."};
       return {ok:false,error:r.error.message};
@@ -2758,7 +2775,8 @@ async function loginOAuth(provider) {
   oauthError('');
   try {
     try { sessionStorage.setItem('afriflow_market_intent', readMarketIntent()); } catch (error) {}
-    var options = { redirectTo: oauthRedirect() };
+    var captchaError=captchaProblem(); if(captchaError){oauthError(captchaError);oauthBusy=false;return;}
+    var options = { redirectTo: oauthRedirect(), captchaToken:turnstileToken };
     if (provider === 'azure') options.scopes = 'email';
     try { sessionStorage.setItem('afriflow_oauth_pending', '1'); } catch (error) {}
     var response = await SB().auth.signInWithOAuth({provider:provider, options:options});
