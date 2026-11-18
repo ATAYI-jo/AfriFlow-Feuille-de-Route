@@ -12,8 +12,22 @@ function text(value: unknown, maximum: number) { return String(value || "").trim
 function imageExtension(mime: string) { return ({ "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp" } as Record<string, string>)[mime] || ""; }
 function b64(value: unknown) { const data = String(value || ""); if (!/^[A-Za-z0-9+/]+={0,2}$/.test(data) || data.length > 10_500_000) throw new Error("Image invalide ou trop volumineuse"); const bytes = Uint8Array.from(atob(data), (char) => char.charCodeAt(0)); if (bytes.byteLength > 7 * 1024 * 1024) throw new Error("Image trop volumineuse (maximum 7 Mo)"); return bytes; }
 function bytesToB64(bytes: Uint8Array) { const chunks: string[] = []; for (let index = 0; index < bytes.length; index += 0x8000) chunks.push(String.fromCharCode(...bytes.subarray(index, index + 0x8000))); return btoa(chunks.join("")); }
-async function token() {
-  const key = Deno.env.get("DROPBOX_APP_KEY") || "", refresh = Deno.env.get("DROPBOX_REFRESH_TOKEN") || "";
+function b64Raw(bytes: Uint8Array) { return bytesToB64(bytes); }
+function rawB64(value: string) { return Uint8Array.from(atob(value), (char) => char.charCodeAt(0)); }
+async function cryptoKey() { const raw = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "")); return crypto.subtle.importKey("raw", raw, "AES-GCM", false, ["encrypt", "decrypt"]); }
+async function savedRefresh(service: ReturnType<typeof createClient>) {
+  const stored = await service.from("afriflow_private_integrations").select("ciphertext,iv").eq("key", "dropbox_refresh_token").maybeSingle();
+  if (stored.error || !stored.data) return "";
+  try { return new TextDecoder().decode(await crypto.subtle.decrypt({ name: "AES-GCM", iv: rawB64(stored.data.iv) }, await cryptoKey(), rawB64(stored.data.ciphertext))); } catch { return ""; }
+}
+async function saveRefresh(service: ReturnType<typeof createClient>, refresh: string) {
+  const iv = crypto.getRandomValues(new Uint8Array(12)), encrypted = new Uint8Array(await crypto.subtle.encrypt({ name: "AES-GCM", iv }, await cryptoKey(), new TextEncoder().encode(refresh)));
+  const result = await service.from("afriflow_private_integrations").upsert({ key: "dropbox_refresh_token", ciphertext: b64Raw(encrypted), iv: b64Raw(iv), updated_at: new Date().toISOString() });
+  if (result.error) throw new Error("Impossible d'enregistrer la connexion Dropbox");
+}
+function redirectUri() { return Deno.env.get("AFRIFLOW_DROPBOX_REDIRECT_URI") || "https://afriflow-africa.onrender.com"; }
+async function token(service: ReturnType<typeof createClient>) {
+  const key = Deno.env.get("DROPBOX_APP_KEY") || "", refresh = await savedRefresh(service) || Deno.env.get("DROPBOX_REFRESH_TOKEN") || "";
   if (!key || !refresh) throw new Error("Dropbox serveur non configurée");
   const body = new URLSearchParams({ grant_type: "refresh_token", refresh_token: refresh, client_id: key });
   const secret = Deno.env.get("DROPBOX_APP_SECRET"); if (secret) body.set("client_secret", secret);
@@ -24,9 +38,9 @@ async function upload(accessToken: string, path: string, bytes: Uint8Array) {
   const response = await fetch("https://content.dropboxapi.com/2/files/upload", { method: "POST", headers: { Authorization: `Bearer ${accessToken}`, "Dropbox-API-Arg": JSON.stringify({ path, mode: "add", autorename: false, mute: true }), "Content-Type": "application/octet-stream" }, body: bytes });
   if (!response.ok) { const detail = (await response.text()).slice(0, 180); throw new Error(`Dropbox a refusé l'enregistrement (${response.status})${detail ? " : " + detail : ""}`); }
 }
-async function dropboxStatus() {
+async function dropboxStatus(service: ReturnType<typeof createClient>) {
   try {
-    const response = await fetch("https://api.dropboxapi.com/2/users/get_current_account", { method: "POST", headers: { Authorization: `Bearer ${await token()}` } });
+    const response = await fetch("https://api.dropboxapi.com/2/users/get_current_account", { method: "POST", headers: { Authorization: `Bearer ${await token(service)}` } });
     return { connected: response.ok, message: response.ok ? "Dropbox est connecté." : "Dropbox doit être reconnecté." };
   } catch { return { connected: false, message: "Dropbox doit être reconnecté." }; }
 }
@@ -61,7 +75,21 @@ Deno.serve(async (req: Request) => {
     if (admin.error || !admin.data) return out(req, { error: "Accès réservé à l'administrateur" }, 403);
     const body = await req.json(); const action = String(body.action || "status");
     const configured = Boolean(Deno.env.get("GEMINI_API_KEY"));
-    if (action === "status") { const dropbox = await dropboxStatus(); return out(req, { dropboxConfigured: Boolean(Deno.env.get("DROPBOX_APP_KEY") && Deno.env.get("DROPBOX_REFRESH_TOKEN")), dropboxConnected: dropbox.connected, dropboxMessage: dropbox.message, aiConfigured: configured, aiMode: configured ? "gemini_image" : "not_configured" }); }
+    if (action === "status") { const dropbox = await dropboxStatus(service); return out(req, { dropboxConfigured: Boolean(Deno.env.get("DROPBOX_APP_KEY")), dropboxConnected: dropbox.connected, dropboxMessage: dropbox.message, aiConfigured: configured, aiMode: configured ? "gemini_image" : "not_configured" }); }
+    if (action === "dropbox_authorize") {
+      const key = Deno.env.get("DROPBOX_APP_KEY") || ""; if (!key) return out(req, { error: "Application Dropbox non configurée" }, 503);
+      const url = new URL("https://www.dropbox.com/oauth2/authorize"); url.searchParams.set("client_id", key); url.searchParams.set("response_type", "code"); url.searchParams.set("token_access_type", "offline"); url.searchParams.set("redirect_uri", redirectUri()); url.searchParams.set("scope", "account_info.read files.metadata.read files.content.read files.content.write");
+      return out(req, { url: url.toString() });
+    }
+    if (action === "dropbox_complete") {
+      const code = text(body.code, 1000); if (!/^[A-Za-z0-9._-]{8,1000}$/.test(code)) return out(req, { error: "Code Dropbox invalide" }, 400);
+      const key = Deno.env.get("DROPBOX_APP_KEY") || "", secret = Deno.env.get("DROPBOX_APP_SECRET") || ""; if (!key || !secret) return out(req, { error: "Application Dropbox non configurée" }, 503);
+      const params = new URLSearchParams({ grant_type: "authorization_code", code, client_id: key, client_secret: secret, redirect_uri: redirectUri() });
+      const exchange = await fetch("https://api.dropboxapi.com/oauth2/token", { method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" }, body: params }); const data = await exchange.json();
+      if (!exchange.ok || !data.refresh_token) return out(req, { error: "Dropbox a refusé la nouvelle autorisation" }, 502);
+      await saveRefresh(service, data.refresh_token); const check = await dropboxStatus(service); if (!check.connected) return out(req, { error: "Nouvelle connexion Dropbox non valide" }, 502);
+      return out(req, { message: "Dropbox est reconnecté avec le droit d’écriture." });
+    }
     if (action === "upload_original") {
       const product = body.product || {}, name = text(product.name, 160), description = text(product.description, 4000), category = text(product.category, 80) || "Découvrir";
       const price = product.price === "" || product.price == null ? null : Number(product.price);
@@ -69,7 +97,7 @@ Deno.serve(async (req: Request) => {
       const mime = String(body.mime || ""), ext = imageExtension(mime); if (!ext) return out(req, { error: "Formats autorisés : JPG, PNG ou WebP" }, 400);
       const id = crypto.randomUUID(), root = (Deno.env.get("DROPBOX_MARKET_ROOT") || `${Deno.env.get("DROPBOX_ROOT") || ""}/Market`).replace(/\/+$/, "");
       if (!root.startsWith("/")) throw new Error("Dossier Market Dropbox non configuré");
-      const path = `${root}/products/${id}/original.${ext}`, bytes = b64(body.data), accessToken = await token();
+      const path = `${root}/products/${id}/original.${ext}`, bytes = b64(body.data), accessToken = await token(service);
       await upload(accessToken, path, bytes);
       const inserted = await service.from("afriflow_market_products").insert({ id, name, description, category, price, currency: text(product.currency, 3).toUpperCase() || "XOF", original_path: path, created_by: user.id, is_active: false }).select("id,name,is_active").single();
       if (inserted.error) throw inserted.error;
@@ -80,7 +108,7 @@ Deno.serve(async (req: Request) => {
       const mime = String(body.mime || ""), ext = imageExtension(mime); if (!ext) return out(req, { error: "Formats autorisés : JPG, PNG ou WebP" }, 400);
       const product = await service.from("afriflow_market_products").select("id").eq("id", productId).maybeSingle(); if (product.error || !product.data) return out(req, { error: "Produit introuvable" }, 404);
       const id = crypto.randomUUID(), root = (Deno.env.get("DROPBOX_MARKET_ROOT") || `${Deno.env.get("DROPBOX_ROOT") || ""}/Market`).replace(/\/+$/, "");
-      const path = `${root}/products/${productId}/variants/${id}.${ext}`; await upload(await token(), path, b64(body.data));
+      const path = `${root}/products/${productId}/variants/${id}.${ext}`; await upload(await token(service), path, b64(body.data));
       const inserted = await service.from("afriflow_market_variants").insert({ id, product_id: productId, storage_path: path, source: body.source === "ai" ? "ai" : "manual", prompt: text(body.prompt, 2000), approval_status: "pending" }).select("id,approval_status").single();
       if (inserted.error) throw inserted.error; return out(req, { variant: inserted.data, message: "Variante enregistrée dans Dropbox. Elle reste hors rotation jusqu'à approbation." });
     }
@@ -92,9 +120,9 @@ Deno.serve(async (req: Request) => {
       try {
         const product = await service.from("afriflow_market_products").select("id,original_path").eq("id", productId).maybeSingle(); if (product.error || !product.data?.original_path) throw new Error("Produit ou original introuvable");
         const originalMime = product.data.original_path.endsWith(".png") ? "image/png" : product.data.original_path.endsWith(".webp") ? "image/webp" : "image/jpeg";
-        const generated = await generateImage(await download(await token(), product.data.original_path), originalMime, prompt), id = crypto.randomUUID(), root = (Deno.env.get("DROPBOX_MARKET_ROOT") || `${Deno.env.get("DROPBOX_ROOT") || ""}/Market`).replace(/\/+$/, ""), ext = imageExtension(generated.mime);
+        const generated = await generateImage(await download(await token(service), product.data.original_path), originalMime, prompt), id = crypto.randomUUID(), root = (Deno.env.get("DROPBOX_MARKET_ROOT") || `${Deno.env.get("DROPBOX_ROOT") || ""}/Market`).replace(/\/+$/, ""), ext = imageExtension(generated.mime);
         if (!root.startsWith("/")) throw new Error("Dossier Market Dropbox non configuré");
-        const path = `${root}/products/${productId}/variants/${id}.${ext}`; await upload(await token(), path, generated.bytes);
+        const path = `${root}/products/${productId}/variants/${id}.${ext}`; await upload(await token(service), path, generated.bytes);
         const variant = await service.from("afriflow_market_variants").insert({ id, product_id: productId, storage_path: path, source: "ai", prompt, approval_status: "pending" }).select("id,approval_status").single(); if (variant.error) throw variant.error;
         await service.from("afriflow_market_variant_jobs").update({ status: "ready", error_message: null }).eq("id", job.data.id);
         return out(req, { job: job.data, variant: variant.data, generated: true, message: "Variante IA créée et placée en attente d'approbation." });
