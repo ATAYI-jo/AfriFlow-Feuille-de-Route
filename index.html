@@ -3974,14 +3974,28 @@ async function onClick(e){
 }
 
 /* ---------- Ouverture de la page + entrée de menu ---------- */
+function renderDeadlinePage(){
+  var form=isAdmin()?'<p style="margin:6px 0 4px"><b>Nouvelle échéance</b><br><small>Choisissez tout le monde ou des personnes précises : elles reçoivent l’alerte dans leur Messagerie.</small></p>'
+    +'<div class="fdr-form"><label>Élément à clôturer<input id="fdrT" maxlength="120" placeholder="Ex. Base prospects consolidée" autocomplete="off"></label>'
+    +'<label>Date de début<input type="date" id="fdrS" value="'+addDays(0)+'"></label><label>Date de clôture<input type="date" id="fdrD" value="'+addDays(15)+'"></label>'
+    +'<label class="full">Destinataires<select id="fdrTarget"><option value="all">Tout le monde</option><option value="selected">Personnes précises</option></select><input id="fdrPeople" maxlength="1000" placeholder="Emails séparés par des virgules" autocomplete="off" style="display:none;margin-top:8px"></label>'
+    +'<label class="full">Précision (facultatif)<textarea id="fdrN" rows="2" maxlength="400" placeholder="Ce qui est attendu, qui est concerné…"></textarea></label></div>'
+    +'<div id="fdrErr" role="alert" style="color:#c0392b;min-height:1.2em;font-size:.88rem"></div>'
+    +'<button type="button" class="p" id="fdrGo">Créer l\'échéance et alerter les inscrits</button>':'';
+  var urgent=cache.some(function(i){return !i.done&&daysLeft(i.due)<=7});
+  $("viewHost").innerHTML='<div class="fdr"><div class="fdr-hero"><h2>Échéances et alertes</h2><p>Suivez les actions à venir et les rappels AfriFloW.</p></div><h3>Échéances et alertes</h3>'+bar("dl","Échéances et alertes","…","…","var(--todo)",form+'<div id="fdrDl"></div>',{open:urgent,metaId:"fdrDlMeta",tagId:"fdrDlTag"})+'</div>';
+  $("viewHost").onclick=onClick;
+  var target=$("fdrTarget"),people=$("fdrPeople");if(target&&people)target.onchange=function(){people.style.display=target.value==="selected"?"":"none";if(target.value==="selected")people.focus();};
+  drawBanner(cache);drawList();tick();
+}
 async function openPage(){
   var home=document.querySelector('#navList .nv[data-id="home"]');
   if(home)home.click();            /* laisse le site nettoyer la vue précédente */
   active=true;
   $("view-home").style.display="none";$("viewHost").style.display="";
   var sc=$("scrim");if(sc&&sc.classList.contains("on"))sc.click();
-  render();window.scrollTo(0,0);markNav();
-  if(window.AFRI)window.AFRI.page("Feuille de route");
+  renderDeadlinePage();window.scrollTo(0,0);markNav();
+  if(window.AFRI)window.AFRI.page("Échéances et alertes");
   refreshBanner();
 }
 function markNav(){

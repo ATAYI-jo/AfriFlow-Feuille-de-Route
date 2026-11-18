@@ -99,6 +99,11 @@
     return '<span class="af-market-fallback"><img class="af-fb-logo" src="logo.png" alt=""><em>' + esc(p.name) + "</em>" + hint + "</span>";
   }
   function media(p) { var u = state.imgs[p.id]; return u ? '<img class="af-photo" src="' + esc(u) + '" alt="' + esc(p.name) + '">' : fallbackHtml(p); }
+  function fitMedia(box, image) {
+    if (!box || !image || !image.naturalWidth || !image.naturalHeight) return;
+    var ratio = Math.max(0.62, Math.min(1.75, image.naturalWidth / image.naturalHeight));
+    box.style.setProperty("--media-ratio", ratio.toFixed(3));
+  }
   function applyImage(id, url) {
     state.imgs[id] = url;
     document.querySelectorAll('[data-market-hero="' + id + '"]').forEach(function (slide) {
@@ -107,9 +112,9 @@
     });
     document.querySelectorAll('[data-market-image="' + id + '"]').forEach(function (box) {
       var cur = box.querySelector("img.af-photo");
-      if (cur) { if (cur.getAttribute("src") !== url) cur.src = url; return; }
+      if (cur) { cur.onload = function () { fitMedia(box, cur); }; if (cur.getAttribute("src") !== url) cur.src = url; else fitMedia(box, cur); return; }
       var im = new Image(); im.className = "af-photo"; im.alt = box.dataset.alt || "Produit AfriFloW"; im.src = url;
-      im.onload = function () { if (!box.isConnected) return; box.querySelectorAll(".af-market-fallback").forEach(function (n) { n.remove(); }); box.insertBefore(im, box.firstChild); };
+      im.onload = function () { if (!box.isConnected) return; fitMedia(box, im); box.querySelectorAll(".af-market-fallback").forEach(function (n) { n.remove(); }); box.insertBefore(im, box.firstChild); };
     });
   }
   function loadInitialImages() {
@@ -428,11 +433,12 @@
         return '<div class="af-market-admin-row"><div><b>' + esc(product.name) + "</b><small>Produit " + (product.is_active ? "visible" : "brouillon") + " · " + (inStock(product) ? "en stock" : "rupture") + " · " + sub.length + " variante" + (sub.length > 1 ? "s" : "") + "</small>"
           + sub.map(function (variant) { return "<small>Variante " + esc(variant.source) + " · " + statusTag(variant.approval_status) + ' <button type="button" class="af-market-secondary" data-variant="' + esc(variant.id) + '" data-status="approved">Approuver</button> <button type="button" class="af-market-secondary" data-variant="' + esc(variant.id) + '" data-status="rejected">Refuser</button></small>'; }).join("")
           + pending.map(function (job) { return '<small class="af-market-job">' + esc(jobLabel(job)) + ((job.status === "queued" || job.status === "processing") ? ' <button type="button" class="af-market-secondary" data-job="' + esc(job.id) + '">Actualiser</button>' : "") + "</small>"; }).join("") + "</div>"
-          + '<div class="af-market-admin-actions"><button type="button" class="af-market-secondary" data-edit="' + esc(product.id) + '">Modifier</button><button type="button" class="af-market-secondary" data-stock="' + esc(product.id) + '" data-in-stock="' + (inStock(product) ? "false" : "true") + '">' + (inStock(product) ? "Rupture" : "Remettre en stock") + '</button><button type="button" class="af-market-secondary" data-product="' + esc(product.id) + '" data-active="' + (product.is_active ? "false" : "true") + '">' + (product.is_active ? "Retirer" : "Publier") + "</button></div></div>";
+          + '<div class="af-market-admin-actions"><button type="button" class="af-market-secondary" data-edit="' + esc(product.id) + '">Modifier</button><button type="button" class="af-market-secondary" data-stock="' + esc(product.id) + '" data-in-stock="' + (inStock(product) ? "false" : "true") + '">' + (inStock(product) ? "Rupture" : "Remettre en stock") + '</button><button type="button" class="af-market-secondary" data-product="' + esc(product.id) + '" data-active="' + (product.is_active ? "false" : "true") + '">' + (product.is_active ? "Retirer" : "Publier") + '</button><button type="button" class="af-market-danger" data-delete="' + esc(product.id) + '">Supprimer</button></div></div>';
       }).join("") : '<div class="af-market-empty"><b>Aucun brouillon à publier.</b><br><small>Le bouton « Publier » apparaît ici dès qu’un original a été enregistré avec succès dans Dropbox.</small></div>';
       list.querySelectorAll("[data-product]").forEach(function (button) { button.onclick = async function () { var response = await sb().from("afriflow_market_products").update({ is_active: button.dataset.active === "true" }).eq("id", button.dataset.product); if (response.error) notice(response.error.message); else { notice("Visibilité mise à jour."); loadCatalog(); } }; });
       list.querySelectorAll("[data-edit]").forEach(function (button) { button.onclick = function () { openProductEditor(products.filter(function (product) { return product.id === button.dataset.edit; })[0]); }; });
       list.querySelectorAll("[data-stock]").forEach(function (button) { button.onclick = async function () { button.disabled = true; try { var result = await adminCall("set_stock", { productId: button.dataset.stock, inStock: button.dataset.inStock === "true" }); notice(result.message); loadCatalog(); } catch (error) { button.disabled = false; notice(error.message || "Mise à jour du stock impossible"); } }; });
+      list.querySelectorAll("[data-delete]").forEach(function (button) { button.onclick = async function () { var product = products.filter(function (item) { return item.id === button.dataset.delete; })[0]; if (!product || !confirm('Supprimer définitivement « ' + product.name + ' » et ses images ? Cette action est irréversible.')) return; button.disabled = true; try { var result = await adminCall("delete_product", { productId: product.id }); notice(result.message); loadCatalog(); } catch (error) { button.disabled = false; notice(error.message || "Suppression impossible"); } }; });
       list.querySelectorAll("[data-variant]").forEach(function (button) { button.onclick = async function () { var update = { approval_status: button.dataset.status, approved_at: button.dataset.status === "approved" ? new Date().toISOString() : null }; var response = await sb().from("afriflow_market_variants").update(update).eq("id", button.dataset.variant); if (response.error) notice(response.error.message); else { notice(button.dataset.status === "approved" ? "Variante approuvée : elle participera à la rotation horaire." : "Variante refusée."); loadAdminList(); } }; });
       list.querySelectorAll("[data-job]").forEach(function (button) { button.onclick = function () { pollAiJob(button.dataset.job); }; });
       jobs.filter(function (job) { return job.status === "queued" || job.status === "processing"; }).slice(0, 3).forEach(function (job) { pollAiJob(job.id); });

@@ -42,6 +42,10 @@ async function upload(accessToken: string, path: string, bytes: Uint8Array) {
   const response = await fetch("https://content.dropboxapi.com/2/files/upload", { method: "POST", headers: { Authorization: `Bearer ${accessToken}`, "Dropbox-API-Arg": JSON.stringify({ path, mode: "add", autorename: false, mute: true }), "Content-Type": "application/octet-stream" }, body: bytes });
   if (!response.ok) { const detail = (await response.text()).slice(0, 180); throw new Error(`Dropbox a refusé l'enregistrement (${response.status})${detail ? " : " + detail : ""}`); }
 }
+async function removeDropboxPath(accessToken: string, path: string) {
+  const response = await fetch("https://api.dropboxapi.com/2/files/delete_v2", { method: "POST", headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json" }, body: JSON.stringify({ path }) });
+  if (!response.ok) throw new Error("Dropbox a refusé la suppression du produit");
+}
 async function dropboxStatus(service: ReturnType<typeof createClient>) {
   try {
     const response = await fetch("https://api.dropboxapi.com/2/users/get_current_account", { method: "POST", headers: { Authorization: `Bearer ${await token(service)}` } });
@@ -180,6 +184,17 @@ Deno.serve(async (req: Request) => {
       const changed = await service.from("afriflow_market_products").update({ is_in_stock: inStock }).eq("id", productId).select("id,name,is_in_stock").single();
       if (changed.error || !changed.data) throw new Error("Impossible de mettre à jour le stock");
       return out(req, { product: changed.data, message: inStock ? "Produit remis en stock." : "Produit marqué en rupture : il reste visible mais ne peut plus recevoir de devis." });
+    }
+    if (action === "delete_product") {
+      const productId = String(body.productId || ""); if (!isUuid(productId)) return out(req, { error: "Produit invalide" }, 400);
+      const product = await service.from("afriflow_market_products").select("id,name").eq("id", productId).maybeSingle();
+      if (product.error || !product.data) return out(req, { error: "Produit introuvable" }, 404);
+      const root = (Deno.env.get("DROPBOX_MARKET_ROOT") || `${Deno.env.get("DROPBOX_ROOT") || ""}/Market`).replace(/\/+$/, "");
+      if (!root.startsWith("/")) throw new Error("Dossier Market Dropbox non configuré");
+      await removeDropboxPath(await token(service), `${root}/products/${productId}`);
+      const deleted = await service.from("afriflow_market_products").delete().eq("id", productId);
+      if (deleted.error) throw new Error("Suppression de la fiche impossible");
+      return out(req, { message: "Produit, variantes et images associés supprimés définitivement." });
     }
     if (action === "update_product") {
       const productId = String(body.productId || ""), product = body.product || {};
