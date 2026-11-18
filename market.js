@@ -4,7 +4,7 @@
   var DEF_TITLE = "AfriFloW – De l’Afrique vers le monde", HERO_KEY = "pub:markethero", HERO_LS = "afriflow_markethero_v1", EXT = ["jpg", "jpeg", "webp", "png"];
   function readHeroLocal() { try { return JSON.parse(localStorage.getItem(HERO_LS) || "{}") || {}; } catch (error) { return {}; } }
   /* Le bandeau est toujours repris depuis le serveur : aucune ancienne image locale ne réapparaît au rechargement. */
-  var state = { products: [], adminProducts: [], category: "", term: "", context: { kind: "public" }, timers: [], heroTimer: null, rotationTimer: null, rotationStep: 0, heroIdx: 0, imgs: {}, imgErr: {}, hero: {} };
+  var state = { products: [], adminProducts: [], category: "", term: "", context: { kind: "public" }, timers: [], heroTimer: null, rotationTimer: null, rotationStep: 0, heroIdx: 0, imgs: {}, imgErr: {}, hero: {}, aiPolling: {} };
 
   function el(id) { return document.getElementById(id); }
   function esc(value) { return String(value == null ? "" : value).replace(/[&<>"']/g, function (char) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[char]; }); }
@@ -100,14 +100,25 @@
       im.onload = function () { if (!box.isConnected) return; box.querySelectorAll(".af-market-fallback").forEach(function (n) { n.remove(); }); box.insertBefore(im, box.firstChild); };
     });
   }
-  function scheduleImages(force) {
-    state.products.forEach(function (p) {
-      if (!force && state.imgs[p.id]) return;
-      resolveImage(p, state.rotationStep).then(function (url) { if (url) applyImage(p.id, url); else { var b = document.querySelector('[data-market-image="' + p.id + '"] .af-fb-hint'); if (!b && isAdmin()) render(); } });
+  function loadInitialImages() {
+    /* Only load the first visible cards. Loading every Dropbox link repeatedly
+       made a large catalogue perform needless requests on every ten-second turn. */
+    state.products.slice(0, 8).forEach(function (p) {
+      if (state.imgs[p.id]) return;
+      resolveImage(p, 0).then(function (url) { if (url) applyImage(p.id, url); else { var b = document.querySelector('[data-market-image="' + p.id + '"] .af-fb-hint'); if (!b && isAdmin()) render(); } });
     });
+  }
+  function rotateVisibleHero() {
+    var slide = document.querySelector(".af-product-slide.on[data-market-hero]");
+    if (!slide) return;
+    var p = productById(slide.dataset.marketHero); if (!p) return;
+    resolveImage(p, state.rotationStep).then(function (url) { if (url) applyImage(p.id, url); });
+  }
+  function scheduleImages() {
+    loadInitialImages();
     if (!state.rotationTimer) state.rotationTimer = setInterval(function () {
       if (!document.body.classList.contains("af-market-mode") || document.hidden) return;
-      state.rotationStep += 1; scheduleImages(true);
+      state.rotationStep += 1; rotateVisibleHero();
     }, 10000);
   }
 
@@ -274,6 +285,7 @@
       state.heroIdx = (i + slides.length) % slides.length;
       slides.forEach(function (s, k) { s.classList.toggle("on", k === state.heroIdx); });
       hero.querySelectorAll(".af-dot").forEach(function (d, k) { d.classList.toggle("on", k === state.heroIdx); });
+      rotateVisibleHero();
     }
     go(Math.min(state.heroIdx, slides.length - 1));
     hero.querySelectorAll(".af-dot").forEach(function (d) { d.onclick = function () { go(+d.dataset.go); }; });
@@ -330,7 +342,7 @@
       if (result[1] && result[1].error) throw result[1].error;
       state.products = result[0].data || [];
       state.adminProducts = result[1] ? result[1].data || [] : [];
-      render(); scheduleImages(false); if (isAdmin()) loadAdminList();
+      render(); scheduleImages(); if (isAdmin()) loadAdminList();
     } catch (error) { showCatalogError("Le catalogue est momentanément indisponible."); }
   }
   function showCatalogError(message) { var grid = el("afMarketGrid"); if (grid) grid.innerHTML = '<div class="af-market-error">' + esc(message) + "</div>"; }
@@ -343,12 +355,26 @@
     if (result.data && result.data.error) throw new Error(result.data.error); return result.data;
   }
   function bindAdmin() {
-    var original = el("afProductUpload"); if (original) original.onsubmit = async function (event) { event.preventDefault(); var form = new FormData(original), file = form.get("image"); if (!(file instanceof File) || !file.size) return notice("Choisissez une photo originale."); try { var data = await toBase64(file); var result = await adminCall("upload_original", { product: { name: form.get("name"), category: form.get("category"), price: form.get("price"), currency: form.get("currency"), description: form.get("description") }, data: data, mime: file.type }); notice(result.message); original.reset(); loadCatalog(); } catch (error) { notice(error.message || "Envoi impossible"); } };
+    var original = el("afProductUpload"); if (original) original.onsubmit = async function (event) { event.preventDefault(); var form = new FormData(original), file = form.get("image"); if (!(file instanceof File) || !file.size) return notice("Choisissez une photo originale."); try { var data = await toBase64(file); var result = await adminCall("upload_original", { product: { name: form.get("name"), category: form.get("category"), price: form.get("price"), currency: form.get("currency"), description: form.get("description") }, data: data, mime: file.type }); notice(result.message); original.reset(); loadCatalog(); if (result.autoJob && result.autoJob.id) pollAiJob(result.autoJob.id); } catch (error) { notice(error.message || "Envoi impossible"); } };
     var variant = el("afVariantUpload"); if (variant) variant.onsubmit = async function (event) { event.preventDefault(); var form = new FormData(variant), file = form.get("image"); if (!(file instanceof File) || !file.size) return notice("Choisissez une image de variante."); try { var result = await adminCall("upload_variant", { productId: form.get("productId"), data: await toBase64(file), mime: file.type, source: form.get("source"), prompt: form.get("prompt") }); notice(result.message); variant.reset(); loadAdminList(); } catch (error) { notice(error.message || "Envoi impossible"); } };
-    var ai = el("afAiRequest"); if (ai) ai.onsubmit = async function (event) { event.preventDefault(); var form = new FormData(ai); try { var result = await adminCall("request_ai_variant", { productId: form.get("productId"), prompt: form.get("prompt") }); notice(result.message); loadAdminList(); } catch (error) { notice(error.message || "Aucune génération n'a été lancée."); loadAdminList(); } };
+    var ai = el("afAiRequest"); if (ai) ai.onsubmit = async function (event) { event.preventDefault(); var form = new FormData(ai); try { var result = await adminCall("request_ai_variant", { productId: form.get("productId"), prompt: form.get("prompt") }); notice(result.message); loadAdminList(); if (result.job && result.job.id) pollAiJob(result.job.id); } catch (error) { notice(error.message || "Aucune génération n'a été lancée."); loadAdminList(); } };
     var reconnect = el("afDropboxReconnect"); if (reconnect) reconnect.onclick = async function () { try { var result = await adminCall("dropbox_authorize"); var nonce = crypto.randomUUID(); sessionStorage.setItem("afriflow_dropbox_oauth_state", nonce); window.location.assign(result.url + "&state=" + encodeURIComponent(nonce)); } catch (error) { notice(error.message || "Connexion Dropbox indisponible."); } };
     var query = new URLSearchParams(window.location.search), code = query.get("code"), oauthState = query.get("state"); if (code && oauthState && oauthState === sessionStorage.getItem("afriflow_dropbox_oauth_state")) { sessionStorage.removeItem("afriflow_dropbox_oauth_state"); history.replaceState({}, "", window.location.pathname + window.location.hash); adminCall("dropbox_complete", { code: code }).then(function (result) { notice(result.message); render(); }).catch(function (error) { notice(error.message || "Connexion Dropbox impossible."); }); }
-    adminCall("status").then(function (result) { var status = el("afAiStatus"); if (status) status.textContent = result.aiConfigured ? "IA d’images prête côté serveur : chaque résultat reste à approuver avant publication." : "L’IA d’images n’est pas configurée."; var dropbox = el("afDropboxStatus"); if (dropbox) dropbox.textContent = result.dropboxConnected ? "Dropbox est connecté." : "Dropbox doit être reconnecté avant tout envoi."; }).catch(function () { var status = el("afAiStatus"); if (status) status.textContent = "État du connecteur IA indisponible."; });
+    adminCall("status").then(function (result) { var status = el("afAiStatus"); if (status) status.textContent = result.aiConfigured ? "AI Horde génère automatiquement une variante après chaque original. Chaque résultat reste à votre approbation." : "L’IA d’images n’est pas configurée."; var dropbox = el("afDropboxStatus"); if (dropbox) dropbox.textContent = result.dropboxConnected ? "Dropbox est connecté." : "Dropbox doit être reconnecté avant tout envoi."; }).catch(function () { var status = el("afAiStatus"); if (status) status.textContent = "État du connecteur IA indisponible."; });
+  }
+  function jobLabel(job) { return job.status === "ready" ? "Variante prête à examiner" : job.status === "failed" ? "Génération refusée : " + (job.error_message || "erreur inconnue") : "Génération automatique en cours"; }
+  function pollAiJob(id, attempt) {
+    if (!id || state.aiPolling[id]) return;
+    state.aiPolling[id] = true;
+    (async function () {
+      try {
+        var result = await adminCall("poll_ai_variant", { jobId: id });
+        if (result.status === "ready") { delete state.aiPolling[id]; notice("Variante IA prête : visualisez-la puis approuvez-la ou refusez-la."); loadAdminList(); loadCatalog(false); return; }
+        if (result.status === "failed") { delete state.aiPolling[id]; notice("La génération IA n’a pas abouti : " + (result.message || "réessayez plus tard.")); loadAdminList(); return; }
+        if ((attempt || 0) >= 39) { delete state.aiPolling[id]; loadAdminList(); return; }
+        var timer = setTimeout(function () { delete state.aiPolling[id]; pollAiJob(id, (attempt || 0) + 1); }, 15000); state.timers.push(timer);
+      } catch (error) { delete state.aiPolling[id]; loadAdminList(); }
+    })();
   }
   function statusTag(status) { return '<span class="af-market-tag ' + esc(status) + '">' + esc(status === "approved" ? "Approuvée" : status === "rejected" ? "Refusée" : "En attente") + "</span>"; }
   async function loadQuotes() {
@@ -365,18 +391,22 @@
     try {
       var both = await Promise.all([
         sb().from("afriflow_market_products").select("id,name,is_active,created_at").order("created_at", { ascending: false }).limit(100),
-        sb().from("afriflow_market_variants").select("id,product_id,approval_status,source,created_at").order("created_at", { ascending: false }).limit(200)
+        sb().from("afriflow_market_variants").select("id,product_id,approval_status,source,created_at").order("created_at", { ascending: false }).limit(200),
+        sb().from("afriflow_market_variant_jobs").select("id,product_id,status,error_message,created_at").order("created_at", { ascending: false }).limit(100)
       ]);
-      if (both[0].error) throw both[0].error; if (both[1].error) throw both[1].error;
-      var products = both[0].data || [], variants = both[1].data || [];
+      if (both[0].error) throw both[0].error; if (both[1].error) throw both[1].error; if (both[2].error) throw both[2].error;
+      var products = both[0].data || [], variants = both[1].data || [], jobs = both[2].data || [];
       list.innerHTML = products.length ? products.map(function (product) {
-        var sub = variants.filter(function (variant) { return variant.product_id === product.id; });
+        var sub = variants.filter(function (variant) { return variant.product_id === product.id; }), pending = jobs.filter(function (job) { return job.product_id === product.id; });
         return '<div class="af-market-admin-row"><div><b>' + esc(product.name) + "</b><small>Produit " + (product.is_active ? "visible" : "brouillon") + " · " + sub.length + " variante" + (sub.length > 1 ? "s" : "") + "</small>"
-          + sub.map(function (variant) { return "<small>Variante " + esc(variant.source) + " · " + statusTag(variant.approval_status) + ' <button type="button" class="af-market-secondary" data-variant="' + esc(variant.id) + '" data-status="approved">Approuver</button> <button type="button" class="af-market-secondary" data-variant="' + esc(variant.id) + '" data-status="rejected">Refuser</button></small>'; }).join("") + "</div>"
+          + sub.map(function (variant) { return "<small>Variante " + esc(variant.source) + " · " + statusTag(variant.approval_status) + ' <button type="button" class="af-market-secondary" data-variant="' + esc(variant.id) + '" data-status="approved">Approuver</button> <button type="button" class="af-market-secondary" data-variant="' + esc(variant.id) + '" data-status="rejected">Refuser</button></small>'; }).join("")
+          + pending.map(function (job) { return '<small class="af-market-job">' + esc(jobLabel(job)) + ((job.status === "queued" || job.status === "processing") ? ' <button type="button" class="af-market-secondary" data-job="' + esc(job.id) + '">Actualiser</button>' : "") + "</small>"; }).join("") + "</div>"
           + '<div class="af-market-admin-actions"><button type="button" class="af-market-secondary" data-product="' + esc(product.id) + '" data-active="' + (product.is_active ? "false" : "true") + '">' + (product.is_active ? "Retirer" : "Publier") + "</button></div></div>";
       }).join("") : '<div class="af-market-empty"><b>Aucun brouillon à publier.</b><br><small>Le bouton « Publier » apparaît ici dès qu’un original a été enregistré avec succès dans Dropbox.</small></div>';
       list.querySelectorAll("[data-product]").forEach(function (button) { button.onclick = async function () { var response = await sb().from("afriflow_market_products").update({ is_active: button.dataset.active === "true" }).eq("id", button.dataset.product); if (response.error) notice(response.error.message); else { notice("Visibilité mise à jour."); loadCatalog(); } }; });
       list.querySelectorAll("[data-variant]").forEach(function (button) { button.onclick = async function () { var update = { approval_status: button.dataset.status, approved_at: button.dataset.status === "approved" ? new Date().toISOString() : null }; var response = await sb().from("afriflow_market_variants").update(update).eq("id", button.dataset.variant); if (response.error) notice(response.error.message); else { notice(button.dataset.status === "approved" ? "Variante approuvée : elle participera à la rotation horaire." : "Variante refusée."); loadAdminList(); } }; });
+      list.querySelectorAll("[data-job]").forEach(function (button) { button.onclick = function () { pollAiJob(button.dataset.job); }; });
+      jobs.filter(function (job) { return job.status === "queued" || job.status === "processing"; }).slice(0, 3).forEach(function (job) { pollAiJob(job.id); });
     } catch (error) { list.innerHTML = '<p class="af-market-error">Gestion du catalogue indisponible : ' + esc(error.message || error) + "</p>"; }
   }
 

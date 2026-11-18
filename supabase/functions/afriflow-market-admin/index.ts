@@ -48,27 +48,82 @@ async function dropboxStatus(service: ReturnType<typeof createClient>) {
     return { connected: response.ok, message: response.ok ? "Dropbox est connecté." : "Dropbox doit être reconnecté." };
   } catch { return { connected: false, message: "Dropbox doit être reconnecté." }; }
 }
-async function download(accessToken: string, path: string) {
-  const response = await fetch("https://content.dropboxapi.com/2/files/download", { method: "POST", headers: { Authorization: `Bearer ${accessToken}`, "Dropbox-API-Arg": JSON.stringify({ path }) } });
-  if (!response.ok) throw new Error("Original Dropbox indisponible pour la génération IA");
-  return new Uint8Array(await response.arrayBuffer());
+const HORDE_API = "https://aihorde.net/api/v2";
+const DEFAULT_AUTO_PROMPT = "Créer une mise en scène commerciale sobre et lumineuse autour du produit, avec un décor naturel et professionnel.";
+function hordeHeaders() {
+  /* The anonymous community key is intentionally used only when no private
+     key is configured. It never reaches the browser. A dedicated free Horde
+     key can later be added as AI_HORDE_API_KEY for a better queue priority. */
+  return { "content-type": "application/json", apikey: Deno.env.get("AI_HORDE_API_KEY") || "0000000000", "Client-Agent": "AfriFloW:1.0:afriflow.info@gmail.com" };
 }
-async function generateImage(original: Uint8Array, mime: string, instruction: string) {
-  const key = Deno.env.get("GEMINI_API_KEY") || "", model = Deno.env.get("GEMINI_IMAGE_MODEL") || "gemini-3.1-flash-image";
-  if (!key) throw new Error("IA d'images non configurée");
-  const prompt = "Crée une variante commerciale fidèle de la photo produit fournie. Conserve exactement le produit, sa forme, sa matière, son emballage, ses couleurs et tout texte lisible. Ne change que le décor, l'éclairage ou la mise en scène selon cette consigne : " + instruction;
-  const response = await fetch(`https://generativelanguage.googleapis.com/v1/models/${model}:generateContent`, { method: "POST", headers: { "x-goog-api-key": key, "content-type": "application/json" }, signal: AbortSignal.timeout(60000), body: JSON.stringify({ contents: [{ parts: [{ text: prompt.slice(0, 2800) }, { inlineData: { mimeType: mime, data: bytesToB64(original) } }] }], generationConfig: { responseModalities: ["TEXT", "IMAGE"] } }) });
-  const result = await response.json();
-  if (!response.ok) {
-    const providerMessage = String(result?.error?.message || "").replace(/[\r\n]+/g, " ").slice(0, 240);
-    if (response.status === 401 || response.status === 403) throw new Error("La clé IA ne possède pas l’accès requis à la génération d’images.");
-    if (response.status === 404) throw new Error(`Le modèle IA « ${model} » n’est pas disponible pour ce projet.`);
-    if (response.status === 429) throw new Error("La limite du fournisseur IA est atteinte : réessayez plus tard.");
-    throw new Error(providerMessage ? `Le fournisseur IA a refusé la génération : ${providerMessage}` : "Génération IA indisponible");
+function hordePrompt(instruction: string) {
+  return ("Photographie e-commerce fidèle du produit fourni. Garde exactement le produit, son emballage, sa forme, ses couleurs, ses proportions, son logo et tout texte lisible. Ne change que le décor, la lumière et le cadrage. " + instruction + " ### produit déformé, emballage modifié, texte illisible, nouveau logo, nouveau produit, mains, personnes, watermark").slice(0, 2800);
+}
+async function temporaryLink(accessToken: string, path: string) {
+  const response = await fetch("https://api.dropboxapi.com/2/files/get_temporary_link", { method: "POST", headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json" }, body: JSON.stringify({ path }) });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok || !/^https:\/\//i.test(String(data?.link || ""))) throw new Error("Original Dropbox indisponible pour la génération IA");
+  return String(data.link);
+}
+async function startHorde(sourceImageUrl: string, instruction: string) {
+  const response = await fetch(`${HORDE_API}/generate/async`, {
+    method: "POST", headers: hordeHeaders(), signal: AbortSignal.timeout(30000),
+    body: JSON.stringify({
+      prompt: hordePrompt(instruction), source_image: sourceImageUrl, source_processing: "img2img", nsfw: false, censor_nsfw: true,
+      params: { n: 1, width: 768, height: 768, steps: 20, cfg_scale: 5, sampler_name: "k_euler_a", denoising_strength: 0.16 },
+      allow_downgrade: true, shared: false
+    })
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok || !data?.id) {
+    const detail = String(data?.message || data?.error || "").replace(/[\r\n]+/g, " ").slice(0, 220);
+    throw new Error(detail ? `AI Horde a refusé la génération : ${detail}` : "AI Horde ne peut pas lancer la génération pour le moment");
   }
-  const image = (result.candidates?.[0]?.content?.parts || []).find((part: { inlineData?: { data?: string } }) => part.inlineData?.data)?.inlineData;
-  if (!image?.data || !imageExtension(image.mimeType || "")) throw new Error("L'IA n'a renvoyé aucune image exploitable");
-  return { bytes: b64(image.data), mime: image.mimeType as string };
+  return String(data.id);
+}
+async function generatedImage(url: string) {
+  if (!/^https:\/\//i.test(url)) throw new Error("AI Horde a renvoyé une image invalide");
+  const response = await fetch(url, { signal: AbortSignal.timeout(30000) });
+  const mime = String(response.headers.get("content-type") || "").split(";")[0].toLowerCase();
+  if (!response.ok || !imageExtension(mime)) throw new Error("L’image générée est indisponible");
+  const bytes = new Uint8Array(await response.arrayBuffer());
+  if (!bytes.byteLength || bytes.byteLength > 9 * 1024 * 1024) throw new Error("L’image générée est trop volumineuse");
+  return { bytes, mime };
+}
+async function createHordeJob(service: ReturnType<typeof createClient>, productId: string, requestedBy: string, prompt: string) {
+  const product = await service.from("afriflow_market_products").select("id,original_path").eq("id", productId).maybeSingle();
+  if (product.error || !product.data?.original_path) throw new Error("Produit ou original introuvable");
+  const providerRequestId = await startHorde(await temporaryLink(await token(service), product.data.original_path), prompt);
+  const job = await service.from("afriflow_market_variant_jobs").insert({ product_id: productId, requested_by: requestedBy, prompt, status: "queued", provider: "ai_horde", provider_request_id: providerRequestId }).select("id,status").single();
+  if (job.error) throw job.error;
+  return job.data;
+}
+async function refreshHordeJob(service: ReturnType<typeof createClient>, jobId: string) {
+  const job = await service.from("afriflow_market_variant_jobs").select("id,product_id,prompt,status,provider,provider_request_id,completed_variant_id").eq("id", jobId).maybeSingle();
+  if (job.error || !job.data) throw new Error("Demande IA introuvable");
+  if (job.data.status === "ready" || job.data.status === "failed" || job.data.status === "configuration_missing") return { status: job.data.status, message: job.data.status === "ready" ? "Variante prête à examiner." : "Cette demande est terminée." };
+  if (job.data.provider !== "ai_horde" || !job.data.provider_request_id) throw new Error("Demande IA incompatible");
+  const response = await fetch(`${HORDE_API}/generate/status/${encodeURIComponent(job.data.provider_request_id)}`, { headers: hordeHeaders(), signal: AbortSignal.timeout(30000) });
+  const status = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error("AI Horde ne répond pas pour cette demande");
+  if (!status?.done) {
+    await service.from("afriflow_market_variant_jobs").update({ status: "processing", error_message: null }).eq("id", jobId);
+    return { status: "processing", message: "Génération en cours." };
+  }
+  const generation = Array.isArray(status.generations) ? status.generations.find((item: { img?: unknown; censored?: boolean }) => typeof item?.img === "string" && !item.censored) : null;
+  if (!generation?.img) {
+    const message = "AI Horde n’a pas livré d’image exploitable.";
+    await service.from("afriflow_market_variant_jobs").update({ status: "failed", error_message: message }).eq("id", jobId);
+    return { status: "failed", message };
+  }
+  const image = await generatedImage(generation.img), id = crypto.randomUUID(), root = (Deno.env.get("DROPBOX_MARKET_ROOT") || `${Deno.env.get("DROPBOX_ROOT") || ""}/Market`).replace(/\/+$/, "");
+  if (!root.startsWith("/")) throw new Error("Dossier Market Dropbox non configuré");
+  const path = `${root}/products/${job.data.product_id}/variants/${id}.${imageExtension(image.mime)}`;
+  await upload(await token(service), path, image.bytes);
+  const variant = await service.from("afriflow_market_variants").insert({ id, product_id: job.data.product_id, storage_path: path, source: "ai", prompt: job.data.prompt, approval_status: "pending" }).select("id,approval_status").single();
+  if (variant.error) throw variant.error;
+  await service.from("afriflow_market_variant_jobs").update({ status: "ready", error_message: null, completed_variant_id: variant.data.id }).eq("id", jobId);
+  return { status: "ready", variant: variant.data, message: "Variante IA prête à examiner." };
 }
 function isUuid(value: string) { return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value); }
 
@@ -85,8 +140,7 @@ Deno.serve(async (req: Request) => {
     const admin = await service.from("afriflow_admins").select("email").eq("email", user.email.toLowerCase()).maybeSingle();
     if (admin.error || !admin.data) return out(req, { error: "Accès réservé à l'administrateur" }, 403);
     const body = await req.json(); const action = String(body.action || "status");
-    const configured = Boolean(Deno.env.get("GEMINI_API_KEY"));
-    if (action === "status") { const dropbox = await dropboxStatus(service); return out(req, { dropboxConfigured: true, dropboxConnected: dropbox.connected, dropboxMessage: dropbox.message, aiConfigured: configured, aiMode: configured ? "gemini_image" : "not_configured" }); }
+    if (action === "status") { const dropbox = await dropboxStatus(service); return out(req, { dropboxConfigured: true, dropboxConnected: dropbox.connected, dropboxMessage: dropbox.message, aiConfigured: true, aiMode: "ai_horde", aiAnonymous: !Deno.env.get("AI_HORDE_API_KEY") }); }
     if (action === "dropbox_authorize") {
       const verifier = b64url(crypto.getRandomValues(new Uint8Array(48))); await saveValue(service, "dropbox_oauth_verifier", verifier);
       const url = new URL("https://www.dropbox.com/oauth2/authorize"); url.searchParams.set("client_id", DROPBOX_MARKET_APP_KEY); url.searchParams.set("response_type", "code"); url.searchParams.set("token_access_type", "offline"); url.searchParams.set("redirect_uri", redirectUri()); url.searchParams.set("scope", "account_info.read files.metadata.read files.content.read files.content.write"); url.searchParams.set("code_challenge", await codeChallenge(verifier)); url.searchParams.set("code_challenge_method", "S256");
@@ -112,7 +166,10 @@ Deno.serve(async (req: Request) => {
       await upload(accessToken, path, bytes);
       const inserted = await service.from("afriflow_market_products").insert({ id, name, description, category, price, currency: text(product.currency, 3).toUpperCase() || "XOF", original_path: path, created_by: user.id, is_active: false }).select("id,name,is_active").single();
       if (inserted.error) throw inserted.error;
-      return out(req, { product: inserted.data, message: "Original enregistré dans Dropbox. Activez le produit après vérification." });
+      let autoJob: { id: string; status: string } | null = null, autoNote = "";
+      try { autoJob = await createHordeJob(service, id, user.id, DEFAULT_AUTO_PROMPT); autoNote = " Une variante IA est lancée automatiquement et restera à approuver."; }
+      catch (generationError) { autoNote = " L’original est bien enregistré ; la variante automatique sera à relancer plus tard (AI Horde indisponible)."; console.error("afriflow-market-admin auto horde", generationError instanceof Error ? generationError.message : "error"); }
+      return out(req, { product: inserted.data, autoJob, message: "Original enregistré dans Dropbox. Activez le produit après vérification." + autoNote });
     }
     if (action === "upload_variant") {
       const productId = String(body.productId || ""); if (!isUuid(productId)) return out(req, { error: "Produit invalide" }, 400);
@@ -125,22 +182,21 @@ Deno.serve(async (req: Request) => {
     }
     if (action === "request_ai_variant") {
       const productId = String(body.productId || ""), prompt = text(body.prompt, 2000); if (!isUuid(productId) || prompt.length < 8) return out(req, { error: "Produit et consigne détaillée requis" }, 400);
-      const job = await service.from("afriflow_market_variant_jobs").insert({ product_id: productId, requested_by: user.id, prompt, status: configured ? "processing" : "configuration_missing", error_message: configured ? null : "IA d'images non configurée." }).select("id,status,error_message").single();
-      if (job.error) throw job.error;
-      if (!configured) return out(req, { job: job.data, generated: false, message: "Aucune génération lancée : configurez l'IA d'images côté serveur." }, 503);
       try {
-        const product = await service.from("afriflow_market_products").select("id,original_path").eq("id", productId).maybeSingle(); if (product.error || !product.data?.original_path) throw new Error("Produit ou original introuvable");
-        const originalMime = product.data.original_path.endsWith(".png") ? "image/png" : product.data.original_path.endsWith(".webp") ? "image/webp" : "image/jpeg";
-        const generated = await generateImage(await download(await token(service), product.data.original_path), originalMime, prompt), id = crypto.randomUUID(), root = (Deno.env.get("DROPBOX_MARKET_ROOT") || `${Deno.env.get("DROPBOX_ROOT") || ""}/Market`).replace(/\/+$/, ""), ext = imageExtension(generated.mime);
-        if (!root.startsWith("/")) throw new Error("Dossier Market Dropbox non configuré");
-        const path = `${root}/products/${productId}/variants/${id}.${ext}`; await upload(await token(service), path, generated.bytes);
-        const variant = await service.from("afriflow_market_variants").insert({ id, product_id: productId, storage_path: path, source: "ai", prompt, approval_status: "pending" }).select("id,approval_status").single(); if (variant.error) throw variant.error;
-        await service.from("afriflow_market_variant_jobs").update({ status: "ready", error_message: null }).eq("id", job.data.id);
-        return out(req, { job: job.data, variant: variant.data, generated: true, message: "Variante IA créée et placée en attente d'approbation." });
+        const job = await createHordeJob(service, productId, user.id, prompt);
+        return out(req, { job, generated: false, message: "Variante IA mise en file d’attente. Elle restera à approuver." });
       } catch (generationError) {
         const message = generationError instanceof Error ? generationError.message : "Erreur de génération IA";
-        await service.from("afriflow_market_variant_jobs").update({ status: "failed", error_message: message.slice(0, 500) }).eq("id", job.data.id);
         throw new Error(message);
+      }
+    }
+    if (action === "poll_ai_variant") {
+      const jobId = String(body.jobId || ""); if (!isUuid(jobId)) return out(req, { error: "Demande IA invalide" }, 400);
+      try { return out(req, await refreshHordeJob(service, jobId)); }
+      catch (generationError) {
+        const message = generationError instanceof Error ? generationError.message : "Erreur de génération IA";
+        await service.from("afriflow_market_variant_jobs").update({ status: "failed", error_message: message.slice(0, 500) }).eq("id", jobId);
+        return out(req, { status: "failed", message }, 200);
       }
     }
     return out(req, { error: "Action non reconnue" }, 400);

@@ -7362,7 +7362,9 @@ async function open(){var p=$("profilePanel");p.classList.add("open");p.setAttri
 $("profileOpen").onclick=open;$("profileClose").onclick=close;window.AfriProfileOpen=open;document.addEventListener("keydown",function(e){if(e.key==="Escape"&&$("profilePanel").classList.contains("open"))close()});
 var prior=window.onRole;window.onRole=function(){if(prior)prior();if(window.loggedUserEmail)load().catch(function(){});mountMemberHub()};
 var priorLogout=window.logout;window.logout=function(message){current=null;updateReminder(false);mountMemberHub();if(priorLogout)priorLogout(message)};
-setInterval(function(){if(window.loggedUserEmail&&(!current||current.user.email!==window.loggedUserEmail))load().catch(function(){});mountMemberHub()},2000);
+/* A two-second global refresh kept rebuilding the member hub even when nothing
+   changed. Authentication and role events above already refresh immediately. */
+setInterval(function(){if(window.loggedUserEmail&&(!current||current.user.email!==window.loggedUserEmail))load().catch(function(){});mountMemberHub()},30000);
 /* Efface un ancien marqueur de test affiché littéralement dans certaines installations. */
 Array.prototype.slice.call(document.body.childNodes).forEach(function(n){if(n.nodeType===3&&String(n.nodeValue||"").trim()==="\\n")n.remove()});
 mountMemberHub();

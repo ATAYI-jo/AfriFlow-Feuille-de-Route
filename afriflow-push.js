@@ -147,7 +147,7 @@
   }
   function start(){
     // Registration after system permission was expressly approved, not silently at page load.
-    var timer=setInterval(autoRegister,20000);
+    var timer=setInterval(autoRegister,60000);
     window.addEventListener('online',autoRegister);
     window.addEventListener('focus',autoRegister);
     document.addEventListener('visibilitychange',function(){if(!document.hidden)autoRegister()});

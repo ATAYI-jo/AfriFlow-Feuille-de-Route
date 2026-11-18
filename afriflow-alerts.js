@@ -250,7 +250,7 @@
   }
   function start(){
     build();
-    setInterval(poll,30000);
+    setInterval(poll,60000);
     document.addEventListener('visibilitychange',function(){if(!document.hidden)poll()});
     window.addEventListener('online',poll);
     window.addEventListener('afriflow:refresh',poll);

@@ -114,7 +114,9 @@
   function start(){
     create();
     check();
-    timer=setInterval(check,1200);
+    /* Login and visibility events handle the immediate path; a light fallback
+       avoids a permanent sub-second style polling loop for every visitor. */
+    timer=setInterval(check,15000);
     document.addEventListener('visibilitychange',function(){if(!document.hidden)check()});
   }
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start);
