@@ -33,6 +33,9 @@ body.af-market-mode #market-view{display:block}
 .af-ali-hero::before{width:340px;height:340px;right:-90px;top:-120px;background:rgba(255,255,255,.14);animation:afDrift 9s ease-in-out infinite alternate}
 .af-ali-hero::after{width:260px;height:260px;right:90px;bottom:-130px;background:rgba(245,173,61,.4);animation:afDrift 11s ease-in-out infinite alternate-reverse}
 .af-slide{position:absolute;inset:0;z-index:1;display:flex;align-items:center;justify-content:space-between;gap:24px;padding:clamp(24px,4vw,56px) clamp(24px,4vw,56px) 56px;opacity:0;visibility:hidden;transition:opacity .8s ease,visibility 0s linear .8s}
+.af-product-slide{isolation:isolate;background-image:linear-gradient(90deg,rgba(7,50,33,.90) 0%,rgba(12,76,48,.70) 48%,rgba(9,42,28,.20) 100%),var(--slide-img,none);background-size:cover;background-position:center}
+.af-product-slide::before{content:"";position:absolute;inset:0;z-index:-1;background:linear-gradient(0deg,rgba(0,0,0,.18),transparent 52%);pointer-events:none}
+.af-hero-watermark{position:absolute;right:clamp(24px,5vw,66px);bottom:clamp(24px,5vw,54px);z-index:-1;width:clamp(78px,13vw,150px);height:auto;opacity:.28;object-fit:contain;filter:drop-shadow(0 5px 16px rgba(0,0,0,.24))}
 .af-slide.on{opacity:1;visibility:visible;transition-delay:0s}
 .af-slide.on .af-slide-text{animation:afSlideIn .8s cubic-bezier(.2,.8,.2,1) both}
 .af-slide.on .af-slide-media{animation:afSlideIn .9s .1s cubic-bezier(.2,.8,.2,1) both}

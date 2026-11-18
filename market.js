@@ -89,6 +89,10 @@
   function media(p) { var u = state.imgs[p.id]; return u ? '<img class="af-photo" src="' + esc(u) + '" alt="' + esc(p.name) + '">' : fallbackHtml(p); }
   function applyImage(id, url) {
     state.imgs[id] = url;
+    document.querySelectorAll('[data-market-hero="' + id + '"]').forEach(function (slide) {
+      slide.style.setProperty("--slide-img", "url('" + String(url).replace(/'/g, "%27") + "')");
+      slide.classList.add("has-image");
+    });
     document.querySelectorAll('[data-market-image="' + id + '"]').forEach(function (box) {
       var cur = box.querySelector("img.af-photo");
       if (cur) { if (cur.getAttribute("src") !== url) cur.src = url; return; }
@@ -207,9 +211,10 @@
   function heroHtml() {
     var h = state.hero, bg = okImg(h.img) ? ' style="--hero-img:url(\'' + h.img + '\')"' : "";
     var picks = state.products.slice(0, 4);
-    var slides = '<div class="af-slide on"><div class="af-slide-text"><h1>' + titleHtml(h.title) + '</h1><div class="af-actions"><button type="button" class="af-market-primary" data-act="products">Voir les produits</button><button type="button" class="af-ghost" data-act="quote">Demander un devis</button></div></div><div class="af-slide-media"><img class="af-hero-logo" src="logo.png" alt=""></div></div>';
+    var slides = '<div class="af-slide on"><img class="af-hero-watermark" src="logo.png" alt=""><div class="af-slide-text"><h1>' + titleHtml(h.title) + '</h1><div class="af-actions"><button type="button" class="af-market-primary" data-act="products">Voir les produits</button><button type="button" class="af-ghost" data-act="quote">Demander un devis</button></div></div></div>';
     picks.forEach(function (p) {
-      slides += '<div class="af-slide"><div class="af-slide-text"><span class="af-kicker">Produit à la une</span><h2>' + esc(p.name) + '</h2><div class="af-slide-price">' + esc(formatPrice(p.price, p.currency)) + '</div><button type="button" class="af-market-primary" data-market-detail="' + esc(p.id) + '">Découvrir</button></div><div class="af-slide-media af-media" data-market-image="' + esc(p.id) + '" data-alt="' + esc(p.name) + '">' + media(p) + "</div></div>";
+      var image = state.imgs[p.id] ? ' style="--slide-img:url(\'' + String(state.imgs[p.id]).replace(/'/g, "%27") + '\')"' : "";
+      slides += '<div class="af-slide af-product-slide" data-market-hero="' + esc(p.id) + '"' + image + '><img class="af-hero-watermark" src="logo.png" alt=""><div class="af-slide-text"><span class="af-kicker">Produit à la une</span><h2>' + esc(p.name) + '</h2><div class="af-slide-price">' + esc(formatPrice(p.price, p.currency)) + '</div><button type="button" class="af-market-primary" data-market-detail="' + esc(p.id) + '">Découvrir</button></div></div>';
     });
     var dots = picks.length ? '<div class="af-dots">' + [0].concat(picks.map(function (_, i) { return i + 1; })).map(function (i) { return '<button type="button" class="af-dot' + (i === 0 ? " on" : "") + '" data-go="' + i + '" aria-label="Diapositive ' + (i + 1) + '"></button>'; }).join("") + "</div>" : "";
     return '<div class="af-ali-hero" id="afHero"' + bg + ">" + slides + dots + (isAdmin() ? '<button type="button" class="af-hero-pencil" data-act="hero-edit" title="Modifier le texte et l’image du bandeau" aria-label="Modifier le bandeau">✎</button>' : "") + "</div>";
