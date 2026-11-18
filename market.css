@@ -28,7 +28,7 @@ body.af-market-mode #market-view{display:block}
 .af-ali-cats button:hover,.af-ali-cats button.on{background:color-mix(in srgb,var(--green) 14%,transparent);color:var(--green)}
 
 .af-ali-hero{position:relative;overflow:hidden;min-height:390px;border-radius:20px;color:#fff;border:1px solid rgba(255,255,255,.3);box-shadow:0 20px 55px rgba(13,54,37,.22);
-  background-image:linear-gradient(115deg,rgba(13,68,46,.88),rgba(30,111,75,.78) 55%,rgba(225,155,45,.72)),var(--hero-img,linear-gradient(transparent,transparent));background-size:cover;background-position:center}
+  background-image:linear-gradient(105deg,rgba(8,52,34,.82),rgba(21,104,66,.56) 54%,rgba(211,144,25,.42)),var(--hero-img,linear-gradient(135deg,#12442e,#d79627));background-size:cover;background-position:center}
 .af-ali-hero::before,.af-ali-hero::after{content:"";position:absolute;border-radius:50%;pointer-events:none}
 .af-ali-hero::before{width:340px;height:340px;right:-90px;top:-120px;background:rgba(255,255,255,.14);animation:afDrift 9s ease-in-out infinite alternate}
 .af-ali-hero::after{width:260px;height:260px;right:90px;bottom:-130px;background:rgba(245,173,61,.4);animation:afDrift 11s ease-in-out infinite alternate-reverse}

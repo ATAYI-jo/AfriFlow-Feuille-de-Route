@@ -3,7 +3,8 @@
   "use strict";
   var DEF_TITLE = "AfriFloW – De l’Afrique vers le monde", HERO_KEY = "pub:markethero", HERO_LS = "afriflow_markethero_v1", EXT = ["jpg", "jpeg", "webp", "png"];
   function readHeroLocal() { try { return JSON.parse(localStorage.getItem(HERO_LS) || "{}") || {}; } catch (error) { return {}; } }
-  var state = { products: [], adminProducts: [], category: "", term: "", context: { kind: "public" }, timers: [], heroTimer: null, heroIdx: 0, imgs: {}, imgErr: {}, hero: readHeroLocal() };
+  /* Le bandeau est toujours repris depuis le serveur : aucune ancienne image locale ne réapparaît au rechargement. */
+  var state = { products: [], adminProducts: [], category: "", term: "", context: { kind: "public" }, timers: [], heroTimer: null, heroIdx: 0, imgs: {}, imgErr: {}, hero: {} };
 
   function el(id) { return document.getElementById(id); }
   function esc(value) { return String(value == null ? "" : value).replace(/[&<>"']/g, function (char) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[char]; }); }
@@ -171,15 +172,17 @@
     m.querySelector("[data-q]").onclick = function () { closeModal(); openQuote(p); };
   }
   function openQuote(p) {
-    if (state.context.kind === "public") { notice("Connectez-vous ou créez un compte pour demander un devis."); openAuth(); return; }
+    if (state.context.kind === "public") { notice("Identifiez-vous uniquement pour envoyer votre devis et recevoir la réponse."); openAuth(); return; }
     var m = modal('<button type="button" class="af-modal-x" aria-label="Fermer">×</button><h3>Demander un devis</h3><p class="af-quote-prod">' + esc(p.name) + '</p><label for="afqQ">Quantité souhaitée</label><input id="afqQ" type="text" maxlength="60" placeholder="Ex. 200 sachets"><label for="afqM">Message</label><textarea id="afqM" rows="4" maxlength="1500" placeholder="Pays de livraison, délais, questions…"></textarea><div class="af-actions"><button type="button" class="af-market-primary" id="afqGo">Envoyer ma demande</button><button type="button" class="af-market-secondary" id="afqNo">Annuler</button></div>');
     m.querySelector(".af-modal-x").onclick = closeModal; m.querySelector("#afqNo").onclick = closeModal;
     m.querySelector("#afqGo").onclick = async function () {
       var b = this; b.disabled = true;
-      var ts = Date.now(), key = "quote:" + ts + ":" + Math.random().toString(36).slice(2, 6);
       try {
-        var r = await sb().from("afriflow_state").insert({ key: key, value: { productId: p.id, product: p.name, qty: m.querySelector("#afqQ").value.trim(), message: m.querySelector("#afqM").value.trim(), email: String(window.loggedUserEmail || ""), name: window.USER_NAME || "", ts: ts }, updated_at: new Date().toISOString() });
-        if (r.error) throw r.error; closeModal(); notice("Demande envoyée à AfriFloW. Nous vous répondons rapidement.");
+        var request = { productId: p.id, qty: m.querySelector("#afqQ").value.trim(), message: m.querySelector("#afqM").value.trim() };
+        var r = await sb().functions.invoke("afriflow-market-quote", { body: request });
+        if (r.error) { var details = ""; try { details = (await r.error.context.json()).error || ""; } catch (ignore) {} throw new Error(details || r.error.message); }
+        if (r.data && r.data.error) throw new Error(r.data.error);
+        closeModal(); notice("Demande envoyée à AfriFloW. L’équipe a reçu une alerte urgente et vous répondra rapidement.");
       } catch (error) { b.disabled = false; notice("Envoi impossible : " + (error.message || error)); }
     };
   }
@@ -214,7 +217,7 @@
   function sideHtml() {
     var member = state.context.kind === "authenticated";
     return '<aside class="af-ali-side"><div class="af-side-hello"><img src="logo.png" alt=""><div><b>Bienvenue sur AfriFloW</b><small>' + (member ? "Votre espace client" : "Achetez et échangez en direct") + "</small></div></div>"
-      + (member ? '<button type="button" class="af-market-primary" id="afMarketProfile">Mon compte</button>' : '<button type="button" class="af-market-primary" id="afSideSignIn">Se connecter</button><button type="button" class="af-market-secondary" id="afSideSignUp">Créer un compte</button>')
+      + (member ? '<button type="button" class="af-market-primary" id="afMarketProfile">Mon compte</button>' : '')
       + '<button type="button" class="af-market-secondary" data-act="quote">Demander un devis</button>'
       + '<ul class="af-side-list"><li>Produits d’Afrique, sélectionnés</li><li>Contact direct avec AfriFloW</li><li>De l’Afrique vers le monde</li></ul></aside>';
   }
@@ -239,7 +242,7 @@
       + '<form class="af-market-search" id="afMarketSearch"><input id="afMarketSearchInput" value="' + esc(state.term) + '" type="search" placeholder="Rechercher un produit, une catégorie…" aria-label="Rechercher dans la Marketplace"><button>Rechercher</button></form>'
       + (workspace ? '<button type="button" class="af-market-link" id="afMarketBack">Retour à mon espace</button>' : "")
       + (state.context.kind === "authenticated" ? '<button type="button" class="af-market-link" id="afMarketAccount">Mon compte</button>' : "")
-      + (state.context.kind === "public" ? '<button type="button" class="af-market-link" id="afMarketSignIn">Se connecter</button>' : (state.context.kind === "authenticated" ? '<button type="button" class="af-market-link" id="afMarketSignOut">Déconnexion</button>' : ""))
+      + (state.context.kind === "authenticated" ? '<button type="button" class="af-market-link" id="afMarketSignOut">Déconnexion</button>' : "")
       + "</div></header>";
   }
   function adminPanel() {

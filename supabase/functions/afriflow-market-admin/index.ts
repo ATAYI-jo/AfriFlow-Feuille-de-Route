@@ -54,11 +54,18 @@ async function download(accessToken: string, path: string) {
   return new Uint8Array(await response.arrayBuffer());
 }
 async function generateImage(original: Uint8Array, mime: string, instruction: string) {
-  const key = Deno.env.get("GEMINI_API_KEY") || "", model = Deno.env.get("GEMINI_IMAGE_MODEL") || "gemini-2.5-flash-image";
+  const key = Deno.env.get("GEMINI_API_KEY") || "", model = Deno.env.get("GEMINI_IMAGE_MODEL") || "gemini-3.1-flash-image";
   if (!key) throw new Error("IA d'images non configurée");
   const prompt = "Crée une variante commerciale fidèle de la photo produit fournie. Conserve exactement le produit, sa forme, sa matière, son emballage, ses couleurs et tout texte lisible. Ne change que le décor, l'éclairage ou la mise en scène selon cette consigne : " + instruction;
-  const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, { method: "POST", headers: { "x-goog-api-key": key, "content-type": "application/json" }, signal: AbortSignal.timeout(60000), body: JSON.stringify({ contents: [{ parts: [{ text: prompt.slice(0, 2800) }, { inlineData: { mimeType: mime, data: bytesToB64(original) } }] }], generationConfig: { responseModalities: ["IMAGE"] } }) });
-  const result = await response.json(); if (!response.ok) throw new Error("Génération IA indisponible");
+  const response = await fetch(`https://generativelanguage.googleapis.com/v1/models/${model}:generateContent`, { method: "POST", headers: { "x-goog-api-key": key, "content-type": "application/json" }, signal: AbortSignal.timeout(60000), body: JSON.stringify({ contents: [{ parts: [{ text: prompt.slice(0, 2800) }, { inlineData: { mimeType: mime, data: bytesToB64(original) } }] }], generationConfig: { responseModalities: ["TEXT", "IMAGE"] } }) });
+  const result = await response.json();
+  if (!response.ok) {
+    const providerMessage = String(result?.error?.message || "").replace(/[\r\n]+/g, " ").slice(0, 240);
+    if (response.status === 401 || response.status === 403) throw new Error("La clé IA ne possède pas l’accès requis à la génération d’images.");
+    if (response.status === 404) throw new Error(`Le modèle IA « ${model} » n’est pas disponible pour ce projet.`);
+    if (response.status === 429) throw new Error("La limite du fournisseur IA est atteinte : réessayez plus tard.");
+    throw new Error(providerMessage ? `Le fournisseur IA a refusé la génération : ${providerMessage}` : "Génération IA indisponible");
+  }
   const image = (result.candidates?.[0]?.content?.parts || []).find((part: { inlineData?: { data?: string } }) => part.inlineData?.data)?.inlineData;
   if (!image?.data || !imageExtension(image.mimeType || "")) throw new Error("L'IA n'a renvoyé aucune image exploitable");
   return { bytes: b64(image.data), mime: image.mimeType as string };
