@@ -158,13 +158,16 @@ Deno.serve(async (req: Request) => {
     if (action === "upload_original") {
       const product = body.product || {}, name = text(product.name, 160), description = text(product.description, 4000), category = text(product.category, 80) || "Découvrir";
       const price = product.price === "" || product.price == null ? null : Number(product.price);
-      if (name.length < 2 || !Number.isFinite(price == null ? 0 : price) || (price != null && price < 0)) return out(req, { error: "Vérifiez le nom et le prix du produit" }, 400);
+      const compareAtPrice = product.compareAtPrice === "" || product.compareAtPrice == null ? null : Number(product.compareAtPrice);
+      const minimumOrderQuantity = product.minimumOrderQuantity === "" || product.minimumOrderQuantity == null ? null : Number(product.minimumOrderQuantity);
+      const originCountry = text(product.originCountry, 80) || null, deliveryInfo = text(product.deliveryInfo, 160) || null, promotionLabel = text(product.promotionLabel, 40) || null;
+      if (name.length < 2 || !Number.isFinite(price == null ? 0 : price) || (price != null && price < 0) || !Number.isFinite(compareAtPrice == null ? 0 : compareAtPrice) || (compareAtPrice != null && (price == null || compareAtPrice <= price)) || !Number.isInteger(minimumOrderQuantity == null ? 1 : minimumOrderQuantity) || (minimumOrderQuantity != null && minimumOrderQuantity < 1)) return out(req, { error: "Vérifiez le prix, l’ancien prix et la quantité minimale" }, 400);
       const mime = String(body.mime || ""), ext = imageExtension(mime); if (!ext) return out(req, { error: "Formats autorisés : JPG, PNG ou WebP" }, 400);
       const id = crypto.randomUUID(), root = (Deno.env.get("DROPBOX_MARKET_ROOT") || `${Deno.env.get("DROPBOX_ROOT") || ""}/Market`).replace(/\/+$/, "");
       if (!root.startsWith("/")) throw new Error("Dossier Market Dropbox non configuré");
       const path = `${root}/products/${id}/original.${ext}`, bytes = b64(body.data), accessToken = await token(service);
       await upload(accessToken, path, bytes);
-      const inserted = await service.from("afriflow_market_products").insert({ id, name, description, category, price, currency: text(product.currency, 3).toUpperCase() || "XOF", original_path: path, created_by: user.id, is_active: false }).select("id,name,is_active").single();
+      const inserted = await service.from("afriflow_market_products").insert({ id, name, description, category, price, compare_at_price: compareAtPrice, currency: text(product.currency, 3).toUpperCase() || "XOF", minimum_order_quantity: minimumOrderQuantity, origin_country: originCountry, delivery_info: deliveryInfo, promotion_label: promotionLabel, original_path: path, created_by: user.id, is_active: false }).select("id,name,is_active").single();
       if (inserted.error) throw inserted.error;
       let autoJob: { id: string; status: string } | null = null, autoNote = "";
       try { autoJob = await createHordeJob(service, id, user.id, DEFAULT_AUTO_PROMPT); autoNote = " Une variante IA est lancée automatiquement et restera à approuver."; }
