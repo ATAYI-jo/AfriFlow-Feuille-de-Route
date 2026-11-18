@@ -15,22 +15,26 @@ function bytesToB64(bytes: Uint8Array) { const chunks: string[] = []; for (let i
 function b64Raw(bytes: Uint8Array) { return bytesToB64(bytes); }
 function rawB64(value: string) { return Uint8Array.from(atob(value), (char) => char.charCodeAt(0)); }
 async function cryptoKey() { const raw = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "")); return crypto.subtle.importKey("raw", raw, "AES-GCM", false, ["encrypt", "decrypt"]); }
-async function savedRefresh(service: ReturnType<typeof createClient>) {
-  const stored = await service.from("afriflow_private_integrations").select("ciphertext,iv").eq("key", "dropbox_refresh_token").maybeSingle();
+const DROPBOX_MARKET_APP_KEY = "fabkaj1klaccpeg";
+async function savedValue(service: ReturnType<typeof createClient>, key: string) {
+  const stored = await service.from("afriflow_private_integrations").select("ciphertext,iv").eq("key", key).maybeSingle();
   if (stored.error || !stored.data) return "";
   try { return new TextDecoder().decode(await crypto.subtle.decrypt({ name: "AES-GCM", iv: rawB64(stored.data.iv) }, await cryptoKey(), rawB64(stored.data.ciphertext))); } catch { return ""; }
 }
-async function saveRefresh(service: ReturnType<typeof createClient>, refresh: string) {
-  const iv = crypto.getRandomValues(new Uint8Array(12)), encrypted = new Uint8Array(await crypto.subtle.encrypt({ name: "AES-GCM", iv }, await cryptoKey(), new TextEncoder().encode(refresh)));
-  const result = await service.from("afriflow_private_integrations").upsert({ key: "dropbox_refresh_token", ciphertext: b64Raw(encrypted), iv: b64Raw(iv), updated_at: new Date().toISOString() });
+async function saveValue(service: ReturnType<typeof createClient>, key: string, value: string) {
+  const iv = crypto.getRandomValues(new Uint8Array(12)), encrypted = new Uint8Array(await crypto.subtle.encrypt({ name: "AES-GCM", iv }, await cryptoKey(), new TextEncoder().encode(value)));
+  const result = await service.from("afriflow_private_integrations").upsert({ key, ciphertext: b64Raw(encrypted), iv: b64Raw(iv), updated_at: new Date().toISOString() });
   if (result.error) throw new Error("Impossible d'enregistrer la connexion Dropbox");
 }
+async function savedRefresh(service: ReturnType<typeof createClient>) { return savedValue(service, "dropbox_refresh_token"); }
+async function saveRefresh(service: ReturnType<typeof createClient>, refresh: string) { return saveValue(service, "dropbox_refresh_token", refresh); }
+function b64url(bytes: Uint8Array) { return bytesToB64(bytes).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, ""); }
+async function codeChallenge(value: string) { return b64url(new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(value)))); }
 function redirectUri() { return Deno.env.get("AFRIFLOW_DROPBOX_REDIRECT_URI") || "https://afriflow-africa.onrender.com"; }
 async function token(service: ReturnType<typeof createClient>) {
-  const key = Deno.env.get("DROPBOX_APP_KEY") || "", refresh = await savedRefresh(service) || Deno.env.get("DROPBOX_REFRESH_TOKEN") || "";
+  const key = DROPBOX_MARKET_APP_KEY, refresh = await savedRefresh(service) || Deno.env.get("DROPBOX_REFRESH_TOKEN") || "";
   if (!key || !refresh) throw new Error("Dropbox serveur non configurée");
   const body = new URLSearchParams({ grant_type: "refresh_token", refresh_token: refresh, client_id: key });
-  const secret = Deno.env.get("DROPBOX_APP_SECRET"); if (secret) body.set("client_secret", secret);
   const response = await fetch("https://api.dropboxapi.com/oauth2/token", { method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" }, body });
   const data = await response.json(); if (!response.ok || !data.access_token) throw new Error("Dropbox nécessite une reconnexion administrateur"); return data.access_token as string;
 }
@@ -75,16 +79,16 @@ Deno.serve(async (req: Request) => {
     if (admin.error || !admin.data) return out(req, { error: "Accès réservé à l'administrateur" }, 403);
     const body = await req.json(); const action = String(body.action || "status");
     const configured = Boolean(Deno.env.get("GEMINI_API_KEY"));
-    if (action === "status") { const dropbox = await dropboxStatus(service); return out(req, { dropboxConfigured: Boolean(Deno.env.get("DROPBOX_APP_KEY")), dropboxConnected: dropbox.connected, dropboxMessage: dropbox.message, aiConfigured: configured, aiMode: configured ? "gemini_image" : "not_configured" }); }
+    if (action === "status") { const dropbox = await dropboxStatus(service); return out(req, { dropboxConfigured: true, dropboxConnected: dropbox.connected, dropboxMessage: dropbox.message, aiConfigured: configured, aiMode: configured ? "gemini_image" : "not_configured" }); }
     if (action === "dropbox_authorize") {
-      const key = Deno.env.get("DROPBOX_APP_KEY") || ""; if (!key) return out(req, { error: "Application Dropbox non configurée" }, 503);
-      const url = new URL("https://www.dropbox.com/oauth2/authorize"); url.searchParams.set("client_id", key); url.searchParams.set("response_type", "code"); url.searchParams.set("token_access_type", "offline"); url.searchParams.set("redirect_uri", redirectUri()); url.searchParams.set("scope", "account_info.read files.metadata.read files.content.read files.content.write");
+      const verifier = b64url(crypto.getRandomValues(new Uint8Array(48))); await saveValue(service, "dropbox_oauth_verifier", verifier);
+      const url = new URL("https://www.dropbox.com/oauth2/authorize"); url.searchParams.set("client_id", DROPBOX_MARKET_APP_KEY); url.searchParams.set("response_type", "code"); url.searchParams.set("token_access_type", "offline"); url.searchParams.set("redirect_uri", redirectUri()); url.searchParams.set("scope", "account_info.read files.metadata.read files.content.read files.content.write"); url.searchParams.set("code_challenge", await codeChallenge(verifier)); url.searchParams.set("code_challenge_method", "S256");
       return out(req, { url: url.toString() });
     }
     if (action === "dropbox_complete") {
       const code = text(body.code, 1000); if (!/^[A-Za-z0-9._-]{8,1000}$/.test(code)) return out(req, { error: "Code Dropbox invalide" }, 400);
-      const key = Deno.env.get("DROPBOX_APP_KEY") || "", secret = Deno.env.get("DROPBOX_APP_SECRET") || ""; if (!key || !secret) return out(req, { error: "Application Dropbox non configurée" }, 503);
-      const params = new URLSearchParams({ grant_type: "authorization_code", code, client_id: key, client_secret: secret, redirect_uri: redirectUri() });
+      const verifier = await savedValue(service, "dropbox_oauth_verifier"); if (!verifier) return out(req, { error: "Demande Dropbox expirée : recommencez la reconnexion." }, 400);
+      const params = new URLSearchParams({ grant_type: "authorization_code", code, client_id: DROPBOX_MARKET_APP_KEY, code_verifier: verifier, redirect_uri: redirectUri() });
       const exchange = await fetch("https://api.dropboxapi.com/oauth2/token", { method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" }, body: params }); const data = await exchange.json();
       if (!exchange.ok || !data.refresh_token) return out(req, { error: "Dropbox a refusé la nouvelle autorisation" }, 502);
       await saveRefresh(service, data.refresh_token); const check = await dropboxStatus(service); if (!check.connected) return out(req, { error: "Nouvelle connexion Dropbox non valide" }, 502);
