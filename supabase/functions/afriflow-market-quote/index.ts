@@ -23,8 +23,9 @@ Deno.serve(async (req: Request) => {
     if (userError || !user?.email || !user.email_confirmed_at) return out(req, { error: "Session invalide" }, 401);
     const body = await req.json(), productId = clean(body.productId, 36), quantity = clean(body.qty, 60), message = clean(body.message, 1500);
     if (!uuid(productId)) return out(req, { error: "Produit invalide" }, 400);
-    const product = await service.from("afriflow_market_products").select("id,name,is_active").eq("id", productId).maybeSingle();
+    const product = await service.from("afriflow_market_products").select("id,name,is_active,is_in_stock").eq("id", productId).maybeSingle();
     if (product.error || !product.data?.is_active) return out(req, { error: "Produit introuvable" }, 404);
+    if (!product.data.is_in_stock) return out(req, { error: "Ce produit est actuellement en rupture de stock" }, 409);
     const now = new Date(), ts = now.getTime(), token = crypto.randomUUID(), email = user.email.toLowerCase();
     const quote = { productId, product: product.data.name, qty: quantity, message, email, name: clean(user.user_metadata?.full_name || user.user_metadata?.name, 160), ts };
     const quoteRow = await service.from("afriflow_state").insert({ key: `quote:${ts}:${token}`, value: quote, updated_at: now.toISOString() });

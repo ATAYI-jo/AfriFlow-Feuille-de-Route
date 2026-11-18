@@ -28,6 +28,7 @@
     if (product.delivery_info) facts.push(product.delivery_info);
     return facts;
   }
+  function inStock(product) { return product.is_in_stock !== false; }
   function titleHtml(text) { return esc(text || DEF_TITLE).replace(/(Afri)(Flo[wW])/, "$1<span>$2</span>"); }
   function roleMode(profile) { return profile && profile.access_mode || "client"; }
   function shouldUseMarket(profile) { return ["client", "shareholder_pending", "partner_waiting"].indexOf(roleMode(profile)) > -1; }
@@ -195,11 +196,13 @@
 
   function openDetail(p) {
     var discount = discountPercent(p), facts = salesFacts(p);
-    var m = modal('<button type="button" class="af-modal-x" aria-label="Fermer">×</button><div class="af-detail"><div class="af-media" data-market-image="' + esc(p.id) + '" data-alt="' + esc(p.name) + '">' + media(p) + '</div><div class="af-detail-body">' + (p.promotion_label || discount ? '<span class="af-promo">' + esc(p.promotion_label || "Offre spéciale") + '</span>' : '') + '<div class="af-product-cat">' + esc(p.category) + "</div><h2>" + esc(p.name) + '</h2><div class="af-price-line"><div class="af-product-price">' + esc(formatPrice(p.price, p.currency)) + "</div>" + (discount ? '<span class="af-old-price">' + esc(formatPrice(p.compare_at_price, p.currency)) + '</span><span class="af-discount">-' + discount + '%</span>' : '') + '</div><p>' + esc(p.description || "Produit sélectionné par AfriFloW.") + '</p>' + (facts.length ? '<ul class="af-sales-facts">' + facts.map(function (fact) { return '<li>' + esc(fact) + '</li>'; }).join('') + '</ul>' : '') + '<div class="af-actions"><button type="button" class="af-market-primary" data-q>Demander un devis</button><button type="button" class="af-market-secondary" data-x>Fermer</button></div></div></div>');
+    var available = inStock(p);
+    var m = modal('<button type="button" class="af-modal-x" aria-label="Fermer">×</button><div class="af-detail' + (available ? '' : ' is-out-of-stock') + '"><div class="af-media" data-market-image="' + esc(p.id) + '" data-alt="' + esc(p.name) + '">' + media(p) + (available ? '' : '<span class="af-stock-badge">Rupture de stock</span>') + '</div><div class="af-detail-body">' + (p.promotion_label || discount ? '<span class="af-promo">' + esc(p.promotion_label || "Offre spéciale") + '</span>' : '') + '<div class="af-product-cat">' + esc(p.category) + "</div><h2>" + esc(p.name) + '</h2><div class="af-price-line"><div class="af-product-price">' + esc(formatPrice(p.price, p.currency)) + "</div>" + (discount ? '<span class="af-old-price">' + esc(formatPrice(p.compare_at_price, p.currency)) + '</span><span class="af-discount">-' + discount + '%</span>' : '') + '</div><p>' + esc(p.description || "Produit sélectionné par AfriFloW.") + '</p>' + (facts.length ? '<ul class="af-sales-facts">' + facts.map(function (fact) { return '<li>' + esc(fact) + '</li>'; }).join('') + '</ul>' : '') + '<div class="af-actions">' + (available ? '<button type="button" class="af-market-primary" data-q>Demander un devis</button>' : '<span class="af-stock-note">Indisponible pour le moment</span>') + '<button type="button" class="af-market-secondary" data-x>Fermer</button></div></div></div>');
     m.querySelector(".af-modal-x").onclick = closeModal; m.querySelector("[data-x]").onclick = closeModal;
-    m.querySelector("[data-q]").onclick = function () { closeModal(); openQuote(p); };
+    var quote = m.querySelector("[data-q]"); if (quote) quote.onclick = function () { closeModal(); openQuote(p); };
   }
   function openQuote(p) {
+    if (!inStock(p)) { notice("Ce produit est actuellement en rupture de stock."); return; }
     if (state.context.kind === "public") { notice("Identifiez-vous uniquement pour envoyer votre devis et recevoir la réponse."); openAuth(); return; }
     var m = modal('<button type="button" class="af-modal-x" aria-label="Fermer">×</button><h3>Demander un devis</h3><p class="af-quote-prod">' + esc(p.name) + '</p><label for="afqQ">Quantité souhaitée</label><input id="afqQ" type="text" maxlength="60" placeholder="Ex. 200 sachets"><label for="afqM">Message</label><textarea id="afqM" rows="4" maxlength="1500" placeholder="Pays de livraison, délais, questions…"></textarea><div class="af-actions"><button type="button" class="af-market-primary" id="afqGo">Envoyer ma demande</button><button type="button" class="af-market-secondary" id="afqNo">Annuler</button></div>');
     m.querySelector(".af-modal-x").onclick = closeModal; m.querySelector("#afqNo").onclick = closeModal;
@@ -217,17 +220,18 @@
 
   /* ---------- Rendu ---------- */
   function productCard(product, i) {
-    var discount = discountPercent(product), facts = salesFacts(product);
-    return '<article class="af-product" style="--i:' + i + '"><div class="af-product-media af-media" data-market-image="' + esc(product.id) + '" data-alt="' + esc(product.name) + '">' + media(product) + (product.promotion_label || discount ? '<span class="af-promo">' + esc(product.promotion_label || "Offre spéciale") + '</span>' : '') + "</div>"
+    var discount = discountPercent(product), facts = salesFacts(product), available = inStock(product);
+    return '<article class="af-product' + (available ? '' : ' is-out-of-stock') + '" style="--i:' + i + '"><div class="af-product-media af-media" data-market-image="' + esc(product.id) + '" data-alt="' + esc(product.name) + '">' + media(product) + (product.promotion_label || discount ? '<span class="af-promo">' + esc(product.promotion_label || "Offre spéciale") + '</span>' : '') + (available ? '' : '<span class="af-stock-badge">Rupture de stock</span>') + "</div>"
       + '<div class="af-product-body"><div class="af-product-cat">' + esc(product.category) + "</div><h3>" + esc(product.name) + "</h3><p>" + esc(product.description || "Produit sélectionné par AfriFloW.") + '</p><div class="af-price-line"><div class="af-product-price">' + esc(formatPrice(product.price, product.currency)) + "</div>" + (discount ? '<span class="af-old-price">' + esc(formatPrice(product.compare_at_price, product.currency)) + '</span><span class="af-discount">-' + discount + '%</span>' : '') + '</div>'
       + (facts.length ? '<div class="af-sales-facts">' + facts.map(function (fact) { return '<span>' + esc(fact) + '</span>'; }).join('') + '</div>' : '')
-      + '<div class="af-card-actions"><button type="button" class="af-market-primary" data-market-quote="' + esc(product.id) + '">Demander un devis</button><button type="button" class="af-market-secondary" data-market-detail="' + esc(product.id) + '">Détails</button></div></div></article>';
+      + '<div class="af-card-actions">' + (available ? '<button type="button" class="af-market-primary" data-market-quote="' + esc(product.id) + '">Demander un devis</button>' : '<button type="button" class="af-market-unavailable" disabled>Rupture</button>') + '<button type="button" class="af-market-secondary" data-market-detail="' + esc(product.id) + '">Détails</button></div></div></article>';
   }
   function featuredCard(p) {
-    return '<div class="af-feature-wrap"><article class="af-feature"><div class="af-media af-feature-media" data-market-image="' + esc(p.id) + '" data-alt="' + esc(p.name) + '">' + media(p) + "</div>"
+    var available = inStock(p);
+    return '<div class="af-feature-wrap"><article class="af-feature' + (available ? '' : ' is-out-of-stock') + '"><div class="af-media af-feature-media" data-market-image="' + esc(p.id) + '" data-alt="' + esc(p.name) + '">' + media(p) + (available ? '' : '<span class="af-stock-badge">Rupture de stock</span>') + "</div>"
       + '<div class="af-feature-body"><span class="af-chip">' + esc(p.category) + "</span><h3>" + esc(p.name) + '</h3><div class="af-product-price af-big">' + esc(formatPrice(p.price, p.currency)) + "</div><p>" + esc(p.description || "Produit sélectionné par AfriFloW.") + "</p>"
       + '<ul class="af-points"><li>Produit sélectionné par AfriFloW</li><li>Devis personnalisé sur demande</li><li>Contact direct avec l’équipe</li></ul>'
-      + '<div class="af-actions"><button type="button" class="af-market-primary" data-market-quote="' + esc(p.id) + '">Demander un devis</button><button type="button" class="af-market-secondary" data-market-detail="' + esc(p.id) + '">Voir les détails</button></div></div></article></div>';
+      + '<div class="af-actions">' + (available ? '<button type="button" class="af-market-primary" data-market-quote="' + esc(p.id) + '">Demander un devis</button>' : '<button type="button" class="af-market-unavailable" disabled>Rupture de stock</button>') + '<button type="button" class="af-market-secondary" data-market-detail="' + esc(p.id) + '">Voir les détails</button></div></div></article></div>';
   }
   function productsHtml(products) {
     if (!products.length) return '<div class="af-market-empty">Aucun produit ne correspond à votre recherche pour le moment.</div>';
@@ -349,7 +353,7 @@
     if (!sb()) { showCatalogError("Le catalogue sera disponible dès que le service est connecté."); return; }
     var grid = el("afMarketGrid"); if (refresh !== false && grid) grid.innerHTML = '<div class="af-market-empty">Chargement de la Marketplace…</div>';
     try {
-      var fields = "id,name,description,category,price,compare_at_price,currency,minimum_order_quantity,origin_country,delivery_info,promotion_label,created_at,is_active";
+      var fields = "id,name,description,category,price,compare_at_price,currency,minimum_order_quantity,origin_country,delivery_info,promotion_label,is_in_stock,created_at,is_active";
       var publicCatalog = sb().from("afriflow_market_products").select(fields).eq("is_active", true).order("created_at", { ascending: false }).limit(100);
       var allCatalog = isAdmin() ? sb().from("afriflow_market_products").select(fields).order("created_at", { ascending: false }).limit(100) : null;
       var result = allCatalog ? await Promise.all([publicCatalog, allCatalog]) : [await publicCatalog, null];
@@ -378,6 +382,14 @@
     adminCall("status").then(function (result) { var status = el("afAiStatus"); if (status) status.textContent = result.aiConfigured ? "AI Horde génère automatiquement une variante après chaque original. Chaque résultat reste à votre approbation." : "L’IA d’images n’est pas configurée."; var dropbox = el("afDropboxStatus"); if (dropbox) dropbox.textContent = result.dropboxConnected ? "Dropbox est connecté." : "Dropbox doit être reconnecté avant tout envoi."; }).catch(function () { var status = el("afAiStatus"); if (status) status.textContent = "État du connecteur IA indisponible."; });
   }
   function jobLabel(job) { return job.status === "ready" ? "Variante prête à examiner" : job.status === "failed" ? "Génération refusée : " + (job.error_message || "erreur inconnue") : "Génération automatique en cours"; }
+  function editorField(value) { return esc(value == null ? "" : value); }
+  function openProductEditor(product) {
+    if (!product) return;
+    var currencies = ["XOF", "EUR", "USD"].map(function (currency) { return '<option' + ((product.currency || "XOF") === currency ? " selected" : "") + '>' + currency + "</option>"; }).join("");
+    var m = modal('<button type="button" class="af-modal-x" aria-label="Fermer">×</button><form class="af-product-edit" id="afProductEdit"><h3>Modifier le produit</h3><label>Nom du produit<input required name="name" maxlength="160" value="' + editorField(product.name) + '"></label><label>Catégorie<input required name="category" maxlength="80" value="' + editorField(product.category) + '"></label><div class="af-edit-grid"><label>Prix<input name="price" type="number" min="0" step="0.01" value="' + editorField(product.price) + '"></label><label>Ancien prix<input name="compareAtPrice" type="number" min="0" step="0.01" value="' + editorField(product.compare_at_price) + '"></label><label>Devise<select name="currency">' + currencies + '</select></label><label>Quantité minimale<input name="minimumOrderQuantity" type="number" min="1" step="1" value="' + editorField(product.minimum_order_quantity) + '"></label></div><label>Pays / origine<input name="originCountry" maxlength="80" value="' + editorField(product.origin_country) + '"></label><label>Délai ou livraison<input name="deliveryInfo" maxlength="160" value="' + editorField(product.delivery_info) + '"></label><label>Badge promotion<input name="promotionLabel" maxlength="40" value="' + editorField(product.promotion_label) + '"></label><label>Description<textarea name="description" maxlength="4000">' + editorField(product.description) + '</textarea></label><div class="af-actions"><button class="af-market-primary">Enregistrer les modifications</button><button type="button" class="af-market-secondary" data-cancel>Annuler</button></div></form>');
+    m.querySelector(".af-modal-x").onclick = closeModal; m.querySelector("[data-cancel]").onclick = closeModal;
+    m.querySelector("#afProductEdit").onsubmit = async function (event) { event.preventDefault(); var form = new FormData(this), button = this.querySelector("button[type=submit]"); button.disabled = true; try { var result = await adminCall("update_product", { productId: product.id, product: { name: form.get("name"), category: form.get("category"), price: form.get("price"), compareAtPrice: form.get("compareAtPrice"), currency: form.get("currency"), minimumOrderQuantity: form.get("minimumOrderQuantity"), originCountry: form.get("originCountry"), deliveryInfo: form.get("deliveryInfo"), promotionLabel: form.get("promotionLabel"), description: form.get("description") } }); closeModal(); notice(result.message); loadCatalog(); } catch (error) { button.disabled = false; notice(error.message || "Modification impossible"); } };
+  }
   function pollAiJob(id, attempt) {
     if (!id || state.aiPolling[id]) return;
     state.aiPolling[id] = true;
@@ -405,7 +417,7 @@
     loadQuotes();
     try {
       var both = await Promise.all([
-        sb().from("afriflow_market_products").select("id,name,is_active,created_at").order("created_at", { ascending: false }).limit(100),
+        sb().from("afriflow_market_products").select("id,name,description,category,price,compare_at_price,currency,minimum_order_quantity,origin_country,delivery_info,promotion_label,is_in_stock,is_active,created_at").order("created_at", { ascending: false }).limit(100),
         sb().from("afriflow_market_variants").select("id,product_id,approval_status,source,created_at").order("created_at", { ascending: false }).limit(200),
         sb().from("afriflow_market_variant_jobs").select("id,product_id,status,error_message,created_at").order("created_at", { ascending: false }).limit(100)
       ]);
@@ -413,12 +425,14 @@
       var products = both[0].data || [], variants = both[1].data || [], jobs = both[2].data || [];
       list.innerHTML = products.length ? products.map(function (product) {
         var sub = variants.filter(function (variant) { return variant.product_id === product.id; }), pending = jobs.filter(function (job) { return job.product_id === product.id; });
-        return '<div class="af-market-admin-row"><div><b>' + esc(product.name) + "</b><small>Produit " + (product.is_active ? "visible" : "brouillon") + " · " + sub.length + " variante" + (sub.length > 1 ? "s" : "") + "</small>"
+        return '<div class="af-market-admin-row"><div><b>' + esc(product.name) + "</b><small>Produit " + (product.is_active ? "visible" : "brouillon") + " · " + (inStock(product) ? "en stock" : "rupture") + " · " + sub.length + " variante" + (sub.length > 1 ? "s" : "") + "</small>"
           + sub.map(function (variant) { return "<small>Variante " + esc(variant.source) + " · " + statusTag(variant.approval_status) + ' <button type="button" class="af-market-secondary" data-variant="' + esc(variant.id) + '" data-status="approved">Approuver</button> <button type="button" class="af-market-secondary" data-variant="' + esc(variant.id) + '" data-status="rejected">Refuser</button></small>'; }).join("")
           + pending.map(function (job) { return '<small class="af-market-job">' + esc(jobLabel(job)) + ((job.status === "queued" || job.status === "processing") ? ' <button type="button" class="af-market-secondary" data-job="' + esc(job.id) + '">Actualiser</button>' : "") + "</small>"; }).join("") + "</div>"
-          + '<div class="af-market-admin-actions"><button type="button" class="af-market-secondary" data-product="' + esc(product.id) + '" data-active="' + (product.is_active ? "false" : "true") + '">' + (product.is_active ? "Retirer" : "Publier") + "</button></div></div>";
+          + '<div class="af-market-admin-actions"><button type="button" class="af-market-secondary" data-edit="' + esc(product.id) + '">Modifier</button><button type="button" class="af-market-secondary" data-stock="' + esc(product.id) + '" data-in-stock="' + (inStock(product) ? "false" : "true") + '">' + (inStock(product) ? "Rupture" : "Remettre en stock") + '</button><button type="button" class="af-market-secondary" data-product="' + esc(product.id) + '" data-active="' + (product.is_active ? "false" : "true") + '">' + (product.is_active ? "Retirer" : "Publier") + "</button></div></div>";
       }).join("") : '<div class="af-market-empty"><b>Aucun brouillon à publier.</b><br><small>Le bouton « Publier » apparaît ici dès qu’un original a été enregistré avec succès dans Dropbox.</small></div>';
       list.querySelectorAll("[data-product]").forEach(function (button) { button.onclick = async function () { var response = await sb().from("afriflow_market_products").update({ is_active: button.dataset.active === "true" }).eq("id", button.dataset.product); if (response.error) notice(response.error.message); else { notice("Visibilité mise à jour."); loadCatalog(); } }; });
+      list.querySelectorAll("[data-edit]").forEach(function (button) { button.onclick = function () { openProductEditor(products.filter(function (product) { return product.id === button.dataset.edit; })[0]); }; });
+      list.querySelectorAll("[data-stock]").forEach(function (button) { button.onclick = async function () { button.disabled = true; try { var result = await adminCall("set_stock", { productId: button.dataset.stock, inStock: button.dataset.inStock === "true" }); notice(result.message); loadCatalog(); } catch (error) { button.disabled = false; notice(error.message || "Mise à jour du stock impossible"); } }; });
       list.querySelectorAll("[data-variant]").forEach(function (button) { button.onclick = async function () { var update = { approval_status: button.dataset.status, approved_at: button.dataset.status === "approved" ? new Date().toISOString() : null }; var response = await sb().from("afriflow_market_variants").update(update).eq("id", button.dataset.variant); if (response.error) notice(response.error.message); else { notice(button.dataset.status === "approved" ? "Variante approuvée : elle participera à la rotation horaire." : "Variante refusée."); loadAdminList(); } }; });
       list.querySelectorAll("[data-job]").forEach(function (button) { button.onclick = function () { pollAiJob(button.dataset.job); }; });
       jobs.filter(function (job) { return job.status === "queued" || job.status === "processing"; }).slice(0, 3).forEach(function (job) { pollAiJob(job.id); });
