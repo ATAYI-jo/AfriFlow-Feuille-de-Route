@@ -37,9 +37,10 @@
   function openAuth() {
     var auth = el("auth-screen"); if (!auth) return;
     if (window.setAuthMode) window.setAuthMode("login");
+    document.body.classList.add("af-auth-open");
     auth.classList.remove("off");
   }
-  function closeAuth() { var auth = el("auth-screen"); if (auth) auth.classList.add("off"); }
+  function closeAuth() { var auth = el("auth-screen"); if (auth) auth.classList.add("off"); document.body.classList.remove("af-auth-open"); }
   function categoryList() { var seen = {}; state.products.forEach(function (product) { if (product.category) seen[product.category] = true; }); return Object.keys(seen).sort(); }
   function filteredProducts() {
     var term = state.term.trim().toLocaleLowerCase("fr");
