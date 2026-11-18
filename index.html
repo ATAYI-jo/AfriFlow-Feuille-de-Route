@@ -196,6 +196,12 @@ svg.road-svg{position:absolute;top:0;left:0;width:100%;height:100%;pointer-event
 #introSkip{right:calc(16px + env(safe-area-inset-right,0px))}
 #intro #introSnd{top:calc(14px + env(safe-area-inset-top,0px));left:14px;bottom:auto;right:auto;width:34px;height:34px;padding:0;display:flex;align-items:center;justify-content:center;font-size:.9rem;line-height:1;border-radius:50%;opacity:.5;box-shadow:none;transition:opacity .2s}
 #intro #introSnd:hover,#intro #introSnd:focus-visible{opacity:1}
+/* Présentation immersive : la même vidéo est projetée en arrière-plan, façon story. */
+#intro{background:#0b2f21!important}
+#intro .intro-video-backdrop{position:absolute!important;inset:-7%!important;z-index:0!important;display:block!important;width:114%!important;height:114%!important;max-width:none!important;max-height:none!important;object-fit:cover!important;filter:blur(28px) saturate(1.3) brightness(.72);opacity:.64;transform:scale(1.06);pointer-events:none!important}
+#intro::before{display:block!important;z-index:1!important;inset:0!important;border:0!important;border-radius:0!important;background:linear-gradient(135deg,rgba(4,28,18,.38),rgba(8,66,44,.18) 52%,rgba(225,155,45,.17))!important;box-shadow:none!important;-webkit-backdrop-filter:blur(9px)!important;backdrop-filter:blur(9px)!important}
+#intro #introVideo{z-index:2!important;width:min(92vw,1200px)!important;height:min(86dvh,900px)!important;border:1px solid rgba(255,255,255,.4)!important;border-radius:clamp(18px,3vw,34px)!important;background:rgba(8,37,25,.12)!important;box-shadow:0 22px 80px rgba(0,0,0,.32),inset 0 1px 0 rgba(255,255,255,.25)!important;-webkit-backdrop-filter:blur(5px)!important;backdrop-filter:blur(5px)!important}
+@media(max-width:640px){#intro .intro-video-backdrop{inset:-14%!important;width:128%!important;height:128%!important;filter:blur(20px) saturate(1.25) brightness(.7)}#intro #introVideo{width:100vw!important;height:91dvh!important;border-radius:0!important;border-left:0!important;border-right:0!important}}
 .no-intro #intro{display:none}
 #bgLayer{position:fixed;inset:0;z-index:-1;pointer-events:none;background-size:cover;background-position:center;background-repeat:no-repeat}
 
@@ -410,6 +416,10 @@ window.ic=function(n,s){return '<svg class="ic"'+(s?' style="width:'+s+';height:
 
 <div id="bgLayer" aria-hidden="true"></div>
 <div id="intro" aria-label="Animation d'ouverture AfriFloW">
+  <video id="introBackdropVideo" class="intro-video-backdrop" muted playsinline webkit-playsinline preload="auto" aria-hidden="true" tabindex="-1">
+    <source src="./afriflow-intro-alpha.webm" type="video/webm">
+    <source src="./afriflow-intro.mp4" type="video/mp4">
+  </video>
   <video id="introVideo" playsinline webkit-playsinline preload="auto" disablepictureinpicture disableremoteplayback controlslist="nodownload noplaybackrate noremoteplayback" aria-label="Animation d'introduction AfriFloW">
     <source src="./afriflow-intro-alpha.webm" type="video/webm">
     <source src="./afriflow-intro.mp4" type="video/mp4">
@@ -430,7 +440,7 @@ window.ic=function(n,s){return '<svg class="ic"'+(s?' style="width:'+s+';height:
     <button type="button" class="oauth" data-p="apple">Continuer avec Apple</button>
     <div class="or"><span>ou</span></div>
     <input type="text" id="authName" placeholder="Nom complet" autocomplete="name" style="display:none">
-    <label for="authMarketRole" style="display:block;text-align:left;font-size:.85rem;color:var(--muted);margin:0 0 6px">Vous accédez au Market comme</label>
+    <label for="authMarketRole" style="display:block;text-align:left;font-size:.85rem;color:var(--muted);margin:0 0 6px">Vous accédez à la Marketplace comme</label>
     <select id="authMarketRole" style="width:100%;padding:12px 16px;margin-bottom:14px;font:inherit"><option value="client">Client</option><option value="shareholder">Actionnaire</option><option value="partner">Partenaire</option></select>
     <input type="email" id="authEmailInput" placeholder="Votre adresse email" autocomplete="email" inputmode="email" autocapitalize="off" autocorrect="off" spellcheck="false">
     <input type="password" id="authPasswordInput" placeholder="Mot de passe" autocomplete="current-password" autocapitalize="off" autocorrect="off" spellcheck="false">
@@ -658,7 +668,7 @@ function setAuthMode(m){
   $("authBtn").textContent = reg ? "S'inscrire" : "Se connecter";
   $("tabLogin").classList.toggle("on", !reg); $("tabReg").classList.toggle("on", reg);
   $("authPasswordInput").setAttribute("autocomplete", reg ? "new-password" : "current-password");
-  $("authHint").textContent = reg ? "Créez votre compte pour consulter le Market. Votre choix d’espace ne donne jamais de droits collaborateur." : "Connectez-vous avec votre email et votre mot de passe personnel. Votre choix d’espace ne modifie pas vos droits collaborateur.";
+  $("authHint").textContent = reg ? "Créez votre compte pour consulter la Marketplace. Votre choix d’espace ne donne jamais de droits collaborateur." : "Connectez-vous avec votre email et votre mot de passe personnel. Votre choix d’espace ne modifie pas vos droits collaborateur.";
   $("authError").textContent = "";
 }
 async function verifyGlobalAuth(){
@@ -1592,7 +1602,7 @@ document.addEventListener("visibilitychange", function(){ if(document.hidden) sa
 window.addEventListener("pagehide", function(){ saveSession(true); });
 
 function initIntro(){
-  var box = $("intro"), v = $("introVideo"), snd = $("introSnd");
+  var box = $("intro"), v = $("introVideo"), bg = $("introBackdropVideo"), snd = $("introSnd");
   if(!box || document.documentElement.classList.contains("no-intro")) return;
   var done = false, fs = setTimeout(finish, 120000);
   var gestures = []; // Les clics sur l’introduction contrôlent uniquement le son.
@@ -1612,7 +1622,7 @@ function initIntro(){
   function finish(){
     if(done) return; done = true; clearTimeout(fs); stopGestures();
     try { sessionStorage.setItem(INTRO_KEY, "1"); } catch(e){}
-    box.classList.add("out"); v.pause(); document.documentElement.classList.add("af-intro-finished");
+    box.classList.add("out"); v.pause(); if(bg)bg.pause(); document.documentElement.classList.add("af-intro-finished");
     setTimeout(function(){ box.style.display = "none"; }, 700);
     if(window.afriMarketInitial)window.afriMarketInitial();
   }
@@ -1622,6 +1632,11 @@ function initIntro(){
   // Preserve every source frame; allow a quiet 850 ms hold before the existing fade.
   v.addEventListener("ended", function(){setTimeout(finish,850)});
   v.addEventListener("error", finish);
+  if(bg){
+    bg.muted=true; bg.volume=0;
+    bg.play().catch(function(){});
+    v.addEventListener("timeupdate",function(){ if(Math.abs(bg.currentTime-v.currentTime)>.25){try{bg.currentTime=v.currentTime}catch(e){}} });
+  }
 
   v.muted = false; v.volume = 1; paint();
   var p = v.play();
@@ -1645,7 +1660,7 @@ initIntro();
 (function(){
 var KEY="afriflow_extra_v1", $=function(i){return document.getElementById(i)};
 var X={nav:[],tre:{open:0,cur:"XOF",rows:[]},pages:{},docs:{},pubAt:{},chg:{},del:{}}; window.EXTRA=X;
-var BASE=[{id:"home",n:"Accueil",e:"🏠"},{id:"market",n:"Market",e:"🛍️"},{id:"treasury",n:"Trésorerie",e:"💰"},{id:"direction",n:"Direction",e:"🧭"}];
+var BASE=[{id:"market",n:"Marketplace",e:"🛍️"},{id:"home",n:"Accueil",e:"🏠"},{id:"treasury",n:"Trésorerie",e:"💰"},{id:"direction",n:"Direction",e:"🧭"}];
 var CURW={XOF:"francs CFA",EUR:"euros",USD:"dollars"}, CUR={XOF:"FCFA",EUR:"EUR",USD:"USD"}, admin=false, cur="home", sel=null, tm;
 var NAV_BACKUP_KEY="afriflow_extra_nav_recovery_v1";
 function backupNav(){

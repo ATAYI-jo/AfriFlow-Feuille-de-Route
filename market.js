@@ -49,35 +49,35 @@
   }
   function productCard(product) {
     return '<article class="af-product">'
-      + '<div class="af-product-media" data-market-image="' + esc(product.id) + '"><span class="af-market-fallback">AfriFloW<br>Market</span><span class="af-market-photo-note">Image Dropbox</span></div>'
+      + '<div class="af-product-media" data-market-image="' + esc(product.id) + '"><span class="af-market-fallback">AfriFloW<br>Marketplace</span><span class="af-market-photo-note">Image Dropbox</span></div>'
       + '<div class="af-product-body"><div class="af-product-cat">' + esc(product.category) + '</div><h3>' + esc(product.name) + '</h3><p>' + esc(product.description || "Produit sélectionné par AfriFloW.") + '</p><div class="af-product-price">' + esc(formatPrice(product.price, product.currency)) + '</div>'
       + '<button type="button" class="af-market-primary" data-market-interest="' + esc(product.id) + '">Découvrir ce produit</button></div></article>';
   }
   function catalogContent() {
     var products = filteredProducts();
-    return '<section class="af-market-hero"><div><h1>Le meilleur d’Afri<span>FloW</span>, à découvrir.</h1><p>Un Market pensé comme une grande place de marché : découvrez les produits, comparez et prenez contact avec AfriFloW.</p></div></section>'
+    return '<section class="af-market-hero"><div><h1>Le meilleur d’Afri<span>FloW</span>, à découvrir.</h1><p>Une Marketplace pensée comme une grande place de marché : découvrez les produits, comparez et prenez contact avec AfriFloW.</p></div></section>'
       + '<div class="af-market-section-head"><h2>' + (state.category ? esc(state.category) : "Nos produits") + '</h2><p>' + (products.length ? products.length + " produit" + (products.length > 1 ? "s" : "") : "Catalogue en préparation") + '</p></div>'
       + '<section id="afMarketGrid" class="af-market-grid">' + (products.length ? products.map(productCard).join("") : '<div class="af-market-empty">Aucun produit ne correspond à votre recherche pour le moment.</div>') + '</section>'
       + (isAdmin() ? adminPanel() : "");
   }
   function waitContent() {
-    return '<section class="af-market-wait"><h1>Espace partenaire en préparation</h1><p>Votre demande de rôle partenaire est enregistrée. Cet espace sera ouvert prochainement. En attendant, vous pouvez revenir à la vitrine publique du Market.</p><button type="button" class="af-market-primary" id="afPartnerCatalog">Voir le Market</button></section>';
+    return '<section class="af-market-wait"><h1>Espace partenaire en préparation</h1><p>Votre demande de rôle partenaire est enregistrée. Cet espace sera ouvert prochainement. En attendant, vous pouvez revenir à la vitrine publique de la Marketplace.</p><button type="button" class="af-market-primary" id="afPartnerCatalog">Voir la Marketplace</button></section>';
   }
   function top() {
     var categories = categoryList();
     var workspace = state.context.kind === "workspace";
     return '<header class="af-market-top"><div class="af-market-topline">'
-      + '<a class="af-market-brand" href="#" id="afMarketHome"><img src="logo.png" alt=""><b>Afri<span>FloW</span> Market</b></a>'
-      + '<form class="af-market-search" id="afMarketSearch"><input id="afMarketSearchInput" value="' + esc(state.term) + '" type="search" placeholder="Rechercher un produit, une catégorie…" aria-label="Rechercher dans le Market"><button>Rechercher</button></form>'
+      + '<a class="af-market-brand" href="#" id="afMarketHome"><img src="logo.png" alt=""><b>Afri<span>FloW</span> Marketplace</b></a>'
+      + '<form class="af-market-search" id="afMarketSearch"><input id="afMarketSearchInput" value="' + esc(state.term) + '" type="search" placeholder="Rechercher un produit, une catégorie…" aria-label="Rechercher dans la Marketplace"><button>Rechercher</button></form>'
       + (workspace ? '<button type="button" class="af-market-link" id="afMarketBack">Retour à mon espace</button>' : '')
       + (state.context.kind === "public" ? '<button type="button" class="af-market-link" id="afMarketSignIn">Se connecter</button>' : (state.context.kind === "authenticated" ? '<button type="button" class="af-market-link" id="afMarketSignOut">Déconnexion</button>' : ''))
-      + '</div><nav class="af-market-nav" aria-label="Catégories Market"><button type="button" data-market-category="" class="' + (!state.category ? "on" : "") + '">Tout le Market</button>'
+      + '</div><nav class="af-market-nav" aria-label="Catégories Marketplace"><button type="button" data-market-category="" class="' + (!state.category ? "on" : "") + '">Toute la Marketplace</button>'
       + categories.map(function (category) { return '<button type="button" data-market-category="' + esc(category) + '" class="' + (state.category === category ? "on" : "") + '">' + esc(category) + '</button>'; }).join("")
       + '</nav></header>';
   }
   function adminPanel() {
     var choices = state.adminProducts.length ? state.adminProducts : state.products;
-    return '<section class="af-market-admin" id="afMarketAdmin"><h2>Administration du Market</h2><p>Les originaux et variantes sont envoyés depuis ici vers Dropbox. Seules les variantes approuvées entrent dans la rotation horaire.</p>'
+    return '<section class="af-market-admin" id="afMarketAdmin"><h2>Administration de la Marketplace</h2><p>Les originaux et variantes sont envoyés depuis ici vers Dropbox. Seules les variantes approuvées entrent dans la rotation horaire.</p>'
       + '<div class="af-market-admin-grid">'
       + '<form class="af-market-admin-card" id="afProductUpload"><h3>Ajouter un original</h3><label>Nom du produit<input required name="name" maxlength="160"></label><label>Catégorie<input required name="category" maxlength="80" value="Découvrir"></label><label>Prix (facultatif)<input name="price" type="number" min="0" step="0.01"></label><label>Devise<select name="currency"><option>XOF</option><option>EUR</option><option>USD</option></select></label><label>Description<textarea name="description" maxlength="4000"></textarea></label><label>Photo originale<input required name="image" type="file" accept="image/jpeg,image/png,image/webp"></label><small>Le produit est ajouté comme brouillon : activez-le seulement après contrôle.</small><button class="af-market-primary">Envoyer vers Dropbox</button></form>'
       + '<form class="af-market-admin-card" id="afVariantUpload"><h3>Ajouter une variante</h3><label>Produit<select required name="productId">' + choices.map(function (product) { return '<option value="' + esc(product.id) + '">' + esc(product.name) + '</option>'; }).join("") + '</select></label><label>Image de variante<input required name="image" type="file" accept="image/jpeg,image/png,image/webp"></label><label>Origine<select name="source"><option value="manual">Retouche manuelle</option><option value="ai">Création IA validée manuellement</option></select></label><label>Consigne / provenance<textarea name="prompt" maxlength="2000" placeholder="Ex. conserver fidèlement le produit, éclairage naturel…"></textarea></label><small>Une variante reste invisible tant qu’elle n’est pas approuvée.</small><button class="af-market-primary">Envoyer la variante</button></form>'
@@ -117,7 +117,7 @@
   }
   async function loadCatalog(refresh) {
     if (!sb()) { showCatalogError("Le catalogue sera disponible dès que le service est connecté."); return; }
-    var grid = el("afMarketGrid"); if (refresh !== false && grid) grid.innerHTML = '<div class="af-market-empty">Chargement du Market…</div>';
+    var grid = el("afMarketGrid"); if (refresh !== false && grid) grid.innerHTML = '<div class="af-market-empty">Chargement de la Marketplace…</div>';
     try {
       var publicCatalog = sb().from("afriflow_market_products").select("id,name,description,category,price,currency,created_at,is_active").eq("is_active", true).order("created_at", { ascending: false }).limit(100);
       var allCatalog = isAdmin() ? sb().from("afriflow_market_products").select("id,name,description,category,price,currency,created_at,is_active").order("created_at", { ascending: false }).limit(100) : null;
@@ -133,7 +133,7 @@
   function toBase64(file) { return new Promise(function (resolve, reject) { var reader = new FileReader(); reader.onload = function () { resolve(String(reader.result).split(",")[1]); }; reader.onerror = reject; reader.readAsDataURL(file); }); }
   async function adminCall(action, body) {
     var result = await sb().functions.invoke("afriflow-market-admin", { body: Object.assign({ action: action }, body || {}) });
-    if (result.error) { var message = result.error.message || "Service Market indisponible"; try { var details = await result.error.context.json(); message = details.error || message; } catch (error) {} throw new Error(message); }
+    if (result.error) { var message = result.error.message || "Service Marketplace indisponible"; try { var details = await result.error.context.json(); message = details.error || message; } catch (error) {} throw new Error(message); }
     if (result.data && result.data.error) throw new Error(result.data.error); return result.data;
   }
   function bindAdmin() {

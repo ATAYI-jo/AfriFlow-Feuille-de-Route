@@ -17,3 +17,18 @@ body.af-market-mode #market-view{display:block}
 #auth-screen .auth-close{position:absolute;right:14px;top:14px;width:auto;padding:6px 10px;background:transparent;color:var(--ink);border:1px solid var(--line)}
 @media(max-width:700px){.af-market-topline{gap:8px;flex-wrap:wrap}.af-market-brand{font-size:.9rem}.af-market-brand img{width:31px;height:31px}.af-market-search{order:3;flex-basis:100%;width:100%}.af-market-link{padding:7px 8px;font-size:.84rem}.af-market-main{padding-top:12px}.af-market-hero{min-height:180px}.af-market-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.af-product-media{height:150px}.af-product-body{padding:10px}.af-product h3{font-size:.92rem}.af-product p{display:none}.af-product-price{font-size:1rem}.af-market-admin{padding:14px}.af-market-admin-row{grid-template-columns:1fr}.af-market-admin-actions{justify-content:flex-start}}
 @media(max-width:390px){.af-market-grid{grid-template-columns:1fr}.af-product-media{height:190px}}
+
+/* Marketplace : laisser respirer le décor personnel et n'utiliser que des surfaces en verre. */
+body.af-market-mode{background:transparent!important}
+#market-view{position:relative;isolation:isolate;background:color-mix(in srgb,var(--bg) 16%,transparent)!important}
+.af-market-top,.af-market-nav{background:color-mix(in srgb,var(--green) 68%,transparent)!important;border-color:color-mix(in srgb,#fff 34%,transparent)!important;-webkit-backdrop-filter:blur(22px) saturate(150%);backdrop-filter:blur(22px) saturate(150%)}
+.af-market-main{padding-top:clamp(24px,4vw,52px);padding-bottom:clamp(48px,7vw,88px)}
+.af-market-hero{min-height:clamp(250px,31vw,385px);border:1px solid rgba(255,255,255,.3);background:linear-gradient(115deg,rgba(13,68,46,.79),rgba(30,111,75,.68) 52%,rgba(225,155,45,.68))!important;box-shadow:0 20px 55px rgba(13,54,37,.2);-webkit-backdrop-filter:blur(20px) saturate(135%);backdrop-filter:blur(20px) saturate(135%)}
+.af-product,.af-market-empty,.af-market-error,.af-market-wait,.af-market-admin,.af-market-admin-card,.af-market-admin-row,.af-market-status{background:color-mix(in srgb,var(--card) 52%,transparent)!important;border-color:color-mix(in srgb,#fff 55%,transparent)!important;box-shadow:0 14px 36px rgba(18,57,39,.12)!important;-webkit-backdrop-filter:blur(22px) saturate(145%);backdrop-filter:blur(22px) saturate(145%)}
+.af-market-wait{border:1px solid color-mix(in srgb,#fff 55%,transparent)}
+.af-market-admin-card input,.af-market-admin-card textarea,.af-market-admin-card select{background:color-mix(in srgb,var(--card) 60%,transparent);border-color:color-mix(in srgb,#fff 50%,transparent)}
+#navList .nv[data-id="market"]{order:-1!important;background:linear-gradient(115deg,#ffca4d,#f49a22 54%,#e45c39)!important;color:#173326!important;font-weight:900!important;border:1px solid rgba(255,255,255,.72)!important;box-shadow:0 0 0 2px rgba(255,184,48,.22),0 8px 22px rgba(207,105,23,.42)!important;animation:af-market-pulse 1s ease-in-out infinite!important}
+#navList .nv[data-id="market"]:hover,#navList .nv[data-id="market"].on{filter:brightness(1.08);color:#173326!important}
+@keyframes af-market-pulse{0%,100%{transform:scale(1);opacity:1;box-shadow:0 0 0 2px rgba(255,184,48,.22),0 8px 22px rgba(207,105,23,.42)}50%{transform:scale(1.035);opacity:.72;box-shadow:0 0 0 7px rgba(255,190,51,.28),0 10px 30px rgba(207,78,23,.68)}}
+@media(prefers-reduced-motion:reduce){#navList .nv[data-id="market"]{animation:none!important}}
+@media(max-width:700px){.af-market-main{padding-top:18px}.af-market-hero{min-height:220px}.af-market-section-head{margin-top:32px}}
