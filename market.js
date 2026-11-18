@@ -107,7 +107,13 @@
   function applyImage(id, url) {
     state.imgs[id] = url;
     document.querySelectorAll('[data-market-hero="' + id + '"]').forEach(function (slide) {
-      slide.style.setProperty("--slide-img", "url('" + String(url).replace(/'/g, "%27") + "')");
+      var next = "url('" + String(url).replace(/'/g, "%27") + "')", previous = slide.style.getPropertyValue("--slide-img");
+      if (previous && previous !== next && !matchMedia("(prefers-reduced-motion: reduce)").matches) {
+        slide.style.setProperty("--previous-slide-img", previous);
+        slide.classList.add("af-image-crossfade");
+        slide.style.setProperty("--slide-img", next);
+        requestAnimationFrame(function () { requestAnimationFrame(function () { slide.classList.remove("af-image-crossfade"); }); });
+      } else slide.style.setProperty("--slide-img", next);
       slide.classList.add("has-image");
     });
     document.querySelectorAll('[data-market-image="' + id + '"]').forEach(function (box) {
