@@ -1,5 +1,19 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 
+const DROPBOX_MARKET_APP_KEY = "fabkaj1klaccpeg";
+function rawB64(value: string) { return Uint8Array.from(atob(value), (char) => char.charCodeAt(0)); }
+async function cryptoKey() {
+  const raw = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || ""));
+  return crypto.subtle.importKey("raw", raw, "AES-GCM", false, ["decrypt"]);
+}
+async function savedRefresh(service: ReturnType<typeof createClient>) {
+  const stored = await service.from("afriflow_private_integrations").select("ciphertext,iv").eq("key", "dropbox_refresh_token").maybeSingle();
+  if (stored.error || !stored.data) return "";
+  try {
+    return new TextDecoder().decode(await crypto.subtle.decrypt({ name: "AES-GCM", iv: rawB64(stored.data.iv) }, await cryptoKey(), rawB64(stored.data.ciphertext)));
+  } catch { return ""; }
+}
+
 const fallbackOrigins = new Set([
   "https://afriflow-africa.onrender.com",
   "https://atayi-jo.github.io",
@@ -29,9 +43,9 @@ function safeDropboxPath(path: string, root: string) {
   if (root && path.toLowerCase() !== root.toLowerCase() && !path.toLowerCase().startsWith(root.toLowerCase() + "/")) throw new Error("Chemin média hors du dossier autorisé");
   return path;
 }
-async function dropboxToken() {
-  const appKey = Deno.env.get("DROPBOX_APP_KEY") || "";
-  const refreshToken = Deno.env.get("DROPBOX_REFRESH_TOKEN") || "";
+async function dropboxToken(service: ReturnType<typeof createClient>) {
+  const appKey = Deno.env.get("DROPBOX_APP_KEY") || DROPBOX_MARKET_APP_KEY;
+  const refreshToken = await savedRefresh(service) || Deno.env.get("DROPBOX_REFRESH_TOKEN") || "";
   const params = new URLSearchParams({ grant_type: "refresh_token", refresh_token: refreshToken, client_id: appKey });
   const secret = Deno.env.get("DROPBOX_APP_SECRET");
   if (secret) params.set("client_secret", secret);
@@ -63,7 +77,7 @@ Deno.serve(async (req: Request) => {
     const selected = approved.length ? approved[hour % approved.length] : null;
     const root = (Deno.env.get("DROPBOX_MARKET_ROOT") || `${Deno.env.get("DROPBOX_ROOT") || ""}/Market`).replace(/\/+$/, "");
     const path = safeDropboxPath(selected?.storage_path || product.data.original_path, root);
-    const token = await dropboxToken();
+    const token = await dropboxToken(service);
     const response = await fetch("https://api.dropboxapi.com/2/files/get_temporary_link", {
       method: "POST",
       headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
