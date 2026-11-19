@@ -376,8 +376,8 @@
   function productCard(product, i) {
     var discount = discountPercent(product), facts = salesFacts(product), available = inStock(product);
     return '<article class="af-product' + (available ? '' : ' is-out-of-stock') + '" style="--i:' + i + '"><div class="af-product-media af-media" data-market-image="' + esc(product.id) + '" data-alt="' + esc(product.name) + '">' + media(product) + (product.promotion_label || discount ? '<span class="af-promo">' + esc(product.promotion_label || "Offre spéciale") + '</span>' : '') + '<button type="button" class="af-favorite' + (state.favorites.indexOf(product.id) > -1 ? ' on' : '') + '" data-favorite="' + esc(product.id) + '" aria-label="Ajouter aux favoris">♥</button>' + (available ? '' : '<span class="af-stock-badge">Rupture de stock</span>') + "</div>"
-      + '<div class="af-product-body"><div class="af-product-cat">' + esc(product.category) + '</div><h3>' + esc(product.name) + '</h3><div class="af-product-assurance">Sélection contrôlée AfriFloW</div><div class="af-price-line"><div class="af-product-price">' + esc(formatPrice(product.price, product.currency)) + '</div>' + (discount ? '<span class="af-old-price">' + esc(formatPrice(product.compare_at_price, product.currency)) + '</span><span class="af-discount">-' + discount + '%</span>' : '') + '</div>'
-      + '<div class="af-product-meta">' + (product.minimum_order_quantity ? '<span><b>Minimum :</b> ' + esc(product.minimum_order_quantity) + ' unité' + (Number(product.minimum_order_quantity) > 1 ? 's' : '') + '</span>' : '<span>Quantité à convenir</span>') + (product.origin_country ? '<span>· ' + esc(product.origin_country) + '</span>' : '') + '</div><div class="af-verified"><i>✓</i><b>Certifié</b> <span>par AfriFloW</span></div>'
+      + '<div class="af-product-body"><div class="af-product-cat">' + esc(product.category) + '</div><h3>' + esc(product.name) + '</h3><div class="af-price-line"><div class="af-product-price">' + esc(formatPrice(product.price, product.currency)) + '</div>' + (discount ? '<span class="af-old-price">' + esc(formatPrice(product.compare_at_price, product.currency)) + '</span><span class="af-discount">-' + discount + '%</span>' : '') + '</div>'
+      + '<div class="af-product-meta">' + (product.minimum_order_quantity ? '<span>Min. ' + esc(product.minimum_order_quantity) + ' unité' + (Number(product.minimum_order_quantity) > 1 ? 's' : '') + '</span>' : '<span>Sur demande</span>') + (product.origin_country ? '<span>' + esc(product.origin_country) + '</span>' : '') + '</div><div class="af-verified"><i>✓</i><b>Certifié</b><span>AfriFloW</span></div>'
       + '<div class="af-card-actions">' + (available ? '<button type="button" class="af-market-primary" data-add-cart="' + esc(product.id) + '">Ajouter</button>' : '<button type="button" class="af-market-unavailable" disabled>Rupture</button>') + '<button type="button" class="af-market-secondary" data-market-detail="' + esc(product.id) + '">Détails</button></div></div></article>';
   }
   function featuredCard(p) {
@@ -427,10 +427,10 @@
   function catalogContent() {
     var products = filteredProducts();
     var announcements = state.products.filter(isAnnouncement);
-    var listings = announcements.concat(products);
     return '<section class="af-ali">' + catsHtml() + heroHtml() + sideHtml() + "</section>"
+      + announcementsHtml()
       + '<div class="af-market-section-head" id="afProductsTop"><h2>' + (state.category ? esc(state.category) : "Nos produits") + "</h2><p>" + (products.length ? products.length + " produit" + (products.length > 1 ? "s" : "") : "Catalogue en préparation") + "</p></div>"
-      + productsHtml(listings) + (isAdmin() ? adminPanel() : "");
+      + productsHtml(products) + (isAdmin() ? adminPanel() : "");
   }
   function waitContent() {
     return '<section class="af-market-wait"><h1>Espace partenaire en préparation</h1><p>Votre demande de rôle partenaire est enregistrée. Cet espace sera ouvert prochainement. En attendant, vous pouvez revenir à la vitrine publique de la Marketplace.</p><button type="button" class="af-market-primary" id="afPartnerCatalog">Voir la Marketplace</button></section>';
