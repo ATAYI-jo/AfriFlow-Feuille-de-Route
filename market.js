@@ -252,8 +252,8 @@
 
   function openDetail(p) {
     if (isAnnouncement(p)) {
-      var announcement = modal('<button type="button" class="af-modal-x" aria-label="Fermer">×</button><div class="af-detail af-announcement-detail"><div class="af-detail-body"><span class="af-product-cat">ANNONCE AFRIFLOW</span><h2>' + esc(p.name) + '</h2><p>' + esc(p.description || "") + '</p><div class="af-actions"><button type="button" class="af-market-secondary" data-x>Fermer</button></div></div></div>');
-      announcement.querySelector(".af-modal-x").onclick = closeModal; announcement.querySelector("[data-x]").onclick = closeModal; return;
+      var announcement = modal('<button type="button" class="af-modal-x" aria-label="Fermer">×</button><div class="af-detail af-announcement-detail"><div class="af-media" data-market-image="' + esc(p.id) + '" data-alt="' + esc(p.name) + '">' + media(p) + '</div><div class="af-detail-body"><span class="af-product-cat">ANNONCE AFRIFLOW</span><h2>' + esc(p.name) + '</h2><p>' + esc(p.description || "") + '</p><div class="af-actions"><button type="button" class="af-market-secondary" data-x>Fermer</button></div></div></div>');
+      announcement.querySelector(".af-modal-x").onclick = closeModal; announcement.querySelector("[data-x]").onclick = closeModal; scheduleImages(); return;
     }
     var discount = discountPercent(p), facts = salesFacts(p);
     var available = inStock(p);
@@ -393,7 +393,7 @@
     return '<section id="afMarketGrid" class="af-market-grid" data-n="' + Math.min(products.length, 5) + '">' + products.map(function (item, index) { return isAnnouncement(item) ? announcementCard(item) : productCard(item, index); }).join("") + "</section>";
   }
   function announcementCard(item) {
-    return '<article class="af-product af-announcement-card" tabindex="0" role="button" data-market-detail="' + esc(item.id) + '" aria-label="Lire l’annonce : ' + esc(item.name) + '"><div class="af-product-body"><span class="af-promo">Annonce AfriFloW</span><div class="af-product-cat">Information · actualité</div><h3>' + esc(item.name) + '</h3><div class="af-product-assurance">Publication officielle AfriFloW</div><p class="af-announcement-text">' + esc(item.description || "Découvrez les nouveautés et informations AfriFloW.") + '</p><div class="af-announcement-label">Lire l’annonce</div></div></article>';
+    return '<article class="af-product af-announcement-card" tabindex="0" role="button" data-market-detail="' + esc(item.id) + '" aria-label="Lire l’annonce : ' + esc(item.name) + '"><div class="af-product-media af-media" data-market-image="' + esc(item.id) + '" data-alt="' + esc(item.name) + '">' + media(item) + '<span class="af-promo">Annonce AfriFloW</span></div><div class="af-product-body"><div class="af-product-cat">Information · actualité</div><h3>' + esc(item.name) + '</h3><div class="af-product-assurance">Publication officielle AfriFloW</div><p class="af-announcement-text">' + esc(item.description || "Découvrez les nouveautés et informations AfriFloW.") + '</p><div class="af-announcement-label">Lire l’annonce</div></div></article>';
   }
   function announcementsHtml() {
     var items = state.products.filter(isAnnouncement).slice(0, 6);

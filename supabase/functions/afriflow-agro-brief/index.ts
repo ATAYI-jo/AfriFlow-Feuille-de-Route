@@ -221,12 +221,37 @@ async function openverseIllustration(service: ReturnType<typeof createClient>, d
   await uploadDropbox(service, path, bytes);
   return { path, attribution: clean(candidate.attribution || `${candidate.creator || "Auteur inconnu"} · ${candidate.license || "licence ouverte"}`, 500), url: clean(candidate.foreign_landing_url || candidate.url, 1500) };
 }
+async function attachBriefIllustration(service: ReturnType<typeof createClient>, id: string, day: string, title: string, description: string, sources: unknown) {
+  /* Prefer a licensed open image. Only generate a new editorial visual when no
+     suitable CC0/public-domain image can be retrieved. */
+  try {
+    const open = await openverseIllustration(service, day, title);
+    const update = await service.from("afriflow_market_products").update({ original_path: open.path, description: `${description}\n\nIllustration libre : ${open.attribution}`, news_sources: { articles: sources, image_attribution: open } }).eq("id", id);
+    if (update.error) throw update.error;
+    return "openverse";
+  } catch (openError) {
+    console.error("afriflow-agro-brief open image", openError instanceof Error ? openError.message : "error");
+  }
+  try {
+    const illustration = await createBriefIllustration(service, day, title, description);
+    if (!illustration) throw new Error("Aucun générateur d’image configuré");
+    const update = await service.from("afriflow_market_products").update({ original_path: illustration }).eq("id", id);
+    if (update.error) throw update.error;
+    return "gemini";
+  } catch (imageError) {
+    console.error("afriflow-agro-brief image", imageError instanceof Error ? imageError.message : "error");
+    return null;
+  }
+}
 
 async function publishDailyBrief(service: ReturnType<typeof createClient>, day: string) {
     await service.from("afriflow_market_products").update({ is_active: false }).eq("listing_type", "announcement").eq("audience", "shareholders").lt("expires_at", new Date().toISOString());
-    const existing = await service.from("afriflow_market_products").select("id,name,expires_at").eq("listing_type", "announcement").eq("audience", "shareholders").eq("promotion_label", `Brief IA · ${day}`).maybeSingle();
+    const existing = await service.from("afriflow_market_products").select("id,name,description,original_path,news_sources,expires_at").eq("listing_type", "announcement").eq("audience", "shareholders").eq("promotion_label", `Brief IA · ${day}`).maybeSingle();
     if (existing.error) throw existing.error;
-    if (existing.data) return { skipped: true, brief: existing.data };
+    if (existing.data) {
+      if (!existing.data.original_path) await attachBriefIllustration(service, existing.data.id, day, existing.data.name, existing.data.description || "", existing.data.news_sources || []);
+      return { skipped: true, brief: existing.data };
+    }
     const apiKey = Deno.env.get("GEMINI_API_KEY") || "";
     if (!apiKey) throw new Error("GEMINI_API_KEY doit être configurée côté serveur avant la publication automatique.");
     const liveSources = await recentArticles();
@@ -240,22 +265,8 @@ async function publishDailyBrief(service: ReturnType<typeof createClient>, day: 
       promotion_label: `Brief IA · ${day}`, news_sources: sources
     }).select("id,name,expires_at").single();
     if (inserted.error) throw inserted.error;
-    /* The article exists even if image generation fails; readers never lose the
-       daily brief because a visual provider is slow or temporarily unavailable. */
-    try {
-      const illustration = await createBriefIllustration(service, day, brief.title, brief.description);
-      if (illustration) {
-        const imageUpdate = await service.from("afriflow_market_products").update({ original_path: illustration }).eq("id", inserted.data.id);
-        if (imageUpdate.error) throw imageUpdate.error;
-      }
-    } catch (error) {
-      console.error("afriflow-agro-brief image", error instanceof Error ? error.message : "error");
-      try {
-        const open = await openverseIllustration(service, day, brief.title);
-        const update = await service.from("afriflow_market_products").update({ original_path: open.path, description: `${brief.description}\n\nIllustration libre : ${open.attribution}`, news_sources: { articles: sources, image_attribution: open } }).eq("id", inserted.data.id);
-        if (update.error) throw update.error;
-      } catch (fallbackError) { console.error("afriflow-agro-brief open image", fallbackError instanceof Error ? fallbackError.message : "error"); }
-    }
+    /* The daily article remains available even if both visual sources fail. */
+    await attachBriefIllustration(service, inserted.data.id, day, brief.title, brief.description, sources);
   return { brief: inserted.data, sourceCount: sources.length };
 }
 
