@@ -161,6 +161,7 @@ Deno.serve(async (req: Request) => {
     }
     if (action === "upload_original") {
       const product = body.product || {}, name = text(product.name, 160), description = text(product.description, 4000), category = text(product.category, 80) || "Découvrir";
+      const listingType = product.listingType === "announcement" ? "announcement" : "product";
       const price = product.price === "" || product.price == null ? null : Number(product.price);
       const compareAtPrice = product.compareAtPrice === "" || product.compareAtPrice == null ? null : Number(product.compareAtPrice);
       const minimumOrderQuantity = product.minimumOrderQuantity === "" || product.minimumOrderQuantity == null ? null : Number(product.minimumOrderQuantity);
@@ -171,7 +172,7 @@ Deno.serve(async (req: Request) => {
       if (!root.startsWith("/")) throw new Error("Dossier Market Dropbox non configuré");
       const path = `${root}/products/${id}/original.${ext}`, bytes = b64(body.data), accessToken = await token(service);
       await upload(accessToken, path, bytes);
-      const inserted = await service.from("afriflow_market_products").insert({ id, name, description, category, price, compare_at_price: compareAtPrice, currency: text(product.currency, 3).toUpperCase() || "XOF", minimum_order_quantity: minimumOrderQuantity, origin_country: originCountry, delivery_info: deliveryInfo, promotion_label: promotionLabel, original_path: path, created_by: user.id, is_active: false }).select("id,name,is_active").single();
+      const inserted = await service.from("afriflow_market_products").insert({ id, name, description, category, listing_type: listingType, price, compare_at_price: compareAtPrice, currency: text(product.currency, 3).toUpperCase() || "XOF", minimum_order_quantity: minimumOrderQuantity, origin_country: originCountry, delivery_info: deliveryInfo, promotion_label: promotionLabel, original_path: path, created_by: user.id, is_active: false }).select("id,name,is_active").single();
       if (inserted.error) throw inserted.error;
       let autoJob: { id: string; status: string } | null = null, autoNote = "";
       try { autoJob = await createHordeJob(service, id, user.id, DEFAULT_AUTO_PROMPT); autoNote = " Une variante IA est lancée automatiquement et restera à approuver."; }
@@ -200,6 +201,7 @@ Deno.serve(async (req: Request) => {
       const productId = String(body.productId || ""), product = body.product || {};
       if (!isUuid(productId)) return out(req, { error: "Produit invalide" }, 400);
       const name = text(product.name, 160), description = text(product.description, 4000), category = text(product.category, 80) || "Découvrir";
+      const listingType = product.listingType === "announcement" ? "announcement" : "product";
       const price = product.price === "" || product.price == null ? null : Number(product.price);
       const compareAtPrice = product.compareAtPrice === "" || product.compareAtPrice == null ? null : Number(product.compareAtPrice);
       const minimumOrderQuantity = product.minimumOrderQuantity === "" || product.minimumOrderQuantity == null ? null : Number(product.minimumOrderQuantity);
@@ -213,7 +215,7 @@ Deno.serve(async (req: Request) => {
         originalPath = `${root}/products/${productId}/original-${crypto.randomUUID()}.${ext}`;
         await upload(await token(service), originalPath, b64(body.data));
       }
-      const update = { name, description, category, price, compare_at_price: compareAtPrice, currency: text(product.currency, 3).toUpperCase() || "XOF", minimum_order_quantity: minimumOrderQuantity, origin_country: originCountry, delivery_info: deliveryInfo, promotion_label: promotionLabel, ...(originalPath ? { original_path: originalPath } : {}) };
+      const update = { name, description, category, listing_type: listingType, price, compare_at_price: compareAtPrice, currency: text(product.currency, 3).toUpperCase() || "XOF", minimum_order_quantity: minimumOrderQuantity, origin_country: originCountry, delivery_info: deliveryInfo, promotion_label: promotionLabel, ...(originalPath ? { original_path: originalPath } : {}) };
       const changed = await service.from("afriflow_market_products").update(update).eq("id", productId).select("id,name,is_active,is_in_stock").single();
       if (changed.error || !changed.data) throw new Error("Impossible de modifier le produit");
       return out(req, { product: changed.data, message: "Produit mis à jour." });
