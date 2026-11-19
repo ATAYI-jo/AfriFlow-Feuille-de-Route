@@ -141,7 +141,7 @@ async function writeBrief(apiKey: string, sources: Array<{ title: string; url: s
   const response = await fetch("https://generativelanguage.googleapis.com/v1beta/interactions", {
     method: "POST",
     headers: { "Content-Type": "application/json", "x-goog-api-key": apiKey },
-    signal: AbortSignal.timeout(20000),
+    signal: AbortSignal.timeout(6000),
     body: JSON.stringify({ model, input: prompt, store: false })
   });
   const data = await response.json().catch(() => ({}));
@@ -154,6 +154,16 @@ async function writeBrief(apiKey: string, sources: Array<{ title: string; url: s
   const title = clean(brief.title, 160), description = clean(brief.description, 4000);
   if (title.length < 20 || description.length < 180) throw new Error("Bulletin IA trop court");
   return { title, description };
+}
+
+function sourceBrief(sources: Array<{ title: string; url: string; domain: string; date: string }>) {
+  const lead = sources[0];
+  const domains = [...new Set(sources.map((source) => source.domain).filter(Boolean))].slice(0, 4).join(", ");
+  const related = sources.slice(1, 3).map((source) => source.title).filter(Boolean).join(" · ");
+  return {
+    title: clean(lead?.title || "Veille agroalimentaire : signaux du jour", 160),
+    description: clean(`Point de veille AfriFloW préparé à partir de sources récentes. Sujet principal : ${lead?.title || "actualité agroalimentaire"}. ${related ? `Autres signaux suivis : ${related}. ` : ""}Cette publication est informative et ne constitue ni un conseil financier ni une cotation de marché. Sources répertoriées : ${domains || "sources spécialisées"}.`, 4000)
+  };
 }
 
 /* The daily bulletin is editorial content, not a product photograph: its
@@ -171,7 +181,7 @@ async function createBriefIllustration(service: ReturnType<typeof createClient>,
     `Sujet : ${clean(title, 180)}. Contexte : ${clean(description, 800)}`
   ].join("\n");
   const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(key)}`, {
-    method: "POST", headers: { "Content-Type": "application/json" }, signal: AbortSignal.timeout(85000),
+    method: "POST", headers: { "Content-Type": "application/json" }, signal: AbortSignal.timeout(8000),
     body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }], generationConfig: { responseModalities: ["TEXT", "IMAGE"] } })
   });
   const data = await response.json().catch(() => ({}));
@@ -198,16 +208,24 @@ async function publishDailyBrief(service: ReturnType<typeof createClient>, day: 
     if (!apiKey) throw new Error("GEMINI_API_KEY doit être configurée côté serveur avant la publication automatique.");
     const sources = await recentArticles();
     if (sources.length < 1) throw new Error("Aucune source récente vérifiable : aucun bulletin ne sera publié.");
-    const brief = await writeBrief(apiKey, sources);
-    let illustration: string | null = null;
-    try { illustration = await createBriefIllustration(service, day, brief.title, brief.description); }
-    catch (error) { console.error("afriflow-agro-brief image", error instanceof Error ? error.message : "error"); }
+    let brief: { title: string; description: string };
+    try { brief = await writeBrief(apiKey, sources); }
+    catch (error) { console.error("afriflow-agro-brief writing", error instanceof Error ? error.message : "error"); brief = sourceBrief(sources); }
     const inserted = await service.from("afriflow_market_products").insert({
-      name: brief.title, description: brief.description, category: topic, listing_type: "announcement", price: null, currency: "XOF", original_path: illustration,
+      name: brief.title, description: brief.description, category: topic, listing_type: "announcement", price: null, currency: "XOF", original_path: null,
       is_active: true, is_in_stock: false, audience: "shareholders", expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
       promotion_label: `Brief IA · ${day}`, news_sources: sources
     }).select("id,name,expires_at").single();
     if (inserted.error) throw inserted.error;
+    /* The article exists even if image generation fails; readers never lose the
+       daily brief because a visual provider is slow or temporarily unavailable. */
+    try {
+      const illustration = await createBriefIllustration(service, day, brief.title, brief.description);
+      if (illustration) {
+        const imageUpdate = await service.from("afriflow_market_products").update({ original_path: illustration }).eq("id", inserted.data.id);
+        if (imageUpdate.error) throw imageUpdate.error;
+      }
+    } catch (error) { console.error("afriflow-agro-brief image", error instanceof Error ? error.message : "error"); }
   return { brief: inserted.data, sourceCount: sources.length };
 }
 
@@ -219,9 +237,12 @@ Deno.serve(async (req: Request) => {
   const actor = await authorize(req, service);
   if (!actor) return json({ error: "Accès non autorisé" }, 401);
   const day = today();
-  EdgeRuntime.waitUntil(publishDailyBrief(service, day).catch((error) => {
+  try {
+    const result = await publishDailyBrief(service, day);
+    return json({ ok: true, result, message: result.skipped ? "Le bulletin du jour existe déjà." : "Bulletin du jour publié." });
+  } catch (error) {
     console.error("afriflow-agro-brief", error instanceof Error ? error.message : "error");
-  }));
-  return json({ ok: true, queued: true, message: "La préparation du bulletin a démarré." }, 202);
+    return json({ error: "Le bulletin n’a pas été publié : " + clean(error instanceof Error ? error.message : "erreur", 240) }, 502);
+  }
 });
 
