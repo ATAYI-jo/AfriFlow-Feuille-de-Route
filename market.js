@@ -438,7 +438,7 @@
     hero.querySelectorAll(".af-dot").forEach(function (d) { d.onclick = function () { go(+d.dataset.go); }; });
     var paused = false; hero.onmouseenter = function () { paused = true; }; hero.onmouseleave = function () { paused = false; };
     if (window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-    state.heroTimer = setInterval(function () { if (!paused && !document.hidden) go(state.heroIdx + 1); }, 5500);
+    state.heroTimer = setInterval(function () { if (!paused && !document.hidden) go(state.heroIdx + 1); }, 10000);
   }
   function bind() {
     var home = el("afMarketHome"); if (home) home.onclick = function (event) { event.preventDefault(); state.category = ""; state.term = ""; render(); loadCatalog(); };
