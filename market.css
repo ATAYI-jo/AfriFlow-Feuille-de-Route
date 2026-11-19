@@ -5,7 +5,7 @@ body.af-market-mode>#view-home,body.af-market-mode>#viewHost,body.af-market-mode
 body.af-market-mode #market-view{display:block}
 
 /* ---------- En-tête : recherche arrondie façon Alibaba ---------- */
-.af-market-top{position:sticky;top:0;z-index:100;background:color-mix(in srgb,var(--card) 62%,transparent);color:var(--ink);border-bottom:1px solid color-mix(in srgb,#fff 60%,transparent);box-shadow:0 10px 30px rgba(9,45,29,.12);-webkit-backdrop-filter:blur(28px) saturate(155%);backdrop-filter:blur(28px) saturate(155%)}
+.af-market-top{position:sticky;top:0;z-index:100;background:linear-gradient(118deg,rgba(255,255,255,.34),rgba(227,247,236,.22) 48%,rgba(255,238,205,.2));color:var(--ink);border-bottom:1px solid rgba(255,255,255,.62);box-shadow:0 10px 30px rgba(9,45,29,.14),inset 0 1px 0 rgba(255,255,255,.48);-webkit-backdrop-filter:blur(28px) saturate(155%);backdrop-filter:blur(28px) saturate(155%)}
 .af-market-topline{min-height:82px;max-width:1440px;margin:auto;display:flex;align-items:center;gap:20px;padding:12px max(24px,calc((100vw - 1440px)/2 + 24px))}
 .af-market-brand{display:flex;align-items:center;gap:10px;color:var(--ink);text-decoration:none;font-weight:800;white-space:nowrap}
 .af-market-brand img{height:42px;width:42px;border-radius:10px;object-fit:contain;background:#fff;padding:3px}
@@ -71,7 +71,7 @@ body.af-market-mode #market-view{display:block}
 
 /* ---------- Titres de section ---------- */
 .af-market-section-head{display:flex;align-items:baseline;justify-content:space-between;gap:16px;margin:34px 0 16px}
-.af-announcements{margin:30px 0}.af-announcements-grid{grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px}.af-announcement-card{height:280px;cursor:default;border-top:3px solid #1687db}.af-announcement-card .af-product-media{flex-basis:47%}.af-announcement-text{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:3;overflow:hidden;margin:0;color:var(--muted);font-size:.84rem;line-height:1.42}.af-announcement-label{margin-top:auto;align-self:flex-start;border-radius:999px;background:color-mix(in srgb,#0b75c9 12%,transparent);color:#0b75c9;padding:6px 10px;font-size:.78rem;font-weight:850}
+.af-announcements{margin:30px 0}.af-announcements-grid{grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px}.af-announcement-card{height:250px;cursor:pointer;border-top:3px solid #1687db;background:linear-gradient(145deg,rgba(255,255,255,.76),rgba(222,241,231,.64));box-shadow:0 12px 30px rgba(17,71,44,.13)}.af-announcement-card:hover{box-shadow:0 18px 38px rgba(17,71,44,.2)}.af-announcement-card .af-product-body{position:relative;padding:20px;gap:0}.af-announcement-card .af-promo{position:static;display:inline-flex;align-self:flex-start;margin:0 0 12px}.af-announcement-text{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:3;overflow:hidden;margin:0;color:var(--muted);font-size:.84rem;line-height:1.42}.af-announcement-label{margin-top:auto;align-self:flex-start;border-radius:999px;background:color-mix(in srgb,#0b75c9 12%,transparent);color:#0b75c9;padding:6px 10px;font-size:.78rem;font-weight:850}
 .af-market-section-head h2{font-size:1.5rem;margin:0}.af-market-section-head p{margin:0;color:var(--muted);font-size:.92rem}
 
 /* ---------- Plusieurs produits : grille centrée ---------- */
@@ -141,7 +141,7 @@ body.af-market-mode #market-view{display:block}
 .af-modal-x{position:absolute;right:12px;top:10px;z-index:2;width:38px;height:38px;padding:0;border-radius:50%;border:0;background:rgba(0,0,0,.45);color:#fff;font-size:22px;cursor:pointer}
 .af-quote-prod{margin:0;font-weight:700}
 .af-hero-prev{max-width:100%;max-height:120px;border-radius:8px;margin-top:8px;display:block}
-.af-detail{display:grid;grid-template-columns:1fr 1fr}
+.af-detail{display:grid;grid-template-columns:1fr 1fr}.af-announcement-detail{display:block;background:linear-gradient(145deg,rgba(255,255,255,.96),rgba(228,244,235,.92))}.af-announcement-detail .af-detail-body{min-height:340px;padding:clamp(30px,6vw,64px);justify-content:flex-start}.af-announcement-detail .af-detail-body h2{font-size:clamp(1.45rem,3vw,2.35rem);max-width:22ch}.af-announcement-detail .af-detail-body p{white-space:pre-line;max-height:48vh;overflow:auto;padding-right:6px}.af-announcement-detail .af-product-cat{min-height:auto;color:#0b75c9;font-weight:850}
 .af-detail .af-media{min-height:360px;background:linear-gradient(135deg,#dce9e2,#f8f3e8);display:flex;align-items:center;justify-content:center;overflow:hidden}
 .af-detail-body{padding:30px;display:flex;flex-direction:column;gap:10px;justify-content:center}
 .af-detail-body h2{margin:0}.af-detail-body p{margin:0;color:var(--muted);line-height:1.55}
@@ -213,7 +213,7 @@ body.af-market-mode #market-view{display:block}
   .af-market-main{padding:12px 10px 76px}
   .af-market-grid,.af-market-grid[data-n="5"]{grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
   .af-announcements-grid{grid-template-columns:1fr}.af-announcement{grid-template-columns:120px 1fr;min-height:128px}
-  .af-product{height:330px;border-radius:12px}.af-product-media{min-height:0;flex-basis:54%}.af-product-body{padding:9px}.af-product h3{font-size:.88rem}.af-product p{display:none}.af-product-price{font-size:1rem}.af-product-cat{font-size:.62rem;min-height:0}.af-product-assurance{display:none}.af-product .af-card-actions{display:none}.af-product .af-product-meta{display:none}.af-announcement-card{height:205px}.af-announcement-card .af-product-media{flex-basis:42%}.af-announcement-card .af-product-body{padding:10px}.af-announcement-card .af-announcement-text{font-size:.75rem;-webkit-line-clamp:2}.af-announcement-card h3{font-size:.88rem}.af-announcement-label{padding:4px 7px;font-size:.67rem}
+  .af-product{height:330px;border-radius:12px}.af-product-media{min-height:0;flex-basis:54%}.af-product-body{padding:9px}.af-product h3{font-size:.88rem}.af-product p{display:none}.af-product-price{font-size:1rem}.af-product-cat{font-size:.62rem;min-height:0}.af-product-assurance{display:none}.af-product .af-card-actions{display:none}.af-product .af-product-meta{display:none}.af-announcement-card{height:190px}.af-announcement-card .af-product-body{padding:14px}.af-announcement-card .af-promo{margin-bottom:8px;font-size:.62rem}.af-announcement-card .af-announcement-text{display:-webkit-box;font-size:.75rem;-webkit-line-clamp:2}.af-announcement-card h3{font-size:.88rem}.af-announcement-label{padding:4px 7px;font-size:.67rem}
   .af-market-admin{padding:14px}.af-market-admin-row{grid-template-columns:1fr}.af-market-admin-actions{justify-content:flex-start}
   .af-edit-grid{grid-template-columns:1fr}
   .af-market-nav{min-height:44px;padding:0 12px;gap:20px}.af-market-nav button{padding:13px 0 11px;font-size:.8rem}.af-market-nav span{display:none}.af-market-cart{padding:8px 10px}.af-cart-list article{grid-template-columns:1fr auto}.af-cart-remove{grid-column:1/-1;justify-self:start;padding:0}
