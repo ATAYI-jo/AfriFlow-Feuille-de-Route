@@ -7261,7 +7261,7 @@ function updateHeader(p,d){
   var first=(p&&p.first_name)||localName(),g=$("sideGreeting"),a=$("sideAvatar"),b=$("profileOpen");
   if(g)g.textContent=first?"Hey "+first:"Hey";
   if(a)a.innerHTML=avatar((d&&d.avatar_kind)||"dicebear",(d&&d.avatar_value)||"afriflow",first);
-  var incomplete=!(p&&p.profile_completed_at&&d&&d.avatar_kind);if(b)b.classList.toggle("needs-profile",!!window.loggedUserEmail&&incomplete);
+  var incomplete=!(p&&p.profile_completed_at);if(b)b.classList.toggle("needs-profile",!!window.loggedUserEmail&&incomplete);
   updateReminder(incomplete,p&&p.profile_due_at);
 }
 function updateReminder(incomplete,due){
@@ -7296,7 +7296,7 @@ function bindAvatarEditor(){
   var reset=$("pfAvatarReset");if(reset)reset.onclick=function(){var base=current&&current.user&&current.user.id||"afriflow";chosen={kind:"dicebear",value:base+"-lorelei-01"};renderAvatarEditor()};
 }
 function profilePage(){
-  var p=current.profile,d=current.directory,complete=!!p.profile_completed_at&&!!d.avatar_kind,notice=complete?'Votre profil est complet. Vous pourrez le modifier à tout moment.':'Complétez les informations demandées et choisissez un avatar. '+dayText(p.profile_due_at||new Date(Date.now()+15*86400000).toISOString());
+  var p=current.profile,d=current.directory,complete=!!p.profile_completed_at,notice=complete?'Votre profil est complet. Vous pourrez le modifier à tout moment.':'Complétez les informations demandées et choisissez un avatar. '+dayText(p.profile_due_at||new Date(Date.now()+15*86400000).toISOString());
   $("profileMain").innerHTML='<div class="profile-tabs"><button type="button" class="on" data-profile-tab="me">Mon profil</button><button type="button" data-profile-tab="directory">Annuaire des membres</button></div><div class="profile-grid"><section class="profile-card"><h3>Mes informations</h3><p class="profile-status">'+esc(notice)+'</p><p class="profile-note">Le nom, la fonction, le pays, la ville et l’avatar sont visibles dans l’annuaire. Les coordonnées personnelles restent privées.</p><div class="profile-form">'
     +field("Prénom *","first",p.first_name,"text",false,"Ex. Aïcha")+field("Nom *","last",p.last_name,"text",false,"Ex. Mensah")
     +field("E-mail", "email",p.email||current.user.email,"email",true)+field("Téléphone *","phone",p.phone,"tel",false,"Ex. +228 …")+field("Date de naissance *","birth",p.birth_date,"date",false)
