@@ -7553,6 +7553,12 @@ if ('serviceWorker' in navigator) {
   .ed-bar label{min-height:40px!important;padding:0 7px!important;background:rgba(255,255,255,.38)!important;border-radius:9px!important}
   .ed-bar .danger{color:#b53a31!important;border-color:rgba(181,58,49,.35)!important}
 }
+/* Navigation Marketplace : une seule bande continue, sans cadres ni interstices gris. */
+#market-view .af-market-nav{gap:0!important;background:#115d3f!important;border:0!important;border-bottom:1px solid rgba(255,202,102,.32)!important}
+#market-view .af-market-nav button{background:transparent!important;border:0!important;border-right:1px solid rgba(255,255,255,.16)!important;border-radius:0!important;color:#fff!important;margin:0!important;padding-left:18px!important;padding-right:18px!important}
+#market-view .af-market-nav button:last-of-type{border-right:0!important}
+#market-view .af-market-nav button:hover,#market-view .af-market-nav button:focus-visible{background:rgba(255,191,74,.13)!important;color:#ffd78b!important}
+@media(max-width:700px){#market-view .af-market-nav{padding:0!important}#market-view .af-market-nav button{padding-left:13px!important;padding-right:13px!important}}
 </style>
 </body>
 </html>
