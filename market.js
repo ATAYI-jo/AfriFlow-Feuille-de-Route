@@ -144,6 +144,10 @@
     return '<span class="af-market-fallback"><img class="af-fb-logo" src="logo.png" alt=""><em>' + esc(p.name) + "</em>" + hint + "</span>";
   }
   function media(p) { var u = state.imgs[p.id]; return u ? '<img class="af-photo" src="' + esc(u) + '" alt="' + esc(p.name) + '">' : fallbackHtml(p); }
+  function announcementMedia(p) {
+    if (p.original_path) return '<div class="af-product-media af-media" data-market-image="' + esc(p.id) + '" data-alt="' + esc(p.name) + '">' + media(p) + '<span class="af-promo">Annonce AfriFloW</span></div>';
+    return '<div class="af-product-media af-announcement-placeholder"><img src="logo.png" alt=""><span>Veille AfriFloW</span><small>Illustration en préparation</small></div>';
+  }
   function fitMedia(box, image) {
     if (!box || !image || !image.naturalWidth || !image.naturalHeight) return;
     var ratio = Math.max(0.62, Math.min(1.75, image.naturalWidth / image.naturalHeight));
@@ -252,8 +256,9 @@
 
   function openDetail(p) {
     if (isAnnouncement(p)) {
-      var announcement = modal('<button type="button" class="af-modal-x" aria-label="Fermer">×</button><div class="af-detail af-announcement-detail"><div class="af-media" data-market-image="' + esc(p.id) + '" data-alt="' + esc(p.name) + '">' + media(p) + '</div><div class="af-detail-body"><span class="af-product-cat">ANNONCE AFRIFLOW</span><h2>' + esc(p.name) + '</h2><p>' + esc(p.description || "") + '</p><div class="af-actions"><button type="button" class="af-market-secondary" data-x>Fermer</button></div></div></div>');
-      announcement.querySelector(".af-modal-x").onclick = closeModal; announcement.querySelector("[data-x]").onclick = closeModal; scheduleImages(); return;
+      var announcementVisual = p.original_path ? '<div class="af-media" data-market-image="' + esc(p.id) + '" data-alt="' + esc(p.name) + '">' + media(p) + '</div>' : '<div class="af-media af-announcement-placeholder"><img src="logo.png" alt=""><span>Veille AfriFloW</span><small>Illustration en préparation</small></div>';
+      var announcement = modal('<button type="button" class="af-modal-x" aria-label="Fermer">×</button><div class="af-detail af-announcement-detail">' + announcementVisual + '<div class="af-detail-body"><span class="af-product-cat">ANNONCE AFRIFLOW</span><h2>' + esc(p.name) + '</h2><p>' + esc(p.description || "") + '</p><div class="af-actions"><button type="button" class="af-market-secondary" data-x>Fermer</button></div></div></div>');
+      announcement.querySelector(".af-modal-x").onclick = closeModal; announcement.querySelector("[data-x]").onclick = closeModal; if (p.original_path) scheduleImages(); return;
     }
     var discount = discountPercent(p), facts = salesFacts(p);
     var available = inStock(p);
@@ -393,7 +398,7 @@
     return '<section id="afMarketGrid" class="af-market-grid" data-n="' + Math.min(products.length, 5) + '">' + products.map(function (item, index) { return isAnnouncement(item) ? announcementCard(item) : productCard(item, index); }).join("") + "</section>";
   }
   function announcementCard(item) {
-    return '<article class="af-product af-announcement-card" tabindex="0" role="button" data-market-detail="' + esc(item.id) + '" aria-label="Lire l’annonce : ' + esc(item.name) + '"><div class="af-product-media af-media" data-market-image="' + esc(item.id) + '" data-alt="' + esc(item.name) + '">' + media(item) + '<span class="af-promo">Annonce AfriFloW</span></div><div class="af-product-body"><div class="af-product-cat">Information · actualité</div><h3>' + esc(item.name) + '</h3><div class="af-product-assurance">Publication officielle AfriFloW</div><p class="af-announcement-text">' + esc(item.description || "Découvrez les nouveautés et informations AfriFloW.") + '</p><div class="af-announcement-label">Lire l’annonce</div></div></article>';
+    return '<article class="af-product af-announcement-card" tabindex="0" role="button" data-market-detail="' + esc(item.id) + '" aria-label="Lire l’annonce : ' + esc(item.name) + '">' + announcementMedia(item) + '<div class="af-product-body"><div class="af-product-cat">Information · actualité</div><h3>' + esc(item.name) + '</h3><div class="af-product-assurance">Publication officielle AfriFloW</div><p class="af-announcement-text">' + esc(item.description || "Découvrez les nouveautés et informations AfriFloW.") + '</p><div class="af-announcement-label">Lire l’annonce</div></div></article>';
   }
   function announcementsHtml() {
     var items = state.products.filter(isAnnouncement).slice(0, 6);
@@ -538,7 +543,7 @@
     if (!sb()) { showCatalogError("Le catalogue sera disponible dès que le service est connecté."); return; }
     var grid = el("afMarketGrid"); if (refresh !== false && grid) grid.innerHTML = '<div class="af-market-empty">Chargement de la Marketplace…</div>';
     try {
-      var fields = "id,name,description,category,listing_type,price,compare_at_price,currency,minimum_order_quantity,origin_country,delivery_info,promotion_label,is_in_stock,created_at,is_active";
+      var fields = "id,name,description,category,listing_type,price,compare_at_price,currency,minimum_order_quantity,origin_country,delivery_info,promotion_label,is_in_stock,original_path,created_at,is_active";
       var publicCatalog = sb().from("afriflow_market_products").select(fields).eq("is_active", true).order("created_at", { ascending: false }).limit(100);
       var allCatalog = isAdmin() ? sb().from("afriflow_market_products").select(fields).order("created_at", { ascending: false }).limit(100) : null;
       var result = allCatalog ? await Promise.all([publicCatalog, allCatalog]) : [await publicCatalog, null];
