@@ -13,6 +13,7 @@ body.af-market-mode #market-view{display:block}
 .af-market-search{display:flex;flex:1;min-width:120px;height:48px;border:2px solid var(--amber);border-radius:999px;overflow:hidden;background:var(--card)}
 .af-market-search input{min-width:0;flex:1;border:0;background:transparent;color:var(--ink);padding:0 18px;font:inherit;outline:0;border-radius:0}
 .af-market-search button{border:0;margin:3px;border-radius:999px;background:linear-gradient(115deg,#ffb23d,#f08a1b);color:#1d2a22;padding:0 22px;font-weight:800;cursor:pointer}
+.af-icon{width:1.05em;height:1.05em;flex:none}.af-market-search button,.af-market-link,.af-market-cart,.af-market-primary,.af-market-nav button{display:inline-flex;align-items:center;justify-content:center;gap:7px}.af-favorite .af-icon{width:16px;height:16px}.af-favorite.on .af-icon{fill:currentColor}
 .af-market-link{border:1px solid color-mix(in srgb,var(--green) 22%,transparent);background:rgba(18,92,59,.08);color:var(--ink);border-radius:999px;padding:10px 16px;font:inherit;font-weight:650;cursor:pointer;white-space:nowrap}
 .af-market-link:hover,.af-market-link:focus-visible{border-color:var(--amber)}
 .af-currency{display:flex;align-items:center;gap:6px;color:var(--muted);font-size:.75rem;font-weight:750;white-space:nowrap}.af-currency select{border:1px solid color-mix(in srgb,var(--green) 38%,transparent);border-radius:10px;background:rgba(18,92,59,.1);color:var(--ink);padding:8px 26px 8px 9px;font:inherit;font-weight:800;cursor:pointer}
