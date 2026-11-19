@@ -4,7 +4,7 @@
   var DEF_TITLE = "AfriFloW – De l’Afrique vers le monde", HERO_KEY = "pub:markethero", HERO_LS = "afriflow_markethero_v1", EXT = ["jpg", "jpeg", "webp", "png"];
   function readHeroLocal() { try { return JSON.parse(localStorage.getItem(HERO_LS) || "{}") || {}; } catch (error) { return {}; } }
   /* Le bandeau est toujours repris depuis le serveur : aucune ancienne image locale ne réapparaît au rechargement. */
-  var state = { products: [], adminProducts: [], category: "", term: "", context: { kind: "public" }, timers: [], heroTimer: null, rotationTimer: null, rotationStep: 0, heroIdx: 0, imgs: {}, imgErr: {}, hero: {}, aiPolling: {}, partner: null, partnerAdmin: null, cart: [], favorites: [] };
+  var state = { products: [], adminProducts: [], category: "", term: "", context: { kind: "public" }, timers: [], heroTimer: null, rotationTimer: null, rotationStep: 0, heroIdx: 0, imgs: {}, imgErr: {}, hero: {}, aiPolling: {}, partner: null, partnerAdmin: null, cart: [], favorites: [], currency: { code: "", rates: {}, loading: false } };
 
   function el(id) { return document.getElementById(id); }
   function loadStored(key, fallback) { try { var value = JSON.parse(localStorage.getItem(key) || ""); return Array.isArray(value) ? value : fallback; } catch (error) { return fallback; } }
@@ -18,10 +18,46 @@
   function isAdmin() { return window.USER_ROLE === "admin"; }
   function notice(message) { if (window.toast) window.toast(message); else window.alert(message); }
   function okImg(d) { return typeof d === "string" && /^data:image\/(png|jpe?g|webp);base64,/.test(d); }
+  function detectedCurrency() {
+    var zone = "";
+    try { zone = Intl.DateTimeFormat().resolvedOptions().timeZone || ""; } catch (error) {}
+    if (["Africa/Abidjan", "Africa/Bamako", "Africa/Bissau", "Africa/Conakry", "Africa/Dakar", "Africa/Lome", "Africa/Niamey", "Africa/Ouagadougou"].indexOf(zone) > -1) return "XOF";
+    if (/^Europe\//.test(zone)) return "EUR";
+    if (/^America\//.test(zone)) return "USD";
+    return "XOF";
+  }
+  function preferredCurrency() {
+    var saved = "";
+    try { saved = String(localStorage.getItem("afriflow_market_currency") || "").toUpperCase(); } catch (error) {}
+    return ["XOF", "EUR", "USD"].indexOf(saved) > -1 ? saved : detectedCurrency();
+  }
+  function currentCurrency() { return state.currency.code || preferredCurrency(); }
+  function convertedPrice(value, currency) {
+    var base = String(currency || "XOF").toUpperCase(), target = currentCurrency(), amount = Number(value);
+    if (!Number.isFinite(amount) || base === target) return amount;
+    var rate = Number(state.currency.rates[base]);
+    return Number.isFinite(rate) && rate > 0 ? amount * rate : amount;
+  }
   function formatPrice(value, currency) {
     if (value == null || value === "") return "Sur demande";
-    try { return new Intl.NumberFormat("fr-FR", { style: "currency", currency: currency || "XOF", maximumFractionDigits: 2 }).format(Number(value)); }
-    catch (error) { return Number(value).toLocaleString("fr-FR") + " " + (currency || "XOF"); }
+    var target = currentCurrency(), amount = convertedPrice(value, currency);
+    try { return new Intl.NumberFormat("fr-FR", { style: "currency", currency: target, maximumFractionDigits: target === "XOF" ? 0 : 2 }).format(amount); }
+    catch (error) { return amount.toLocaleString("fr-FR") + " " + target; }
+  }
+  async function loadCurrencyRates() {
+    var target = preferredCurrency(), before = state.currency.code + JSON.stringify(state.currency.rates);
+    state.currency.code = target;
+    if (!sb()) return;
+    state.currency.loading = true;
+    try {
+      var result = await sb().functions.invoke("afriflow-currency", { body: { currency: target } });
+      if (result.error || !result.data || result.data.error) throw new Error(result.data && result.data.error || "Taux indisponible");
+      state.currency.rates = result.data.rates || {};
+    } catch (error) { state.currency.rates = {}; }
+    finally {
+      state.currency.loading = false;
+      if (before !== state.currency.code + JSON.stringify(state.currency.rates) && el("market-view")) render();
+    }
   }
   function discountPercent(product) {
     var current = Number(product.price), previous = Number(product.compare_at_price);
@@ -52,7 +88,7 @@
   function clearTimers() { state.timers.forEach(function (t) { clearTimeout(t); }); state.timers = []; if (state.rotationTimer) { clearInterval(state.rotationTimer); state.rotationTimer = null; } clearHero(); }
   function clearHero() { if (state.heroTimer) { clearInterval(state.heroTimer); state.heroTimer = null; } }
   function open(context) {
-    state.context = context || { kind: "public" }; loadShop(); hideWorkspace(); render();
+    state.context = context || { kind: "public" }; loadShop(); state.currency.code = preferredCurrency(); hideWorkspace(); render(); loadCurrencyRates();
     if (roleMode(state.context.market) === "partner_waiting") { loadPartnerPortal(); return; }
     loadHero(); loadCatalog();
   }
@@ -304,7 +340,7 @@
 
   /* ---------- Panier et favoris (données stockées uniquement dans ce navigateur) ---------- */
   function cartCount() { return state.cart.reduce(function (sum, row) { return sum + Number(row.quantity || 0); }, 0); }
-  function cartTotal() { return state.cart.reduce(function (sum, row) { return sum + Number(row.quantity || 0) * Number(row.price || 0); }, 0); }
+  function cartTotal() { return state.cart.reduce(function (sum, row) { return sum + Number(row.quantity || 0) * convertedPrice(row.price, row.currency); }, 0); }
   function addToCart(product) {
     if (!product || !inStock(product)) return notice("Ce produit est actuellement indisponible.");
     var row = state.cart.filter(function (item) { return item.id === product.id; })[0];
@@ -319,8 +355,8 @@
   }
   function openCart() {
     if (!state.cart.length) return notice("Votre panier est vide pour le moment.");
-    var currency = state.cart[0].currency || "XOF";
-    var html = '<button type="button" class="af-modal-x" aria-label="Fermer">×</button><div class="af-cart"><h3>Mon panier <span>' + cartCount() + ' article' + (cartCount() > 1 ? "s" : "") + '</span></h3><p>Préparez votre demande : AfriFloW confirmera les prix, stocks et délais avant tout paiement.</p><div class="af-cart-list">' + state.cart.map(function (row) { return '<article><div><b>' + esc(row.name) + '</b><small>' + esc(formatPrice(row.price, row.currency)) + ' / unité</small></div><div class="af-cart-qty"><button type="button" data-cart-minus="' + esc(row.id) + '">−</button><b>' + esc(row.quantity) + '</b><button type="button" data-cart-plus="' + esc(row.id) + '">+</button></div><button type="button" class="af-cart-remove" data-cart-remove="' + esc(row.id) + '">Retirer</button></article>'; }).join("") + '</div><div class="af-cart-total"><span>Total estimatif</span><b>' + esc(formatPrice(cartTotal(), currency)) + '</b></div><div class="af-actions"><button type="button" class="af-market-primary" id="afCartQuote">Demander un devis groupé</button><button type="button" class="af-market-secondary" id="afCartClose">Continuer mes achats</button></div></div>';
+    var currency = currentCurrency();
+    var html = '<button type="button" class="af-modal-x" aria-label="Fermer">×</button><div class="af-cart"><h3>Mon panier <span>' + cartCount() + ' article' + (cartCount() > 1 ? "s" : "") + '</span></h3><p>Préparez votre demande : AfriFloW confirmera les prix, stocks et délais avant tout paiement.</p><div class="af-cart-list">' + state.cart.map(function (row) { return '<article><div><b>' + esc(row.name) + '</b><small>' + esc(formatPrice(row.price, row.currency)) + ' / unité</small></div><div class="af-cart-qty"><button type="button" data-cart-minus="' + esc(row.id) + '">−</button><b>' + esc(row.quantity) + '</b><button type="button" data-cart-plus="' + esc(row.id) + '">+</button></div><button type="button" class="af-cart-remove" data-cart-remove="' + esc(row.id) + '">Retirer</button></article>'; }).join("") + '</div><div class="af-cart-total"><span>Total estimatif</span><b>' + esc(formatPrice(cartTotal(), currency)) + '</b><small>Conversion indicative : le devis final reste le montant de référence.</small></div><div class="af-actions"><button type="button" class="af-market-primary" id="afCartQuote">Demander un devis groupé</button><button type="button" class="af-market-secondary" id="afCartClose">Continuer mes achats</button></div></div>';
     var m = modal(html); m.querySelector(".af-modal-x").onclick = closeModal; m.querySelector("#afCartClose").onclick = closeModal;
     m.querySelectorAll("[data-cart-plus]").forEach(function (button) { button.onclick = function () { var row = state.cart.filter(function (x) { return x.id === button.dataset.cartPlus; })[0]; if (row) { row.quantity += 1; persistShop(); closeModal(); openCart(); } }; });
     m.querySelectorAll("[data-cart-minus]").forEach(function (button) { button.onclick = function () { var row = state.cart.filter(function (x) { return x.id === button.dataset.cartMinus; })[0]; if (row) { row.quantity -= 1; if (row.quantity < 1) state.cart = state.cart.filter(function (x) { return x.id !== row.id; }); persistShop(); closeModal(); if (state.cart.length) openCart(); else render(); } }; });
@@ -406,6 +442,7 @@
     return '<header class="af-market-top"><div class="af-market-topline">'
       + '<a class="af-market-brand" href="#" id="afMarketHome"><img src="logo.png" alt=""><b>Afri<span>FloW</span> Marketplace</b></a>'
       + (partner ? '<div class="af-market-search af-partner-top-label">Portail commercial partenaire</div>' : '<form class="af-market-search" id="afMarketSearch"><input id="afMarketSearchInput" value="' + esc(state.term) + '" type="search" placeholder="Rechercher un produit, une catégorie…" aria-label="Rechercher dans la Marketplace"><button>Rechercher</button></form>')
+      + (!partner ? '<label class="af-currency" title="Devise d’affichage"><span>Devise</span><select id="afCurrency" aria-label="Choisir la devise d’affichage"><option value="XOF"' + (currentCurrency() === "XOF" ? " selected" : "") + '>FCFA</option><option value="EUR"' + (currentCurrency() === "EUR" ? " selected" : "") + '>EUR</option><option value="USD"' + (currentCurrency() === "USD" ? " selected" : "") + '>USD</option></select></label>' : '')
       + (workspace ? '<button type="button" class="af-market-link" id="afMarketBack">Retour à mon espace</button>' : "")
       + (state.context.kind === "public" ? '<button type="button" class="af-market-link" id="afMarketSignIn">Se connecter</button>' : "")
       + (state.context.kind === "authenticated" ? '<button type="button" class="af-market-link" id="afMarketAccount">Mon compte</button>' : "")
@@ -454,6 +491,7 @@
     [el("afMarketProfile"), el("afMarketAccount")].forEach(function (button) { if (button) button.onclick = function () { if (window.AfriProfileOpen) window.AfriProfileOpen(); else notice("Votre profil est indisponible pour le moment."); }; });
     var signOut = el("afMarketSignOut"); if (signOut) signOut.onclick = function () { if (window.logout) window.logout(); };
     var cart = el("afMarketCart"); if (cart) cart.onclick = openCart;
+    var currency = el("afCurrency"); if (currency) currency.onchange = function () { try { localStorage.setItem("afriflow_market_currency", currency.value); } catch (error) {} state.currency.code = currency.value; state.currency.rates = {}; render(); loadCurrencyRates(); };
     var partner = el("afPartnerCatalog"); if (partner) partner.onclick = function () { state.context.market = { access_mode: "client" }; render(); loadCatalog(); };
     var shareholder = el("afShareholderCatalog"); if (shareholder) shareholder.onclick = function () { state.context.market = { access_mode: "client" }; render(); loadCatalog(); };
     var refreshPartner = el("afPartnerRefresh"); if (refreshPartner) refreshPartner.onclick = loadPartnerPortal;
