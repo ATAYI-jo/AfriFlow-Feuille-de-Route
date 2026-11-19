@@ -129,6 +129,9 @@ async function recentArticles() {
     return [];
   }
 }
+function stableAgroReference() {
+  return [{ title: "À savoir : les indices internationaux des prix alimentaires sont publiés mensuellement", url: "https://www.fao.org/worldfoodsituation/foodpricesindex", domain: "FAO", date: today() }];
+}
 
 async function writeBrief(apiKey: string, sources: Array<{ title: string; url: string; domain: string; date: string }>) {
   const model = clean(Deno.env.get("GEMINI_AGRO_MODEL") || "gemini-3.8-flash", 80);
@@ -198,6 +201,26 @@ async function createBriefIllustration(service: ReturnType<typeof createClient>,
   await uploadDropbox(service, path, bytes);
   return path;
 }
+async function openverseIllustration(service: ReturnType<typeof createClient>, day: string, title: string) {
+  const url = new URL("https://api.openverse.org/v1/images");
+  url.searchParams.set("q", `${clean(title, 120)} agriculture food`);
+  url.searchParams.set("license", "cc0,pdm");
+  url.searchParams.set("mature", "false");
+  url.searchParams.set("page_size", "6");
+  const search = await fetch(url, { signal: AbortSignal.timeout(6000), headers: { "User-Agent": "AfriFloW-news/1.0" } });
+  const data = await search.json().catch(() => ({}));
+  const candidate = asArray(data?.results).find((item: Record<string, unknown>) => /^https:\/\//.test(String(item?.url || "")) && /image\/(jpeg|png|webp)/i.test(String(item?.filetype || "image/jpeg"))) as Record<string, unknown> | undefined;
+  if (!search.ok || !candidate) throw new Error("Aucune illustration libre exploitable");
+  const image = await fetch(String(candidate.url), { signal: AbortSignal.timeout(8000) });
+  const mime = clean(image.headers.get("content-type"), 80).split(";")[0].toLowerCase();
+  const bytes = new Uint8Array(await image.arrayBuffer());
+  if (!image.ok || !imageExtension(mime) || !bytes.byteLength || bytes.byteLength > 9 * 1024 * 1024) throw new Error("Illustration libre indisponible");
+  const root = (Deno.env.get("DROPBOX_MARKET_ROOT") || `${Deno.env.get("DROPBOX_ROOT") || ""}/Market`).replace(/\/+$/, "");
+  if (!root.startsWith("/")) throw new Error("Dossier Market Dropbox non configuré");
+  const path = `${root}/news/${day}/${crypto.randomUUID()}.${imageExtension(mime)}`;
+  await uploadDropbox(service, path, bytes);
+  return { path, attribution: clean(candidate.attribution || `${candidate.creator || "Auteur inconnu"} · ${candidate.license || "licence ouverte"}`, 500), url: clean(candidate.foreign_landing_url || candidate.url, 1500) };
+}
 
 async function publishDailyBrief(service: ReturnType<typeof createClient>, day: string) {
     await service.from("afriflow_market_products").update({ is_active: false }).eq("listing_type", "announcement").eq("audience", "shareholders").lt("expires_at", new Date().toISOString());
@@ -206,8 +229,8 @@ async function publishDailyBrief(service: ReturnType<typeof createClient>, day: 
     if (existing.data) return { skipped: true, brief: existing.data };
     const apiKey = Deno.env.get("GEMINI_API_KEY") || "";
     if (!apiKey) throw new Error("GEMINI_API_KEY doit être configurée côté serveur avant la publication automatique.");
-    const sources = await recentArticles();
-    if (sources.length < 1) throw new Error("Aucune source récente vérifiable : aucun bulletin ne sera publié.");
+    const liveSources = await recentArticles();
+    const sources = liveSources.length ? liveSources : stableAgroReference();
     let brief: { title: string; description: string };
     try { brief = await writeBrief(apiKey, sources); }
     catch (error) { console.error("afriflow-agro-brief writing", error instanceof Error ? error.message : "error"); brief = sourceBrief(sources); }
@@ -225,7 +248,14 @@ async function publishDailyBrief(service: ReturnType<typeof createClient>, day: 
         const imageUpdate = await service.from("afriflow_market_products").update({ original_path: illustration }).eq("id", inserted.data.id);
         if (imageUpdate.error) throw imageUpdate.error;
       }
-    } catch (error) { console.error("afriflow-agro-brief image", error instanceof Error ? error.message : "error"); }
+    } catch (error) {
+      console.error("afriflow-agro-brief image", error instanceof Error ? error.message : "error");
+      try {
+        const open = await openverseIllustration(service, day, brief.title);
+        const update = await service.from("afriflow_market_products").update({ original_path: open.path, description: `${brief.description}\n\nIllustration libre : ${open.attribution}`, news_sources: { articles: sources, image_attribution: open } }).eq("id", inserted.data.id);
+        if (update.error) throw update.error;
+      } catch (fallbackError) { console.error("afriflow-agro-brief open image", fallbackError instanceof Error ? fallbackError.message : "error"); }
+    }
   return { brief: inserted.data, sourceCount: sources.length };
 }
 
