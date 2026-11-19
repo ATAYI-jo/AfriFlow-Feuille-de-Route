@@ -7544,7 +7544,15 @@ if ('serviceWorker' in navigator) {
 #auth-screen .auth-password-toggle{right:8px!important;width:26px!important;height:26px!important;opacity:.42!important;color:var(--muted)!important}
 #auth-screen .auth-password-toggle:hover,#auth-screen .auth-password-toggle:focus-visible{opacity:.9!important;color:var(--green)!important}
 #auth-screen .auth-password-toggle .ic{width:15px!important;height:15px!important}
-@media(max-width:640px){#view-home .brand{padding:22px 14px!important}#view-home .brand>.logo-img{width:min(280px,76vw)!important;height:auto!important}}
+/* Sur mobile, les outils d'édition restent accessibles mais ne prennent plus la page entière. */
+@media(max-width:640px){
+  #view-home .brand{padding:22px 14px!important}#view-home .brand>.logo-img{width:min(280px,76vw)!important;height:auto!important}
+  .ed-bar{position:static!important;display:flex!important;flex-wrap:nowrap!important;overflow-x:auto!important;align-items:center!important;gap:7px!important;padding:8px!important;margin:8px 0 12px!important;border-radius:12px!important;max-width:100%!important;scroll-snap-type:x proximity!important}
+  .ed-bar>*{flex:0 0 auto!important;scroll-snap-align:start!important}
+  .ed-bar button,.ed-bar select{min-height:40px!important;padding:8px 11px!important;font-size:.82rem!important}
+  .ed-bar label{min-height:40px!important;padding:0 7px!important;background:rgba(255,255,255,.38)!important;border-radius:9px!important}
+  .ed-bar .danger{color:#b53a31!important;border-color:rgba(181,58,49,.35)!important}
+}
 </style>
 </body>
 </html>

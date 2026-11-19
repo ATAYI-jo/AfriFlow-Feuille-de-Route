@@ -8,6 +8,29 @@ function json(body: unknown, status = 200) {
 function clean(value: unknown, limit: number) { return String(value ?? "").replace(/\s+/g, " ").trim().slice(0, limit); }
 function today() { return new Date().toISOString().slice(0, 10); }
 function asArray(value: unknown) { return Array.isArray(value) ? value : []; }
+function bytesToB64(bytes: Uint8Array) { const chunks: string[] = []; for (let i = 0; i < bytes.length; i += 0x8000) chunks.push(String.fromCharCode(...bytes.subarray(i, i + 0x8000))); return btoa(chunks.join("")); }
+function rawB64(value: string) { return Uint8Array.from(atob(value), (char) => char.charCodeAt(0)); }
+function imageExtension(mime: string) { return ({ "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp" } as Record<string, string>)[mime] || ""; }
+async function cryptoKey() { const raw = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "")); return crypto.subtle.importKey("raw", raw, "AES-GCM", false, ["decrypt"]); }
+async function dropboxRefresh(service: ReturnType<typeof createClient>) {
+  const fallback = Deno.env.get("DROPBOX_REFRESH_TOKEN") || "";
+  const stored = await service.from("afriflow_private_integrations").select("ciphertext,iv").eq("key", "dropbox_refresh_token").maybeSingle();
+  if (stored.error || !stored.data) return fallback;
+  try { return new TextDecoder().decode(await crypto.subtle.decrypt({ name: "AES-GCM", iv: rawB64(stored.data.iv) }, await cryptoKey(), rawB64(stored.data.ciphertext))); } catch { return fallback; }
+}
+async function dropboxToken(service: ReturnType<typeof createClient>) {
+  const refresh = await dropboxRefresh(service);
+  if (!refresh) throw new Error("Dropbox non configuré pour les illustrations IA");
+  const body = new URLSearchParams({ grant_type: "refresh_token", refresh_token: refresh, client_id: "fabkaj1klaccpeg" });
+  const response = await fetch("https://api.dropboxapi.com/oauth2/token", { method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" }, body });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok || !data.access_token) throw new Error("Dropbox ne peut pas recevoir l’illustration IA");
+  return String(data.access_token);
+}
+async function uploadDropbox(service: ReturnType<typeof createClient>, path: string, bytes: Uint8Array) {
+  const response = await fetch("https://content.dropboxapi.com/2/files/upload", { method: "POST", headers: { Authorization: `Bearer ${await dropboxToken(service)}`, "Dropbox-API-Arg": JSON.stringify({ path, mode: "add", autorename: false, mute: true }), "Content-Type": "application/octet-stream" }, body: bytes });
+  if (!response.ok) throw new Error("Dropbox a refusé l’illustration IA");
+}
 
 async function authorize(req: Request, service: ReturnType<typeof createClient>) {
   const cronSecret = Deno.env.get("AFRIFLOW_AGRO_CRON_SECRET") || "";
@@ -133,6 +156,39 @@ async function writeBrief(apiKey: string, sources: Array<{ title: string; url: s
   return { title, description };
 }
 
+/* The daily bulletin is editorial content, not a product photograph: its
+   illustration is automatically published, with a strict no-text/no-logo
+   prompt so it cannot fabricate a branded package or a factual claim. */
+async function createBriefIllustration(service: ReturnType<typeof createClient>, day: string, title: string, description: string) {
+  const key = Deno.env.get("GEMINI_IMAGE_API_KEY") || Deno.env.get("GEMINI_API_KEY") || "";
+  const provider = String(Deno.env.get("AFRIFLOW_IMAGE_PROVIDER") || "").toLowerCase();
+  if (!key || (provider && provider !== "gemini")) return null;
+  const model = clean(Deno.env.get("GEMINI_IMAGE_MODEL") || "gemini-3.1-flash-lite-image-preview", 100);
+  const prompt = [
+    "Créer une illustration éditoriale premium pour une actualité agroalimentaire africaine.",
+    "Style : photographie de magazine, lumière naturelle, composition verticale ou carrée, ingrédients ou produits alimentaires finis réalistes, couleurs AfriFloW vert profond, orange chaud et or discret.",
+    "Ne montrer aucun emballage de marque, aucun logo, aucun texte, aucun prix, aucune personne identifiable, aucune carte, aucun graphique. Ne pas inventer de fait précis.",
+    `Sujet : ${clean(title, 180)}. Contexte : ${clean(description, 800)}`
+  ].join("\n");
+  const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(key)}`, {
+    method: "POST", headers: { "Content-Type": "application/json" }, signal: AbortSignal.timeout(85000),
+    body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }], generationConfig: { responseModalities: ["TEXT", "IMAGE"] } })
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(clean(data?.error?.message, 220) || "Gemini Image indisponible");
+  const parts = asArray(data?.candidates?.[0]?.content?.parts) as Array<Record<string, unknown>>;
+  const item = parts.find((part) => typeof (part.inlineData as Record<string, unknown> | undefined)?.data === "string");
+  const inline = item?.inlineData as Record<string, unknown> | undefined, mime = clean(inline?.mimeType, 80).toLowerCase();
+  if (!inline?.data || !imageExtension(mime)) throw new Error("Gemini Image n’a pas renvoyé d’illustration utilisable");
+  const bytes = rawB64(String(inline.data));
+  if (!bytes.byteLength || bytes.byteLength > 9 * 1024 * 1024) throw new Error("Illustration IA invalide");
+  const root = (Deno.env.get("DROPBOX_MARKET_ROOT") || `${Deno.env.get("DROPBOX_ROOT") || ""}/Market`).replace(/\/+$/, "");
+  if (!root.startsWith("/")) throw new Error("Dossier Market Dropbox non configuré");
+  const path = `${root}/news/${day}/${crypto.randomUUID()}.${imageExtension(mime)}`;
+  await uploadDropbox(service, path, bytes);
+  return path;
+}
+
 async function publishDailyBrief(service: ReturnType<typeof createClient>, day: string) {
     await service.from("afriflow_market_products").update({ is_active: false }).eq("listing_type", "announcement").eq("audience", "shareholders").lt("expires_at", new Date().toISOString());
     const existing = await service.from("afriflow_market_products").select("id,name,expires_at").eq("listing_type", "announcement").eq("audience", "shareholders").eq("promotion_label", `Brief IA · ${day}`).maybeSingle();
@@ -143,8 +199,11 @@ async function publishDailyBrief(service: ReturnType<typeof createClient>, day: 
     const sources = await recentArticles();
     if (sources.length < 1) throw new Error("Aucune source récente vérifiable : aucun bulletin ne sera publié.");
     const brief = await writeBrief(apiKey, sources);
+    let illustration: string | null = null;
+    try { illustration = await createBriefIllustration(service, day, brief.title, brief.description); }
+    catch (error) { console.error("afriflow-agro-brief image", error instanceof Error ? error.message : "error"); }
     const inserted = await service.from("afriflow_market_products").insert({
-      name: brief.title, description: brief.description, category: topic, listing_type: "announcement", price: null, currency: "XOF", original_path: null,
+      name: brief.title, description: brief.description, category: topic, listing_type: "announcement", price: null, currency: "XOF", original_path: illustration,
       is_active: true, is_in_stock: false, audience: "shareholders", expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
       promotion_label: `Brief IA · ${day}`, news_sources: sources
     }).select("id,name,expires_at").single();
