@@ -167,6 +167,7 @@ body.af-market-mode #market-view{display:block}
 @keyframes af-market-pulse{0%,100%{transform:scale(1);opacity:1;box-shadow:0 0 0 2px rgba(255,184,48,.22),0 8px 22px rgba(207,105,23,.42)}50%{transform:scale(1.035);opacity:.72;box-shadow:0 0 0 7px rgba(255,190,51,.28),0 10px 30px rgba(207,78,23,.68)}}
 
 /* ---------- Animations ---------- */
+.af-partner-admin-row select{box-sizing:border-box;width:100%;padding:10px;border:1px solid color-mix(in srgb,var(--green) 28%,#c7d3cb);border-radius:9px;background:rgba(255,255,255,.78);color:var(--ink);font:inherit}.af-partner-admin-subtitle{margin:24px 0 0!important;padding-top:18px;border-top:1px solid var(--line);font-size:1rem!important}
 @keyframes afIn{from{opacity:0;scale:.92;translate:0 34px}}
 @keyframes afFloat{50%{translate:0 var(--amp,-8px)}}
 @keyframes afShine{0%,55%{translate:-130% 0}100%{translate:130% 0}}
