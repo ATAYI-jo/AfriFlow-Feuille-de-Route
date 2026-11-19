@@ -4,7 +4,7 @@
   var DEF_TITLE = "AfriFloW – De l’Afrique vers le monde", HERO_KEY = "pub:markethero", HERO_LS = "afriflow_markethero_v1", EXT = ["jpg", "jpeg", "webp", "png"];
   function readHeroLocal() { try { return JSON.parse(localStorage.getItem(HERO_LS) || "{}") || {}; } catch (error) { return {}; } }
   /* Le bandeau est toujours repris depuis le serveur : aucune ancienne image locale ne réapparaît au rechargement. */
-  var state = { products: [], adminProducts: [], category: "", term: "", context: { kind: "public" }, timers: [], heroTimer: null, rotationTimer: null, rotationStep: 0, heroIdx: 0, imgs: {}, imgErr: {}, hero: {}, aiPolling: {} };
+  var state = { products: [], adminProducts: [], category: "", term: "", context: { kind: "public" }, timers: [], heroTimer: null, rotationTimer: null, rotationStep: 0, heroIdx: 0, imgs: {}, imgErr: {}, hero: {}, aiPolling: {}, partner: null, partnerAdmin: null };
 
   function el(id) { return document.getElementById(id); }
   function esc(value) { return String(value == null ? "" : value).replace(/[&<>"']/g, function (char) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[char]; }); }
@@ -46,7 +46,7 @@
   function clearHero() { if (state.heroTimer) { clearInterval(state.heroTimer); state.heroTimer = null; } }
   function open(context) {
     state.context = context || { kind: "public" }; hideWorkspace(); render();
-    if (roleMode(state.context.market) === "partner_waiting") return;
+    if (roleMode(state.context.market) === "partner_waiting") { loadPartnerPortal(); return; }
     loadHero(); loadCatalog();
   }
   function openPublic() { open({ kind: "public", market: { access_mode: "public" } }); }
@@ -229,6 +229,58 @@
     };
   }
 
+  /* ---------- Portail commercial partenaire ---------- */
+  async function partnerCall(action, body) {
+    var result = await sb().functions.invoke("afriflow-partner-portal", { body: Object.assign({ action: action }, body || {}) });
+    if (result.error) { var message = result.error.message || "Service partenaire indisponible"; try { var details = await result.error.context.json(); message = details.error || message; } catch (ignore) {} throw new Error(message); }
+    if (result.data && result.data.error) throw new Error(result.data.error);
+    return result.data;
+  }
+  function partnerMoney(amount, currency) { return formatPrice(amount, currency || "XOF"); }
+  function partnerStatus(status) {
+    var labels = { requested: "À valider", approved: "Validée", supplied: "Prête à vendre", rejected: "Refusée", closed: "Clôturée", pending_review: "À contrôler", validated: "Validée", settled: "Réglée" };
+    return '<span class="af-market-tag ' + esc(status) + '">' + esc(labels[status] || status) + "</span>";
+  }
+  function partnerContent() {
+    var data = state.partner;
+    if (!data) return '<section class="af-market-wait"><h1>Préparation de votre espace partenaire</h1><p>Nous vérifions vos conditions commerciales sécurisées…</p></section>';
+    if (!data.enabled) return '<section class="af-market-wait"><h1>Votre partenariat attend validation</h1><p>AfriFloW doit d’abord définir votre pourcentage commercial et activer votre accès. Vos droits de partenaire ne sont jamais attribués automatiquement.</p><button type="button" class="af-market-secondary" id="afPartnerRefresh">Actualiser</button></section>';
+    var terms = data.terms || {}, orders = data.orders || [], reports = data.reports || [], products = data.products || [];
+    var pending = reports.filter(function (report) { return report.status === "pending_review"; });
+    var gross = reports.filter(function (report) { return report.status !== "rejected"; }).reduce(function (sum, report) { return sum + Number(report.gross_amount || 0); }, 0);
+    var due = reports.filter(function (report) { return report.status !== "rejected" && report.status !== "settled"; }).reduce(function (sum, report) { return sum + Number(report.afriflow_amount || 0); }, 0);
+    var sellable = orders.filter(function (order) { return order.status === "approved" || order.status === "supplied"; });
+    var productOpts = products.map(function (product) { return '<option value="' + esc(product.id) + '">' + esc(product.name) + ' · ' + esc(partnerMoney(product.price, product.currency)) + '</option>'; }).join("");
+    var orderOpts = sellable.map(function (order) { var product = Array.isArray(order.product) ? order.product[0] : order.product; return '<option value="' + esc(order.id) + '">' + esc(product && product.name || "Produit") + ' · allocation ' + esc(order.quantity_requested) + ' unités</option>'; }).join("");
+    return '<section class="af-partner-portal"><header class="af-partner-head"><div><span>PARTENAIRE COMMERCIAL</span><h1>Votre activité, en toute clarté.</h1><p>Commandez vos produits, déclarez vos ventes et suivez chaque montant en temps réel.</p></div><div class="af-partner-rate"><small>Part AfriFloW</small><strong>' + esc(Number(terms.commission_rate || 0).toLocaleString("fr-FR")) + ' %</strong><em>définie pour votre partenariat</em></div></header>'
+      + '<div class="af-partner-kpis"><article><small>Chiffre d’affaires déclaré</small><b>' + esc(partnerMoney(gross, reports[0] && reports[0].currency || "XOF")) + '</b><span>Toutes ventes hors refus</span></article><article><small>À reverser à AfriFloW</small><b>' + esc(partnerMoney(due, reports[0] && reports[0].currency || "XOF")) + '</b><span>Selon votre taux personnalisé</span></article><article><small>Déclarations à contrôler</small><b>' + pending.length + '</b><span>AfriFloW est déjà alerté</span></article></div>'
+      + '<div class="af-partner-grid"><form class="af-partner-card" id="afPartnerOrder"><h2>Préparer une commande</h2><p>Choisissez un produit et la quantité souhaitée. AfriFloW confirme ensuite votre allocation.</p><label>Produit<select required name="productId"><option value="">Sélectionner un produit</option>' + productOpts + '</select></label><label>Quantité demandée<input required name="quantity" type="number" min="1" step="1" placeholder="Ex. 100"></label><label>Message facultatif<textarea name="note" maxlength="1200" placeholder="Lieu de vente, délai souhaité…"></textarea></label><button class="af-market-primary">Envoyer la demande</button></form>'
+      + '<form class="af-partner-card af-partner-report" id="afPartnerSale"><h2>Déclarer une vente</h2><p>Le calcul est fait côté AfriFloW et une alerte urgente est envoyée à l’équipe.</p><label>Allocation validée<select required name="orderId"><option value="">Sélectionner une allocation</option>' + orderOpts + '</select></label><div class="af-partner-duo"><label>Quantité vendue<input required name="quantity" type="number" min="1" step="1"></label><label>Prix unitaire de vente<input required name="unitSalePrice" type="number" min="0" step="0.01"></label></div><label>Note facultative<textarea name="note" maxlength="1200" placeholder="Canal de vente, précision…"></textarea></label><div id="afPartnerCalc" class="af-partner-calc">Le montant net partenaire et la part AfriFloW seront calculés automatiquement.</div><button class="af-market-primary"' + (sellable.length ? "" : " disabled") + '>Déclarer et alerter</button></form></div>'
+      + '<section class="af-partner-card af-partner-follow"><h2>Suivi des allocations</h2>' + (orders.length ? '<div class="af-partner-list">' + orders.map(function (order) { var product = Array.isArray(order.product) ? order.product[0] : order.product; return '<article><div><b>' + esc(product && product.name || "Produit") + '</b><small>' + esc(order.quantity_requested) + ' unités demandées · ' + esc(partnerMoney(order.unit_price, order.currency)) + ' / unité</small></div>' + partnerStatus(order.status) + '</article>'; }).join("") + '</div>' : '<p class="af-partner-empty">Aucune demande produit pour le moment.</p>') + '</section>'
+      + '<section class="af-partner-card af-partner-follow"><h2>Historique financier</h2>' + (reports.length ? '<div class="af-partner-list">' + reports.map(function (report) { var product = Array.isArray(report.product) ? report.product[0] : report.product; return '<article><div><b>' + esc(product && product.name || "Produit") + '</b><small>' + esc(report.quantity_sold) + ' vendu(s) · CA ' + esc(partnerMoney(report.gross_amount, report.currency)) + ' · net partenaire ' + esc(partnerMoney(report.partner_net_amount, report.currency)) + '</small></div>' + partnerStatus(report.status) + '</article>'; }).join("") + '</div>' : '<p class="af-partner-empty">Vos ventes déclarées apparaîtront ici.</p>') + '</section>'
+      + (terms.payment_notes ? '<p class="af-partner-note"><b>Note AfriFloW :</b> ' + esc(terms.payment_notes) + '</p>' : '') + '</section>';
+  }
+  async function loadPartnerPortal() {
+    if (!sb()) return;
+    try { state.partner = await partnerCall("dashboard"); render(); }
+    catch (error) { state.partner = { enabled: false, error: error.message || "Portail indisponible" }; render(); notice(error.message || "Portail partenaire indisponible"); }
+  }
+  function updatePartnerCalculation() {
+    var box = el("afPartnerCalc"), form = el("afPartnerSale"), terms = state.partner && state.partner.terms; if (!box || !form || !terms) return;
+    var quantity = Number(form.querySelector('[name="quantity"]').value), unit = Number(form.querySelector('[name="unitSalePrice"]').value), rate = Number(terms.commission_rate || 0);
+    if (!(quantity > 0) || !(unit >= 0)) { box.textContent = "Le montant net partenaire et la part AfriFloW seront calculés automatiquement."; return; }
+    var gross = quantity * unit, share = gross * rate / 100, net = gross - share;
+    box.innerHTML = '<b>Prévision :</b> CA ' + esc(partnerMoney(gross, "XOF")) + ' · AfriFloW ' + esc(partnerMoney(share, "XOF")) + ' · <b>net partenaire ' + esc(partnerMoney(net, "XOF")) + '</b>';
+  }
+  async function loadPartnerAdmin() {
+    var box = el("afPartnerAdmin"); if (!box || !isAdmin() || !sb()) return;
+    try {
+      state.partnerAdmin = await partnerCall("admin_dashboard"); var partners = state.partnerAdmin.partners || [];
+      box.innerHTML = '<h3>Partenaires commerciaux</h3><p>Activez un partenaire uniquement après validation, puis fixez sa part AfriFloW. Les calculs et alertes restent sécurisés côté serveur.</p>' + (partners.length ? partners.map(function (partner) { var term = partner.terms || {}; return '<form class="af-partner-admin-row" data-partner="' + esc(partner.user_id) + '"><div><b>' + esc(partner.email) + '</b><small>' + (term.is_enabled ? "Accès commercial actif" : "En attente d’activation") + '</small></div><label>Part AfriFloW (%)<input required name="rate" type="number" min="0" max="100" step="0.01" value="' + esc(term.commission_rate || 0) + '"></label><label class="af-partner-enable"><input name="enabled" type="checkbox"' + (term.is_enabled ? " checked" : "") + '> Activer</label><label>Instruction de règlement<input name="notes" maxlength="1200" value="' + esc(term.payment_notes || "") + '"></label><button class="af-market-secondary">Enregistrer</button></form>'; }).join("") : '<p class="af-partner-empty">Aucun partenaire n’a encore demandé cet accès.</p>');
+      box.querySelectorAll("form[data-partner]").forEach(function (form) { form.onsubmit = async function (event) { event.preventDefault(); var button = form.querySelector("button"), fields = new FormData(form); button.disabled = true; try { var result = await partnerCall("admin_save_partner", { partnerId: form.dataset.partner, commissionRate: fields.get("rate"), enabled: fields.get("enabled") === "on", paymentNotes: fields.get("notes") }); notice(result.message); loadPartnerAdmin(); } catch (error) { notice(error.message || "Mise à jour impossible"); button.disabled = false; } }; });
+    } catch (error) { box.innerHTML = '<p class="af-market-error">Gestion des partenaires indisponible.</p>'; }
+  }
+
   /* ---------- Rendu ---------- */
   function productCard(product, i) {
     var discount = discountPercent(product), facts = salesFacts(product), available = inStock(product);
@@ -282,10 +334,10 @@
     return '<section class="af-market-wait"><h1>Espace partenaire en préparation</h1><p>Votre demande de rôle partenaire est enregistrée. Cet espace sera ouvert prochainement. En attendant, vous pouvez revenir à la vitrine publique de la Marketplace.</p><button type="button" class="af-market-primary" id="afPartnerCatalog">Voir la Marketplace</button></section>';
   }
   function top() {
-    var workspace = state.context.kind === "workspace";
+    var workspace = state.context.kind === "workspace", partner = roleMode(state.context.market) === "partner_waiting";
     return '<header class="af-market-top"><div class="af-market-topline">'
       + '<a class="af-market-brand" href="#" id="afMarketHome"><img src="logo.png" alt=""><b>Afri<span>FloW</span> Marketplace</b></a>'
-      + '<form class="af-market-search" id="afMarketSearch"><input id="afMarketSearchInput" value="' + esc(state.term) + '" type="search" placeholder="Rechercher un produit, une catégorie…" aria-label="Rechercher dans la Marketplace"><button>Rechercher</button></form>'
+      + (partner ? '<div class="af-market-search af-partner-top-label">Portail commercial partenaire</div>' : '<form class="af-market-search" id="afMarketSearch"><input id="afMarketSearchInput" value="' + esc(state.term) + '" type="search" placeholder="Rechercher un produit, une catégorie…" aria-label="Rechercher dans la Marketplace"><button>Rechercher</button></form>')
       + (workspace ? '<button type="button" class="af-market-link" id="afMarketBack">Retour à mon espace</button>' : "")
       + (state.context.kind === "authenticated" ? '<button type="button" class="af-market-link" id="afMarketAccount">Mon compte</button>' : "")
       + (state.context.kind === "authenticated" ? '<button type="button" class="af-market-link" id="afMarketSignOut">Déconnexion</button>' : "")
@@ -299,12 +351,12 @@
       + '<form class="af-market-admin-card" id="afProductUpload"><h3>Ajouter un original</h3><div id="afDropboxStatus" class="af-market-status">Vérification de Dropbox…</div><button type="button" class="af-market-secondary" id="afDropboxReconnect">Reconnecter Dropbox</button><label>Nom du produit<input required name="name" maxlength="160"></label><label>Catégorie<input required name="category" maxlength="80" value="Découvrir"></label><label>Prix (facultatif)<input name="price" type="number" min="0" step="0.01"></label><label>Ancien prix (promotion réelle)<input name="compareAtPrice" type="number" min="0" step="0.01"></label><label>Devise<select name="currency"><option>XOF</option><option>EUR</option><option>USD</option></select></label><label>Quantité minimale (facultatif)<input name="minimumOrderQuantity" type="number" min="1" step="1"></label><label>Pays / origine (facultatif)<input name="originCountry" maxlength="80" placeholder="Ex. Togo"></label><label>Délai ou livraison (facultatif)<input name="deliveryInfo" maxlength="160" placeholder="Ex. Expédition sous 3 à 5 jours"></label><label>Badge promotion (facultatif)<input name="promotionLabel" maxlength="40" placeholder="Ex. Offre de lancement"></label><label>Description<textarea name="description" maxlength="4000"></textarea></label><label>Photo originale<input required name="image" type="file" accept="image/jpeg,image/png,image/webp"></label><small>Ces informations restent masquées si vous ne les renseignez pas. Le produit est ajouté comme brouillon.</small><button class="af-market-primary">Envoyer vers Dropbox</button></form>'
       + '<form class="af-market-admin-card" id="afVariantUpload"><h3>Ajouter une variante</h3><label>Produit<select required name="productId">' + opts + '</select></label><label>Image de variante<input required name="image" type="file" accept="image/jpeg,image/png,image/webp"></label><label>Origine<select name="source"><option value="manual">Retouche manuelle</option><option value="ai">Création IA validée manuellement</option></select></label><label>Consigne / provenance<textarea name="prompt" maxlength="2000" placeholder="Ex. conserver fidèlement le produit, éclairage naturel…"></textarea></label><small>Une variante reste invisible tant qu’elle n’est pas approuvée.</small><button class="af-market-primary">Envoyer la variante</button></form>'
       + '<form class="af-market-admin-card" id="afAiRequest"><h3>Pipeline IA</h3><div id="afAiStatus" class="af-market-status">Vérification de la configuration…</div><label>Produit<select required name="productId">' + opts + '</select></label><label>Consigne de transformation<textarea required name="prompt" minlength="8" maxlength="2000" placeholder="Conserver exactement le produit ; modifier seulement l’ambiance…"></textarea></label><small>L’IA travaille uniquement côté serveur. Chaque variante créée reste en attente de votre approbation.</small><button class="af-market-secondary">Créer une variante IA</button></form>'
-      + '</div><div id="afMarketAdminList" class="af-market-admin-list"><p>Chargement des brouillons et variantes…</p></div><div id="afMarketQuotes" class="af-market-admin-list"></div></section>';
+      + '</div><div id="afMarketAdminList" class="af-market-admin-list"><p>Chargement des brouillons et variantes…</p></div><div id="afMarketQuotes" class="af-market-admin-list"></div><div id="afPartnerAdmin" class="af-partner-admin"><p>Chargement des partenaires commerciaux…</p></div></section>';
   }
   function render() {
     var root = el("market-view"); if (!root) return;
     clearHero();
-    root.innerHTML = top() + '<main class="af-market-main">' + (roleMode(state.context.market) === "partner_waiting" ? waitContent() : catalogContent()) + "</main>";
+    root.innerHTML = top() + '<main class="af-market-main">' + (roleMode(state.context.market) === "partner_waiting" ? partnerContent() : catalogContent()) + "</main>";
     bind(); startHero();
   }
   function startHero() {
@@ -331,6 +383,9 @@
     [el("afMarketProfile"), el("afMarketAccount")].forEach(function (button) { if (button) button.onclick = function () { if (window.AfriProfileOpen) window.AfriProfileOpen(); else notice("Votre profil est indisponible pour le moment."); }; });
     var signOut = el("afMarketSignOut"); if (signOut) signOut.onclick = function () { if (window.logout) window.logout(); };
     var partner = el("afPartnerCatalog"); if (partner) partner.onclick = function () { state.context.market = { access_mode: "client" }; render(); loadCatalog(); };
+    var refreshPartner = el("afPartnerRefresh"); if (refreshPartner) refreshPartner.onclick = loadPartnerPortal;
+    var orderForm = el("afPartnerOrder"); if (orderForm) orderForm.onsubmit = async function (event) { event.preventDefault(); var button = orderForm.querySelector("button"), form = new FormData(orderForm); button.disabled = true; try { var result = await partnerCall("request_order", { productId: form.get("productId"), quantity: form.get("quantity"), note: form.get("note") }); notice(result.message); loadPartnerPortal(); } catch (error) { button.disabled = false; notice(error.message || "Demande impossible"); } };
+    var saleForm = el("afPartnerSale"); if (saleForm) { saleForm.querySelectorAll("input").forEach(function (input) { input.oninput = updatePartnerCalculation; }); saleForm.onsubmit = async function (event) { event.preventDefault(); var button = saleForm.querySelector("button"), form = new FormData(saleForm); button.disabled = true; try { var result = await partnerCall("report_sale", { orderId: form.get("orderId"), quantity: form.get("quantity"), unitSalePrice: form.get("unitSalePrice"), note: form.get("note") }); notice(result.message + " Net partenaire : " + partnerMoney(result.calculation.partnerNet, result.calculation.currency)); loadPartnerPortal(); } catch (error) { button.disabled = false; notice(error.message || "Déclaration impossible"); } }; }
     var search = el("afMarketSearch"); if (search) search.onsubmit = function (event) { event.preventDefault(); state.term = el("afMarketSearchInput").value; render(); loadCatalog(false); };
     document.querySelectorAll("[data-market-category]").forEach(function (button) { button.onclick = function () { state.category = button.dataset.marketCategory || ""; render(); loadCatalog(false); }; });
     document.querySelectorAll("[data-market-detail]").forEach(function (button) { button.onclick = function () { var p = productById(button.dataset.marketDetail); if (p) openDetail(p); }; });
@@ -425,7 +480,7 @@
   }
   async function loadAdminList() {
     var list = el("afMarketAdminList"); if (!list || !sb()) return;
-    loadQuotes();
+    loadQuotes(); loadPartnerAdmin();
     try {
       var both = await Promise.all([
         sb().from("afriflow_market_products").select("id,name,description,category,price,compare_at_price,currency,minimum_order_quantity,origin_country,delivery_info,promotion_label,is_in_stock,is_active,created_at").order("created_at", { ascending: false }).limit(100),
