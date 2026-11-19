@@ -30,7 +30,7 @@ body.af-market-mode #market-view{display:block}
 .af-ali-cats button i{font-style:normal;opacity:.5}
 .af-ali-cats button:hover,.af-ali-cats button.on{background:color-mix(in srgb,var(--green) 14%,transparent);color:var(--green)}
 
-.af-ali-hero{position:relative;overflow:hidden;width:100%;max-width:none;margin-inline:0;height:280px;min-height:280px;border-radius:18px;color:#fff;border:1px solid rgba(255,255,255,.46);box-shadow:0 16px 38px rgba(13,54,37,.2);
+.af-ali-hero{position:relative;overflow:hidden;width:calc(100% - 48px);max-width:1120px;margin-inline:auto;height:280px;min-height:280px;border-radius:18px;color:#fff;border:1px solid rgba(255,255,255,.46);box-shadow:0 16px 38px rgba(13,54,37,.2);
   background-image:linear-gradient(105deg,rgba(8,52,34,.82),rgba(21,104,66,.56) 54%,rgba(211,144,25,.42)),var(--hero-img,linear-gradient(135deg,#12442e,#d79627));background-size:cover;background-position:center}
 .af-ali-hero::before,.af-ali-hero::after{content:"";position:absolute;border-radius:50%;pointer-events:none}
 .af-ali-hero::before{width:340px;height:340px;right:-90px;top:-120px;background:rgba(255,255,255,.14);animation:afDrift 9s ease-in-out infinite alternate}
