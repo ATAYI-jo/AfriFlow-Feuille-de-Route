@@ -356,12 +356,12 @@
     return '<section id="afMarketGrid" class="af-market-grid" data-n="' + Math.min(products.length, 5) + '">' + products.map(productCard).join("") + "</section>";
   }
   function announcementCard(item) {
-    return '<article class="af-announcement"><div class="af-announcement-media af-media" data-market-image="' + esc(item.id) + '" data-alt="' + esc(item.name) + '">' + media(item) + '</div><div class="af-announcement-body"><span>ANNONCE AFRIFLOW</span><h3>' + esc(item.name) + '</h3><p>' + esc(item.description || "Découvrez les nouveautés et informations AfriFloW.") + '</p><button type="button" class="af-market-secondary" data-market-detail="' + esc(item.id) + '">Lire l’annonce</button></div></article>';
+    return '<article class="af-product af-announcement-card"><div class="af-product-media af-media" data-market-image="' + esc(item.id) + '" data-alt="' + esc(item.name) + '">' + media(item) + '<span class="af-promo">Annonce AfriFloW</span></div><div class="af-product-body"><div class="af-product-cat">Information · actualité</div><h3>' + esc(item.name) + '</h3><div class="af-product-assurance">Publication officielle AfriFloW</div><p class="af-announcement-text">' + esc(item.description || "Découvrez les nouveautés et informations AfriFloW.") + '</p><div class="af-announcement-label">Annonce</div></div></article>';
   }
   function announcementsHtml() {
     var items = state.products.filter(isAnnouncement).slice(0, 6);
     if (!items.length) return "";
-    return '<section class="af-announcements"><div class="af-market-section-head"><h2>À la une chez AfriFloW</h2><p>Actualités, lancements et informations utiles</p></div><div class="af-announcements-grid">' + items.map(announcementCard).join("") + "</div></section>";
+    return '<section class="af-announcements"><div class="af-market-section-head"><h2>À la une chez AfriFloW</h2><p>Actualités, lancements et informations utiles</p></div><div class="af-market-grid af-announcements-grid">' + items.map(announcementCard).join("") + "</div></section>";
   }
   function heroHtml() {
     var h = state.hero, bg = okImg(h.img) ? ' style="--hero-img:url(\'' + h.img + '\')"' : "";
