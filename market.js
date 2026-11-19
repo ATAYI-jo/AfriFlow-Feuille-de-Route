@@ -352,8 +352,8 @@
   }
   function productsHtml(products) {
     if (!products.length) return '<div class="af-market-empty">Aucun produit ne correspond à votre recherche pour le moment.</div>';
-    if (products.length === 1) return featuredCard(products[0]);
-    return '<section id="afMarketGrid" class="af-market-grid" data-n="' + Math.min(products.length, 5) + '">' + products.map(productCard).join("") + "</section>";
+    if (products.length === 1 && !isAnnouncement(products[0])) return featuredCard(products[0]);
+    return '<section id="afMarketGrid" class="af-market-grid" data-n="' + Math.min(products.length, 5) + '">' + products.map(function (item, index) { return isAnnouncement(item) ? announcementCard(item) : productCard(item, index); }).join("") + "</section>";
   }
   function announcementCard(item) {
     return '<article class="af-product af-announcement-card"><div class="af-product-media af-media" data-market-image="' + esc(item.id) + '" data-alt="' + esc(item.name) + '">' + media(item) + '<span class="af-promo">Annonce AfriFloW</span></div><div class="af-product-body"><div class="af-product-cat">Information · actualité</div><h3>' + esc(item.name) + '</h3><div class="af-product-assurance">Publication officielle AfriFloW</div><p class="af-announcement-text">' + esc(item.description || "Découvrez les nouveautés et informations AfriFloW.") + '</p><div class="af-announcement-label">Annonce</div></div></article>';
@@ -389,9 +389,11 @@
   }
   function catalogContent() {
     var products = filteredProducts();
+    var announcements = state.products.filter(isAnnouncement);
+    var listings = announcements.concat(products);
     return '<section class="af-ali">' + catsHtml() + heroHtml() + sideHtml() + "</section>"
       + '<div class="af-market-section-head" id="afProductsTop"><h2>' + (state.category ? esc(state.category) : "Nos produits") + "</h2><p>" + (products.length ? products.length + " produit" + (products.length > 1 ? "s" : "") : "Catalogue en préparation") + "</p></div>"
-      + announcementsHtml() + productsHtml(products) + (isAdmin() ? adminPanel() : "");
+      + productsHtml(listings) + (isAdmin() ? adminPanel() : "");
   }
   function waitContent() {
     return '<section class="af-market-wait"><h1>Espace partenaire en préparation</h1><p>Votre demande de rôle partenaire est enregistrée. Cet espace sera ouvert prochainement. En attendant, vous pouvez revenir à la vitrine publique de la Marketplace.</p><button type="button" class="af-market-primary" id="afPartnerCatalog">Voir la Marketplace</button></section>';
