@@ -41,7 +41,7 @@ Deno.serve(async (req: Request) => {
       if (!isPartner) return reply(req, { error: "Cet espace est réservé aux partenaires commerciaux." }, 403);
       const [terms, products, orders, reports] = await Promise.all([
         service.from("afriflow_partner_terms").select("commission_rate,is_enabled,payment_notes").eq("partner_user_id", user.id).maybeSingle(),
-        service.from("afriflow_market_products").select("id,name,category,description,price,currency,minimum_order_quantity,is_in_stock").eq("is_active", true).eq("is_in_stock", true).order("created_at", { ascending: false }).limit(100),
+        service.from("afriflow_market_products").select("id,name,category,description,price,currency,minimum_order_quantity,is_in_stock").eq("listing_type", "product").eq("is_active", true).eq("is_in_stock", true).order("created_at", { ascending: false }).limit(100),
         service.from("afriflow_partner_orders").select("id,product_id,quantity_requested,unit_price,currency,status,note,created_at,product:afriflow_market_products(name)").eq("partner_user_id", user.id).order("created_at", { ascending: false }).limit(100),
         service.from("afriflow_partner_sales_reports").select("id,order_id,product_id,quantity_sold,unit_sale_price,gross_amount,commission_rate,afriflow_amount,partner_net_amount,currency,status,note,created_at,product:afriflow_market_products(name)").eq("partner_user_id", user.id).order("created_at", { ascending: false }).limit(100)
       ]);
@@ -56,8 +56,8 @@ Deno.serve(async (req: Request) => {
       if (!terms?.is_enabled) return reply(req, { error: "Votre partenariat attend encore l’activation d’AfriFloW." }, 403);
       const productId = text(body.productId, 36), quantity = positiveInteger(body.quantity), note = text(body.note, 1200);
       if (!uuid(productId) || !quantity) return reply(req, { error: "Produit ou quantité invalide" }, 400);
-      const { data: product } = await service.from("afriflow_market_products").select("id,name,price,currency,minimum_order_quantity,is_active,is_in_stock").eq("id", productId).maybeSingle();
-      if (!product?.is_active || !product.is_in_stock) return reply(req, { error: "Ce produit n’est plus disponible." }, 409);
+      const { data: product } = await service.from("afriflow_market_products").select("id,name,price,currency,minimum_order_quantity,is_active,is_in_stock,listing_type").eq("id", productId).maybeSingle();
+      if (!product?.is_active || !product.is_in_stock || product.listing_type !== "product") return reply(req, { error: "Ce produit n’est plus disponible." }, 409);
       if (product.minimum_order_quantity && quantity < product.minimum_order_quantity) return reply(req, { error: `Quantité minimale : ${product.minimum_order_quantity} unités.` }, 400);
       const saved = await service.from("afriflow_partner_orders").insert({ partner_user_id: user.id, product_id: product.id, quantity_requested: quantity, unit_price: product.price, currency: product.currency, note }).select("id").single();
       if (saved.error) throw new Error("Impossible d’enregistrer la demande produit");
