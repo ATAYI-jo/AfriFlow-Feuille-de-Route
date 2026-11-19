@@ -89,16 +89,17 @@ Deno.serve(async (req: Request) => {
 
     if (action === "admin_dashboard") {
       if (!isAdmin) return reply(req, { error: "Administration requise" }, 403);
-      const [profiles, terms, orders, reports] = await Promise.all([
+      const [profiles, shareholders, terms, orders, reports] = await Promise.all([
         service.from("afriflow_market_profiles").select("user_id,created_at").eq("requested_role", "partner").order("created_at", { ascending: false }).limit(200),
+        service.from("afriflow_market_profiles").select("user_id,access_mode,created_at").eq("requested_role", "shareholder").order("created_at", { ascending: false }).limit(200),
         service.from("afriflow_partner_terms").select("partner_user_id,commission_rate,is_enabled,payment_notes,updated_at"),
         service.from("afriflow_partner_orders").select("id,partner_user_id,product_id,quantity_requested,unit_price,currency,status,note,created_at,product:afriflow_market_products(name)").order("created_at", { ascending: false }).limit(200),
         service.from("afriflow_partner_sales_reports").select("id,partner_user_id,order_id,quantity_sold,gross_amount,commission_rate,afriflow_amount,partner_net_amount,currency,status,created_at,product:afriflow_market_products(name)").order("created_at", { ascending: false }).limit(200)
       ]);
-      const failure = [profiles, terms, orders, reports].find((result) => result.error); if (failure?.error) throw new Error("Chargement de l’administration partenaire indisponible");
+      const failure = [profiles, shareholders, terms, orders, reports].find((result) => result.error); if (failure?.error) throw new Error("Chargement de l’administration partenaire indisponible");
       const users = await service.auth.admin.listUsers({ page: 1, perPage: 1000 });
       const emails: Record<string, string> = {}; (users.data?.users || []).forEach((entry) => { emails[entry.id] = entry.email || "Partenaire"; });
-      return reply(req, { ok: true, partners: (profiles.data || []).map((partner) => ({ ...partner, email: emails[partner.user_id] || "Partenaire", terms: (terms.data || []).find((term) => term.partner_user_id === partner.user_id) || null })), orders: orders.data || [], reports: reports.data || [] });
+      return reply(req, { ok: true, partners: (profiles.data || []).map((partner) => ({ ...partner, email: emails[partner.user_id] || "Partenaire", terms: (terms.data || []).find((term) => term.partner_user_id === partner.user_id) || null })), shareholders: (shareholders.data || []).map((shareholder) => ({ ...shareholder, email: emails[shareholder.user_id] || "Actionnaire" })), orders: orders.data || [], reports: reports.data || [] });
     }
 
     if (action === "admin_save_partner") {
@@ -110,6 +111,18 @@ Deno.serve(async (req: Request) => {
       const saved = await service.from("afriflow_partner_terms").upsert({ partner_user_id: partnerId, commission_rate: rate, is_enabled: enabled, payment_notes: paymentNotes }, { onConflict: "partner_user_id" });
       if (saved.error) throw new Error("Impossible d’enregistrer les conditions du partenaire");
       return reply(req, { ok: true, message: enabled ? "Partenaire activé avec ses conditions commerciales." : "Partenaire mis en attente." });
+    }
+
+    if (action === "admin_approve_shareholder") {
+      if (!isAdmin) return reply(req, { error: "Administration requise" }, 403);
+      const shareholderId = text(body.shareholderId, 36);
+      if (!uuid(shareholderId)) return reply(req, { error: "Actionnaire invalide" }, 400);
+      const { data: shareholder } = await service.from("afriflow_market_profiles").select("user_id,requested_role,access_mode").eq("user_id", shareholderId).maybeSingle();
+      if (!shareholder || shareholder.requested_role !== "shareholder") return reply(req, { error: "Actionnaire introuvable" }, 404);
+      const saved = await service.from("afriflow_market_profiles").update({ access_mode: "shareholder_approved" }).eq("user_id", shareholderId);
+      if (saved.error) throw new Error("Impossible de valider l’actionnaire");
+      await notifyAdmins(service, "Actionnaire validé", "Une demande d’accès actionnaire a été validée par un administrateur AfriFloW.", false);
+      return reply(req, { ok: true, message: "Actionnaire validé. Son espace actionnaire pourra désormais être ouvert." });
     }
 
     if (action === "admin_set_order_status") {

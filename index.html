@@ -2597,10 +2597,8 @@ async function ensureMarketProfile(us,intent){
     var existing=await SB().from("afriflow_market_profiles").select("user_id,requested_role,access_mode").eq("user_id",us.id).maybeSingle();
     if(existing.error)throw existing.error;
     if(existing.data){
-      if(existing.data.access_mode!=="collaborator"&&existing.data.requested_role!==intent){
-        var changed=await SB().from("afriflow_market_profiles").update({requested_role:intent}).eq("user_id",us.id).select("user_id,requested_role,access_mode").single();
-        if(!changed.error&&changed.data)return changed.data;
-      }
+      /* Le rôle est choisi une seule fois à la création du compte. Une connexion
+         ultérieure — y compris OAuth — ne doit jamais modifier cet accès. */
       return existing.data;
     }
     var created=await SB().from("afriflow_market_profiles").insert({user_id:us.id,requested_role:intent}).select("user_id,requested_role,access_mode").single();
