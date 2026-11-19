@@ -39,7 +39,7 @@ body{margin:0;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-a
 .auth-box button{width:100%;padding:12px;background:var(--green);color:#fff;border-color:var(--green);font-size:1rem}
 #authError{color:#c0392b;font-size:.85rem;min-height:1.2em;margin:-4px 0 10px}
 .auth-box .oauth{background:var(--card);color:var(--ink);border:1px solid var(--ink);margin-bottom:10px;font-weight:600}
-.auth-captcha{display:flex;justify-content:center;min-height:65px;margin:6px 0 10px}
+.auth-captcha{display:flex;justify-content:center;min-height:65px;margin:6px 0 10px}.auth-captcha-notice{display:flex;align-items:center;justify-content:center;gap:9px;max-width:330px;padding:10px 12px;border-radius:10px;background:#fff4e8;color:#8a4f19;font-size:.82rem;line-height:1.35;text-align:left}.auth-captcha-notice button{border:1px solid #c77724;background:#fff;color:#7b481a;border-radius:7px;padding:6px 9px;font:inherit;font-weight:700;white-space:nowrap;cursor:pointer}
 .auth-box .or{display:flex;align-items:center;gap:10px;color:var(--muted);font-size:.85rem;margin:6px 0 14px}
 .auth-box .or::before,.auth-box .or::after{content:"";flex:1;height:1px;background:var(--line)}
 .auth-progress{margin:0 0 10px!important;font-weight:700;color:var(--green)!important}
@@ -675,16 +675,28 @@ function recordUserAction(text){
 
 /* ---------- Authentification (comptes Supabase Auth, droits contrôlés côté serveur) ---------- */
 var AUTH_MODE = "login", AUTH_STEP = 1;
-var TURNSTILE_SITE_KEY = "0x4AAAAAAGGdSaQPHSavzxha", turnstileWidgetId = null, turnstileToken = "";
+var TURNSTILE_SITE_KEY = "0x4AAAAAAGGdSaQPHSavzxha", turnstileWidgetId = null, turnstileToken = "", captchaAttempts = 0, captchaUnavailable = false, captchaTimer = null;
+function captchaNotice(){
+  var host=$("authCaptcha"); if(!host)return;
+  host.innerHTML='<div class="auth-captcha-notice">La vérification Cloudflare est momentanément inaccessible.<button type="button" id="authCaptchaRetry">Réessayer</button></div>';
+  var retry=$("authCaptchaRetry"); if(retry)retry.onclick=function(){captchaUnavailable=false;captchaAttempts=0;turnstileWidgetId=null;mountCaptcha();};
+}
 function mountCaptcha(){
   var host=$("authCaptcha"); if(!host)return;
-  if(!window.turnstile){ setTimeout(mountCaptcha,250); return; }
+  if(captchaTimer){clearTimeout(captchaTimer);captchaTimer=null;}
+  if(!window.turnstile){
+    captchaAttempts+=1;
+    if(captchaAttempts>=20){captchaUnavailable=true;captchaNotice();return;}
+    captchaTimer=setTimeout(mountCaptcha,250); return;
+  }
+  captchaAttempts=0; captchaUnavailable=false;
   if(turnstileWidgetId===null){
-    turnstileWidgetId=window.turnstile.render(host,{sitekey:TURNSTILE_SITE_KEY,theme:"light",callback:function(token){turnstileToken=token;$("authError").textContent="";},"expired-callback":function(){turnstileToken="";},"error-callback":function(){turnstileToken="";}});
+    host.innerHTML="";
+    turnstileWidgetId=window.turnstile.render(host,{sitekey:TURNSTILE_SITE_KEY,theme:"light",callback:function(token){turnstileToken=token;$("authError").textContent="";},"expired-callback":function(){turnstileToken="";},"error-callback":function(){turnstileToken="";captchaUnavailable=true;turnstileWidgetId=null;captchaNotice();}});
   }
 }
 function resetCaptcha(){turnstileToken="";if(window.turnstile&&turnstileWidgetId!==null)window.turnstile.reset(turnstileWidgetId);}
-function captchaProblem(){return turnstileToken?"":"Validez la vérification de sécurité avant de continuer.";}
+function captchaProblem(){return turnstileToken?"":captchaUnavailable?"La vérification Cloudflare est indisponible. Désactivez temporairement le VPN ou le bloqueur de contenu, puis réessayez.":"Validez la vérification de sécurité avant de continuer.";}
 function authFinalStep(){ return AUTH_MODE === "register" ? 4 : 3; }
 function authStepFocus(id){ setTimeout(function(){ var input=$(id); if(input) input.focus(); },0); }
 function renderAuthStep(){
