@@ -2656,12 +2656,10 @@ AFRI.listMembers=async function(){
 AFRI.listRequests=async function(){return (await listRows("req:",300)).map(function(r){return r.value})};
 AFRI.setGrants=async function(email,g){var u=await getRow(ukey(email));if(!u)throw new Error("Compte introuvable");u.grants=g;await putRow(ukey(email),u)};
 AFRI.deleteUser=async function(email){
-  var e=String(email).toLowerCase(),keys=[ukey(e),"req:"+e];
-  var r=await SB().from(TB()).delete().in("key",keys).select("key");
+  var e=String(email).toLowerCase(),r=await SB().functions.invoke("afriflow-admin-user",{body:{action:"delete_member",email:e}});
   if(r.error)throw r.error;
-  if(!r.data||!r.data.some(function(x){return x.key===keys[0]}))throw new Error("Suppression refusée (0 ligne supprimée) : réservé à l'administrateur connecté avec son compte.");
-  /* ménage best-effort : messages de ce compte */
-  try{await SB().from(TB()).delete().like("key","msg:"+e+":%");await SB().from(TB()).delete().like("key","sent:"+e+":%")}catch(x){}
+  if(r.data&&r.data.error)throw new Error(r.data.error);
+  return r.data;
 };
 AFRI.sendRequest=async function(pages,msg){var e=loggedUserEmail.toLowerCase();await putRow("req:"+e,{email:e,name:USER_NAME,pages:pages,msg:msg,at:iso(),status:"pending"})};
 AFRI.sendDocRequest=async function(path){var e=loggedUserEmail.toLowerCase();await putRow("req:"+e,{email:e,name:USER_NAME,pages:[],docPath:path,msg:"Demande de modification : "+String(path).split("/").pop(),at:iso(),status:"pending"})};
@@ -2787,6 +2785,7 @@ async function loginOAuth(provider) {
     try { sessionStorage.setItem('afriflow_market_intent', readMarketIntent()); } catch (error) {}
     var captchaError=captchaProblem(); if(captchaError){oauthError(captchaError);oauthBusy=false;return;}
     var options = { redirectTo: oauthRedirect(), captchaToken:turnstileToken };
+    if (provider === 'google') options.queryParams = { prompt: 'select_account' };
     if (provider === 'azure') options.scopes = 'email';
     try { sessionStorage.setItem('afriflow_oauth_pending', '1'); } catch (error) {}
     var response = await SB().auth.signInWithOAuth({provider:provider, options:options});
@@ -7257,11 +7256,12 @@ function avatar(kind,value,label){
 function close(){var p=$("profilePanel");p.classList.remove("member-hub-mode");p.classList.remove("open");p.setAttribute("aria-hidden","true");document.body.classList.remove("af-profile-open");var b=$("profileOpen");if(b)b.focus()}
 function dayText(d){var n=Math.ceil((new Date(d).getTime()-Date.now())/86400000);return n<0?"Le délai est dépassé.":n===0?"Le délai se termine aujourd’hui.":"Il reste "+n+" jour"+(n>1?"s":"")+"."}
 function localName(){return String(window.USER_NAME||"").trim().split(/\s+/)[0]||""}
+function shareholderProfileRequired(){var market=window.afriMarketSession||{};return market.requested_role==="shareholder"||["shareholder_pending","shareholder_approved"].indexOf(market.access_mode)>=0}
 function updateHeader(p,d){
   var first=(p&&p.first_name)||localName(),g=$("sideGreeting"),a=$("sideAvatar"),b=$("profileOpen");
   if(g)g.textContent=first?"Hey "+first:"Hey";
   if(a)a.innerHTML=avatar((d&&d.avatar_kind)||"dicebear",(d&&d.avatar_value)||"afriflow",first);
-  var incomplete=!(p&&p.profile_completed_at);if(b)b.classList.toggle("needs-profile",!!window.loggedUserEmail&&incomplete);
+  var incomplete=shareholderProfileRequired()&&!(p&&p.profile_completed_at);if(b)b.classList.toggle("needs-profile",!!window.loggedUserEmail&&incomplete);
   updateReminder(incomplete,p&&p.profile_due_at);
 }
 function updateReminder(incomplete,due){
@@ -7296,7 +7296,7 @@ function bindAvatarEditor(){
   var reset=$("pfAvatarReset");if(reset)reset.onclick=function(){var base=current&&current.user&&current.user.id||"afriflow";chosen={kind:"dicebear",value:base+"-lorelei-01"};renderAvatarEditor()};
 }
 function profilePage(){
-  var p=current.profile,d=current.directory,complete=!!p.profile_completed_at,notice=complete?'Votre profil est complet. Vous pourrez le modifier à tout moment.':'Complétez les informations demandées et choisissez un avatar. '+dayText(p.profile_due_at||new Date(Date.now()+15*86400000).toISOString());
+  var p=current.profile,d=current.directory,required=shareholderProfileRequired(),complete=!!p.profile_completed_at,notice=!required?'Ces informations sont facultatives pour votre compte. Vous pouvez les compléter ou les modifier à tout moment.':complete?'Votre profil actionnaire est complet. Vous pourrez le modifier à tout moment.':'Complétez les informations demandées et choisissez un avatar. '+dayText(p.profile_due_at||new Date(Date.now()+15*86400000).toISOString());
   $("profileMain").innerHTML='<div class="profile-tabs"><button type="button" class="on" data-profile-tab="me">Mon profil</button><button type="button" data-profile-tab="directory">Annuaire des membres</button></div><div class="profile-grid"><section class="profile-card"><h3>Mes informations</h3><p class="profile-status">'+esc(notice)+'</p><p class="profile-note">Le nom, la fonction, le pays, la ville et l’avatar sont visibles dans l’annuaire. Les coordonnées personnelles restent privées.</p><div class="profile-form">'
     +field("Prénom *","first",p.first_name,"text",false,"Ex. Aïcha")+field("Nom *","last",p.last_name,"text",false,"Ex. Mensah")
     +field("E-mail", "email",p.email||current.user.email,"email",true)+field("Téléphone *","phone",p.phone,"tel",false,"Ex. +228 …")+field("Date de naissance *","birth",p.birth_date,"date",false)
@@ -7373,10 +7373,10 @@ function bindProfile(){
 }
 async function saveProfile(){
   var p=current.profile,d=current.directory,err=$("pfErr"),v=function(id){var x=$("pf_"+id);return x?x.value.trim():""},first=v("first"),last=v("last"),phone=v("phone"),birth=v("birth"),country=v("country"),city=v("city"),address=v("address");
-  if(!first||!last||!phone||!birth||!country||!city||!address||!chosen.kind||!chosen.value){err.textContent="Renseignez les champs marqués d’un astérisque et choisissez un portrait.";return}
-  var btn=$("pfSave");btn.disabled=true;err.textContent="";var now=new Date().toISOString(),display=(first+" "+last).trim(),due=p.profile_due_at||new Date(Date.now()+15*86400000).toISOString();
+  var required=shareholderProfileRequired();if(required&&(!first||!last||!phone||!birth||!country||!city||!address||!chosen.kind||!chosen.value)){err.textContent="Renseignez les champs marqués d’un astérisque et choisissez un portrait.";return}
+  var btn=$("pfSave");btn.disabled=true;err.textContent="";var now=new Date().toISOString(),display=(first+" "+last).trim()||String(current.user.email).split("@")[0],due=p.profile_due_at||new Date(Date.now()+15*86400000).toISOString();
   try{
-    var profile={user_id:current.user.id,email:String(current.user.email).toLowerCase(),first_name:first,last_name:last,phone:phone,address:address,birth_date:birth,country:country,city:city,job_title:v("job"),department:v("department"),organization:v("organization"),languages:v("languages"),emergency_name:v("emergencyName"),emergency_phone:v("emergencyPhone"),profile_completed_at:now,profile_due_at:due,updated_at:now};
+    var profile={user_id:current.user.id,email:String(current.user.email).toLowerCase(),first_name:first,last_name:last,phone:phone,address:address,birth_date:birth,country:country,city:city,job_title:v("job"),department:v("department"),organization:v("organization"),languages:v("languages"),emergency_name:v("emergencyName"),emergency_phone:v("emergencyPhone"),profile_completed_at:required?now:(p.profile_completed_at||null),profile_due_at:due,updated_at:now};
     var pub={user_id:current.user.id,email:String(current.user.email).toLowerCase(),first_name:first,last_name:last,display_name:display,avatar_kind:chosen.kind,avatar_value:chosen.value,job_title:v("job"),department:v("department"),organization:v("organization"),country:country,city:city,bio:v("bio"),updated_at:now};
     var a=await window.__sb.from("afriflow_profiles").upsert(profile,{onConflict:"user_id"});if(a.error)throw a.error;var b=await window.__sb.from("afriflow_member_directory").upsert(pub,{onConflict:"user_id"});if(b.error)throw b.error;
     current.profile=profile;current.directory=pub;window.USER_NAME=display;updateHeader(profile,pub);if(window.toast)toast("Profil enregistré.");profilePage();
