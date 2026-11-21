@@ -1441,7 +1441,7 @@ function markJp(){var nl=$("navList");if(!nl||!jpActive)return;nl.querySelectorA
 function injectNav(){
   var nl=$("navList");if(!nl||!nl.firstElementChild)return;
   var has=nl.querySelector("[data-jp-nav]");
-  if(!me()||!cfg2||isCensor()){if(has)has.parentNode.remove();return}
+  if(!me()||!cfg2){if(has)has.parentNode.remove();return}
   if(has){markJp();return}
   var row=document.createElement("div");row.className="nvr";
   row.innerHTML='<button type="button" class="nv" data-jp-nav="1">Mes présences</button>';
