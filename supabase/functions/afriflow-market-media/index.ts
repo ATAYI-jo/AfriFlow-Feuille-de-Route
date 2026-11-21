@@ -67,7 +67,7 @@ Deno.serve(async (req: Request) => {
     if (!Number.isSafeInteger(rotation) || rotation < 0 || rotation > 1000000) return json(req, { error: "Rotation invalide" }, 400);
     const service = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!, { auth: { persistSession: false, autoRefreshToken: false } });
     const product = await service.from("afriflow_market_products")
-      .select("id,original_path,is_active,audience,listing_type,promotion_label,expires_at").eq("id", productId).eq("is_active", true).maybeSingle();
+      .select("id,original_path,is_active,audience,listing_type,category,promotion_label,expires_at").eq("id", productId).eq("is_active", true).maybeSingle();
     if (product.error) throw product.error;
     if (!product.data) return json(req, { error: "Produit indisponible" }, 404);
 
@@ -89,6 +89,7 @@ Deno.serve(async (req: Request) => {
         : { data: null };
       const isAdmin = !!admin.data;
       const isNewsBrief = record.listing_type === "announcement"
+        && record.category === "Veille agroalimentaire"
         && typeof record.promotion_label === "string"
         && record.promotion_label.startsWith("Brief IA · ");
       const allowed = isAdmin || (
