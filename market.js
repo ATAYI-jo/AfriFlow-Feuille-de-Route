@@ -265,10 +265,28 @@
   function closeModal() { var m = el("afModal"); if (m) m.remove(); }
   document.addEventListener("keydown", function (e) { if (e.key === "Escape") closeModal(); });
 
+  function announcementSources(p) {
+    var raw = p && p.news_sources;
+    var articles = Array.isArray(raw) ? raw : raw && Array.isArray(raw.articles) ? raw.articles : [];
+    var seen = {};
+    var links = articles.filter(function (item) {
+      var url = item && String(item.url || "").trim();
+      if (!/^https:\/\//i.test(url) || seen[url]) return false;
+      seen[url] = true;
+      return true;
+    }).slice(0, 5);
+    if (!links.length) return "";
+    return '<section class="af-news-sources" aria-label="Sources des informations"><h3>Sources et articles d’origine</h3><p>Ce bulletin est une synthèse AfriFloW des titres publiés par les médias cités, et non une reproduction intégrale de leurs articles.</p><ul>'
+      + links.map(function (item, index) {
+          var label = String(item.domain || "Source") + " — " + String(item.title || "Lire l’article original");
+          return '<li><a href="' + esc(String(item.url).trim()) + '" target="_blank" rel="noopener noreferrer" referrerpolicy="no-referrer">' + esc(label) + ' ↗</a></li>';
+        }).join("")
+      + '</ul></section>';
+  }
   function openDetail(p) {
     if (isAnnouncement(p)) {
       var announcementVisual = p.original_path ? '<div class="af-media" data-market-image="' + esc(p.id) + '" data-alt="' + esc(p.name) + '">' + media(p) + '</div>' : '<div class="af-media af-announcement-placeholder"><img src="logo.png" alt=""><span>Veille AfriFloW</span><small>Illustration en préparation</small></div>';
-      var announcement = modal('<button type="button" class="af-modal-x" aria-label="Fermer">×</button><div class="af-detail af-announcement-detail">' + announcementVisual + '<div class="af-detail-body"><span class="af-product-cat">ANNONCE AFRIFLOW</span><h2>' + esc(p.name) + '</h2><p>' + esc(p.description || "") + '</p><div class="af-actions"><button type="button" class="af-market-secondary" data-x>Fermer</button></div></div></div>');
+      var announcement = modal('<button type="button" class="af-modal-x" aria-label="Fermer">×</button><div class="af-detail af-announcement-detail">' + announcementVisual + '<div class="af-detail-body"><span class="af-product-cat">ANNONCE AFRIFLOW</span><h2>' + esc(p.name) + '</h2><p>' + esc(p.description || "") + '</p>' + announcementSources(p) + '<div class="af-actions"><button type="button" class="af-market-secondary" data-x>Fermer</button></div></div></div>');
       announcement.querySelector(".af-modal-x").onclick = closeModal; announcement.querySelector("[data-x]").onclick = closeModal; if (p.original_path) scheduleImages(); return;
     }
     var discount = discountPercent(p), facts = salesFacts(p);
@@ -554,7 +572,7 @@
     if (!sb()) { showCatalogError("Le catalogue sera disponible dès que le service est connecté."); return; }
     var grid = el("afMarketGrid"); if (refresh !== false && grid) grid.innerHTML = '<div class="af-market-empty">Chargement de la Marketplace…</div>';
     try {
-      var fields = "id,name,description,category,listing_type,price,compare_at_price,currency,minimum_order_quantity,origin_country,delivery_info,promotion_label,is_in_stock,original_path,created_at,is_active";
+      var fields = "id,name,description,category,listing_type,price,compare_at_price,currency,minimum_order_quantity,origin_country,delivery_info,promotion_label,is_in_stock,original_path,news_sources,created_at,is_active";
       var publicCatalog = sb().from("afriflow_market_products").select(fields).eq("is_active", true).order("created_at", { ascending: false }).limit(100);
       var allCatalog = isAdmin() ? sb().from("afriflow_market_products").select(fields).order("created_at", { ascending: false }).limit(100) : null;
       var result = allCatalog ? await Promise.all([publicCatalog, allCatalog]) : [await publicCatalog, null];
