@@ -105,9 +105,26 @@ document.addEventListener("click",async function(e){
     toast(isAdmin()?"Aucun lien : renseignez-le dans Administration › Réunion en ligne.":"Le lien de la réunion n'a pas encore été configuré.");
     return;
   }
-  // Open synchronously within the user gesture. Waiting for Supabase first
-  // would make Safari/Chrome mobile block the Teams tab as a popup.
-  var target=a.href,tab=window.open("about:blank","_blank");
+  var target=a.href;
+  var nativeOpen=window.AfriFlowNative&&typeof window.AfriFlowNative.openTeams==="function";
+  // Desktop Electron denies temporary about:blank popups. Use its validated
+  // IPC bridge only after Supabase successfully records the user's check-in.
+  if(nativeOpen){
+    var selected=pick();
+    if(selected&&selected.live){
+      if(!await mark(selected.m))return;
+    }else if(selected){
+      toast("La présence sera comptabilisée à partir de 15 minutes avant le début de la réunion.");
+    }
+    try {
+      var opened=await window.AfriFlowNative.openTeams(target);
+      if(!opened||!opened.ok)toast("Impossible d’ouvrir Teams depuis AfriFloW Windows. Vérifiez le lien et votre application Teams.");
+    }catch(error){toast("Impossible d’ouvrir Teams : "+(error.message||error));}
+    return;
+  }
+  // Keep the existing synchronous popup for mobile/desktop web browsers,
+  // which otherwise block a new tab after an asynchronous server request.
+  var tab=window.open("about:blank","_blank");
   if(!tab){toast("Autorisez l’ouverture des fenêtres pour rejoindre Teams.");return;}
   try{tab.opener=null;}catch(ignore){}
   var p=pick();

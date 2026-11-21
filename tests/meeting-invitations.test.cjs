@@ -33,3 +33,16 @@ test('Teams opens its tab before awaiting check-in, preventing mobile popup bloc
  assert.match(meetings,/if\(!saved\)\{try\{tab\.close\(\)\}/);
  assert.match(meetings,/tab\.location\.replace\(target\)/);
 });
+
+// Windows app: no popup is required, and access is granted only after check-in.
+test('Native Teams launch waits for check-in and personal attendance includes administrators',()=>{
+ const native=meetings.indexOf('if(nativeOpen){');
+ const checkin=meetings.indexOf('if(!await mark(selected.m))return;',native);
+ const launch=meetings.indexOf('await window.AfriFlowNative.openTeams(target)',native);
+ assert.ok(native>=0&&checkin>native&&launch>checkin);
+ assert.match(html,/if\(!me\(\)\|\|!cfg2\)\{if\(has\)has\.parentNode\.remove\(\);return\}/);
+ const main=read('desktop/main.js'),preload=read('desktop/preload.js');
+ assert.match(main,/ipcMain\.handle\('afriflow:open-teams'/);
+ assert.match(main,/const url = teamsUrl\(String\(rawUrl \|\| ''\)\)/);
+ assert.match(preload,/openTeams: \(url\) => ipcRenderer\.invoke\('afriflow:open-teams'/);
+});
