@@ -149,10 +149,28 @@ async function openPage(){
 }
 async function render(){
   var host=$("viewHost");if(!active||!host)return;
-  var U=[];try{
-    U=window.AFRI?(await window.AFRI.listMembers()):[];
-    if(!U.length&&window.AFRI)U=await window.AFRI.listUsers();
-  }catch(e){}
+  var U=[],memberLoadError="";
+  try{
+    // Directory records can outlive membership. Use current registrations
+    // as the source of truth for meeting invitations and attendance.
+    var registered=window.AFRI?(await window.AFRI.listUsers()):[];
+    var allowed=new Map();
+    (registered||[]).forEach(function(u){
+      if(u&&u.email)allowed.set(String(u.email).trim().toLowerCase(),u);
+    });
+    var directory=window.AFRI?(await window.AFRI.listMembers()):[];
+    var seen=new Set();
+    (directory||[]).forEach(function(u){
+      var email=u&&u.email&&String(u.email).trim().toLowerCase();
+      if(email&&allowed.has(email)&&!seen.has(email)){U.push(u);seen.add(email)}
+    });
+    // Include registered users who have not completed their profile yet.
+    allowed.forEach(function(u,email){
+      if(!seen.has(email)){U.push(u);seen.add(email)}
+    });
+  }catch(e){
+    memberLoadError="Impossible de vérifier les comptes inscrits. Actualisez avant de programmer une réunion.";
+  }
   if(!active)return;
   var d=new Date(),dd=d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate());
   var h='<div class="toolbar"><b>Censeur</b><div class="toolbar-actions"><button type="button" id="csRef">Actualiser</button></div></div>'
@@ -181,7 +199,9 @@ async function render(){
      +(rows.length?rows.map(function(r){return '<tr><td>'+esc(r.nm||"—")+'</td><td>'+esc(r.em)+'</td><td><span class="mt-pill mt-'+(r.s.k==="ok"?"ok":r.s.k==="late"?"late":r.s.k==="abs"?"abs":"wait")+'">'+esc(r.s.t)+'</span></td><td>'+(r.rec?fh(r.rec.at):"—")+'</td></tr>'}).join(""):'<tr><td colspan="4" style="color:var(--muted)">Aucun compte à afficher.</td></tr>')
      +'</tbody></table></div><p style="margin:14px 0 0"><button type="button" class="danger" data-csdel="'+esc(m.id)+'">Supprimer cette réunion</button></p></div></details>';
   }).join(""):'<p style="color:var(--muted)">Aucune réunion programmée.</p>');
+  if(memberLoadError)h='<p role="alert" class="mt-err">'+esc(memberLoadError)+'</p>'+h;
   host.innerHTML=h;host.onclick=onClick;
+  var createButton=$("csGo");if(createButton&&memberLoadError)createButton.disabled=true;
   var audience=$("csAudience"),people=$("csPeople");
   if(audience&&people)audience.onchange=function(){people.hidden=audience.value!=="selected"};
 }
