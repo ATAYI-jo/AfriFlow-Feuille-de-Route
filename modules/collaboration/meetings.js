@@ -75,12 +75,20 @@ document.addEventListener("click",async function(e){
     toast(isAdmin()?"Aucun lien : renseignez-le dans Administration › Réunion en ligne.":"Le lien de la réunion n'a pas encore été configuré.");
     return;
   }
+  // Open synchronously within the user gesture. Waiting for Supabase first
+  // would make Safari/Chrome mobile block the Teams tab as a popup.
+  var target=a.href,tab=window.open("about:blank","_blank");
+  if(!tab){toast("Autorisez l’ouverture des fenêtres pour rejoindre Teams.");return;}
+  try{tab.opener=null;}catch(ignore){}
   var p=pick();
   if(p&&p.live){
     var saved=await mark(p.m);
-    if(!saved)return; /* Ne pas ouvrir Teams si l’enregistrement de présence a échoué. */
+    if(!saved){try{tab.close()}catch(ignore){}return}
   }else if(p){toast("La présence sera comptabilisée à partir de 15 minutes avant le début de la réunion.");}
-  window.open(a.href,"_blank","noopener,noreferrer");
+  try{tab.location.replace(target)}catch(error){
+    try{tab.close()}catch(ignore){}
+    toast("Impossible d’ouvrir Teams. Réessayez depuis le lien de la réunion.");
+  }
 });
 async function mark(m){
   if(!me()||!SB()||!invited(m,me())&&!isAdmin())return false;
