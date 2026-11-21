@@ -160,10 +160,12 @@ async function writeBrief(apiKey: string, sources: Array<{ title: string; url: s
 }
 
 function sourceBrief(sources: Array<{ title: string; url: string; domain: string; date: string }>) {
-  const source = sources[0];
+  const lead = sources[0];
+  const title=clean(lead?.title || "Actualité mondiale : consulter la source",160);
+  const domain=clean(lead?.domain || "une source journalistique",100);
   return {
-    title: "Actualité mondiale : information à consulter auprès de la source",
-    description: clean("Une nouvelle information internationale a été publiée par " + (source?.domain || "une source d’actualité") + ". AfriFloW propose de consulter directement l’article original pour connaître les faits et leur contexte. La rédaction automatique de la synthèse n’a pas abouti ; aucun contenu non vérifié n’a été ajouté.",4000)
+    title,
+    description: clean("Actualité relayée par " + domain + " : « " + title + " ». AfriFloW présente ce sujet à partir du titre et des métadonnées de la publication d’origine. Aucun détail supplémentaire n’est affirmé sans vérification du texte complet. Consultez l’article source pour comprendre les faits et leur contexte.",4000)
   };
 }
 
@@ -365,7 +367,7 @@ async function worldArticles(slot: NewsSlot) {
   const all=results.flatMap((result)=>result.status==="fulfilled"?result.value:[]);
   const seen=new Set<string>();
   const recent=all.filter(article=>{
-    if(!article.title||!/^https:\/\//.test(article.url)||seen.has(article.url))return false;
+    if(!article.title||!/^https:\/\//.test(article.url)||seen.has(article.url)||/\?$/.test(article.title)||/\/videos?\/|\/émissions\/|%c3%a9missions|\/opinion\//i.test(article.url))return false;
     const date=Date.parse(article.date);
     if(!Number.isFinite(date)||Date.now()-date>72*60*60*1000||date>Date.now()+15*60*1000)return false;
     seen.add(article.url);return true;
@@ -377,7 +379,7 @@ async function worldArticles(slot: NewsSlot) {
     evening:/business|entreprise|marché|market|inflation|commerce|trade|transport|logist|industrie|économ|econom|invest|banque|bank|afrique|africa|energy|énergie/i
   };
   return recent.sort((a,b)=>{
-    const score=(x:typeof a)=> (patterns[slot].test(x.title)?100:0)+(Number.isFinite(Date.parse(x.date))?Date.parse(x.date)/1e13:0);
+    const score=(x:typeof a)=> (patterns[slot].test(x.title)?100:0)+(x.domain==="France 24"?20:0)+(Number.isFinite(Date.parse(x.date))?Date.parse(x.date)/1e13:0);
     return score(b)-score(a);
   }).slice(0,20);
 }
