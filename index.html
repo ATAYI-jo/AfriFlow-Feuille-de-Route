@@ -96,8 +96,15 @@
   width:48px!important;min-width:48px!important;height:48px!important;min-height:48px!important;
   padding:0!important;border:0!important;border-radius:0!important;
   background:transparent!important;color:#145c36!important;-webkit-text-fill-color:#145c36!important;
-  box-shadow:none!important;text-shadow:none!important;filter:drop-shadow(0 3px 3px rgba(255,255,255,.8))!important;
+  box-shadow:none!important;text-shadow:none!important;filter:none!important;
+  -webkit-backdrop-filter:none!important;backdrop-filter:none!important;
+  -webkit-appearance:none!important;appearance:none!important;background-image:none!important;
   transform-origin:center;animation:afInstallHover 2.8s ease-in-out infinite!important;
+}
+/* Prevent the generic glass-button styles from drawing a visible tile. */
+#afPwaInstallArea #afPwaInstallBtn::before,
+#afPwaInstallArea #afPwaInstallBtn::after{
+  content:none!important;display:none!important;background:none!important;box-shadow:none!important;
 }
 #afPwaInstallArea #afPwaInstallBtn svg{
   display:block;width:31px!important;height:31px!important;
@@ -225,7 +232,7 @@ window.ic=function(n,s){return '<svg class="ic"'+(s?' style="width:'+s+';height:
 <div class="wrap" id="view-home">
   <!-- AfriFloW distribution: downloads appear only after verified GitHub release assets -->
   <div id="afPwaInstallArea" class="af-pwa-install-area" hidden>
-    <button id="afPwaInstallBtn" class="af-pwa-install-button" type="button" aria-label="Installer ou télécharger AfriFloW" title="Installer ou télécharger AfriFloW" aria-controls="afDownloadPanel" aria-expanded="false"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12m0 0 4-4m-4 4-4-4"/><path d="M4 17v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3"/></svg></button>
+    <button id="afPwaInstallBtn" class="af-pwa-install-button" type="button" aria-label="Installer ou télécharger AfriFloW" title="Installer ou télécharger AfriFloW" aria-controls="afDownloadPanel" aria-expanded="false"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M7.5 18.5H6a4 4 0 0 1-.6-7.95A7 7 0 0 1 19 9.9a4.3 4.3 0 0 1-.7 8.6H16.5"/><path d="M12 12v9m0 0-3.2-3.2M12 21l3.2-3.2"/></svg></button>
     <div id="afDownloadPanel" class="af-download-panel" hidden>
       <strong>Application AfriFloW</strong>
       <p>Choisissez votre appareil. Versions de test : connexion Internet nécessaire.</p>
