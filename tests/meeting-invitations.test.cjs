@@ -24,3 +24,12 @@ test('Server validates identity, invitee and time before creating first checkin'
  assert.match(meetings,/afriflow-meeting-checkin/);
  assert.match(sql,/drop policy if exists af_meet_att_insert_own/);
 });
+
+test('Teams opens its tab before awaiting check-in, preventing mobile popup blocking',()=>{
+ const event=meetings.indexOf('document.addEventListener("click",async function(e)');
+ const opener=meetings.indexOf('window.open("about:blank","_blank")',event);
+ const checkin=meetings.indexOf('var saved=await mark(p.m)',event);
+ assert.ok(event>=0&&opener>event&&checkin>opener,'Teams tab should open in the direct click handler');
+ assert.match(meetings,/if\(!saved\)\{try\{tab\.close\(\)\}/);
+ assert.match(meetings,/tab\.location\.replace\(target\)/);
+});
