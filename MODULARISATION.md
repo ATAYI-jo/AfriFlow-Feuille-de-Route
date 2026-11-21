@@ -56,3 +56,10 @@ Configurer Render pour déployer uniquement après une CI verte, ou gérer le d�
 - L'ordre de chargement synchrone est inchangé. La logique du code extrait n'a pas été réécrite.
 - Tests de présence, d'ordre et de non-duplication ajoutés.
 - À vérifier avant fusion : connexion, reconnexion, refus des accès non autorisés, pièces jointes et navigation Dropbox sur mobile.
+
+## Étape 5 — Interface de l'assistant et rendu mathématique
+- `modules/assistant/chat-ui.js` : interface de discussion et interactions IA extraites.
+- `modules/assistant/math-rendering.js` : fonctions de rendu mathématique séparées.
+- Les blocs d'origine sont conservés tels quels, sous des chemins externes et aux mêmes positions dans l'ordre de chargement.
+- Les tests syntaxiques et de chargement sont étendus aux deux modules.
+- Avant fusion, tester l'assistant en session connectée, l'envoi de pièces jointes, la synthèse vocale et l'affichage des formules. La CI seule ne garantit pas ces parcours.
