@@ -231,3 +231,13 @@ body.af-market-mode #market-view{display:block}
 .af-announcement-detail .af-detail-body h2{max-width:none;overflow-wrap:anywhere;color:#173c2b;line-height:1.18}
 .af-announcement-detail .af-detail-body p{max-height:none;overflow:visible;white-space:pre-line;color:#33473b;line-height:1.7;overflow-wrap:anywhere}
 @media(max-width:700px){.af-modal{padding:10px}.af-modal-box:has(.af-announcement-detail){max-height:calc(100dvh - 20px)}.af-announcement-detail .af-media{height:clamp(150px,27dvh,240px);min-height:0}.af-announcement-detail .af-detail-body{padding:20px 17px 26px}}
+
+
+/* AfriFloW — liens des sources officielles sous les actualités */
+.af-news-sources{margin-top:14px;padding-top:18px;border-top:1px solid #d7e4d9}
+.af-news-sources h3{font-size:1.05rem;margin:0 0 8px;color:#19553a}
+.af-news-sources p{font-size:.86rem;margin:0 0 12px;color:#53695e;line-height:1.55}
+.af-news-sources ul{display:grid;gap:10px;margin:0;padding-left:20px}
+.af-news-sources li{color:#1f5d3a}
+.af-news-sources a{color:#1262aa;text-decoration:underline;text-underline-offset:3px;overflow-wrap:anywhere}
+.af-news-sources a:hover,.af-news-sources a:focus-visible{color:#0d432d}
