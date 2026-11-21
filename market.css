@@ -340,3 +340,43 @@ body.af-market-mode #market-view{display:block}
 @media(prefers-reduced-motion:reduce){
   #market-view .af-scroll-cue,#market-view .af-scroll-cue .af-icon{animation:none!important;transition:none!important}
 }
+
+/* Verre transparent réel : les fonds de la page restent visibles derrière le bandeau.
+   Les images d'illustration sont rendues sur des calques séparés des textes. */
+#market-view .af-ali-hero{
+  background:linear-gradient(115deg,rgba(8,56,37,.36),rgba(28,101,68,.22) 56%,rgba(218,161,53,.19));
+  border:1px solid rgba(255,255,255,.69);
+  -webkit-backdrop-filter:blur(17px) saturate(145%);
+  backdrop-filter:blur(17px) saturate(145%);
+  box-shadow:0 16px 38px rgba(13,54,37,.16),inset 0 1px 0 rgba(255,255,255,.36);
+}
+#market-view .af-ali-hero::before{
+  inset:0;width:auto;height:auto;right:0;top:0;border-radius:inherit;
+  background-image:var(--hero-img,none);background-size:cover;background-position:center;
+  opacity:.23;animation:none;
+}
+#market-view .af-product-slide{
+  background-color:transparent;
+  background-image:none;
+  isolation:isolate;
+}
+#market-view .af-product-slide::before{
+  z-index:0;
+  background-image:linear-gradient(90deg,rgba(8,57,39,.39),rgba(17,83,58,.16) 55%,rgba(243,178,65,.06)),var(--slide-img,none);
+  background-size:cover,contain;background-repeat:no-repeat;background-position:center,center;
+  opacity:.58;
+}
+#market-view .af-product-slide::after{
+  z-index:0;background-color:transparent;
+  background-image:linear-gradient(90deg,rgba(8,57,39,.39),rgba(17,83,58,.16) 55%,rgba(243,178,65,.06)),var(--previous-slide-img,none);
+  background-size:cover,contain;background-position:center,center;
+  opacity:0;
+}
+#market-view .af-product-slide.af-image-crossfade::after{opacity:.58}
+#market-view .af-slide-text{
+  text-shadow:0 2px 7px rgba(3,28,18,.5);
+}
+#market-view .af-slide-text .af-market-primary,#market-view .af-slide-text .af-ghost{text-shadow:none}
+@media(prefers-reduced-transparency:reduce){
+  #market-view .af-ali-hero{background:rgba(10,64,43,.87);backdrop-filter:none;-webkit-backdrop-filter:none}
+}
