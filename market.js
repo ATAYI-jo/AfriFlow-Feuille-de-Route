@@ -400,22 +400,29 @@
     return result.data;
   }
   /* Gestion des comptes : décisions exclusivement exécutées par la fonction admin. */
-  async function loadAccessAdmin() {
-    var host=el("afAccessAdmin");
+  async function loadAccessAdmin(targetId) {
+    // Reuse the exact same server-controlled approvals in Marketplace and Administration.
+    var host=el(targetId||"afAccessAdmin");
     if(!host||!isAdmin()||!sb())return;
     try{
       var data=await accessCall("list");
+      if(!host.isConnected)return;
       var users=data.users||[], history=data.history||[];
+      var pendingPartners=users.filter(function(u){return u.access_mode==="partner_waiting"});
+      var sortedUsers=users.slice().sort(function(a,b){
+        return Number(b.access_mode==="partner_waiting")-Number(a.access_mode==="partner_waiting");
+      });
       var nClient=users.filter(function(u){return u.access_mode==="client"}).length;
       var nPartner=users.filter(function(u){return u.requested_role==="partner"}).length;
       var nShareholder=users.filter(function(u){return u.requested_role==="shareholder"}).length;
       var legacy=users.filter(function(u){return u.legacy});
       var labels={client:"Client",collaborator:"Ancien collaborateur",partner_waiting:"Partenaire en attente",partner_approved:"Partenaire approuvé",shareholder_pending:"Actionnaire en attente",shareholder_approved:"Actionnaire approuvé"};
       host.innerHTML='<h3>Administration · Gestion des utilisateurs et des accès</h3>'
-       +'<p>La connexion Google ne confère aucun droit. Classez les anciens comptes, puis approuvez les demandes vérifiées. Toutes les décisions sont contrôlées et enregistrées côté serveur.</p>'
+       +'<p>Demandes de partenariat en attente : <b>'+pendingPartners.length+'</b>. Vérifiez l’identité du demandeur avant de cliquer sur Approuver. Les décisions sont enregistrées côté serveur.</p>'
+       +'<p>La connexion Google ne confère aucun droit. Classez les anciens comptes, puis approuvez les demandes vérifiées.</p>'
        +'<div class="af-access-summary"><span>Clients <b>'+nClient+'</b></span><span>Partenaires <b>'+nPartner+'</b></span><span>Actionnaires <b>'+nShareholder+'</b></span><span>Historiques à examiner <b>'+legacy.length+'</b></span></div>'
        +'<label class="af-access-filter">Rechercher un compte<input id="afAccessSearch" type="search" placeholder="Nom ou e-mail" autocomplete="off"></label>'
-       +'<div id="afAccessRows">'+(users.length?users.map(function(u){
+       +'<div id="afAccessRows">'+(sortedUsers.length?sortedUsers.map(function(u){
          var actions=u.legacy?'<option value="classify_client">Classer Client</option><option value="classify_partner">Classer Partenaire (en attente)</option><option value="classify_shareholder">Classer Actionnaire (en attente)</option>':
            (u.access_mode==="partner_waiting"||u.access_mode==="shareholder_pending"?'<option value="approve">Approuver</option><option value="reject">Refuser / maintenir en attente</option>':
            (u.access_mode==="partner_approved"||u.access_mode==="shareholder_approved"?'<option value="revoke">Révoquer l’accès</option>':""));
@@ -427,25 +434,37 @@
        +'<h4>Historique des décisions</h4><div class="af-access-history">'
        +(history.length?history.map(function(h){return '<p><time>'+esc(new Date(h.created_at).toLocaleString("fr-FR"))+'</time> · '+esc(h.action)+' · '+esc(h.previous_access||"—")+' → '+esc(h.new_access)+' · '+esc(h.reason||"Sans motif")+'</p>';}).join(""):'<p>Aucune décision enregistrée.</p>')
        +'</div>';
-      var search=el("afAccessSearch");
+      var search=host.querySelector("#afAccessSearch");
       if(search)search.oninput=function(){var value=search.value.trim().toLowerCase();host.querySelectorAll("[data-access-user]").forEach(function(row){row.hidden=!!value&&!row.dataset.search.includes(value);});};
       host.querySelectorAll("form[data-access-user]").forEach(function(form){
         form.onsubmit=async function(event){
           event.preventDefault();
           var fields=new FormData(form), decision=String(fields.get("decision")||"");
           if(!decision)return;
-          var promptText=decision==="approve"?"Confirmer l’approbation de ce compte ?":decision==="revoke"?"Révoquer son accès maintenant ?":"Confirmer la classification ou la décision ?";
-          if(!window.confirm(promptText))return;
-          var button=form.querySelector("button");button.disabled=true;
+          var button=form.querySelector('button[type="submit"]'),reason=String(fields.get("reason")||"");
+          var signature=decision+"|"+reason;
+          // Two deliberate clicks, without unsupported window.confirm() in the app.
+          if(form.dataset.confirming!==signature){
+            form.dataset.confirming=signature;
+            button.textContent="Confirmer la décision";
+            button.setAttribute("aria-label","Confirmer "+decision+" pour "+(form.querySelector("strong").textContent||"ce compte"));
+            return;
+          }
+          button.disabled=true;
           try{
             var result=await accessCall("decide",{
-              userId:form.dataset.accessUser,decision:decision,reason:String(fields.get("reason")||"")
+              userId:form.dataset.accessUser,decision:decision,reason:reason
             });
-            notice(result.message||"Décision enregistrée");loadAccessAdmin();loadPartnerAdmin();
+            notice(result.message||"Décision enregistrée");loadAccessAdmin(targetId);if(!targetId)loadPartnerAdmin();
           }catch(error){notice(error.message||"Décision impossible");button.disabled=false;}
         };
       });
-    }catch(error){host.innerHTML='<p class="af-market-error">'+esc(error.message||"Gestion des utilisateurs indisponible")+'</p>';}
+      host.querySelectorAll("form[data-access-user]").forEach(function(form){
+        form.onchange=function(){form.dataset.confirming="";var b=form.querySelector('button[type="submit"]');if(b){b.textContent="Appliquer";b.removeAttribute("aria-label")}};
+        var reason=form.querySelector('[name="reason"]');
+        if(reason)reason.oninput=form.onchange;
+      });
+    }catch(error){if(host.isConnected)host.innerHTML='<p class="af-market-error">'+esc(error.message||"Gestion des utilisateurs indisponible")+'</p>';}
   }
 
   async function loadPartnerAdmin() {
@@ -929,7 +948,7 @@
     } catch (error) { list.innerHTML = '<p class="af-market-error">Gestion du catalogue indisponible : ' + esc(error.message || error) + "</p>"; }
   }
 
-  window.AfriMarket = { open: open, openPublic: openPublic, closeToWorkspace: closeToWorkspace, openAuth: openAuth, closeAuth: closeAuth, shouldUseMarket: shouldUseMarket };
+  window.AfriMarket = { open: open, openPublic: openPublic, closeToWorkspace: closeToWorkspace, openAuth: openAuth, closeAuth: closeAuth, shouldUseMarket: shouldUseMarket, renderAccessAdmin: loadAccessAdmin };
   window.afriMarketInitial = function () {
     if (window.afriMarketSession) {
       if (shouldUseMarket(window.afriMarketSession)) open({ kind: "authenticated", market: window.afriMarketSession });
