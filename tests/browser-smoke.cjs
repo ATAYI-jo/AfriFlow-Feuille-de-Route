@@ -72,6 +72,10 @@ test('Anonymous page boots and locally hosted JavaScript loads', { timeout: 9000
     }));
     assert.equal(await page.locator('#afMarketBack').count(), 0,
       'A customer must not see the shareholder workspace navigation');
+    assert.equal(await page.locator('#afMarketSignOut').count(), 1,
+      'Authenticated customers need a logout button');
+    assert.equal(await page.locator('#afMarketSignOut').isVisible(), true,
+      'Logout must remain visible on mobile screens');
     await page.evaluate(() => window.AfriMarket.open({
       kind: 'authenticated', market: { access_mode: 'shareholder_pending' }
     }));
