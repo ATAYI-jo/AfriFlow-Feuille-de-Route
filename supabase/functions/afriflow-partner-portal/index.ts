@@ -34,11 +34,12 @@ Deno.serve(async (req: Request) => {
     const body = await req.json(); const action = text(body.action, 40);
     const { data: adminRow } = await service.from("afriflow_admins").select("email").eq("email", user.email.toLowerCase()).maybeSingle();
     const isAdmin = Boolean(adminRow);
-    const { data: profile } = await service.from("afriflow_market_profiles").select("requested_role").eq("user_id", user.id).maybeSingle();
+    const { data: profile } = await service.from("afriflow_market_profiles").select("requested_role,access_mode").eq("user_id", user.id).maybeSingle();
     const isPartner = profile?.requested_role === "partner";
+    const isApprovedPartner = isPartner && profile?.access_mode === "partner_approved";
 
     if (action === "dashboard") {
-      if (!isPartner) return reply(req, { error: "Cet espace est réservé aux partenaires commerciaux." }, 403);
+      if (!isApprovedPartner) return reply(req, { error: "Votre espace partenaire attend une approbation d’AfriFloW." }, 403);
       const [terms, products, orders, reports] = await Promise.all([
         service.from("afriflow_partner_terms").select("commission_rate,is_enabled,payment_notes").eq("partner_user_id", user.id).maybeSingle(),
         service.from("afriflow_market_products").select("id,name,category,description,price,currency,minimum_order_quantity,is_in_stock").eq("listing_type", "product").eq("is_active", true).eq("is_in_stock", true).order("created_at", { ascending: false }).limit(100),
@@ -51,7 +52,7 @@ Deno.serve(async (req: Request) => {
     }
 
     if (action === "request_order") {
-      if (!isPartner) return reply(req, { error: "Cet espace est réservé aux partenaires commerciaux." }, 403);
+      if (!isApprovedPartner) return reply(req, { error: "Votre espace partenaire attend une approbation d’AfriFloW." }, 403);
       const { data: terms } = await service.from("afriflow_partner_terms").select("is_enabled").eq("partner_user_id", user.id).maybeSingle();
       if (!terms?.is_enabled) return reply(req, { error: "Votre partenariat attend encore l’activation d’AfriFloW." }, 403);
       const productId = text(body.productId, 36), quantity = positiveInteger(body.quantity), note = text(body.note, 1200);
@@ -66,7 +67,7 @@ Deno.serve(async (req: Request) => {
     }
 
     if (action === "report_sale") {
-      if (!isPartner) return reply(req, { error: "Cet espace est réservé aux partenaires commerciaux." }, 403);
+      if (!isApprovedPartner) return reply(req, { error: "Votre espace partenaire attend une approbation d’AfriFloW." }, 403);
       const { data: terms } = await service.from("afriflow_partner_terms").select("commission_rate,is_enabled").eq("partner_user_id", user.id).maybeSingle();
       if (!terms?.is_enabled) return reply(req, { error: "Votre partenariat attend encore l’activation d’AfriFloW." }, 403);
       const orderId = text(body.orderId, 36), quantity = positiveInteger(body.quantity), price = money(body.unitSalePrice), note = text(body.note, 1200);
@@ -110,7 +111,12 @@ Deno.serve(async (req: Request) => {
       if (!partner) return reply(req, { error: "Partenaire introuvable" }, 404);
       const saved = await service.from("afriflow_partner_terms").upsert({ partner_user_id: partnerId, commission_rate: rate, is_enabled: enabled, payment_notes: paymentNotes }, { onConflict: "partner_user_id" });
       if (saved.error) throw new Error("Impossible d’enregistrer les conditions du partenaire");
-      return reply(req, { ok: true, message: enabled ? "Partenaire activé avec ses conditions commerciales." : "Partenaire mis en attente." });
+      // Status controlled by verified administrator through the service-role client.
+      const status = await service.from("afriflow_market_profiles")
+        .update({ access_mode: enabled ? "partner_approved" : "partner_waiting" })
+        .eq("user_id", partnerId).eq("requested_role", "partner");
+      if (status.error) throw new Error("Conditions enregistrées, mais statut d’approbation non synchronisé");
+      return reply(req, { ok: true, message: enabled ? "Partenaire approuvé : son portail est activé." : "Partenaire mis en attente." });
     }
 
     if (action === "admin_approve_shareholder") {
