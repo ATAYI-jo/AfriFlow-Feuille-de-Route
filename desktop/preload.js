@@ -10,6 +10,7 @@ ipcRenderer.on('afriflow:incoming-meeting', (_event, payload) => {
 });
 contextBridge.exposeInMainWorld('AfriFlowNative', Object.freeze({
   isBackground: () => background,
+  openTeams: (url) => ipcRenderer.invoke('afriflow:open-teams', String(url || '').slice(0, 2048)),
   notify: (payload) => {
     if (!payload || typeof payload !== 'object') return;
     ipcRenderer.send('afriflow:notify', {
