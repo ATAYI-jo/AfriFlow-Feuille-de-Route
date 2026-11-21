@@ -89,6 +89,20 @@ function presentIncomingMeeting(event, details) {
   }
 }
 ipcMain.on('afriflow:present-incoming-meeting',presentIncomingMeeting);
+// A first-party, validated Teams link can be opened after the server check-in.
+// Do not depend on a temporary popup: Electron denies such windows by design.
+ipcMain.handle('afriflow:open-teams', async (event, rawUrl) => {
+  if (!event.sender || !parseSafeUrl(event.sender.getURL())) return {ok:false,reason:'unauthorized'};
+  const url = teamsUrl(String(rawUrl || ''));
+  if (!url) return {ok:false,reason:'invalid_teams_url'};
+  try {
+    await shell.openExternal(url);
+    return {ok:true};
+  } catch (error) {
+    console.warn('AfriFloW could not open Teams:', error.message);
+    return {ok:false,reason:'open_failed'};
+  }
+});
 function createWindow() {
   win = new BrowserWindow({
     width:1200, height:840, minWidth:360, minHeight:540,
