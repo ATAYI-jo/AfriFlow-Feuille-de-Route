@@ -1076,10 +1076,18 @@ function enterApp(email, role, name, grants, market){
   USER_NAME = name || ""; USER_GRANTS = Array.isArray(grants) ? grants : [];
   window.afriMarketSession = market || null;
   lastAct = Date.now(); saveSession(true);
-  if(window.AfriMarket && window.AfriMarket.shouldUseMarket && window.AfriMarket.shouldUseMarket(market)){
-    window.AfriMarket.open({kind:"authenticated",market:market});
+  var accessMode=market&&market.access_mode;
+  if(accessMode==="onboarding_required"){
+    if(window.AfriMarket)window.AfriMarket.openPublic();
+    if(window.AFRI&&window.AFRI.promptRoleChoice)window.AFRI.promptRoleChoice().catch(function(e){console.error("Onboarding:",e)});
     return;
   }
+  // Seul un actionnaire approuvé ou un administrateur reconnu peut ouvrir le workspace.
+  if(USER_ROLE!=="admin" && accessMode!=="shareholder_approved" && accessMode!=="collaborator"){
+    if(window.AfriMarket)window.AfriMarket.open({kind:"authenticated",market:market||{access_mode:"client"}});
+    return;
+  }
+  document.documentElement.classList.remove("af-role-checking");
   document.body.classList.remove("af-market-mode");
   document.body.classList.toggle("ro", !canEdit());
   $("auth-screen").classList.add("off");
