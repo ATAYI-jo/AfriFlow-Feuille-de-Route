@@ -31,7 +31,8 @@ test('Tous les scripts JavaScript applicatifs sont syntaxiquement valides', () =
     ...essentialScripts, 'document-excel-editor.js', 'document-permissions.js',
     'document-urgency.js', 'updates.js',
     'modules/auth/oauth-icons.js', 'modules/messaging/internal-messaging.js',
-    'modules/documents/document-viewer.js'
+    'modules/documents/document-viewer.js',
+    'modules/documents/word-editor.js', 'modules/admin/access-controls.js'
   ];
   for (const script of scripts) {
     assert.doesNotThrow(() => new vm.Script(read(script), { filename: script }), script);
@@ -82,4 +83,22 @@ test('Aucun bloc extrait ne subsiste en double dans index.html', () => {
   assert.ok(!html.includes('Messagerie interne : envoi groupé, pièces jointes, archivage Dropbox'));
   assert.ok(!html.includes('var U={pdf:"https://cdn.jsdelivr.net/npm/pdfjs-dist'));
   assert.ok(!html.includes('var NM={google:"Google",facebook:"Facebook",azure:"Microsoft"'));
+});
+
+test('Éditeur Word et gestion des droits chargés une seule fois', () => {
+  for (const filename of [
+    'modules/documents/word-editor.js',
+    'modules/admin/access-controls.js'
+  ]) {
+    const tag = '<script src="./' + filename + '?v=20261121-modularisation-2"></script>';
+    assert.equal(html.split(tag).length - 1, 1, filename + ' absent ou chargé plusieurs fois');
+    assert.ok(fs.existsSync(path.join(root, filename)), filename + ' manquant');
+  }
+  assert.ok(html.indexOf('modules/admin/access-controls.js') <
+    html.indexOf('modules/documents/word-editor.js'),
+    'Ordre des scripts modifié');
+  assert.ok(!html.includes('Bibliothèque d\'export Word'),
+    'Le code de l\'éditeur Word est encore dupliqué dans index.html');
+  assert.ok(!html.includes('Boutons de connexion : Apple retiré, Microsoft ajouté'),
+    'Le code des droits est encore dupliqué dans index.html');
 });
