@@ -56,7 +56,7 @@ Deno.serve(async (req:Request)=>{
     const access = await service.from("afriflow_market_profiles")
       .select("access_mode").eq("user_id",user.id).maybeSingle();
     if(access.error)return respond({error:"Vérification des accès indisponible"},503);
-    if(!admin&&access.data?.access_mode!=="shareholder_approved")
+    if(!admin&&!["shareholder_approved","collaborator"].includes(access.data?.access_mode??""))
       return respond({error:"Édition réservée aux actionnaires approuvés"},403);
     const permissions=await service.from("afriflow_state").select("value").eq("key","pub:dbxperm").maybeSingle();
     if(permissions.error)throw new Error("Impossible de vérifier les permissions des documents");
