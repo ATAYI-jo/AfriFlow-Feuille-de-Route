@@ -98,7 +98,7 @@ function renderAuthStep(){
   var register = AUTH_MODE === "register", finalStep = authFinalStep(), step = AUTH_STEP;
   var roleStep = step === 1, nameStep = register && step === 2, emailStep = (!register && step === 2) || (register && step === 3), passwordStep = step === finalStep;
   document.querySelectorAll("#auth-screen .oauth,.or").forEach(function(el){ el.style.display=roleStep ? "" : "none"; });
-  ["authMarketRole","authMarketRoleLabel"].forEach(function(id){ $(id).style.display=roleStep ? "" : "none"; });
+  ["authMarketRole","authMarketRoleLabel"].forEach(function(id){ $(id).style.display=register && roleStep ? "" : "none"; });
   $("authName").style.display=nameStep ? "" : "none";
   $("authEmailInput").style.display=emailStep ? "" : "none";
   $("authPasswordRow").style.display=passwordStep ? "" : "none";
@@ -109,11 +109,11 @@ function renderAuthStep(){
   $("authNext").style.display=passwordStep ? "none" : "";
   $("authBack").style.display=step > 1 ? "" : "none";
   $("authProgress").style.display=""; $("authProgress").textContent="Étape "+step+" sur "+finalStep;
-  if(roleStep) $("authHint").textContent="Choisissez votre espace. Ce choix ne donne jamais de droits collaborateur.";
+  if(roleStep) $("authHint").textContent=register?"Choisissez votre profil AfriFloW. Les demandes Partenaire et Actionnaire nécessitent une approbation.":"Connectez-vous avec Google ou continuez par e-mail. Si vous n’avez pas de profil, vous le choisirez après la connexion.";
   else if(nameStep) $("authHint").textContent="Comment devons-nous vous appeler ?";
   else if(emailStep) $("authHint").textContent="Quelle est votre adresse email ?";
   else $("authHint").textContent=register ? "Créez un mot de passe personnel d’au moins 8 caractères." : "Entrez votre mot de passe pour continuer.";
-  if(roleStep) authStepFocus("authMarketRole"); else if(nameStep) authStepFocus("authName"); else if(emailStep) authStepFocus("authEmailInput"); else authStepFocus("authPasswordInput");
+  if(roleStep) authStepFocus(register?"authMarketRole":"authNext"); else if(nameStep) authStepFocus("authName"); else if(emailStep) authStepFocus("authEmailInput"); else authStepFocus("authPasswordInput");
 }
 function nextAuthStep(){
   var register=AUTH_MODE === "register", err=$("authError"); err.textContent="";
@@ -1076,10 +1076,18 @@ function enterApp(email, role, name, grants, market){
   USER_NAME = name || ""; USER_GRANTS = Array.isArray(grants) ? grants : [];
   window.afriMarketSession = market || null;
   lastAct = Date.now(); saveSession(true);
-  if(window.AfriMarket && window.AfriMarket.shouldUseMarket && window.AfriMarket.shouldUseMarket(market)){
-    window.AfriMarket.open({kind:"authenticated",market:market});
+  var accessMode=market&&market.access_mode;
+  if(accessMode==="onboarding_required"){
+    if(window.AfriMarket)window.AfriMarket.openPublic();
+    if(window.AFRI&&window.AFRI.promptRoleChoice)window.AFRI.promptRoleChoice().catch(function(e){console.error("Onboarding:",e)});
     return;
   }
+  // Seul un actionnaire approuvé ou un administrateur reconnu peut ouvrir le workspace.
+  if(USER_ROLE!=="admin" && !["shareholder_approved","collaborator"].includes(accessMode)){
+    if(window.AfriMarket)window.AfriMarket.open({kind:"authenticated",market:market||{access_mode:"client"}});
+    return;
+  }
+  document.documentElement.classList.remove("af-role-checking");
   document.body.classList.remove("af-market-mode");
   document.body.classList.toggle("ro", !canEdit());
   $("auth-screen").classList.add("off");

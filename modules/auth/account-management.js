@@ -44,15 +44,19 @@ async function ensureMemberProfile(us){
 async function finish(us,intent){
   var email=String(us.email).toLowerCase(),isA=false;
   try{var a=await SB().rpc("af_is_admin");isA=a.data===true}catch(e){}
-  var u=await getRow(ukey(email));
-  if(!u){
-    u={email:email,name:nameOf(us),grants:[],created:iso()};
-    var ins=await SB().from(TB()).insert({key:ukey(email),value:u,updated_at:iso()});
-    if(ins.error&&ins.error.code!=="23505")throw ins.error;
+  var market=await ensureMarketProfile(us,intent);
+  var allowed=isA||["shareholder_approved","collaborator"].includes(market.access_mode);
+  var u={email:email,name:nameOf(us),grants:[]};
+  if(allowed){
+    var stored=await getRow(ukey(email));
+    if(stored)u=stored;
+    else{
+      var ins=await SB().from(TB()).insert({key:ukey(email),value:u,updated_at:iso()});
+      if(ins.error&&ins.error.code!=="23505")throw ins.error;
+    }
   }
   ensureMemberProfile(us);
-  var market=await ensureMarketProfile(us,intent||readMarketIntent());
-  var g=isA?["all"]:(u.grants||[]);
+  var g=isA?["all"]:(allowed?(u.grants||[]):[]);
   return {ok:true,email:email,name:isA?"Administrateur":(u.name||nameOf(us)),grants:g,role:isA?"admin":(g.length?"editor":"reader"),market:market};
 }
 function readMarketIntent(){
@@ -61,23 +65,93 @@ function readMarketIntent(){
   return /^(client|shareholder|partner)$/.test(role||"")?role:"client";
 }
 async function ensureMarketProfile(us,intent){
-  if(!us||!us.id)return {access_mode:"client"};
-  intent=/^(client|shareholder|partner)$/.test(intent||"")?intent:"client";
+  if(!us||!us.id)throw new Error("Session utilisateur invalide");
+  var selected=/^(client|shareholder|partner)$/.test(intent||"")?intent:null;
   try{
-    var existing=await SB().from("afriflow_market_profiles").select("user_id,requested_role,access_mode").eq("user_id",us.id).maybeSingle();
+    var existing=await SB().from("afriflow_market_profiles").select("user_id,requested_role,access_mode,selection_confirmed_at").eq("user_id",us.id).maybeSingle();
     if(existing.error)throw existing.error;
     if(existing.data){
-      /* Le rôle est choisi une seule fois à la création du compte. Une connexion
-         ultérieure — y compris OAuth — ne doit jamais modifier cet accès. */
+      // The former OAuth flow silently created Client profiles. Prompt once for
+      // these unconfirmed rows without granting partner/shareholder permissions.
+      if(existing.data.access_mode==="client" && !existing.data.selection_confirmed_at)
+        return {access_mode:"onboarding_required",legacy_client:true};
       return existing.data;
     }
-    var created=await SB().from("afriflow_market_profiles").insert({user_id:us.id,requested_role:intent}).select("user_id,requested_role,access_mode").single();
+    if(!selected)return {access_mode:"onboarding_required"};
+    var created=await SB().from("afriflow_market_profiles").insert({user_id:us.id,requested_role:selected}).select("user_id,requested_role,access_mode").single();
     if(created.error)throw created.error;return created.data;
   }catch(e){
-    /* Un déploiement partiel ne doit jamais empêcher l’espace collaborateur existant. */
-    return {access_mode:"collaborator",unavailable:true};
+    /* Fail closed: do not treat an unavailable profile as collaborator access. */
+    throw new Error("Impossible de vérifier les autorisations du profil : "+fail(e));
   }
 }
+/* Choix obligatoire lors du premier login (OAuth, email ou autre).
+ * Pas de droits jusqu'à l'insertion et la vérification du profil côté Supabase.
+ */
+AFRI.promptRoleChoice=async function(){
+  if(!SB())return false;
+  var response=await SB().auth.getUser(),user=response.data&&response.data.user;
+  if(response.error||!user)return false;
+  var current=await SB().from("afriflow_market_profiles")
+    .select("requested_role,access_mode,selection_confirmed_at").eq("user_id",user.id).maybeSingle();
+  if(current.error)throw current.error;
+  var unconfirmedClient=Boolean(current.data && current.data.access_mode==="client" && !current.data.selection_confirmed_at);
+  if(current.data && !unconfirmedClient){
+    var existing=await finish(user);
+    enterApp(existing.email,existing.role,existing.name,existing.grants,existing.market);
+    return true;
+  }
+  var overlay=document.getElementById("afRoleChooser");
+  if(!overlay){
+    overlay=document.createElement("div");overlay.id="afRoleChooser";overlay.setAttribute("role","dialog");
+    overlay.setAttribute("aria-modal","true");overlay.setAttribute("aria-labelledby","afRoleHeading");
+    overlay.style.cssText="position:fixed;inset:0;z-index:2147483000;display:grid;place-items:center;background:rgba(6,24,17,.88);padding:18px";
+    overlay.innerHTML='<section style="width:min(100%,500px);max-height:90dvh;overflow:auto;background:#fff;color:#163b2a;padding:27px;border-radius:22px;box-shadow:0 16px 70px #0005;font:16px/1.5 system-ui">'
+      +'<h2 id="afRoleHeading" style="margin:0 0 10px">Bienvenue sur AfriFloW</h2>'
+      +'<p>Pour votre première connexion, choisissez votre profil. Ce choix ne pourra pas vous donner de droits supplémentaires sans validation.</p>'
+      +'<div style="display:grid;gap:12px">'
+      +'<button type="button" data-af-role="client">Client — accéder à la Marketplace</button>'
+      +'<button type="button" data-af-role="partner">Partenaire — demander une approbation</button>'
+      +'<button type="button" data-af-role="shareholder">Actionnaire — demander une approbation</button></div>'
+      +'<p id="afRoleMessage" role="status" style="font-size:14px"></p>'
+      +'<button type="button" id="afRoleSignout">Déconnexion</button></section>';
+    document.body.appendChild(overlay);
+    overlay.querySelectorAll("[data-af-role]").forEach(function(button){
+      button.style.cssText="width:100%;text-align:left;padding:14px;border:1px solid #bdd8cc;border-radius:12px;background:#f3faf6;color:#164a33;font:inherit;cursor:pointer";
+      button.addEventListener("click",async function(){
+        var msg=document.getElementById("afRoleMessage");
+        overlay.querySelectorAll("button").forEach(function(b){b.disabled=true});
+        try{
+          var data;
+          if(unconfirmedClient){
+            var saved=await SB().from("afriflow_market_profiles")
+              .update({requested_role:button.dataset.afRole,selection_confirmed_at:new Date().toISOString()})
+              .eq("user_id",user.id).is("selection_confirmed_at",null)
+              .select("requested_role,access_mode,selection_confirmed_at").single();
+            if(saved.error)throw saved.error;
+            data=saved.data;
+          }else{
+            data=await ensureMarketProfile(user,button.dataset.afRole);
+          }
+          if(!data||data.access_mode==="onboarding_required")throw new Error("Profil non enregistré");
+          overlay.remove();
+          var info=await finish(user);
+          enterApp(info.email,info.role,info.name,info.grants,info.market);
+        }catch(e){
+          msg.textContent="Erreur : "+fail(e);
+          overlay.querySelectorAll("button").forEach(function(b){b.disabled=false});
+        }
+      });
+    });
+    overlay.querySelector("#afRoleSignout").onclick=async function(){
+      await SB().auth.signOut({scope:"local"});
+      overlay.remove();if(window.AfriMarket)window.AfriMarket.openPublic();
+    };
+  }
+  overlay.style.display="grid";
+  overlay.querySelector("[data-af-role]").focus();
+  return true;
+};
 AFRI.login=async function(email,pwd,intent,captchaToken){
   try{
     if(!SB())return {ok:false,error:"Service de comptes indisponible."};
@@ -88,7 +162,7 @@ AFRI.login=async function(email,pwd,intent,captchaToken){
       if(/invalid login/i.test(m))return {ok:false,error:"Email ou mot de passe incorrect. Compte créé avant la mise à jour de sécurité ? Cliquez sur « S'inscrire » avec le même email pour choisir un mot de passe."};
       return {ok:false,error:m};
     }
-    return await finish(r.data.user,intent);
+    return await finish(r.data.user); // First login without a profile requires post-login role choice.
   }catch(e){return {ok:false,error:fail(e)}}
 };
 AFRI.register=async function(email,name,pwd,intent,captchaToken){
@@ -107,9 +181,21 @@ AFRI.register=async function(email,name,pwd,intent,captchaToken){
 };
 AFRI.resume=async function(){
   try{
-    var r=await SB().auth.getSession(),us=r.data&&r.data.session&&r.data.session.user;
-    if(!us||!us.email)return false;
-    var x=await finish(us);enterApp(x.email,x.role,x.name,x.grants,x.market);return true;
+    // getUser validates the identity with Supabase Auth; getSession alone can
+    // return a cached session left behind after administrative account deletion.
+    var session=await SB().auth.getSession();
+    if(!session.data||!session.data.session)return false;
+    var verified=await SB().auth.getUser();
+    var us=verified.data&&verified.data.user;
+    if(verified.error&&(/fetch|network|timeout|failed to fetch/i.test(verified.error.message||"")))return false;
+    if(verified.error||!us||!us.id||!us.email){
+      await SB().auth.signOut({scope:"local"});
+      try{localStorage.removeItem("afriflow_session_v1")}catch(ignore){}
+      return false;
+    }
+    var x=await finish(us);
+    if(x.market&&x.market.access_mode==="onboarding_required"){await AFRI.promptRoleChoice();return true;}
+    enterApp(x.email,x.role,x.name,x.grants,x.market);return true;
   }catch(e){return false}
 };
 AFRI.signOut=function(){try{if(SB())SB().auth.signOut({scope:"local"})}catch(e){}};
@@ -147,7 +233,11 @@ AFRI.resolve=async function(email,ok){
   r.status=ok?"approved":"refused";r.done=iso();await putRow("req:"+email,r);
 };
 async function refreshMe(){
-  if(!loggedUserEmail||USER_ROLE==="admin")return;
+  // Client, pending partner and pending shareholder have no collaboration row.
+  // Never treat that as deletion of their market account.
+  var market=window.afriMarketSession;
+  if(!loggedUserEmail||USER_ROLE==="admin"||!market||
+     !["shareholder_approved","collaborator"].includes(market.access_mode))return;
   try{
     var u=await getRow(ukey(loggedUserEmail));
     if(!u){window.logout("Votre compte n'existe plus. Inscrivez-vous à nouveau.");return}
@@ -276,10 +366,16 @@ async function finishOAuthUser(user) {
   if (oauthHandled || !user || !user.email) return;
   oauthHandled = true;
   try {
-    var oauthIntent = "";
-    try { oauthIntent = sessionStorage.getItem('afriflow_market_intent') || ""; } catch (error) {}
-    var info = await finish(user, oauthIntent);
-    enterApp(info.email, info.role, info.name, info.grants, info.market);
+    // Confirm the OAuth identity against Auth before restoring any permissions.
+    var verified=await SB().auth.getUser();
+    if(verified.error||!verified.data?.user||verified.data.user.id!==user.id)
+      throw new Error("Votre ancienne session a expiré. Reconnectez-vous.");
+    var info = await finish(verified.data.user);
+    if(info.market && info.market.access_mode==="onboarding_required"){
+      await AFRI.promptRoleChoice();
+    } else {
+      enterApp(info.email, info.role, info.name, info.grants, info.market);
+    }
     recordUserAction('Connexion via ' + ((user.app_metadata && user.app_metadata.provider) || 'fournisseur externe'));
     try { sessionStorage.removeItem('afriflow_oauth_pending'); } catch (error) {}
     if (oauthReturning) history.replaceState(null, '', location.pathname);
