@@ -33,3 +33,12 @@ Objectif : séparer les fonctionnalités sans rompre les usages existants (colla
 ## Important : véritable blocage avant déploiement
 Ce workflow GitHub Actions **ne bloque pas à lui seul** le déploiement automatique Render.
 Configurer Render pour déployer uniquement après une CI verte, ou gérer le déploiement par GitHub Actions avec un job `needs: [static-and-regression, e2e]`. Protéger également la branche main en exigeant le check `JavaScript syntax and architecture` avant fusion. Les tests actuels sont structurels et ne remplacent pas les tests de navigation ni les tests Supabase/Dropbox.
+
+## Étape 2 — Extraction conservatrice (en cours)
+- `modules/messaging/internal-messaging.js` : bloc interne de messagerie extrait depuis `index.html`.
+- `modules/documents/document-viewer.js` : bloc de prévisualisation extrait.
+- `modules/auth/oauth-icons.js` : rendu des icônes OAuth extrait.
+- Ordre de chargement des scripts synchrones préservé; code source interne conservé sans changement de logique.
+- Tests structurels renforcés pour vérifier ces trois points d'entrée et empêcher leur duplication.
+- Le Market reste dans `market.js` : aucune modification à ce stade.
+- **Validation restante** : CI GitHub Actions verte, tests fonctionnels dans un navigateur, contrôle du chargement des fichiers JavaScript et du parcours authentification/documents/messagerie.
