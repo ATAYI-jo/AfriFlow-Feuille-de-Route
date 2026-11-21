@@ -246,3 +246,43 @@ body.af-market-mode #market-view{display:block}
 .af-news-relevance{display:inline-flex;align-items:center;gap:5px;align-self:flex-start;width:max-content;max-width:100%;padding:5px 9px;border:1px solid #d0a34b;border-radius:999px;background:#fff5de;color:#705019;font-size:.76rem;font-weight:800;line-height:1.3}
 .af-announcement-card .af-news-relevance{font-size:.68rem;margin:5px 0;white-space:normal}
 .af-announcement-detail .af-news-relevance{margin:4px 0 6px}
+
+/* Restore the reference Marketplace header and 3-column welcome panel (2026-11-21). */
+@media(min-width:1101px){
+  #market-view .af-market-main{max-width:1640px;padding:24px 28px 88px}
+  #market-view .af-ali{display:grid;grid-template-columns:minmax(210px,270px) minmax(0,1fr) minmax(220px,285px);align-items:stretch;gap:18px;margin:0 0 26px}
+  #market-view .af-ali-cats,#market-view .af-ali-side{display:flex}
+  #market-view .af-ali-hero{width:100%;max-width:none;height:438px;min-height:438px;margin:0}
+  #market-view .af-ali-cats{flex-direction:column}
+  #market-view .af-ali-side{min-width:0}
+  #market-view .af-slide h1{font-size:clamp(2rem,3.2vw,3.35rem)}
+  #market-view .af-market-topline{max-width:1640px}
+}
+@media(min-width:801px) and (max-width:1100px){
+  #market-view .af-ali{display:grid;grid-template-columns:minmax(0,1fr) 250px;gap:14px}
+  #market-view .af-ali-cats{display:none}
+  #market-view .af-ali-side{display:flex}
+  #market-view .af-ali-hero{width:100%;max-width:none;height:335px;min-height:335px;margin:0}
+}
+#market-view .af-ali-side.af-welcome-guest{display:flex;align-items:center;justify-content:center;text-align:center;min-height:0}
+#market-view .af-welcome-guest h2{font-size:clamp(1.4rem,2.1vw,2rem);line-height:1.2;font-weight:850;margin:0;color:#153b29}
+#market-view .af-welcome-member{display:flex;flex-direction:column;align-items:stretch;gap:12px;overflow:hidden}
+#market-view .af-side-news-heading{display:flex;gap:9px;align-items:center}
+#market-view .af-side-news-heading h2{margin:0;font-size:1.12rem;line-height:1.3;color:#154630}
+#market-view .af-side-news-list{display:grid;gap:9px;margin:0;padding:0;list-style:none;min-width:0;overflow-y:auto;scrollbar-width:thin}
+#market-view .af-side-news-item{display:flex;align-items:flex-start;gap:6px;width:100%;text-align:left;padding:10px 9px;border-radius:10px;border:1px solid rgba(17,92,61,.17);background:rgba(255,255,255,.55);color:#16422d;cursor:pointer;font-weight:650;font-size:.84rem;line-height:1.43;overflow-wrap:anywhere}
+#market-view .af-side-news-item:hover,#market-view .af-side-news-item:focus-visible{background:#fff;border-color:#db9d38;outline-offset:2px}
+#market-view .af-side-news-bell{flex:none}
+#market-view .af-side-news-empty,#market-view .af-side-news-footnote{margin:0;font-size:.82rem;color:#496657;line-height:1.55}
+#market-view .af-side-news-footnote{margin-top:auto}
+@media(max-width:800px){
+  #market-view .af-ali{display:grid;grid-template-columns:minmax(0,1fr);gap:12px}
+  #market-view .af-ali-cats{display:none}
+  #market-view .af-ali-hero{width:100%;max-width:none;margin:0}
+  #market-view .af-ali-side{display:flex;padding:18px;min-height:130px}
+  #market-view .af-welcome-member .af-side-news-list{max-height:220px}
+}
+@media(max-width:700px){
+  #market-view .af-welcome-guest{min-height:95px}
+  #market-view .af-welcome-member{min-height:0}
+}
