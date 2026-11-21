@@ -114,6 +114,11 @@
   }
   function openPublic() { open({ kind: "public", market: { access_mode: "public" } }); }
   function closeToWorkspace() {
+    var profile=window.afriMarketSession;
+    if (!(profile && profile.access_mode === "shareholder_approved") && window.USER_ROLE !== "admin") {
+      notice("Cet espace est réservé aux actionnaires approuvés.");
+      return;
+    }
     clearTimers(); showWorkspace();
     var home = document.querySelector('#navList .nv[data-id="home"]');
     if (home) home.click();
@@ -647,7 +652,7 @@
       + '<a class="af-market-brand" href="#" id="afMarketHome"><img src="logo.png" alt=""><b>Afri<span>FloW</span> Marketplace</b></a>'
       + (partner ? '<div class="af-market-search af-partner-top-label">Portail commercial partenaire</div>' : '<form class="af-market-search" id="afMarketSearch"><input id="afMarketSearchInput" value="' + esc(state.term) + '" type="search" placeholder="Rechercher un produit, une catégorie…" aria-label="Rechercher dans la Marketplace"><button>' + icon("search") + '<span>Rechercher</span></button></form>')
       + (!partner ? '<label class="af-currency" title="Devise d’affichage"><span>Devise</span><select id="afCurrency" aria-label="Choisir la devise d’affichage"><option value="XOF"' + (currentCurrency() === "XOF" ? " selected" : "") + '>FCFA (XOF)</option><option value="XAF"' + (currentCurrency() === "XAF" ? " selected" : "") + '>FCFA (XAF)</option><option value="EUR"' + (currentCurrency() === "EUR" ? " selected" : "") + '>Euro (EUR)</option><option value="USD"' + (currentCurrency() === "USD" ? " selected" : "") + '>Dollar US (USD)</option><option value="GBP"' + (currentCurrency() === "GBP" ? " selected" : "") + '>Livre sterling (GBP)</option><option value="CHF"' + (currentCurrency() === "CHF" ? " selected" : "") + '>Franc suisse (CHF)</option><option value="CAD"' + (currentCurrency() === "CAD" ? " selected" : "") + '>Dollar canadien (CAD)</option><option value="CNY"' + (currentCurrency() === "CNY" ? " selected" : "") + '>Yuan chinois (CNY)</option><option value="JPY"' + (currentCurrency() === "JPY" ? " selected" : "") + '>Yen japonais (JPY)</option><option value="ZAR"' + (currentCurrency() === "ZAR" ? " selected" : "") + '>Rand sud-africain (ZAR)</option></select></label>' : '')
-      + '<button type="button" class="af-market-link" id="afMarketBack">' + icon("back") + '<span>' + (workspace ? 'Retour à mon espace' : 'Retour à l’accueil') + '</span></button>'
+      + ((window.afriMarketSession && window.afriMarketSession.access_mode==="shareholder_approved" || window.USER_ROLE==="admin") ? '<button type="button" class="af-market-link" id="afMarketBack">' + icon("back") + '<span>Retour à mon espace</span></button>' : '')
       + (state.context.kind === "public" ? '<button type="button" class="af-market-link" id="afMarketSignIn">' + icon("user") + '<span>Se connecter</span></button>' : "")
       + (state.context.kind === "authenticated" ? '<button type="button" class="af-market-link" id="afMarketAccount">' + icon("user") + '<span>Mon compte</span></button>' : "")
       + (!partner ? '<button type="button" class="af-market-cart" id="afMarketCart" aria-label="Ouvrir le panier">' + icon("bag") + '<span>Panier</span><b>' + cartCount() + '</b></button>' : '')

@@ -65,6 +65,19 @@ test('Anonymous page boots and locally hosted JavaScript loads', { timeout: 9000
     await page.evaluate(() => window.AfriMarket.openPublic());
     assert.equal(await page.locator('body.af-market-mode').count(), 1,
       'Public Market should show the market mode');
+    assert.equal(await page.locator('#afMarketBack').count(), 0,
+      'A visitor must never see Retour à l’accueil or Retour à mon espace');
+    await page.evaluate(() => window.AfriMarket.open({
+      kind: 'authenticated', market: { access_mode: 'client' }
+    }));
+    assert.equal(await page.locator('#afMarketBack').count(), 0,
+      'A customer must not see the shareholder workspace navigation');
+    await page.evaluate(() => window.AfriMarket.open({
+      kind: 'authenticated', market: { access_mode: 'shareholder_pending' }
+    }));
+    assert.equal(await page.locator('#afMarketBack').count(), 0,
+      'A pending shareholder must not see the workspace navigation');
+    await page.evaluate(() => window.AfriMarket.openPublic());
     await page.evaluate(() => window.AfriMarket.openAuth('login'));
     assert.equal(await page.locator('#auth-screen:not(.off)').count(), 1,
       'Login dialog should open from public Market');
