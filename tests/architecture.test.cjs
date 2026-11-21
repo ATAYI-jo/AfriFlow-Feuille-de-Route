@@ -79,7 +79,7 @@ test('Les trois scripts extraits sont chargés une fois et dans le bon ordre', (
 });
 
 test('Aucun bloc extrait ne subsiste en double dans index.html', () => {
-  assert.doesNotMatch(html, /Messagerie interne : envoi groupé, pièces jointes, archivage Dropbox/);
-  assert.doesNotMatch(html, /var U=\\{pdf:"https:\/\/cdn\\.jsdelivr\\.net\/npm\/pdfjs-dist/);
-  assert.doesNotMatch(html, /var NM=\\{google:"Google",facebook:"Facebook",azure:"Microsoft"/);
+  assert.ok(!html.includes('Messagerie interne : envoi groupé, pièces jointes, archivage Dropbox'));
+  assert.ok(!html.includes('var U={pdf:"https://cdn.jsdelivr.net/npm/pdfjs-dist'));
+  assert.ok(!html.includes('var NM={google:"Google",facebook:"Facebook",azure:"Microsoft"'));
 });
