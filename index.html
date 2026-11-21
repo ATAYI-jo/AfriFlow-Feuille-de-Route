@@ -91,8 +91,39 @@
 <!-- AfriFloW enhanced brand colors and active-session alerts -->
 <link rel="stylesheet" href="./afriflow-alerts.css">
 <style id="afri-download-brand-2026">
-#afPwaInstallArea #afPwaInstallBtn{background:linear-gradient(115deg,#155d38 0%,#1f7947 72%,#357d3d 100%)!important;color:#fff!important;-webkit-text-fill-color:#fff!important;border:2px solid #e6a244!important;box-shadow:0 7px 22px rgba(26,98,58,.24),0 0 0 1px rgba(230,162,68,.22)!important;letter-spacing:.015em}
-#afPwaInstallArea #afPwaInstallBtn:hover{background:linear-gradient(115deg,#0f4b2b,#237848)!important}
+/* Floating installation glyph: keep a 48px accessible hit target, without a visible tile. */
+#afPwaInstallArea #afPwaInstallBtn{
+  width:48px!important;min-width:48px!important;height:48px!important;min-height:48px!important;
+  padding:0!important;border:0!important;border-radius:0!important;
+  background:transparent!important;color:#145c36!important;-webkit-text-fill-color:#145c36!important;
+  box-shadow:none!important;text-shadow:none!important;filter:drop-shadow(0 3px 3px rgba(255,255,255,.8))!important;
+  transform-origin:center;animation:afInstallHover 2.8s ease-in-out infinite!important;
+}
+#afPwaInstallArea #afPwaInstallBtn svg{
+  display:block;width:31px!important;height:31px!important;
+  stroke:currentColor;stroke-width:2.25;filter:drop-shadow(0 3px 5px rgba(20,92,54,.27));
+  animation:afInstallGlyph 2.8s ease-in-out infinite;
+}
+#afPwaInstallArea #afPwaInstallBtn:hover{
+  background:transparent!important;color:#0b482b!important;-webkit-text-fill-color:#0b482b!important;
+  animation-play-state:paused!important;transform:translateY(-3px) scale(1.12);
+}
+#afPwaInstallArea #afPwaInstallBtn:focus-visible{
+  outline:2px solid #e6a244!important;outline-offset:2px;border-radius:12px!important;
+}
+@keyframes afInstallHover{
+  0%,100%{transform:translateY(0) rotate(-3deg)}
+  35%{transform:translateY(-8px) rotate(3deg)}
+  65%{transform:translateY(-3px) rotate(-2deg)}
+}
+@keyframes afInstallGlyph{
+  0%,100%{opacity:1;transform:scale(1)}
+  45%{opacity:.78;transform:scale(1.1)}
+}
+@media(prefers-reduced-motion:reduce){
+  #afPwaInstallArea #afPwaInstallBtn,
+  #afPwaInstallArea #afPwaInstallBtn svg{animation:none!important;transform:none!important}
+}
 #afDownloadPanel .af-download-link{background:#196e42!important;border-color:#e69d32!important}
 </style>
 </head>
