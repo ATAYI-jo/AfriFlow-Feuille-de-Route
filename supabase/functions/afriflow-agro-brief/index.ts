@@ -207,9 +207,9 @@ async function createBriefIllustration(service: ReturnType<typeof createClient>,
   const model = clean(Deno.env.get("CLOUDFLARE_IMAGE_MODEL") || "@cf/black-forest-labs/flux-1-schnell", 120);
   if (!/^@cf\/[a-z0-9._-]+\/[a-z0-9._-]+$/i.test(model)) throw new Error("Modèle Cloudflare invalide");
   const prompt = [
-    "Premium photorealistic editorial image for African agriculture and food-industry news.",
-    "Realistic food, fields or agricultural products relevant to the headline; natural light; sophisticated magazine photography.",
-    "Deep green and warm orange accents. No written text, no logos, no branded packaging, no fabricated chart, no identifiable people.",
+    "High-quality editorial photograph illustrating this specific world-news headline accurately, without asserting visual facts about real people or events.",
+    "Neutral professional newsroom photography, coherent subjects and scenery, natural light and realistic details. Avoid generic agriculture imagery unless the news is agricultural.",
+    "AfriFloW deep green and warm orange accents. No text, no logos, no branded packaging, no fake data chart, no recognizable real people.",
     `News headline: ${clean(title, 160)}. Context: ${clean(description, 650)}`
   ].join("\n").slice(0, 2048);
   const response = await fetch(
@@ -293,7 +293,7 @@ async function attachBriefIllustration(service: ReturnType<typeof createClient>,
   }
   /* Otherwise prefer a reusable CC0/public-domain photograph from Openverse;
      Cloudflare AI generates an editorial illustration only when those fail. */
-  try {
+  if (/agric|aliment|farm|harvest|mangue|cajou|food|r[eé]colte/i.test(title)) try {
     const open = await openverseIllustration(service, day, title);
     const update = await service.from("afriflow_market_products").update({ original_path: open.path, description: `${description}\n\nIllustration libre : ${open.attribution}`, news_sources: { articles: sources, image_attribution: open } }).eq("id", id);
     if (update.error) throw update.error;
