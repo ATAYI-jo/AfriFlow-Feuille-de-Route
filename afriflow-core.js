@@ -1099,7 +1099,7 @@ function enterApp(email, role, name, grants, market){
 function logout(msg){
   if(window.AFRI){ AFRI.stop(); AFRI.signOut(); }
   loggedUserEmail = ""; USER_ROLE = "reader"; USER_NAME = ""; USER_GRANTS = []; window.afriMarketSession = null; document.body.classList.add("ro");
-  try { localStorage.removeItem(SESSION_KEY); } catch(e){}
+  try { localStorage.removeItem(SESSION_KEY); if(window.AfriNav)window.AfriNav.clear(); } catch(e){}
   closeDrawer(); $("customizer-modal").classList.remove("on");
   $("authPasswordInput").value = ""; $("authError").textContent = msg || "";
   $("editStatusIndicator").textContent = "";
