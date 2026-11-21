@@ -49,10 +49,10 @@ test('Anonymous page boots and locally hosted JavaScript loads', { timeout: 9000
     // The install flag survives a reload and hides the invitation.
     await page.evaluate(() => { localStorage.setItem('afriflow_pwa_installed_v1','yes'); });
     await page.reload({ waitUntil: 'domcontentloaded' });
-    assert.equal(await page.locator('#afPwaInstallArea').isVisible(), false);
+    assert.equal(await page.locator('#afPwaInstallArea').evaluate(el => el.hidden), true);
     await page.evaluate(() => { localStorage.removeItem('afriflow_pwa_installed_v1'); });
     await page.reload({ waitUntil: 'domcontentloaded' });
-    assert.equal(await page.locator('#afPwaInstallArea').isVisible(), true);
+    assert.equal(await page.locator('#afPwaInstallArea').evaluate(el => el.hidden), false);
 
     assert.equal(await page.locator('#navList').count(), 1);
     assert.deepEqual(failedScripts, [], 'Local JavaScript returned HTTP errors');
