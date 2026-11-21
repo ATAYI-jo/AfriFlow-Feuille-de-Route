@@ -20,7 +20,7 @@ test('Unknown OAuth users must explicitly choose a profile once', () => {
   for (const role of ['client','partner','shareholder']) {
     assert.ok(accounts.includes('data-af-role="'+role+'"'), 'Missing choice '+role);
   }
-  assert.match(accounts,/var info = await finish\(user\)/);
+  assert.match(accounts,/var info = await finish\(verified\.data\.user\)/);
   assert.doesNotMatch(accounts,/finish\(user, oauthIntent\)/);
 });
 test('Client and pending applicants cannot initialize shareholder collaboration', () => {
@@ -58,4 +58,14 @@ test('Deleted members are treated as entirely new users when they sign in again'
   assert.match(accounts,/if\(verified\.error\|\|!us\|\|!us\.id\|\|!us\.email\)/);
   assert.match(accounts,/access_mode:"onboarding_required"/);
   assert.match(accounts,/AFRI\.promptRoleChoice\(\)/);
+});
+
+test('Legacy auto-assigned Client profiles get exactly one explicit selection', () => {
+  assert.match(accounts, /legacy_client:true/);
+  assert.match(accounts, /unconfirmedClient/);
+  assert.match(accounts, /selection_confirmed_at:new Date\(\)\.toISOString\(\)/);
+  assert.match(sql, /selection_confirmed_at timestamptz/);
+  assert.match(sql, /old\.selection_confirmed_at is null/);
+  assert.match(sql, /'shareholder_pending'/);
+  assert.match(sql, /'partner_waiting'/);
 });
