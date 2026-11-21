@@ -250,9 +250,9 @@ async function createBriefIllustration(service: ReturnType<typeof createClient>,
   const model = clean(Deno.env.get("CLOUDFLARE_IMAGE_MODEL") || "@cf/black-forest-labs/flux-1-schnell", 120);
   if (!/^@cf\/[a-z0-9._-]+\/[a-z0-9._-]+$/i.test(model)) throw new Error("Modèle Cloudflare invalide");
   const prompt = [
-    "High-quality editorial photograph illustrating this specific world-news headline accurately, without asserting visual facts about real people or events.",
-    "Neutral professional newsroom photography, coherent subjects and scenery, natural light and realistic details. Avoid generic agriculture imagery unless the news is agricultural.",
-    "AfriFloW deep green and warm orange accents. No text, no logos, no branded packaging, no fake data chart, no recognizable real people.",
+    "Professional conceptual editorial illustration directly matching the supplied international-news topic. Do NOT depict a real event or assert a photographed scene.",
+    "For geopolitical/military/diplomatic news, depict abstract diplomacy: a conference table, empty chairs, restrained European blue and amber accents, subtle documentary graphics. NO battle scenes, alleged military activities, weapons, real people or invented flags. For other stories, represent their actual subject rather than agriculture.",
+    "No captions, no typography, no invented insignia, no logos, no fake data charts. Clearly illustrative rather than misleading photojournalism.",
     `News headline: ${clean(title, 160)}. Context: ${clean(description, 650)}`
   ].join("\n").slice(0, 2048);
   const response = await fetch(
@@ -482,6 +482,23 @@ Deno.serve(async (req: Request) => {
   const day = today();
   try {
     const body=await req.json().catch(()=>({}));
+    // Admin-only or cron-protected editorial repair for an existing world-news image.
+    if(body?.action==="regenerate_image") {
+      const id=String(body?.article_id||"");
+      if(!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id))
+        return json({error:"Identifiant invalide"},400);
+      const record=await service.from("afriflow_market_products")
+        .select("id,name,description,category,listing_type,is_active")
+        .eq("id",id).maybeSingle();
+      if(record.error)throw record.error;
+      if(!record.data || record.data.category!=="Actualités mondiales" ||
+        record.data.listing_type!=="announcement" || !record.data.is_active)
+        return json({error:"Article introuvable"},404);
+      const path=await createBriefIllustration(service,day,record.data.name,record.data.description);
+      const update=await service.from("afriflow_market_products").update({original_path:path}).eq("id",id);
+      if(update.error)throw update.error;
+      return json({ok:true,article_id:id,image_updated:true});
+    }
     const slot=String(body?.slot||"");
     if(!slots.includes(slot as NewsSlot))return json({error:"Créneau invalide"},400);
     const result=await publishDailyBrief(service,day,slot as NewsSlot);
