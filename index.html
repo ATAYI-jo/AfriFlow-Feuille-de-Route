@@ -96,8 +96,15 @@
   width:48px!important;min-width:48px!important;height:48px!important;min-height:48px!important;
   padding:0!important;border:0!important;border-radius:0!important;
   background:transparent!important;color:#145c36!important;-webkit-text-fill-color:#145c36!important;
-  box-shadow:none!important;text-shadow:none!important;filter:drop-shadow(0 3px 3px rgba(255,255,255,.8))!important;
+  box-shadow:none!important;text-shadow:none!important;filter:none!important;
+  -webkit-backdrop-filter:none!important;backdrop-filter:none!important;
+  -webkit-appearance:none!important;appearance:none!important;background-image:none!important;
   transform-origin:center;animation:afInstallHover 2.8s ease-in-out infinite!important;
+}
+/* Prevent the generic glass-button styles from drawing a visible tile. */
+#afPwaInstallArea #afPwaInstallBtn::before,
+#afPwaInstallArea #afPwaInstallBtn::after{
+  content:none!important;display:none!important;background:none!important;box-shadow:none!important;
 }
 #afPwaInstallArea #afPwaInstallBtn svg{
   display:block;width:31px!important;height:31px!important;
