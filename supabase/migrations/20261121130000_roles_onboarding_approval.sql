@@ -51,6 +51,14 @@ begin
 end;
 $$;
 
+-- Existing partners already approved through their commercial terms remain approved.
+update public.afriflow_market_profiles mp
+set access_mode='partner_approved'
+from public.afriflow_partner_terms pt
+where pt.partner_user_id=mp.user_id and pt.is_enabled=true
+  and mp.requested_role='partner'
+  and mp.access_mode <> 'partner_approved';
+
 -- Protect shareholder-only journal, collaboration records, internal configuration.
 -- Marketplace product catalog and currency rates remain public through their
 -- distinct policies and keys.
