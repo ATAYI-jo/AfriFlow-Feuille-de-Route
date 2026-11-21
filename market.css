@@ -539,3 +539,22 @@ body.af-market-mode #market-view{display:block}
   #market-view .af-showcase-gifts .af-gift-art{transition:none}
   #market-view .af-showcase-gifts .af-gift-open:hover .af-gift-art{transform:none}
 }
+
+/* Gift card: photographic image supplied by the owner replaces the old SVG drawing. */
+#market-view .af-showcase-gifts .af-gift-photo{
+  display:block;width:100%;height:auto;max-height:none;aspect-ratio:3/2;
+  object-fit:cover;object-position:center;border-radius:14px;
+  box-shadow:0 8px 22px rgba(13,77,45,.16);filter:none;
+  transition:transform .3s ease;
+}
+#market-view .af-showcase-gifts .af-gift-open{
+  min-height:0;justify-content:flex-start;gap:11px;
+}
+@media(max-width:700px){
+  #market-view .af-showcase-gifts .af-gift-photo{
+    width:100%;height:auto;max-height:none;aspect-ratio:3/2;
+  }
+}
+@media(prefers-reduced-motion:reduce){
+  #market-view .af-showcase-gifts .af-gift-photo{transition:none}
+}
