@@ -584,3 +584,19 @@ body.af-market-mode #market-view{display:block}
   #market-view .af-showcase-gifts .af-gift-photo-wrap{aspect-ratio:3/2}
   #market-view .af-showcase-gifts .af-gift-brand{width:36px}
 }
+
+/* Client sign-out: never hide the authenticated logout action on phones.
+   The older <=700px rule hid it unconditionally. */
+@media (max-width:700px) {
+  #market-view .af-market-topline #afMarketSignOut {
+    display:inline-flex !important;
+    grid-column:1 / -1;
+    grid-row:4;
+    justify-self:end;
+    align-self:center;
+    min-height:40px;
+    padding:8px 14px;
+    font-size:.8rem;
+    white-space:nowrap;
+  }
+}
