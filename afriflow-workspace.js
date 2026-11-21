@@ -61,12 +61,24 @@ function ask(title,fields,ok){
 function isAdmin(){return window.USER_ROLE==="admin"}
 // Marketplace : texte, trois icônes, puis répétition en continu.
 // Le libellé accessible reste constant même pendant les rotations.
-var marketplaceCycle=["Marketplace","🛍️","Marketplace","🛒","Marketplace","🏬"],marketplaceStep=0;
+var marketplaceCycle=[
+  {kind:"text"},
+  {kind:"icon",paths:'<rect x="3" y="7" width="18" height="14" rx="2"/><path d="M8 9V6a4 4 0 0 1 8 0v3"/>'},
+  {kind:"text"},
+  {kind:"icon",paths:'<path d="M3 10h18l-2-6H5l-2 6Z"/><path d="M5 10v10h14V10"/><path d="M9 20v-6h6v6"/><path d="M3 10c1.5 2 3.5 2 5 0s3.5 2 4 0 3.5 2 4 0 3.5 2 5 0"/>'},
+  {kind:"text"},
+  {kind:"icon",paths:'<circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/>'}
+],marketplaceStep=0;
 function renderMarketplaceLabel(){
   var b=$("navList")&&$("navList").querySelector('.nv[data-id="market"]');
   if(!b)return;
   var reduced=window.matchMedia&&window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-  b.textContent=reduced?"Marketplace":marketplaceCycle[marketplaceStep%marketplaceCycle.length];
+  var frame=reduced?marketplaceCycle[0]:marketplaceCycle[marketplaceStep%marketplaceCycle.length];
+  if(frame.kind==="text"){
+    b.innerHTML='<span class="af-market-text">Marketplace</span>';
+  }else{
+    b.innerHTML='<span class="af-market-rotator" aria-hidden="true"><svg class="af-market-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.15" stroke-linecap="round" stroke-linejoin="round" focusable="false">'+frame.paths+'</svg></span>';
+  }
   b.setAttribute("aria-label","Marketplace");
   b.setAttribute("title","Marketplace");
 }
