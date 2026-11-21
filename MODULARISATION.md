@@ -49,3 +49,10 @@ Configurer Render pour déployer uniquement après une CI verte, ou gérer le d�
 - Aucun déplacement du contrôle réel des permissions Supabase/RLS : l'autorisation reste à vérifier côté serveur.
 - Le chargement synchrone original a été conservé pour limiter les risques de régression.
 - Tests de présence et de non-duplication ajoutés; aucune fusion automatique.
+
+## Étape 4 — Comptes et documents Dropbox
+- `modules/auth/account-management.js` : comptes, rôles, présence et journal partagé extraits de `index.html`.
+- `modules/documents/dropbox-browser.js` : explorateur Dropbox et injection dans l'interface déplacés.
+- L'ordre de chargement synchrone est inchangé. La logique du code extrait n'a pas été réécrite.
+- Tests de présence, d'ordre et de non-duplication ajoutés.
+- À vérifier avant fusion : connexion, reconnexion, refus des accès non autorisés, pièces jointes et navigation Dropbox sur mobile.
