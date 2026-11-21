@@ -58,6 +58,48 @@ function ask(title,fields,ok){
 }
 
 /* ---------- Navigation ---------- */
+/* Conserver la dernière rubrique dans cet onglet, uniquement pour ce compte. */
+var LAST_VIEW_KEY="afriflow_last_view_v1",viewRestored=false;
+function rememberView(id){
+  if(!window.loggedUserEmail)return;
+  try{sessionStorage.setItem(LAST_VIEW_KEY,JSON.stringify({email:String(window.loggedUserEmail).toLowerCase(),id:id,y:0}))}catch(ignore){}
+}
+function previousView(){
+  try{
+    var v=JSON.parse(sessionStorage.getItem(LAST_VIEW_KEY)||"null");
+    return v&&v.email===String(window.loggedUserEmail||"").toLowerCase()?v:null;
+  }catch(ignore){return null}
+}
+function restorePreviousView(){
+  if(viewRestored||!window.loggedUserEmail)return;
+  viewRestored=true;
+  var saved=previousView();
+  if(!saved||saved.id==="home")return;
+  if(saved.id==="personal"){
+    if(typeof window.AfriOpenPersonal==="function")window.AfriOpenPersonal();
+    return;
+  }
+  var ids=BASE.concat(X.nav,[{id:"messages"},{id:"admin"}]).map(function(x){return x.id});
+  if(ids.indexOf(saved.id)===-1)return;
+  if(saved.id==="admin"&&!isAdmin())return;
+  if(saved.id==="market"&&!window.AfriMarket)return;
+  show(saved.id);
+  if(saved.y>0){
+    [350,1000].forEach(function(ms){setTimeout(function(){
+      var current=previousView();
+      if(current&&current.id===saved.id)window.scrollTo(0,saved.y);
+    },ms)});
+  }
+}
+window.AfriNav={
+  remember:rememberView,
+  clear:function(){try{sessionStorage.removeItem(LAST_VIEW_KEY)}catch(ignore){}},
+  saved:previousView
+};
+window.addEventListener("pagehide",function(){
+  var v=previousView();
+  if(v){v.y=Math.max(0,Math.floor(window.scrollY||0));try{sessionStorage.setItem(LAST_VIEW_KEY,JSON.stringify(v))}catch(ignore){}}
+});
 function isAdmin(){return window.USER_ROLE==="admin"}
 // Marketplace : texte, trois icônes, puis répétition en continu.
 // Le libellé accessible reste constant même pendant les rotations.
@@ -101,8 +143,9 @@ function openNav(){$("side").classList.add("on");$("scrim").classList.add("on");
 function closeNav(){$("side").classList.remove("on");$("scrim").classList.remove("on");$("menuBtn").setAttribute("aria-expanded","false")}
 function show(id){
   wkClean(); cur=id; sel=null; W.tv=null; W.pv=null; W.tvAt=0;
-  if(id==="market"&&window.AfriMarket){window.AfriMarket.open({kind:"workspace",market:{access_mode:"collaborator"}});buildNav();closeNav();return}
+  if(id==="market"&&window.AfriMarket){rememberView("market");window.AfriMarket.open({kind:"workspace",market:{access_mode:"collaborator"}});buildNav();closeNav();return}
   if(id==="admin"&&!isAdmin())cur=id="home";
+  rememberView(id);
   $("view-home").style.display=id==="home"?"":"none";
   $("viewHost").style.display=id==="home"?"none":"";
   if(id==="admin")renAdmin();else if(id==="messages"){if(window.renMsg)window.renMsg()}
@@ -122,7 +165,7 @@ $("side").addEventListener("click",function(e){
   else if(b.dataset.del){ if(isAdmin()&&confirm("Supprimer cet élément du menu et son contenu ?")){ var id=b.dataset.del; X.nav=X.nav.filter(function(n){return n.id!==id}); delete X.pages[id]; save(); if(cur===id)show("home"); else buildNav(); } }
   else if(b.id==="addNav"&&isAdmin()) ask("Nouvel élément du menu",[{id:"n",l:"Nom"}],function(v){ if(!v.n)return "Donnez un nom à l'élément."; X.nav.push({id:"p"+Date.now().toString(36),n:v.n,e:""}); save(); buildNav(); });
 });
-var _lo=window.logout; if(typeof _lo==="function") window.logout=function(m){show("home");_lo(m)};
+var _lo=window.logout; if(typeof _lo==="function") window.logout=function(m){window.AfriNav.clear();show("home");_lo(m)};
 
 /* ---------- Trésorerie ---------- */
 function fd(d){return d?d.split("-").reverse().join("/"):""}
@@ -689,6 +732,6 @@ window.getPages=function(){return BASE.concat(X.nav)};
 window.askDlg=ask;window.toast=toast;
 window.onPending=function(n){AF_PEND=n;buildNav()};
 
-window.onRole=function(){buildNav();if(cur!=="home")show(cur)};
+window.onRole=function(){buildNav();if(!viewRestored)restorePreviousView();else if(cur!=="home")show(cur)};
 buildNav();
 })();
