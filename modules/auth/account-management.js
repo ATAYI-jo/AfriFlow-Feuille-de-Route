@@ -44,15 +44,19 @@ async function ensureMemberProfile(us){
 async function finish(us,intent){
   var email=String(us.email).toLowerCase(),isA=false;
   try{var a=await SB().rpc("af_is_admin");isA=a.data===true}catch(e){}
-  var u=await getRow(ukey(email));
-  if(!u){
-    u={email:email,name:nameOf(us),grants:[],created:iso()};
-    var ins=await SB().from(TB()).insert({key:ukey(email),value:u,updated_at:iso()});
-    if(ins.error&&ins.error.code!=="23505")throw ins.error;
+  var market=await ensureMarketProfile(us,intent);
+  var allowed=isA||market.access_mode==="shareholder_approved";
+  var u={email:email,name:nameOf(us),grants:[]};
+  if(allowed){
+    var stored=await getRow(ukey(email));
+    if(stored)u=stored;
+    else{
+      var ins=await SB().from(TB()).insert({key:ukey(email),value:u,updated_at:iso()});
+      if(ins.error&&ins.error.code!=="23505")throw ins.error;
+    }
   }
   ensureMemberProfile(us);
-  var market=await ensureMarketProfile(us,intent);
-  var g=isA?["all"]:(u.grants||[]);
+  var g=isA?["all"]:(allowed?(u.grants||[]):[]);
   return {ok:true,email:email,name:isA?"Administrateur":(u.name||nameOf(us)),grants:g,role:isA?"admin":(g.length?"editor":"reader"),market:market};
 }
 function readMarketIntent(){
