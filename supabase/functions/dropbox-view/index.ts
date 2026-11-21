@@ -106,6 +106,12 @@ Deno.serve(async (req) => {
     );
     const { data: auth } = await supabase.auth.getUser();
     if (!auth.user) return json({ error: "Connexion requise" }, 401);
+    const { data: administrator, error: adminError } = await supabase.rpc("af_is_admin");
+    const { data: profile, error: profileError } = await supabase
+      .from("afriflow_market_profiles").select("access_mode").eq("user_id", auth.user.id).maybeSingle();
+    if (adminError || profileError) return json({ error: "Vérification des accès indisponible" }, 503);
+    if (administrator !== true && profile?.access_mode !== "shareholder_approved")
+      return json({ error: "Documents réservés aux actionnaires approuvés" }, 403);
 
     const { data: body } = await req.json().then((value) => ({ data: value })).catch(() => ({ data: {} }));
     const action = String(body?.action ?? "").toLowerCase();
@@ -118,8 +124,7 @@ Deno.serve(async (req) => {
 
     const published: PublishedFile[] = Array.isArray(register?.value?.items) ? register.value.items : [];
     const publishedFilePaths = publishedPaths(published);
-    const { data: admin } = await supabase.rpc("af_is_admin");
-    const isAdmin = admin === true;
+    const isAdmin = administrator === true;
     const canRead = (path: string) => {
       const wanted = safePath(path).toLowerCase();
       return isAdmin || publishedFilePaths.some((publishedPath) => publishedPath.toLowerCase() === wanted);
