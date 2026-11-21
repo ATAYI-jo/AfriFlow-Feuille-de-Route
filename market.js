@@ -101,7 +101,7 @@
   function clearHero() { if (state.heroTimer) { clearInterval(state.heroTimer); state.heroTimer = null; } }
   function open(context) {
     state.context = context || { kind: "public" }; loadShop(); state.currency.code = preferredCurrency(); hideWorkspace(); render(); loadCurrencyRates();
-    if (roleMode(state.context.market) === "partner_waiting") { loadPartnerPortal(); return; }
+    if (roleMode(state.context.market) === "partner_waiting") { loadPartnerPortal(); loadCatalog(); return; }
     loadHero(); loadCatalog();
   }
   function openPublic() { open({ kind: "public", market: { access_mode: "public" } }); }
@@ -499,7 +499,7 @@
     var root = el("market-view"); if (!root) return;
     clearHero();
     var mode = roleMode(state.context.market);
-    root.innerHTML = top() + '<main class="af-market-main">' + (mode === "partner_waiting" ? partnerContent() : mode === "shareholder_pending" ? shareholderWaitContent() : catalogContent()) + "</main>";
+    root.innerHTML = top() + '<main class="af-market-main">' + (mode === "partner_waiting" ? partnerContent() + announcementsHtml() : mode === "shareholder_pending" ? shareholderWaitContent() + announcementsHtml() : catalogContent()) + "</main>";
     bind(); startHero();
   }
   function startHero() {
