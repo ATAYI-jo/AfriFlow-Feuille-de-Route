@@ -1,4 +1,3 @@
-/* Module extracted from index.html; synchronous load order intentionally preserved. */
 
 (function(){
 "use strict";
