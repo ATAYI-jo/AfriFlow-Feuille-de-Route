@@ -29,7 +29,7 @@ Deno.serve(async(req:Request)=>{
   if(!admin&&!["collaborator","shareholder_approved"].includes(profile?.access_mode||""))
     return reply(req,{error:"Cette réunion est réservée aux membres autorisés"},403);
   const invitees=Array.isArray(m.invitees)?m.invitees.map((v:unknown)=>String(v).trim().toLowerCase()):null;
-  if(invitees&&invitees.length&&!invitees.includes(email)&&!admin)
+  if(invitees&&!invitees.includes(email)&&!admin)
     return reply(req,{error:"Vous ne faites pas partie des personnes invitées"},403);
   const start=Number(m.start),end=start+Number(m.dur)*60000;
   if(!Number.isFinite(start)||!Number.isFinite(end)||now<start-15*60000||now>end)
