@@ -68,11 +68,13 @@ async function ensureMarketProfile(us,intent){
   if(!us||!us.id)throw new Error("Session utilisateur invalide");
   var selected=/^(client|shareholder|partner)$/.test(intent||"")?intent:null;
   try{
-    var existing=await SB().from("afriflow_market_profiles").select("user_id,requested_role,access_mode").eq("user_id",us.id).maybeSingle();
+    var existing=await SB().from("afriflow_market_profiles").select("user_id,requested_role,access_mode,selection_confirmed_at").eq("user_id",us.id).maybeSingle();
     if(existing.error)throw existing.error;
     if(existing.data){
-      /* Le rôle est choisi une seule fois à la création du compte. Une connexion
-         ultérieure — y compris OAuth — ne doit jamais modifier cet accès. */
+      // The former OAuth flow silently created Client profiles. Prompt once for
+      // these unconfirmed rows without granting partner/shareholder permissions.
+      if(existing.data.access_mode==="client" && !existing.data.selection_confirmed_at)
+        return {access_mode:"onboarding_required",legacy_client:true};
       return existing.data;
     }
     if(!selected)return {access_mode:"onboarding_required"};
@@ -91,9 +93,14 @@ AFRI.promptRoleChoice=async function(){
   var response=await SB().auth.getUser(),user=response.data&&response.data.user;
   if(response.error||!user)return false;
   var current=await SB().from("afriflow_market_profiles")
-    .select("requested_role,access_mode").eq("user_id",user.id).maybeSingle();
+    .select("requested_role,access_mode,selection_confirmed_at").eq("user_id",user.id).maybeSingle();
   if(current.error)throw current.error;
-  if(current.data){var existing=await finish(user);enterApp(existing.email,existing.role,existing.name,existing.grants,existing.market);return true;}
+  var unconfirmedClient=Boolean(current.data && current.data.access_mode==="client" && !current.data.selection_confirmed_at);
+  if(current.data && !unconfirmedClient){
+    var existing=await finish(user);
+    enterApp(existing.email,existing.role,existing.name,existing.grants,existing.market);
+    return true;
+  }
   var overlay=document.getElementById("afRoleChooser");
   if(!overlay){
     overlay=document.createElement("div");overlay.id="afRoleChooser";overlay.setAttribute("role","dialog");
@@ -115,7 +122,17 @@ AFRI.promptRoleChoice=async function(){
         var msg=document.getElementById("afRoleMessage");
         overlay.querySelectorAll("button").forEach(function(b){b.disabled=true});
         try{
-          var data=await ensureMarketProfile(user,button.dataset.afRole);
+          var data;
+          if(unconfirmedClient){
+            var saved=await SB().from("afriflow_market_profiles")
+              .update({requested_role:button.dataset.afRole,selection_confirmed_at:new Date().toISOString()})
+              .eq("user_id",user.id).is("selection_confirmed_at",null)
+              .select("requested_role,access_mode,selection_confirmed_at").single();
+            if(saved.error)throw saved.error;
+            data=saved.data;
+          }else{
+            data=await ensureMarketProfile(user,button.dataset.afRole);
+          }
           if(!data||data.access_mode==="onboarding_required")throw new Error("Profil non enregistré");
           overlay.remove();
           var info=await finish(user);
