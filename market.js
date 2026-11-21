@@ -597,10 +597,11 @@
     var giftCard = '<article class="af-showcase-card af-showcase-gifts">' +
       '<h3>' + icon("sparkle") + ' Cadeaux</h3>' +
       '<button type="button" class="af-gift-open" data-showcase-gifts aria-label="Découvrir le contenu des cadeaux">' +
-        '<img class="af-gift-art af-gift-photo" src="./afriflow-cadeaux-photo.svg" alt="Trois paquets cadeaux vert menthe aux rubans dorés avec logo AfriFloW" loading="lazy" decoding="async">' +
+        '<span class="af-gift-photo-wrap"><img class="af-gift-art af-gift-photo" src="https://images.pexels.com/photos/31496295/pexels-photo-31496295/free-photo-of-elegant-gift-box-with-green-and-gold-ribbons.jpeg?auto=compress&amp;dpr=1&amp;h=750&amp;w=1260" alt="Photographie d’un paquet cadeau vert aux rubans dorés" loading="lazy" decoding="async"><span class="af-gift-brand" aria-hidden="true"><img src="logo.png" alt=""></span></span>' +
         '<span class="af-gift-open-label">Voir ce que contient la sélection ' + icon("back") + '</span>' +
       '</button>' +
       '<p>Découvrez des produits d’Afrique pour composer un cadeau.</p>' +
+      '<small class="af-gift-photo-credit">Photo : <a href="https://www.pexels.com/photo/elegant-gift-box-with-green-and-gold-ribbons-31496295/" target="_blank" rel="noopener noreferrer">Grzegorz Lewandowski / Pexels</a></small>' +
       '</article>';
     var photos = [
       { file:"Market Scene in Ghana.jpg", place:"Marché d’Accra, Ghana", author:"Fquasie", license:"CC BY-SA 4.0" },
