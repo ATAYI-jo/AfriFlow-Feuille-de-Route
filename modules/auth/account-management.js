@@ -170,6 +170,7 @@ AFRI.resume=async function(){
     if(!session.data||!session.data.session)return false;
     var verified=await SB().auth.getUser();
     var us=verified.data&&verified.data.user;
+    if(verified.error&&(/fetch|network|timeout|failed to fetch/i.test(verified.error.message||"")))return false;
     if(verified.error||!us||!us.id||!us.email){
       await SB().auth.signOut({scope:"local"});
       try{localStorage.removeItem("afriflow_session_v1")}catch(ignore){}
