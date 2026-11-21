@@ -50,3 +50,10 @@ Les tests statiques sont nécessaires, mais **ne démontrent pas** l'absence de 
 - Sert la branche localement sans identifiants et contrôle le chargement des scripts locaux, les points d'entrée et la structure de démarrage anonyme.
 - Le test de navigateur ne remplace pas la validation des parcours connectés Supabase/Dropbox, ni un audit Lighthouse avec mesures LCP/INP/CLS.
 - Lancer ce contrôle avec les tests statiques avant toute fusion, et corriger les échecs relevés.
+
+## Premier chargement à la demande — Éditeur Word
+- `index.html` charge désormais le petit adaptateur `modules/documents/word-editor-loader.js` au lieu de `word-editor.js`.
+- L'adaptateur publie `window.dvWordEdit`, `window.dvPerm` et `window.dvTogglePerm` dès le chargement afin de préserver les appels existants.
+- `word-editor.js` est chargé une seule fois lors du premier appel. En cas d'échec, `dvPerm` répond `false` (ne jamais autoriser par défaut).
+- Un test navigateur vérifie l'absence du script métier au démarrage et son injection à la première sollicitation.
+- Le parcours connecté de modification Word et les permissions réelles nécessitent encore un test manuel avec un compte de test.
