@@ -290,6 +290,12 @@ window.ic=function(n,s){return '<svg class="ic"'+(s?' style="width:'+s+';height:
     event.preventDefault();event.stopImmediatePropagation();
     if(toggle){
       var menu=get("side");setOpen(!menu||!menu.classList.contains("on"));
+    }else if(target.closest("#sideClose")){
+      // The header Home icon returns to Accueil, not merely closes the drawer.
+      var home=get("navList")&&get("navList").querySelector('.nv[data-id="home"]');
+      if(home)home.click();
+      else if(window.location.pathname!=="/")window.location.assign("/");
+      setOpen(false);
     }else setOpen(false);
   },true);
   document.addEventListener("keydown",function(e){
@@ -298,7 +304,7 @@ window.ic=function(n,s){return '<svg class="ic"'+(s?' style="width:'+s+';height:
 })();
 </script>
 <nav id="side" aria-label="Menu principal">
-  <div class="side-h"><button type="button" id="profileOpen" class="side-profile" aria-label="Ouvrir mon profil"><span id="sideAvatar"><svg class="ic" aria-hidden="true"><use href="#i-user"/></svg></span></button><b id="sideGreeting">Hey</b><button type="button" id="sideClose" aria-label="Fermer le menu"><svg class="ic" aria-hidden="true"><use href="#i-close"/></svg></button></div>
+  <div class="side-h"><button type="button" id="profileOpen" class="side-profile" aria-label="Ouvrir mon profil"><span id="sideAvatar"><svg class="ic" aria-hidden="true"><use href="#i-user"/></svg></span></button><b id="sideGreeting">Hey</b><button type="button" id="sideClose" aria-label="Retourner à l’accueil" title="Accueil"><svg class="ic" aria-hidden="true"><use href="#i-home"/></svg></button></div>
   <div id="navList"></div>
   <div id="admBox"></div>
 </nav>
@@ -2031,6 +2037,12 @@ if(window.__sb&&window.__sb.functions){
 .nvr{margin-bottom:2px!important;gap:2px!important}
 .nv{padding:9px 16px!important;font-size:.95rem}
 .nx{padding:4px 8px!important}
+/* Barre latérale : lignes compactes, Marketplace garde son espacement visuel. */
+#side #navList .nvr{margin-bottom:0!important;gap:4px!important}
+#side #navList .nv:not([data-id="market"]){padding:6px 14px!important;min-height:38px;line-height:22px;box-sizing:border-box}
+#side #navList .nvr:has(.nv[data-id="market"]){margin-bottom:12px!important}
+#side #sideClose{display:inline-flex;align-items:center;justify-content:center;min-width:44px;min-height:44px}
+#side #sideClose .ic{width:22px;height:22px}
 
 /* Accueil : logo seul, en cercle, grand et centré */
 .brand{justify-content:center!important;padding:30px 20px!important}
