@@ -1,7 +1,7 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 
 const projectUrl = "https://jgvwdpzevghfavmpjbqp.supabase.co";
-const topic = "Veille agroalimentaire";
+const topic = "Actualités mondiales";
 function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), { status, headers: { "Content-Type": "application/json", "Cache-Control": "no-store" } });
 }
@@ -70,7 +70,7 @@ function stripHtml(value: string) {
 
 async function googleNewsArticles() {
   const url = new URL("https://news.google.com/rss/search");
-  url.searchParams.set("q", 'agroalimentaire OR agriculture OR "sécurité alimentaire"');
+  url.searchParams.set("q", 'actualités internationales économie diplomatie technologie climat');
   url.searchParams.set("hl", "fr");
   url.searchParams.set("gl", "FR");
   url.searchParams.set("ceid", "FR:fr");
@@ -136,7 +136,7 @@ function stableAgroReference() {
 async function writeBrief(apiKey: string, sources: Array<{ title: string; url: string; domain: string; date: string }>) {
   const model = clean(Deno.env.get("GEMINI_AGRO_MODEL") || "gemini-3.8-flash", 80);
   const prompt = [
-    "Tu es le rédacteur de veille d’AfriFloW. Rédige en français un bref bulletin factuel pour des actionnaires, basé EXCLUSIVEMENT sur les titres et métadonnées ci-dessous.",
+    "Tu es le rédacteur des actualités mondiales d’AfriFloW. Rédige un bulletin factuel, neutre et entièrement en français pour tous les membres, basé EXCLUSIVEMENT sur le titre principal et les métadonnées ci-dessous.",
     "Ne prétends jamais avoir lu les articles. Ne donne ni conseil financier, ni prix, ni chiffre qui n’est pas fourni. Si les sources sont insuffisantes, réponds avec un titre prudent et une synthèse qui le dit.",
     "Réponds strictement en JSON valide : {\"title\":\"...\",\"description\":\"...\"}. title: 45 à 140 caractères. description: 350 à 1200 caractères, une synthèse claire qui cite les domaines sources entre parenthèses.",
     JSON.stringify(sources)
@@ -160,10 +160,10 @@ async function writeBrief(apiKey: string, sources: Array<{ title: string; url: s
 }
 
 function sourceBrief(sources: Array<{ title: string; url: string; domain: string; date: string }>) {
-  const domains = [...new Set(sources.map((source) => source.domain).filter(Boolean))].slice(0, 4).join(", ");
+  const source = sources[0];
   return {
-    title: "Veille agroalimentaire : les dernières informations des organismes spécialisés",
-    description: clean("AfriFloW présente une sélection d'actualités récentes relatives à l'agriculture, à l'alimentation et à la sécurité alimentaire. Les liens vers les publications originales sont disponibles au bas de cette annonce pour consulter directement leur contenu. Cette sélection est établie à partir des titres et métadonnées disponibles ; elle ne constitue pas une analyse complète des articles. Sources répertoriées : " + (domains || "organismes spécialisés") + ".", 4000)
+    title: "Actualité mondiale : information à consulter auprès de la source",
+    description: clean("Une nouvelle information internationale a été publiée par " + (source?.domain || "une source d’actualité") + ". AfriFloW propose de consulter directement l’article original pour connaître les faits et leur contexte. La rédaction automatique de la synthèse n’a pas abouti ; aucun contenu non vérifié n’a été ajouté.",4000)
   };
 }
 
@@ -174,7 +174,7 @@ async function frenchBriefFallback(sources: Array<{ title: string; url: string; 
   try {
     const model = "@cf/meta/llama-3.1-8b-instruct";
     const prompt = [
-      "Réécris en français naturel et intégralement français un titre (max 160 caractères) et un bref texte (max 1000 caractères) de veille économique et agroalimentaire pour AfriFloW.",
+      "Rédige en français un titre (max 160 caractères) et une brève synthèse (max 1000 caractères) de cette actualité internationale pour AfriFloW.",
       "Utilise STRICTEMENT les titres et métadonnées de la liste. Tu ne connais pas le contenu des articles. Ne crée aucun chiffre, fait, citation ou événement non mentionné. Traduis les titres anglais en français. Ne donne pas de conseil financier.",
       "Réponds uniquement avec un objet JSON valide ayant les deux propriétés title et description. N'inclus aucun Markdown.",
       JSON.stringify(sources.slice(0, 5))
@@ -313,30 +313,85 @@ async function attachBriefIllustration(service: ReturnType<typeof createClient>,
   }
 }
 
-async function publishDailyBrief(service: ReturnType<typeof createClient>, day: string) {
-    await service.from("afriflow_market_products").update({ is_active: false }).eq("listing_type", "announcement").eq("audience", "shareholders").lt("expires_at", new Date().toISOString());
-    const existing = await service.from("afriflow_market_products").select("id,name,description,original_path,news_sources,expires_at").eq("listing_type", "announcement").eq("audience", "shareholders").eq("promotion_label", `Brief IA · ${day}`).maybeSingle();
-    if (existing.error) throw existing.error;
-    if (existing.data) {
-      if (!existing.data.original_path) await attachBriefIllustration(service, existing.data.id, day, existing.data.name, existing.data.description || "", existing.data.news_sources || []);
-      return { skipped: true, brief: existing.data };
-    }
-    const apiKey = Deno.env.get("GEMINI_API_KEY") || "";
-    if (!apiKey) throw new Error("GEMINI_API_KEY doit être configurée côté serveur avant la publication automatique.");
-    const liveSources = await recentArticles();
-    const sources = liveSources.length ? liveSources : stableAgroReference();
-    let brief: { title: string; description: string };
-    try { brief = await writeBrief(apiKey, sources); }
-    catch (error) { console.error("afriflow-agro-brief writing", error instanceof Error ? error.message : "error"); brief = await frenchBriefFallback(sources); }
-    const inserted = await service.from("afriflow_market_products").insert({
-      name: brief.title, description: brief.description, category: topic, listing_type: "announcement", price: null, currency: "XOF", original_path: null,
-      is_active: true, is_in_stock: false, audience: "shareholders", expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
-      promotion_label: `Brief IA · ${day}`, news_sources: sources
-    }).select("id,name,expires_at").single();
-    if (inserted.error) throw inserted.error;
-    /* The daily article remains available even if both visual sources fail. */
-    await attachBriefIllustration(service, inserted.data.id, day, brief.title, brief.description, sources);
-  return { brief: inserted.data, sourceCount: sources.length };
+/* Three global-news slots per UTC day. One item per slot, with a stable
+   unique label; concurrent retries can never create duplicate editions. */
+const slots = ["morning","afternoon","evening"] as const;
+type NewsSlot = typeof slots[number];
+const queries: Record<NewsSlot,string> = {
+  morning: "(international OR monde) (diplomatie OR économie OR géopolitique)",
+  afternoon: "(monde OR international) (technologie OR climat OR santé OR science)",
+  evening: "(international OR monde) (commerce OR transports OR énergie OR Afrique)"
+};
+function relevantToAfriFlow(title:string) {
+  const text = title.toLocaleLowerCase("fr");
+  return /afrique|africain|togo|bénin|burkina|c[eé]d[eé]ao|commerce|export|import|douane|logist|transport|portuaire|fret|agric|alimentaire|approvisionnement|cha[iî]ne d.approvisionnement|cajou|mangue|march[eé] mondial|inflation|taux de change|investissement|entreprise|pme/.test(text);
+}
+async function worldArticles(slot: NewsSlot) {
+  const url = new URL("https://news.google.com/rss/search");
+  url.searchParams.set("q",queries[slot]+" when:2d");
+  url.searchParams.set("hl","fr");url.searchParams.set("gl","FR");url.searchParams.set("ceid","FR:fr");
+  const response=await fetch(url,{signal:AbortSignal.timeout(9000),headers:{"User-Agent":"AfriFloW-world-news/1.0"}});
+  if(!response.ok) throw new Error("Fil d’actualités indisponible");
+  const xml=await response.text();
+  const items=xml.match(/<item>[\s\S]*?<\/item>/g)||[];
+  const result=items.map((item)=>{
+    const t=item.match(/<title><!\[CDATA\[([\s\S]*?)\]\]><\/title>|<title>([\s\S]*?)<\/title>/);
+    return {title:stripHtml(t?.[1]||t?.[2]||""),
+      url:clean(item.match(/<link>([\s\S]*?)<\/link>/)?.[1],1500),
+      domain:stripHtml(item.match(/<source[^>]*>([\s\S]*?)<\/source>/)?.[1]||"Presse"),
+      date:clean(item.match(/<pubDate>([\s\S]*?)<\/pubDate>/)?.[1],60)};
+  });
+  const seen=new Set<string>();
+  return result.filter(a=>{
+    if(!a.title||!/^https:\/\//.test(a.url)||seen.has(a.url))return false;
+    const date=Date.parse(a.date);
+    if(!Number.isFinite(date)||Date.now()-date>48*60*60*1000||date>Date.now()+15*60*1000)return false;
+    seen.add(a.url);return true;
+  }).slice(0,18);
+}
+async function publishDailyBrief(service: ReturnType<typeof createClient>, day:string, slot:NewsSlot) {
+  await service.from("afriflow_market_products").update({is_active:false})
+    .eq("listing_type","announcement").in("category",["Veille agroalimentaire","Actualités mondiales"])
+    .lt("expires_at",new Date().toISOString());
+  const label=`Brief IA · ${day} · ${slot}`;
+  const existing=await service.from("afriflow_market_products")
+    .select("id,name,original_path").eq("listing_type","announcement")
+    .eq("category","Actualités mondiales").eq("promotion_label",label).maybeSingle();
+  if(existing.error)throw existing.error;
+  if(existing.data)return {skipped:true,brief:existing.data};
+  const candidates=await worldArticles(slot);
+  if(!candidates.length)throw new Error("Aucune information récente et sourcée : publication suspendue");
+  const recent=await service.from("afriflow_market_products").select("news_sources")
+    .eq("listing_type","announcement").in("category",["Veille agroalimentaire","Actualités mondiales"])
+    .gte("created_at",new Date(Date.now()-3*24*60*60*1000).toISOString()).limit(100);
+  if(recent.error)throw recent.error;
+  const already=new Set<string>();
+  for(const item of recent.data||[]) {
+    const raw=item.news_sources;
+    const sources=Array.isArray(raw)?raw:Array.isArray(raw?.articles)?raw.articles:[];
+    if(sources[0]?.url)already.add(String(sources[0].url));
+  }
+  const lead=candidates.find(a=>!already.has(a.url));
+  if(!lead)throw new Error("Aucun nouvel article distinct : pas de doublon publié");
+  const sources=[lead,...candidates.filter(a=>a.url!==lead.url).slice(0,3)];
+  let brief:{title:string;description:string};
+  const apiKey=Deno.env.get("GEMINI_API_KEY")||"";
+  try { if(!apiKey)throw new Error("Rédaction Gemini indisponible"); brief=await writeBrief(apiKey,sources); }
+  catch(error) { console.error("afriflow-world-news writing",error instanceof Error?error.message:"error");brief=await frenchBriefFallback(sources); }
+  const isRelevant=relevantToAfriFlow(lead.title);
+  const inserted=await service.from("afriflow_market_products").insert({
+    name:brief.title,description:brief.description,category:topic,
+    listing_type:"announcement",price:null,currency:"XOF",original_path:null,
+    is_active:true,is_in_stock:false,audience:"shareholders",news_relevance:isRelevant,
+    expires_at:new Date(Date.now()+7*24*60*60*1000).toISOString(),
+    promotion_label:label,news_sources:sources
+  }).select("id,name,expires_at").single();
+  if(inserted.error) {
+    if(inserted.error.code==="23505")return {skipped:true};
+    throw inserted.error;
+  }
+  await attachBriefIllustration(service,inserted.data.id,day,brief.title,brief.description,sources);
+  return {brief:inserted.data,sourceCount:sources.length,relevant:isRelevant,slot};
 }
 
 Deno.serve(async (req: Request) => {
@@ -348,7 +403,10 @@ Deno.serve(async (req: Request) => {
   if (!actor) return json({ error: "Accès non autorisé" }, 401);
   const day = today();
   try {
-    const result = await publishDailyBrief(service, day);
+    const body=await req.json().catch(()=>({}));
+    const slot=String(body?.slot||"");
+    if(!slots.includes(slot as NewsSlot))return json({error:"Créneau invalide"},400);
+    const result=await publishDailyBrief(service,day,slot as NewsSlot);
     return json({ ok: true, result, message: result.skipped ? "Le bulletin du jour existe déjà." : "Bulletin du jour publié." });
   } catch (error) {
     console.error("afriflow-agro-brief", error instanceof Error ? error.message : "error");
