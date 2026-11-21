@@ -42,3 +42,10 @@ Configurer Render pour déployer uniquement après une CI verte, ou gérer le d�
 - Tests structurels renforcés pour vérifier ces trois points d'entrée et empêcher leur duplication.
 - Le Market reste dans `market.js` : aucune modification à ce stade.
 - **Validation restante** : CI GitHub Actions verte, tests fonctionnels dans un navigateur, contrôle du chargement des fichiers JavaScript et du parcours authentification/documents/messagerie.
+
+## Étape 3 — Modules supplémentaires
+- `modules/documents/word-editor.js` : éditeur Word séparé du HTML.
+- `modules/admin/access-controls.js` : personnalisation de la connexion et contrôles d'accès d'interface extraits.
+- Aucun déplacement du contrôle réel des permissions Supabase/RLS : l'autorisation reste à vérifier côté serveur.
+- Le chargement synchrone original a été conservé pour limiter les risques de régression.
+- Tests de présence et de non-duplication ajoutés; aucune fusion automatique.
