@@ -185,6 +185,9 @@
       slide.classList.add("has-image");
     });
     document.querySelectorAll('[data-market-image="' + id + '"]').forEach(function (box) {
+      if (box.classList.contains("af-showcase-picture")) {
+        box.style.setProperty("--showcase-bg", 'url("' + String(url).replace(/"/g,"%22") + '")');
+      }
       var cur = box.querySelector("img.af-photo");
       if (cur) { cur.onload = function () { fitMedia(box, cur); }; if (cur.getAttribute("src") !== url) cur.src = url; else fitMedia(box, cur); return; }
       var im = new Image(); im.className = "af-photo"; im.alt = box.dataset.alt || "Produit AfriFloW"; im.src = url;
@@ -532,6 +535,41 @@
       (state.imgs[product.id] ? '<img class="af-photo" src="' + esc(state.imgs[product.id]) + '" alt="" loading="lazy">' :
        '<img class="af-showcase-placeholder" src="logo.png" alt="" aria-hidden="true">') + '</span>';
   }
+  function openGiftSelection() {
+    var eligible = state.products.filter(function (p) {
+      return p && !isAnnouncement(p) && p.is_active !== false && inStock(p);
+    });
+    var giftPackages = eligible.filter(function (p) { return /coffret|cadeau|assortiment|box/i.test(p.name || ""); });
+    var items = (giftPackages.length ? giftPackages : eligible).slice(0, 4);
+    var actualPack = giftPackages.length > 0;
+    var title = actualPack ? 'Cadeaux disponibles chez AfriFloW' : 'Composez votre cadeau AfriFloW';
+    var intro = actualPack
+      ? 'Découvrez les coffrets et cadeaux proposés dans notre catalogue. Consultez chaque fiche pour connaître sa composition exacte.'
+      : 'Voici des produits actuellement proposés par AfriFloW qui peuvent composer un cadeau. Il ne s’agit pas de coffrets préassemblés ni de cadeaux offerts.';
+    var cards = items.length ? items.map(function (p) {
+      return '<article class="af-gift-content-product">' +
+        '<div class="af-gift-content-photo" data-market-image="' + esc(p.id) + '" data-alt="' + esc(p.name) + '">' +
+        (state.imgs[p.id] ? '<img class="af-photo" src="' + esc(state.imgs[p.id]) + '" alt="" loading="lazy">' :
+          '<img class="af-showcase-placeholder" src="logo.png" alt="" aria-hidden="true">') + '</div>' +
+        '<div class="af-gift-content-copy"><h4>' + esc(p.name) + '</h4><p>' + esc(formatPrice(p.price,p.currency)) +
+        '</p><button type="button" class="af-market-secondary" data-gift-product="' + esc(p.id) + '">Voir le contenu et les détails</button></div></article>';
+    }).join("") : '<p>Aucun cadeau n’est disponible actuellement. Revenez consulter nos nouveautés.</p>';
+    var layer = modal('<button type="button" class="af-modal-x" aria-label="Fermer">×</button>' +
+      '<div class="af-gift-dialog"><div class="af-gift-dialog-header"><span class="af-showcase-eyebrow">Cadeaux AfriFloW</span>' +
+      '<h2>' + esc(title) + '</h2><p>' + esc(intro) + '</p></div>' +
+      '<div class="af-gift-content-grid">' + cards + '</div></div>');
+    layer.querySelector(".af-modal-x").onclick = closeModal;
+    layer.querySelectorAll("[data-gift-product]").forEach(function (button) {
+      button.onclick = function () {
+        var product = productById(button.dataset.giftProduct);
+        if (product) openDetail(product);
+      };
+    });
+    items.forEach(function (p) {
+      if (state.imgs[p.id]) return;
+      resolveImage(p,0).then(function (url) { if (url && el("afModal")) applyImage(p.id,url); });
+    });
+  }
   function marketShowcaseHtml() {
     var offers = state.products.filter(function (item) { return !isAnnouncement(item) && item.is_active !== false; });
     var featured = offers.filter(inStock);
@@ -557,11 +595,27 @@
       showcasePhoto(second) +
       (second ? '<button type="button" data-market-detail="' + esc(second.id) + '" class="af-showcase-text-link">Voir le produit ' + icon("back") + '</button>' : '<span>À découvrir</span>') + '</article>';
     var giftCard = '<article class="af-showcase-card af-showcase-gifts">' +
-      '<span class="af-showcase-eyebrow">' + icon("sparkle") + ' Idées cadeaux</span>' +
-      '<h3>' + (gift ? esc(gift.name) : "Des découvertes à offrir") + '</h3>' +
-      showcasePhoto(gift) +
-      '<p>Inspirations gourmandes et découvertes africaines</p>' +
-      (gift ? '<button type="button" data-market-detail="' + esc(gift.id) + '" class="af-showcase-text-link">Découvrir ' + icon("back") + '</button>' : '') + '</article>';
+      '<span class="af-showcase-eyebrow">' + icon("sparkle") + ' Cadeaux</span>' +
+      '<h3>Cadeaux AfriFloW</h3>' +
+      '<button type="button" class="af-gift-open" data-showcase-gifts aria-label="Découvrir le contenu des cadeaux">' +
+        '<svg class="af-gift-art" viewBox="0 0 360 230" role="img" aria-label="Trois paquets cadeaux avec rubans dorés et verts">' +
+          '<defs><linearGradient id="afGiftRed" x1="0" x2="1"><stop stop-color="#ef713e"/><stop offset="1" stop-color="#b73f32"/></linearGradient>' +
+          '<linearGradient id="afGiftGreen" x1="0" x2="1"><stop stop-color="#1eaa71"/><stop offset="1" stop-color="#086b50"/></linearGradient>' +
+          '<linearGradient id="afGiftGold" x1="0" x2="1"><stop stop-color="#ffe8a0"/><stop offset=".5" stop-color="#efbd51"/><stop offset="1" stop-color="#cc8b25"/></linearGradient></defs>' +
+          '<ellipse cx="180" cy="213" rx="149" ry="11" fill="#17482d" opacity=".14"/>' +
+          '<g transform="translate(5 35) rotate(-7 76 126)"><rect x="26" y="101" width="118" height="100" rx="9" fill="url(#afGiftRed)"/>' +
+          '<rect x="18" y="88" width="134" height="29" rx="7" fill="#ef8c54"/><path d="M69 88V201" stroke="#ffe3a0" stroke-width="20"/>' +
+          '<path d="M18 100H152" stroke="#ffe3a0" stroke-width="12"/><path d="M82 85C17 87 47 40 76 65L82 85C95 30 141 49 82 85Z" fill="none" stroke="#ffe3a0" stroke-width="12" stroke-linejoin="round"/></g>' +
+          '<g transform="translate(128 -3)"><rect x="20" y="65" width="160" height="141" rx="11" fill="url(#afGiftGreen)"/>' +
+          '<rect x="9" y="51" width="182" height="32" rx="8" fill="#29bc80"/><path d="M99 53V206" stroke="url(#afGiftGold)" stroke-width="25"/>' +
+          '<path d="M9 65H191" stroke="#f4cc72" stroke-width="13"/><path d="M99 50C26 49 65 -12 96 30C119 -25 166 16 99 50Z" fill="none" stroke="#f4cc72" stroke-width="16" stroke-linejoin="round"/></g>' +
+          '<g transform="translate(258 92) rotate(9 42 65)"><rect x="4" y="33" width="87" height="82" rx="7" fill="#efa34f"/>' +
+          '<rect x="-1" y="24" width="97" height="25" rx="6" fill="#ffbf65"/><path d="M47 26V115" stroke="#ed5548" stroke-width="16"/>' +
+          '<path d="M0 37H94" stroke="#ed5548" stroke-width="11"/><path d="M46 22C1 18 25 -14 46 8C65 -14 92 13 46 22Z" fill="none" stroke="#ed5548" stroke-width="11"/></g></svg>' +
+        '<span class="af-gift-open-label">Voir ce que contient la sélection ' + icon("back") + '</span>' +
+      '</button>' +
+      '<p>Découvrez des produits d’Afrique pour composer un cadeau.</p>' +
+      '</article>';
     var photos = [
       { file:"Market Scene in Ghana.jpg", place:"Marché d’Accra, Ghana", author:"Fquasie", license:"CC BY-SA 4.0" },
       { file:"View of Mt. Kilimanjaro at a distance.jpg", place:"Kilimandjaro, Tanzanie", author:"Tish Madesh", license:"CC0 1.0" },
@@ -669,6 +723,13 @@
     });
     document.querySelectorAll("[data-market-scroll]").forEach(function (button) {
       button.onclick = function () { scrollMarketTo("afProductsTop"); };
+    });
+    document.querySelectorAll("[data-showcase-gifts]").forEach(function (button) {
+      button.onclick = openGiftSelection;
+    });
+    document.querySelectorAll(".af-showcase-picture[data-market-image]").forEach(function (box) {
+      var url = state.imgs[box.dataset.marketImage];
+      if (url) box.style.setProperty("--showcase-bg", 'url("' + String(url).replace(/"/g,"%22") + '")');
     });
     var home = el("afMarketHome"); if (home) home.onclick = function (event) { event.preventDefault(); state.category = ""; state.term = ""; render(); loadCatalog(); };
     var back = el("afMarketBack"); if (back) back.onclick = closeToWorkspace;
