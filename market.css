@@ -558,3 +558,29 @@ body.af-market-mode #market-view{display:block}
 @media(prefers-reduced-motion:reduce){
   #market-view .af-showcase-gifts .af-gift-photo{transition:none}
 }
+
+/* Photographic present sourced from Pexels; brand mark is a separate overlay. */
+#market-view .af-showcase-gifts .af-gift-photo-wrap{
+  display:block;position:relative;width:100%;aspect-ratio:3/2;overflow:hidden;
+  border-radius:14px;box-shadow:0 8px 22px rgba(13,77,45,.16);background:#77bda0;
+}
+#market-view .af-showcase-gifts .af-gift-photo-wrap .af-gift-photo{
+  display:block;width:100%;height:100%;max-height:none;aspect-ratio:auto;object-fit:cover;
+  object-position:center;border:0;border-radius:0;box-shadow:none;
+}
+#market-view .af-showcase-gifts .af-gift-brand{
+  position:absolute;right:11%;bottom:15%;display:grid;place-items:center;
+  width:clamp(32px,5vw,58px);aspect-ratio:1;border:1px solid rgba(255,255,255,.72);
+  border-radius:11px;background:rgba(255,255,255,.85);
+  box-shadow:0 3px 12px rgba(0,0,0,.17);transform:rotate(-6deg);
+  pointer-events:none;
+}
+#market-view .af-showcase-gifts .af-gift-brand img{
+  display:block;width:90%;height:90%;object-fit:contain;
+}
+#market-view .af-gift-photo-credit{display:block;font-size:.62rem;line-height:1.4;color:#295942}
+#market-view .af-gift-photo-credit a{color:inherit;text-decoration:underline;text-underline-offset:2px}
+@media(max-width:700px){
+  #market-view .af-showcase-gifts .af-gift-photo-wrap{aspect-ratio:3/2}
+  #market-view .af-showcase-gifts .af-gift-brand{width:36px}
+}
