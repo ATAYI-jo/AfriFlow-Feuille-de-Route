@@ -1246,28 +1246,38 @@ async function decorate(){
   var det=[].slice.call(vh.querySelectorAll("details.mt-m"));if(!det.length)return;
   var r1=await SB().from(TB()).select("key,value").like("key","att:j-%").limit(1000);
   var r2=await SB().from(TB()).select("key,value").like("key","att:jd-%").limit(1000);
-  var J={},D={},members={};
+  var r3=await SB().from(TB()).select("key,value").like("key","att:perm-%").limit(1000);
+  var J={},D={},P={},members={};
   try{(await window.AFRI.listMembers()).forEach(function(m){if(m.email)members[String(m.email).toLowerCase()]=m})}catch(e){}
   function portrait(m){var seed=encodeURIComponent((m&&m.avatar_value)||((m&&m.name)||"afriflow"));return '<img src="https://api.dicebear.com/10.x/lorelei/svg?seed='+seed+'&backgroundColor=e8f2ec" alt="" referrerpolicy="no-referrer">'}
   (r1.data||[]).forEach(function(x){if(x.value&&x.value.mid)(J[x.value.mid]=J[x.value.mid]||[]).push(x.value)});
   (r2.data||[]).forEach(function(x){if(x.value&&x.value.mid)D[x.value.mid+":"+x.value.email]=x.value});
+  (r3.data||[]).forEach(function(x){if(x.value&&x.value.mid)P[x.value.mid+":"+x.value.email]=x.value});
   det.forEach(function(d){
     if(!d.isConnected||d.dataset.jf)return;d.dataset.jf="1";
     var del=d.querySelector("[data-csdel]");if(!del)return;
-    var id=del.dataset.csdel,L=J[id]||[];if(!L.length)return;
+    var id=del.dataset.csdel,L=J[id]||[];
     var exc=0;
     d.querySelectorAll("tbody tr").forEach(function(tr){
       var td=tr.children;if(td.length<4)return;
-      var em=td[1].textContent.trim().toLowerCase(),j=L.filter(function(x){return x.email===em})[0];if(!j)return;
-      var s=D[id+":"+em],pill=td[2].querySelector(".mt-pill");
-      var decided=s&&Number(s.at)>=Number(j.at);
-      if(decided&&s.ok){if(pill&&pill.classList.contains("mt-abs")){pill.className="mt-pill mt-ok";pill.textContent="Excusé";exc++}}
-      else if(!decided)td[2].insertAdjacentHTML("beforeend"," <span class=\"mt-pill mt-wait\">Justificatif reçu</span>");
+      var em=td[1].textContent.trim().toLowerCase(),j=L.filter(function(x){return x.email===em})[0];
+      var perm=P[id+":"+em],s=D[id+":"+em],pill=td[2].querySelector(".mt-pill");
+      var decided=j&&s&&Number(s.at)>=Number(j.at);
+      if(perm){
+        if(pill&&pill.classList.contains("mt-abs")){pill.className="mt-pill mt-ok";pill.textContent="Excusé — permission";exc++}
+        else td[2].insertAdjacentHTML("beforeend",' <span class="mt-pill mt-ok">Permission accordée</span>');
+      }else if(decided&&s.ok){if(pill&&pill.classList.contains("mt-abs")){pill.className="mt-pill mt-ok";pill.textContent="Excusé";exc++}}
+      else if(j&&!decided)td[2].insertAdjacentHTML("beforeend"," <span class=\"mt-pill mt-wait\">Justificatif reçu</span>");
     });
     var sum=d.querySelector(".mt-sum");
     if(exc&&sum){var ab=sum.querySelector(".mt-abs");if(ab)ab.textContent=Math.max(0,(parseInt(ab.textContent)||0)-exc)+" absent(s)";sum.insertAdjacentHTML("beforeend",'<span class="mt-pill mt-ok">'+exc+' excusé(s)</span>')}
+    var permissions=Object.keys(P).filter(function(k){return k.indexOf(id+":")===0}).map(function(k){return P[k]});
+    if(!L.length&&!permissions.length)return;
     var blk=document.createElement("div");blk.className="jf-blk";
-    blk.innerHTML='<h4 style="margin:0 0 6px;color:var(--green)">Justificatifs reçus ('+L.length+')</h4>'+L.map(function(j){
+    blk.innerHTML=(permissions.length?'<h4 style="margin:0 0 6px;color:var(--green)">Permissions accordées ('+permissions.length+')</h4>'+permissions.map(function(p){
+      return '<div class="jf-it"><b>'+esc(p.email)+'</b> · '+esc(p.reason)+' <small>— '+esc(p.by)+' · '+fdt(p.at)+'</small></div>';
+    }).join(""):'')
+      +'<h4 style="margin:10px 0 6px;color:var(--green)">Justificatifs reçus ('+L.length+')</h4>'+L.map(function(j){
       var s=D[id+":"+j.email],decided=s&&Number(s.at)>=Number(j.at),person=members[String(j.email||"").toLowerCase()]||{},name=person.name||j.name||j.email;
       return '<div class="jf-it"><div class="jf-person">'+portrait(person)+'<div><b>'+esc(name)+'</b><small>'+esc([person.job_title,person.department].filter(Boolean).join(" · ")||j.email)+' · '+fdt(j.at)+'</small><div style="margin-top:6px">'+esc(j.reason)+'</div></div></div><div class="dact">'
         +(j.file?'<button type="button" data-jf="file" data-m="'+esc(id)+'" data-e="'+esc(j.email)+'">📎 '+esc(j.file)+'</button>':'')
