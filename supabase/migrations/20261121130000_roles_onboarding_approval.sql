@@ -34,7 +34,8 @@ begin
       when 'partner' then 'partner_waiting' else 'client' end;
   else
     if privileged and old.access_mode='collaborator'
-       and new.requested_role is distinct from old.requested_role then
+       and (new.requested_role is distinct from old.requested_role
+            or new.access_mode is distinct from old.access_mode) then
       -- Admin-only reconciliation of historical collaboration accounts.
       -- Do not grant shareholder/partner approval on classification alone.
       new.access_mode:=case new.requested_role
