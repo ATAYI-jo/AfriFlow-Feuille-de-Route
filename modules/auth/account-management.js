@@ -164,8 +164,17 @@ AFRI.register=async function(email,name,pwd,intent,captchaToken){
 };
 AFRI.resume=async function(){
   try{
-    var r=await SB().auth.getSession(),us=r.data&&r.data.session&&r.data.session.user;
-    if(!us||!us.email)return false;
+    // getUser validates the identity with Supabase Auth; getSession alone can
+    // return a cached session left behind after administrative account deletion.
+    var session=await SB().auth.getSession();
+    if(!session.data||!session.data.session)return false;
+    var verified=await SB().auth.getUser();
+    var us=verified.data&&verified.data.user;
+    if(verified.error||!us||!us.id||!us.email){
+      await SB().auth.signOut({scope:"local"});
+      try{localStorage.removeItem("afriflow_session_v1")}catch(ignore){}
+      return false;
+    }
     var x=await finish(us);
     if(x.market&&x.market.access_mode==="onboarding_required"){await AFRI.promptRoleChoice();return true;}
     enterApp(x.email,x.role,x.name,x.grants,x.market);return true;
@@ -335,7 +344,11 @@ async function finishOAuthUser(user) {
   if (oauthHandled || !user || !user.email) return;
   oauthHandled = true;
   try {
-    var info = await finish(user);
+    // Confirm the OAuth identity against Auth before restoring any permissions.
+    var verified=await SB().auth.getUser();
+    if(verified.error||!verified.data?.user||verified.data.user.id!==user.id)
+      throw new Error("Votre ancienne session a expiré. Reconnectez-vous.");
+    var info = await finish(verified.data.user);
     if(info.market && info.market.access_mode==="onboarding_required"){
       await AFRI.promptRoleChoice();
     } else {
