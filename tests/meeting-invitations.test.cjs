@@ -1,0 +1,26 @@
+const test=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path');
+const read=p=>fs.readFileSync(path.join(__dirname,'..',p),'utf8');
+const meetings=read('modules/collaboration/meetings.js'),html=read('index.html');
+const checkin=read('supabase/functions/afriflow-meeting-checkin/index.ts');
+const sql=read('supabase/migrations/20261121200000_meeting_invitees_attendance.sql');
+test('Censeur can invite all members or a chosen group',()=>{
+ assert.match(meetings,/id="csAudience"/);
+ assert.match(meetings,/id="csPeople"/);
+ assert.match(meetings,/data-cs-invite/);
+ assert.match(meetings,/invitees:invitees/);
+ assert.match(meetings,/Sélectionnez au moins une personne invitée/);
+});
+test('Only invited attendees see new meetings in personal register',()=>{
+ assert.match(meetings,/function invited\(m,email\)/);
+ assert.match(meetings,/visibleMeeting\(v\)/);
+ assert.match(html,/v\.invitees\.some/);
+ assert.match(sql,/value->'invitees'/);
+});
+test('Server validates identity, invitee and time before creating first checkin',()=>{
+ assert.match(checkin,/service\.auth\.getUser\(token\)/);
+ assert.match(checkin,/!invitees\.includes\(email\)/);
+ assert.match(checkin,/now<start-15\*60000\|\|now>end/);
+ assert.match(checkin,/if\(old\?\.value\)/);
+ assert.match(meetings,/afriflow-meeting-checkin/);
+ assert.match(sql,/drop policy if exists af_meet_att_insert_own/);
+});
