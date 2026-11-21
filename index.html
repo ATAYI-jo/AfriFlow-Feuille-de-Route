@@ -358,20 +358,7 @@ table.xl input:focus{outline:2px solid var(--green);outline-offset:-2px;backgrou
 </style>
 </head>
 <body class="ro">
-  <!-- =====================================================================
-  ICÔNES AFRIFLOW (SVG intégrés, aucun fichier externe, aucune connexion requise)
-
-  INSTALLATION : coller CE BLOC en entier juste après la balise <body ...>
-  (tout en haut du body). Il contient : le style, la bibliothèque d'icônes
-  et la petite fonction ic("nom").
-
-  UTILISATION
-   - Dans le HTML :   <svg class="ic"><use href="#i-clip"/></svg>
-   - Dans le JavaScript (chaînes de texte) :   '... '+ic("clip")+' Justificatif'
-   - Taille : <svg class="ic" style="font-size:1.5rem">…   (l'icône suit la taille du texte)
-   - Couleur : l'icône prend la couleur du texte du bouton (currentColor).
-  ATTENTION : si votre code écrit avec .textContent, passer à .innerHTML pour afficher l'icône.
-====================================================================== -->
+  
 <style>
 .ic{width:1.15em;height:1.15em;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;vertical-align:-.2em;flex:none}
 </style>
@@ -3408,21 +3395,7 @@ setInterval(function(){
 },1000);
 })();
 </script>
-  <!-- =====================================================================
-  MODULE AFRIFLOW · Onglets renommables + design « verre » aéré
-  À COLLER juste avant </body>, APRÈS le module « Feuille de route »
-  (et après le dernier </script>). Aucune autre modification.
-
-  1. Administrateur : un crayon ✎ apparaît à côté de chaque onglet du
-     menu latéral. Un clic ouvre une fenêtre pour saisir le nouveau nom
-     (champ vide = nom d'origine). Le nom est enregistré pour TOUS les
-     utilisateurs (clé Supabase « pub:navlabels », même droits que vos
-     pages publiées) et remplace aussi le titre en haut de la page.
-  2. Design : cartes, barre d'outils, menu et fenêtres en verre dépoli
-     (blanc translucide + flou), fond en dégradé doux, espacements
-     augmentés. Suit le thème clair/sombre et vos couleurs
-     personnalisées. Respecte « réduire la transparence » du système.
-====================================================================== -->
+  
 <style>
 /* ---------- Jetons du verre ---------- */
 :root{--g-bg:84%;--g-bg-ok:56%;--g-edge:72%;--g-hi:.6;--g-blur:20px;--g-shadow:rgba(24,48,36,.10)}
@@ -3623,19 +3596,7 @@ apply();
 if(window.loggedUserEmail)setTimeout(pull,1500);
 })();
 </script>
-  <!-- =====================================================================
-  MODULE AFRIFLOW · Feuille de route v2 : barres flottantes dépliables
-  REMPLACE le premier module « Feuille de route » (supprimez l'ancien
-  bloc <style> + <script>, puis collez celui-ci avant </body>).
-  Le module « verre et onglets » reste inchangé.
-
-  Nouveautés : chaque élément (échéances, jalons, phases, séquences,
-  indicateurs, risques) est une barre horizontale flottante en verre.
-  Un clic la déroule pour afficher son contenu, un second clic la replie.
-  Boutons « Tout déplier / Tout replier ». Navigation au clavier et
-  lecteurs d'écran pris en charge. Les échéances, alertes aux inscrits
-  et bandeaux de compte à rebours fonctionnent comme avant.
-====================================================================== -->
+  
 <style>
 .fdr{max-width:1000px;margin:0 auto;padding-bottom:70px}
 .fdr-hero{background:linear-gradient(120deg,#123d2a 0%,#1f5d3a 60%,#28734a 100%);color:#fff;border-radius:28px;padding:36px 40px;margin-bottom:26px;box-shadow:0 18px 46px rgba(20,60,39,.22)}
@@ -4038,25 +3999,7 @@ setInterval(tick,20000);
 if(me())setTimeout(refreshBanner,1500);
 })();
 </script>
-  <!-- =====================================================================
-  MODULE AFRIFLOW · Fond animé plein écran
-  À COLLER juste avant </body>, APRÈS les autres modules.
-
-  Le décor de la route (ciel, jour → nuit, paysage) remplit désormais
-  tout l'écran, derrière les cartes en verre :
-   - ciel et sol qui changent avec le défilement (jour, coucher de soleil,
-     nuit étoilée, aube), soleil et lune qui traversent le ciel, nuages ;
-   - collines au loin avec léger effet de profondeur ;
-   - paysage sur les côtés qui évolue : campagne → village → montagne
-     → ville (fenêtres allumées la nuit) ;
-   - au centre de l'accueil, la route actuelle se fond dans le décor.
-  Sur les autres pages, le décor reste doux (jour à crépuscule).
-
-  Réglages : case « Fond animé plein écran » dans « Personnaliser ».
-  Si vous choisissez une « Image de fond » dans Personnaliser, elle passe
-  au-dessus de l'animation. Mouvements coupés si le système réduit les
-  animations.
-====================================================================== -->
+  
 <style>
 #afBg{--n:0;--aT:rgb(90,169,230);--aB:rgb(207,233,255);position:fixed;inset:0;z-index:-3;pointer-events:none;overflow:hidden}
 body.af-off #afBg{display:none}
@@ -4207,18 +4150,9 @@ document.addEventListener("visibilitychange",function(){if(!document.hidden)sche
 sched();
 })();
 </script>
-  <!-- =====================================================================
-  AJOUTS AFRIFLOW — à coller juste avant </body>, APRÈS le dernier </script>
-  (après le module « Fond animé plein écran »). Rien d'autre à supprimer.
+  
 
-  BLOC 1  Carte lisible en mode clair · décor sans coupure · verre partout
-  BLOC 2  Style « ruban » de la feuille de route (CSS ; 4 petits
-          remplacements JS à faire en plus : voir modifs-feuille-de-route.md)
-  BLOC 3  Espace « Réunion » sur l'accueil (lien Teams réglable par l'admin)
-          + onglet « Censeur » (programmation des réunions et présences)
-====================================================================== -->
 
-<!-- ============================ BLOC 1 + 2 : CSS ============================ -->
 <style id="af-ajouts-css">
 /* ---------- 1. Carte du monde lisible en mode clair ---------- */
 :root{--map-sea:#a9cfe9;--map-land:#eeebe0;--map-edge:#8a978d}
@@ -4274,7 +4208,7 @@ select,textarea,input:not([type=checkbox]):not([type=radio]):not([type=range]):n
 @media (max-width:640px){.fdr-head{flex-wrap:wrap}.fdr-clock{order:3;width:100%;align-items:flex-start}}
 </style>
 
-<!-- ============================ BLOC 1 : JS (horizon) ============================ -->
+
 <script>
 (function(){
 "use strict";
@@ -4295,7 +4229,7 @@ collect();sched();
 })();
 </script>
 
-<!-- ============================ BLOC 3 : RÉUNION + CENSEUR ============================ -->
+
 <style id="mt-css">
 .mt-card,.mt-adm,.mt-box,.mt-m{
  background:color-mix(in srgb,var(--card) var(--g-bg,56%),transparent);
@@ -4558,12 +4492,7 @@ if(me())setTimeout(refresh,1500);
 </script>
 
 
-<!-- =====================================================================
-  MODULE AFRIFLOW · Verre sans teinte + bandes d'entête personnalisables
-  Les bandes d'entête (titre de l'accueil, feuille de route) ont l'image
-  de votre choix (Personnaliser › « Image des bandes d'entête »). Elle reste
-  toujours translucide (réglage de 5 % à 60 % maximum, jamais opaque).
-====================================================================== -->
+
 <style id="af-neutre-css">
 /* ---------- Verre neutre : plus de teinte ni de halo coloré ---------- */
 :root{--g-neutral-edge:rgba(255,255,255,.62);--g-neutral-shadow:0 10px 30px rgba(0,0,0,.09),inset 0 1px 0 rgba(255,255,255,.5)}
@@ -5011,20 +4940,7 @@ new MutationObserver(function(){
 }).observe(vh,{childList:true});
 })();
 </script>
-  <!-- =====================================================================
-  MODULE AFRIFLOW · CORRECTIFS (à coller juste avant </body>, après TOUS les autres modules)
-
-  1. Marketing : contenu pré-rempli d'après votre PDF, entièrement modifiable
-     (titres, gras, listes, tableaux, insertion de période « Du … au … »).
-     Modifiable par l'administrateur ET par toute personne ayant le droit « Marketing ».
-  2. Justificatifs : le bouton flottant disparaît.
-     - Censeur/administrateur : bouton « Mon justificatif » dans l'onglet Censeur
-       (+ la réception/acceptation des justificatifs reste dans chaque réunion).
-     - Tous les autres inscrits : un onglet « Mes présences » (leur statut par réunion
-       + envoi de leur justificatif, de façon strictement personnelle).
-  3. « Droits de modification » : affiche « Marketing » (voir remplacement n°1 du guide)
-     et le nom « fdr » est remplacé par le nom réel de l'onglet dans l'Administration.
-====================================================================== -->
+  
 <style id="af-corr-css">
 #jfBtn{display:none!important}
 /* Échéances : champ « Date de début » */
@@ -6363,12 +6279,7 @@ if(log)new MutationObserver(function(ms){ms.forEach(function(m){m.addedNodes.for
 })();
 </script>
 
-  <!-- =====================================================================
-  MODULE AFRIFLOW · Éditeur type Word pour les fichiers Dropbox (.docx)
-  À COLLER juste avant </body>, après tous les autres modules.
-  Prérequis : les 3 petites modifications décrites dans le message
-  (window.DBX avec put:dbxUpload, bouton Modifier, window.dvReload).
-====================================================================== -->
+  
 <style id="dw-css">
 #dwApp{position:fixed;inset:0;z-index:1050;display:flex;flex-direction:column;background:#e6e6e6;color:#252525;font:13px/1.3 "Segoe UI",system-ui,sans-serif}
 #dwApp *{box-sizing:border-box}
