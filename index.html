@@ -1173,7 +1173,12 @@ btn.onclick=async function(){
     var er=$("xerr");
     if(er)er.textContent=current.j&&!current.rejected?"Ce justificatif a déjà été envoyé. Une nouvelle soumission sera possible après un refus.":current.rejected?"Motif du refus : "+(current.d.reason||"Non précisé. Vous pouvez corriger votre demande."):"";
   }
-  if($("jfM")){$("jfM").addEventListener("change",refreshJustificationForm);refreshJustificationForm()}
+  if($("jfM")){
+    var requestedId=window.afriflowJustificationMeetingId||"";
+    if(requestedId&&[].some.call($("jfM").options,function(option){return option.value===requestedId}))$("jfM").value=requestedId;
+    window.afriflowJustificationMeetingId="";
+    $("jfM").addEventListener("change",refreshJustificationForm);refreshJustificationForm();
+  }
   if($("jfSend"))$("jfSend").onclick=async function(){
     var mid=$("jfM").value,reason=$("jfR").value.trim(),f=$("jfF").files[0],er=$("xerr"),sb=this;
     var current=selectedJustification();
@@ -1535,14 +1540,14 @@ async function renderPersonal(){
    +meets.map(function(m){
      var jf=J[m.id],jd=D[m.id],decided=!!(jf&&jd&&Number(jd.at)>=Number(jf.at));
      var ex=!!(decided&&jd.ok),s=statut(m,A[m.id],ex);
-     var jt=!jf?'—':(decided?(jd.ok?'<span class="mt-pill mt-ok">Accepté</span>':'<span class="mt-pill mt-abs">Refusé</span>'+(jd.reason?'<details><summary>Voir le motif</summary><p>'+esc(jd.reason)+'</p></details>':'')+' <button type="button" data-jp-resend="1">Corriger et renvoyer</button>'):'<span class="mt-pill mt-wait">En attente du censeur</span>');
+     var jt=!jf?'—':(decided?(jd.ok?'<span class="mt-pill mt-ok">Accepté</span>':'<span class="mt-pill mt-abs">Refusé</span>'+(jd.reason?'<details><summary>Voir le motif</summary><p>'+esc(jd.reason)+'</p></details>':'')+' <button type="button" data-jp-resend="'+esc(m.id)+'">Corriger et renvoyer</button>'):'<span class="mt-pill mt-wait">En attente du censeur</span>');
      if(jd&&Array.isArray(jd.history)&&jd.history.length)jt+='<details><summary>Historique</summary>'+jd.history.map(function(h){return '<p>'+esc(h.ok?"Accepté":"Refusé")+' · '+fdt(h.at)+(h.reason?" — "+esc(h.reason):"")+'</p>'}).join("")+'</details>';
      return '<tr><td><b>'+esc(m.title)+'</b></td><td>'+fdt(m.start)+'</td><td><span class="mt-pill mt-'+s[0]+'">'+esc(s[1])+'</span></td><td>'+jt+'</td></tr>';
    }).join("")+'</tbody></table></div><p style="color:var(--muted);font-size:.85rem;margin:14px 0 0">Seules les réunions auxquelles vous êtes invité et vos propres données sont affichées. Le premier clic sur « Rejoindre » constitue un pointage, pas une preuve de durée sur Teams. En cas d’absence, vous pouvez envoyer un justificatif au Censeur.</p></div>';
 }
 document.addEventListener("click",function(e){
   var button=e.target.closest("button[data-jp-resend]");
-  if(button){var jf=document.getElementById("jfBtn");if(jf)jf.click();}
+  if(button){window.afriflowJustificationMeetingId=button.getAttribute("data-jp-resend");var jf=document.getElementById("jfBtn");if(jf)jf.click();}
 });
 var xm=$("xm");
 if(xm)new MutationObserver(function(){if(!xm.classList.contains("on")&&jpActive&&$("jpRoot"))renderPersonal()}).observe(xm,{attributes:true,attributeFilter:["class"]});
