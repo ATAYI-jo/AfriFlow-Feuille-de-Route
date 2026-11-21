@@ -160,13 +160,41 @@ async function writeBrief(apiKey: string, sources: Array<{ title: string; url: s
 }
 
 function sourceBrief(sources: Array<{ title: string; url: string; domain: string; date: string }>) {
-  const lead = sources[0];
   const domains = [...new Set(sources.map((source) => source.domain).filter(Boolean))].slice(0, 4).join(", ");
-  const related = sources.slice(1, 3).map((source) => source.title).filter(Boolean).join(" · ");
   return {
-    title: clean(lead?.title || "Veille agroalimentaire : signaux du jour", 160),
-    description: clean(`Point de veille AfriFloW préparé à partir de sources récentes. Sujet principal : ${lead?.title || "actualité agroalimentaire"}. ${related ? `Autres signaux suivis : ${related}. ` : ""}Cette publication est informative et ne constitue ni un conseil financier ni une cotation de marché. Sources répertoriées : ${domains || "sources spécialisées"}.`, 4000)
+    title: "Veille agroalimentaire : les dernières informations des organismes spécialisés",
+    description: clean("AfriFloW présente une sélection d'actualités récentes relatives à l'agriculture, à l'alimentation et à la sécurité alimentaire. Les liens vers les publications originales sont disponibles au bas de cette annonce pour consulter directement leur contenu. Cette sélection est établie à partir des titres et métadonnées disponibles ; elle ne constitue pas une analyse complète des articles. Sources répertoriées : " + (domains || "organismes spécialisés") + ".", 4000)
   };
+}
+
+async function frenchBriefFallback(sources: Array<{ title: string; url: string; domain: string; date: string }>) {
+  const token = Deno.env.get("CLOUDFLARE_API_TOKEN") || "";
+  const account = Deno.env.get("CLOUDFLARE_ACCOUNT_ID") || "";
+  if (!token || !account) return sourceBrief(sources);
+  try {
+    const model = "@cf/meta/llama-3.1-8b-instruct";
+    const prompt = [
+      "Réécris en français naturel et intégralement français un titre (max 160 caractères) et un bref texte (max 1000 caractères) de veille économique et agroalimentaire pour AfriFloW.",
+      "Utilise STRICTEMENT les titres et métadonnées de la liste. Tu ne connais pas le contenu des articles. Ne crée aucun chiffre, fait, citation ou événement non mentionné. Traduis les titres anglais en français. Ne donne pas de conseil financier.",
+      "Réponds uniquement avec un objet JSON valide ayant les deux propriétés title et description. N'inclus aucun Markdown.",
+      JSON.stringify(sources.slice(0, 5))
+    ].join("\n");
+    const response = await fetch(`https://api.cloudflare.com/client/v4/accounts/${encodeURIComponent(account)}/ai/run/${model}`, {
+      method: "POST", headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ messages: [{ role: "user", content: prompt }], max_tokens: 380 }),
+      signal: AbortSignal.timeout(12000)
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok || data.success === false) throw new Error("Rédaction Cloudflare indisponible");
+    const output = String(data.result?.response || "").replace(/^```(?:json)?\s*|\s*```$/g, "").trim();
+    const obj = JSON.parse(output);
+    const title = clean(obj.title, 160), description = clean(obj.description, 1200);
+    if (title.length < 20 || description.length < 120) throw new Error("Bulletin trop court");
+    return { title, description };
+  } catch (error) {
+    console.error("afriflow-agro-brief french fallback", error instanceof Error ? error.message : "error");
+    return sourceBrief(sources);
+  }
 }
 
 /* The daily bulletin is editorial content, not a product photograph: its
@@ -258,7 +286,7 @@ async function publishDailyBrief(service: ReturnType<typeof createClient>, day: 
     const sources = liveSources.length ? liveSources : stableAgroReference();
     let brief: { title: string; description: string };
     try { brief = await writeBrief(apiKey, sources); }
-    catch (error) { console.error("afriflow-agro-brief writing", error instanceof Error ? error.message : "error"); brief = sourceBrief(sources); }
+    catch (error) { console.error("afriflow-agro-brief writing", error instanceof Error ? error.message : "error"); brief = await frenchBriefFallback(sources); }
     const inserted = await service.from("afriflow_market_products").insert({
       name: brief.title, description: brief.description, category: topic, listing_type: "announcement", price: null, currency: "XOF", original_path: null,
       is_active: true, is_in_stock: false, audience: "shareholders", expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
