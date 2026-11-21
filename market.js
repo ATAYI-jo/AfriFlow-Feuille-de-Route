@@ -467,6 +467,49 @@
     }catch(error){if(host.isConnected)host.innerHTML='<p class="af-market-error">'+esc(error.message||"Gestion des utilisateurs indisponible")+'</p>';}
   }
 
+  // Commercial conditions shown in both Administration and Marketplace.
+  // Saving never approves a partner by itself; the administrator must still
+  // explicitly approve the identity through afriflow-access-admin.
+  async function loadPartnerTermsAdmin(targetId) {
+    var host=el(targetId);
+    if(!host||!isAdmin()||!sb())return;
+    try {
+      var result=await partnerCall("admin_dashboard");
+      if(!host.isConnected)return;
+      var partners=(result.partners||[]).filter(function(p){return p&&p.user_id});
+      host.innerHTML='<h3>Conditions commerciales des partenaires</h3>'
+        +'<p>Avant d’approuver un partenaire, définissez la part AfriFloW, les instructions de règlement et cochez Activer. Cette étape ne valide pas le compte automatiquement.</p>'
+        +(partners.length?partners.map(function(p){
+          var t=p.terms||{},rate=Number(t.commission_rate||0);
+          return '<form class="af-partner-admin-row" data-partner-terms="'+esc(p.user_id)+'">'
+            +'<div><strong>'+esc(p.email||"Partenaire")+'</strong><small>'+(t.is_enabled?'Conditions commerciales activées':'Conditions commerciales à configurer')+'</small></div>'
+            +'<label>Part AfriFloW (%)<input required name="rate" type="number" min="0" max="100" step="0.01" value="'+esc(rate)+'"></label>'
+            +'<label class="af-partner-enable"><input type="checkbox" name="enabled"'+(t.is_enabled?' checked':'')+'> Activer</label>'
+            +'<label>Instructions de règlement<input name="notes" maxlength="1200" value="'+esc(t.payment_notes||"")+'"></label>'
+            +'<button type="submit" class="af-market-secondary">Enregistrer</button></form>';
+        }).join(""):'<p>Aucun compte partenaire à configurer.</p>');
+      host.querySelectorAll("form[data-partner-terms]").forEach(function(form){
+        form.onsubmit=async function(ev){
+          ev.preventDefault();
+          var button=form.querySelector('button[type="submit"]'),fields=new FormData(form);
+          var rate=Number(fields.get("rate"));
+          if(!Number.isFinite(rate)||rate<0||rate>100){notice("La part AfriFloW doit être comprise entre 0 et 100 %.");return}
+          button.disabled=true;
+          try{
+            var saved=await partnerCall("admin_save_partner",{
+              partnerId:form.dataset.partnerTerms,commissionRate:rate,
+              enabled:fields.get("enabled")==="on",
+              paymentNotes:String(fields.get("notes")||"")
+            });
+            notice(saved.message||"Conditions commerciales enregistrées.");
+            loadPartnerTermsAdmin(targetId);
+          }catch(error){notice(error.message||"Enregistrement impossible.");button.disabled=false}
+        };
+      });
+    }catch(error){
+      if(host.isConnected)host.innerHTML='<p class="af-market-error">'+esc(error.message||"Conditions commerciales indisponibles")+'</p>';
+    }
+  }
   async function loadPartnerAdmin() {
     var box = el("afPartnerAdmin"); if (!box || !isAdmin() || !sb()) return;
     try {
@@ -948,7 +991,7 @@
     } catch (error) { list.innerHTML = '<p class="af-market-error">Gestion du catalogue indisponible : ' + esc(error.message || error) + "</p>"; }
   }
 
-  window.AfriMarket = { open: open, openPublic: openPublic, closeToWorkspace: closeToWorkspace, openAuth: openAuth, closeAuth: closeAuth, shouldUseMarket: shouldUseMarket, renderAccessAdmin: loadAccessAdmin };
+  window.AfriMarket = { open: open, openPublic: openPublic, closeToWorkspace: closeToWorkspace, openAuth: openAuth, closeAuth: closeAuth, shouldUseMarket: shouldUseMarket, renderAccessAdmin: loadAccessAdmin, renderPartnerTermsAdmin: loadPartnerTermsAdmin };
   window.afriMarketInitial = function () {
     if (window.afriMarketSession) {
       if (shouldUseMarket(window.afriMarketSession)) open({ kind: "authenticated", market: window.afriMarketSession });
