@@ -32,7 +32,8 @@ test('Tous les scripts JavaScript applicatifs sont syntaxiquement valides', () =
     'document-urgency.js', 'updates.js',
     'modules/auth/oauth-icons.js', 'modules/messaging/internal-messaging.js',
     'modules/documents/document-viewer.js',
-    'modules/documents/word-editor.js', 'modules/admin/access-controls.js'
+    'modules/documents/word-editor.js', 'modules/admin/access-controls.js',
+    'modules/auth/account-management.js', 'modules/documents/dropbox-browser.js'
   ];
   for (const script of scripts) {
     assert.doesNotThrow(() => new vm.Script(read(script), { filename: script }), script);
@@ -101,4 +102,23 @@ test('Éditeur Word et gestion des droits chargés une seule fois', () => {
     'Le code de l\'éditeur Word est encore dupliqué dans index.html');
   assert.ok(!html.includes('Boutons de connexion : Apple retiré, Microsoft ajouté'),
     'Le code des droits est encore dupliqué dans index.html');
+});
+
+test('Gestion des comptes et explorateur Dropbox chargés une fois', () => {
+  const paths = [
+    'modules/auth/account-management.js',
+    'modules/documents/dropbox-browser.js'
+  ];
+  for (const filename of paths) {
+    const tag = '<script src="./' + filename + '?v=20261121-modularisation-3"></script>';
+    assert.equal(html.split(tag).length - 1, 1, filename + ' absent ou dupliqué');
+    assert.ok(fs.existsSync(path.join(root, filename)), filename + ' manquant');
+  }
+  assert.ok(html.indexOf('modules/auth/account-management.js') <
+    html.indexOf('modules/messaging/internal-messaging.js'),
+    'Les comptes doivent être initialisés avant la messagerie');
+  assert.ok(!html.includes('Comptes, droits, présence en temps réel, journal partagé'),
+    'Le module comptes est toujours inline');
+  assert.ok(!html.includes('var KEY="pub:dbxshow"'),
+    'Explorateur Dropbox toujours inline');
 });
