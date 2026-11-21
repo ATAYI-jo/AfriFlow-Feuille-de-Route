@@ -49,10 +49,12 @@ window.applyExtra=function(v){
   buildNav();
   // Cloud synchronization must not unexpectedly send the user back to top.
   // Only refresh data-backed pages while keeping their current scroll position.
-  if(cur!=="home"&&cur!=="market"&&cur!=="personal"){
+  if(cur==="treasury"||cur==="direction"||X.nav.some(function(n){return n.id===cur})){
     var y=window.scrollY||0;
     show(cur,{restore:true});
-    requestAnimationFrame(function(){window.scrollTo(0,y)});
+    [100,500].forEach(function(ms){setTimeout(function(){
+      if(cur!=="home")window.scrollTo(0,y);
+    },ms)});
   }
   return true;
 };
