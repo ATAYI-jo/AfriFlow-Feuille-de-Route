@@ -32,7 +32,7 @@ test('Tous les scripts JavaScript applicatifs sont syntaxiquement valides', () =
     'document-urgency.js', 'updates.js',
     'modules/auth/oauth-icons.js', 'modules/messaging/internal-messaging.js',
     'modules/documents/document-viewer.js',
-    'modules/documents/word-editor.js', 'modules/admin/access-controls.js',
+    'modules/documents/word-editor.js', 'modules/documents/word-editor-loader.js', 'modules/admin/access-controls.js',
     'modules/auth/account-management.js', 'modules/documents/dropbox-browser.js',
     'modules/assistant/chat-ui.js', 'modules/assistant/math-rendering.js',
     'modules/collaboration/meetings.js', 'modules/roadmap/timeline.js',
@@ -94,12 +94,15 @@ test('Éditeur Word et gestion des droits chargés une seule fois', () => {
     'modules/documents/word-editor.js',
     'modules/admin/access-controls.js'
   ]) {
-    const tag = '<script src="./' + filename + '?v=20261121-modularisation-2"></script>';
-    assert.equal(html.split(tag).length - 1, 1, filename + ' absent ou chargé plusieurs fois');
+    const version = filename.endsWith('word-editor.js') ? null : '20261121-modularisation-2';
+    if (version) {
+      const tag = '<script src="./' + filename + '?v=' + version + '"></script>';
+      assert.equal(html.split(tag).length - 1, 1, filename + ' absent ou chargé plusieurs fois');
+    }
     assert.ok(fs.existsSync(path.join(root, filename)), filename + ' manquant');
   }
   assert.ok(html.indexOf('modules/admin/access-controls.js') <
-    html.indexOf('modules/documents/word-editor.js'),
+    html.indexOf('modules/documents/word-editor-loader.js'),
     'Ordre des scripts modifié');
   assert.ok(!html.includes('Bibliothèque d\'export Word'),
     'Le code de l\'éditeur Word est encore dupliqué dans index.html');
@@ -156,4 +159,14 @@ test('Réunions, feuille de route et décor chargé une seule fois', () => {
   for (const m of ['var CFG="pub:meetcfg"', 'var START="2026-11-09"', 'var LS="afriflow_animbg_v1"']) {
     assert.ok(!html.includes(m), 'Bloc initial encore présent dans index.html : ' + m);
   }
+});
+
+test('Éditeur Word chargé à la demande, sans chargement initial du script métier', () => {
+  const tag = '<script src="./modules/documents/word-editor-loader.js?v=20261121-lazy-word-1"></script>';
+  assert.equal(html.split(tag).length - 1, 1);
+  assert.ok(!html.includes('<script src="./modules/documents/word-editor.js?'));
+  const source = read('modules/documents/word-editor-loader.js');
+  assert.match(source, /window\.dvWordEdit\s*=\s*wordEdit/);
+  assert.match(source, /window\.dvPerm\s*=\s*permission/);
+  assert.match(source, /window\.dvTogglePerm\s*=\s*togglePermission/);
 });
