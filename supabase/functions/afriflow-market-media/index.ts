@@ -67,9 +67,36 @@ Deno.serve(async (req: Request) => {
     if (!Number.isSafeInteger(rotation) || rotation < 0 || rotation > 1000000) return json(req, { error: "Rotation invalide" }, 400);
     const service = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!, { auth: { persistSession: false, autoRefreshToken: false } });
     const product = await service.from("afriflow_market_products")
-      .select("id,original_path,is_active").eq("id", productId).eq("is_active", true).maybeSingle();
+      .select("id,original_path,is_active,audience,listing_type,promotion_label,expires_at").eq("id", productId).eq("is_active", true).maybeSingle();
     if (product.error) throw product.error;
     if (!product.data) return json(req, { error: "Produit indisponible" }, 404);
+
+    // Public listings stay public; private editorial briefs require a signed-in member.
+    // All other shareholder-only records retain their original admin/shareholder restrictions.
+    const record = product.data;
+    if (record.expires_at && new Date(record.expires_at).getTime() <= Date.now())
+      return json(req, { error: "Contenu expiré" }, 404);
+    if (record.audience !== "public") {
+      const bearer = (req.headers.get("authorization") || "").replace(/^Bearer\s+/i, "");
+      const { data: { user }, error: authError } = bearer
+        ? await service.auth.getUser(bearer)
+        : { data: { user: null }, error: new Error("No login") };
+      if (authError || !user) return json(req, { error: "Authentification requise" }, 401);
+      const profile = await service.from("afriflow_market_profiles")
+        .select("access_mode").eq("user_id", user.id).maybeSingle();
+      const admin = user.email
+        ? await service.from("afriflow_admins").select("email").eq("email", user.email.toLowerCase()).maybeSingle()
+        : { data: null };
+      const isAdmin = !!admin.data;
+      const isNewsBrief = record.listing_type === "announcement"
+        && typeof record.promotion_label === "string"
+        && record.promotion_label.startsWith("Brief IA · ");
+      const allowed = isAdmin || (
+        !!profile.data && (isNewsBrief || profile.data.access_mode === "shareholder_approved")
+      );
+      if (!allowed) return json(req, { error: "Accès réservé" }, 403);
+    }
+
 
     const variants = await service.from("afriflow_market_variants")
       .select("id,storage_path").eq("product_id", productId).eq("approval_status", "approved").order("approved_at", { ascending: true }).order("id", { ascending: true });
