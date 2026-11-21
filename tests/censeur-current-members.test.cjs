@@ -24,3 +24,13 @@ test('Stale directory profiles cannot be meeting invitees', () => {
   const selected = directory.filter(u => allowed.has(u.email.toLowerCase()));
   assert.deepEqual(selected.map(u => u.email), ['valid@example.test']);
 });
+
+test('Censeur displays profile photo and professional role when selecting invitees', () => {
+  assert.match(code, /function inviteeAvatar\(u\)/);
+  assert.match(code, /function inviteeCard\(u\)/);
+  assert.match(code, /u\.job_title/);
+  assert.match(code, /u\.department/);
+  assert.match(code, /Poste non renseigné/);
+  assert.match(code, /\.map\(inviteeCard\)/);
+  assert.match(code, /data-cs-invite/);
+});
