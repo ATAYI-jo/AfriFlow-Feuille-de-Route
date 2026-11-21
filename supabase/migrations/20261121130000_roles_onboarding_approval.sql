@@ -33,7 +33,16 @@ begin
       when 'shareholder' then 'shareholder_pending'
       when 'partner' then 'partner_waiting' else 'client' end;
   else
-    if not privileged and old.requested_role='client'
+    if privileged and old.access_mode='collaborator'
+       and new.requested_role is distinct from old.requested_role then
+      -- Admin-only reconciliation of historical collaboration accounts.
+      -- Do not grant shareholder/partner approval on classification alone.
+      new.access_mode:=case new.requested_role
+        when 'shareholder' then 'shareholder_pending'
+        when 'partner' then 'partner_waiting'
+        else 'client' end;
+      new.selection_confirmed_at:=now();
+    elsif not privileged and old.requested_role='client'
        and old.access_mode='client' and old.selection_confirmed_at is null then
       -- One-time confirmation for profiles automatically created by the old code.
       -- Any elevated requested role remains PENDING, never approved.
@@ -142,3 +151,22 @@ create policy af_directory_shareholder_visibility on public.afriflow_member_dire
         and mp.access_mode='shareholder_approved'
     )
   );
+
+-- Administrator decisions are retained separately from customer-facing profiles.
+create table if not exists public.afriflow_access_audit (
+  id bigint generated always as identity primary key,
+  target_user_id uuid not null,
+  administrator_user_id uuid not null,
+  previous_role text,
+  previous_access text,
+  new_role text not null,
+  new_access text not null,
+  action text not null,
+  reason text not null default '',
+  created_at timestamptz not null default now()
+);
+alter table public.afriflow_access_audit enable row level security;
+revoke all on public.afriflow_access_audit from anon, authenticated;
+create policy af_access_audit_admin_read on public.afriflow_access_audit
+  for select to authenticated using ((select public.af_is_admin()));
+grant select on public.afriflow_access_audit to authenticated;
