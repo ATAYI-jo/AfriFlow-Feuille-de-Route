@@ -229,6 +229,35 @@ async function createBriefIllustration(service: ReturnType<typeof createClient>,
   await uploadDropbox(service, path, bytes);
   return path;
 }
+/* Original publisher images can only be copied when the feed explicitly
+   provides an image-specific CC0/public-domain declaration. Source photos without
+   this evidence (including most FAO newsroom photographs) are not redistributed. */
+async function licensedSourceIllustration(service: ReturnType<typeof createClient>, day: string, sources: unknown) {
+  const list = Array.isArray(sources) ? sources : (sources as Record<string, unknown>)?.articles;
+  for (const source of asArray(list) as Array<Record<string, unknown>>) {
+    const imageUrl = clean(source.image_url, 1600), license = clean(source.image_license, 200).toLowerCase();
+    if (!/^https:\/\//i.test(imageUrl) || !/^(cc0|pdm|public-domain|https:\/\/creativecommons\.org\/(?:publicdomain\/zero|publicdomain\/mark)\/)/i.test(license)) continue;
+    try {
+      const url = new URL(imageUrl);
+      if (!["https:"].includes(url.protocol) || url.username || url.password) continue;
+      const response = await fetch(url, { signal: AbortSignal.timeout(8000), redirect: "error" });
+      const mime = clean(response.headers.get("content-type"), 100).split(";")[0].toLowerCase();
+      const contentSize = Number(response.headers.get("content-length") || 0);
+      if (!response.ok || !imageExtension(mime) || contentSize > 9 * 1024 * 1024) continue;
+      const bytes = new Uint8Array(await response.arrayBuffer());
+      if (!bytes.byteLength || bytes.byteLength > 9 * 1024 * 1024) continue;
+      const root = (Deno.env.get("DROPBOX_MARKET_ROOT") || `${Deno.env.get("DROPBOX_ROOT") || ""}/Market`).replace(/\/+$/, "");
+      if (!root.startsWith("/")) throw new Error("Dossier Dropbox Market non configuré");
+      const path = `${root}/news/${day}/${crypto.randomUUID()}.${imageExtension(mime)}`;
+      await uploadDropbox(service, path, bytes);
+      return { path, attribution: clean(source.image_attribution || source.domain || "Source originale", 500),
+        url: clean(source.url, 1500), image_url: imageUrl, license };
+    } catch (error) {
+      console.error("afriflow-agro-brief licensed source image", error instanceof Error ? error.message : "error");
+    }
+  }
+  return null;
+}
 async function openverseIllustration(service: ReturnType<typeof createClient>, day: string, title: string) {
   const url = new URL("https://api.openverse.org/v1/images");
   url.searchParams.set("q", `${clean(title, 120)} agriculture food`);
@@ -250,8 +279,20 @@ async function openverseIllustration(service: ReturnType<typeof createClient>, d
   return { path, attribution: clean(candidate.attribution || `${candidate.creator || "Auteur inconnu"} · ${candidate.license || "licence ouverte"}`, 500), url: clean(candidate.foreign_landing_url || candidate.url, 1500) };
 }
 async function attachBriefIllustration(service: ReturnType<typeof createClient>, id: string, day: string, title: string, description: string, sources: unknown) {
-  /* Prefer a licensed open image. Only generate a new editorial visual when no
-     suitable CC0/public-domain image can be retrieved. */
+  // A publisher-provided photo takes priority only if its *image* is explicitly
+  // labelled CC0/public domain; other photos require the rights holder's permission.
+  const original = await licensedSourceIllustration(service, day, sources);
+  if (original) {
+    const update = await service.from("afriflow_market_products").update({
+      original_path: original.path,
+      description: `${description}\n\nPhotographie : ${original.attribution}`,
+      news_sources: { articles: Array.isArray(sources) ? sources : (sources as Record<string, unknown>)?.articles || [], image_attribution: original }
+    }).eq("id", id);
+    if (!update.error) return "source";
+    console.error("afriflow-agro-brief source image database", update.error.message);
+  }
+  /* Otherwise prefer a reusable CC0/public-domain photograph from Openverse;
+     Cloudflare AI generates an editorial illustration only when those fail. */
   try {
     const open = await openverseIllustration(service, day, title);
     const update = await service.from("afriflow_market_products").update({ original_path: open.path, description: `${description}\n\nIllustration libre : ${open.attribution}`, news_sources: { articles: sources, image_attribution: open } }).eq("id", id);
