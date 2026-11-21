@@ -37,3 +37,15 @@ La suppression depuis Administration est une suppression du compte Supabase Auth
 Si la même personne revient via Google, Microsoft ou e-mail et crée une nouvelle identité Supabase, son profil Market n'existe plus : l'écran de sélection Client / Partenaire / Actionnaire doit réapparaître. Les approbations antérieures ne sont pas récupérées ; une nouvelle demande de partenaire ou actionnaire est nécessaire. Un Client est dirigé vers le Market après son choix.
 
 Attention : si la fonction administrative de suppression retourne une erreur, aucune réinitialisation ne doit être considérée comme terminée. Vérifier que l'identité Auth a réellement été supprimée avant d'affirmer que le parcours repart à zéro. Les sessions restaurées sont revalidées avec `auth.getUser()` au lieu de faire confiance uniquement au cache `getSession()`.
+
+## Correction de la sélection Google des anciens comptes Client
+
+L'ancienne version créait parfois un profil `client` sans demander de confirmation après un premier OAuth. Pour ne pas enfermer ces utilisateurs dans un rôle choisi par défaut :
+
+- Migration : `selection_confirmed_at` est initialement NULL pour les profils existants, et initialisé pour toutes les nouvelles inscriptions.
+- Un ancien profil `client` non confirmé voit **une seule fois** l'écran Client / Partenaire / Actionnaire après la connexion.
+- Le choix met à jour le profil existant en une opération vérifiée ; Partenaire devient `partner_waiting`, Actionnaire devient `shareholder_pending`, sans privilège automatique.
+- Après confirmation, le profil est verrouillé. Les anciens profils `collaborator` ne sont pas reclassés automatiquement : leur revue reste obligatoire avant la migration RLS complète.
+- Le client Google déjà inscrit doit donc également voir le choix, sauf si sa sélection a déjà été confirmée dans la nouvelle version.
+
+Le navigateur ne peut pas déduire si le rôle Client avait été choisi librement ou attribué par défaut. L'utilisateur confirme explicitement sa sélection une fois.
