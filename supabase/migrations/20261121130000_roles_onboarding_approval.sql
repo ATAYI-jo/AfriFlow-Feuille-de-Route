@@ -11,6 +11,12 @@ alter table public.afriflow_market_profiles
     'partner_waiting','partner_approved','collaborator'
   ));
 
+-- Existing rows remain NULL (unknown selection); future inserts are confirmed.
+alter table public.afriflow_market_profiles
+  add column if not exists selection_confirmed_at timestamptz;
+alter table public.afriflow_market_profiles
+  alter column selection_confirmed_at set default now();
+
 create or replace function public.afriflow_market_profile_guard()
 returns trigger language plpgsql set search_path=public as $$
 declare privileged boolean;
@@ -26,23 +32,40 @@ begin
       when 'shareholder' then 'shareholder_pending'
       when 'partner' then 'partner_waiting' else 'client' end;
   else
-    if new.requested_role is distinct from old.requested_role then
-      raise exception 'Le type de profil ne peut pas etre modifie apres inscription';
-    end if;
-    if not privileged then
-      if new.access_mode is distinct from old.access_mode then
-        raise exception 'Approbation reservee au serveur';
+    if not privileged and old.requested_role='client'
+       and old.access_mode='client' and old.selection_confirmed_at is null then
+      -- One-time confirmation for profiles automatically created by the old code.
+      -- Any elevated requested role remains PENDING, never approved.
+      if new.selection_confirmed_at is null then
+        raise exception 'Confirmez le choix du profil';
       end if;
-      new.access_mode := old.access_mode;
-    elsif new.access_mode is distinct from old.access_mode then
-      if new.access_mode='shareholder_approved' and old.requested_role='shareholder' then
-        null; -- Admin approval via service role only.
-      elsif new.access_mode='shareholder_pending' and old.requested_role='shareholder' then
-        null;
-      elsif new.access_mode in ('partner_waiting','partner_approved') and old.requested_role='partner' then
-        null;
-      else
-        raise exception 'Transition de profil interdite';
+      new.selection_confirmed_at:=now();
+      new.access_mode:=case new.requested_role
+        when 'partner' then 'partner_waiting'
+        when 'shareholder' then 'shareholder_pending'
+        else 'client' end;
+    else
+      if new.requested_role is distinct from old.requested_role then
+        raise exception 'Le type de profil ne peut pas etre modifie apres inscription';
+      end if;
+      if new.selection_confirmed_at is distinct from old.selection_confirmed_at then
+        raise exception 'La confirmation du profil est verrouillee';
+      end if;
+      if not privileged then
+        if new.access_mode is distinct from old.access_mode then
+          raise exception 'Approbation reservee au serveur';
+        end if;
+        new.access_mode := old.access_mode;
+      elsif new.access_mode is distinct from old.access_mode then
+        if new.access_mode='shareholder_approved' and old.requested_role='shareholder' then
+          null;
+        elsif new.access_mode='shareholder_pending' and old.requested_role='shareholder' then
+          null;
+        elsif new.access_mode in ('partner_waiting','partner_approved') and old.requested_role='partner' then
+          null;
+        else
+          raise exception 'Transition de profil interdite';
+        end if;
       end if;
     end if;
   end if;
