@@ -372,9 +372,9 @@ window.ic=function(n,s){return '<svg class="ic"'+(s?' style="width:'+s+';height:
   </div>
 </div>
 
-<script src="./afriflow-core.js?v=20261121"></script>
+<script src="./afriflow-core.js?v=20261122-restore"></script>
 
-<script src="./afriflow-workspace.js?v=20261121"></script>
+<script src="./afriflow-workspace.js?v=20261122-restore"></script>
 
 <!-- Synchronisation cloud (Supabase) : table afriflow_state -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -1649,8 +1649,10 @@ async function openPersonal(){
   jpActive=true;$("view-home").style.display="none";vh.style.display="";
   var sc=$("scrim");if(sc&&sc.classList.contains("on"))sc.click();
   window.scrollTo(0,0);if(window.AFRI)window.AFRI.page("Mes présences");
+  if(window.AfriNav)window.AfriNav.remember("personal");
   renderPersonal();
 }
+window.AfriOpenPersonal=openPersonal;
 function statut(m,rec,exc){
   var n=Date.now(),end=m.start+m.dur*6e4;
   if(rec)return rec.at<=m.start+m.grace*6e4?["ok","Présent"]:["late","Retard (+"+Math.max(1,Math.round((rec.at-m.start)/6e4))+" min)"];
