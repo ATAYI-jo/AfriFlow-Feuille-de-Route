@@ -1,6 +1,14 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
+  <script>document.documentElement.classList.add("af-role-checking");</script>
+  <style id="af-role-guard">
+    /* Avoid flashing shareholder-only content before validated routing. */
+    html.af-role-checking #view-home,
+    html.af-role-checking #viewHost,
+    html.af-role-checking #side,
+    html.af-role-checking #memberHub { visibility:hidden!important; }
+  </style>
   <script>
       window.__oauthReturn = location.hash;
       window.__oauthQuery = location.search;
