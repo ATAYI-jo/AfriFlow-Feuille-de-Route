@@ -110,7 +110,7 @@ Deno.serve(async (req) => {
     const { data: profile, error: profileError } = await supabase
       .from("afriflow_market_profiles").select("access_mode").eq("user_id", auth.user.id).maybeSingle();
     if (adminError || profileError) return json({ error: "Vérification des accès indisponible" }, 503);
-    if (administrator !== true && profile?.access_mode !== "shareholder_approved")
+    if (administrator !== true && !["shareholder_approved","collaborator"].includes(profile?.access_mode ?? ""))
       return json({ error: "Documents réservés aux actionnaires approuvés" }, 403);
 
     const { data: body } = await req.json().then((value) => ({ data: value })).catch(() => ({ data: {} }));
