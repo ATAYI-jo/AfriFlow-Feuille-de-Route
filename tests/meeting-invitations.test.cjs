@@ -48,8 +48,11 @@ test('Native Teams launch waits for check-in and personal attendance includes ad
 });
 
 test('Justification refusals require a reason and resubmissions reopen review',()=>{
- assert.match(html,/Motif obligatoire du refus/);
- assert.match(html,/reason\.trim\(\)\.length<10/);
+ assert.match(html,/function askJustificationRefusal\(\)/);
+ assert.match(html,/aria-labelledby="afJfRejectTitle"/);
+ assert.match(html,/value\.length<10/);
+ assert.match(html,/reason=await askJustificationRefusal\(\)/);
+ assert.doesNotMatch(html,/reason=window\.prompt\(/);
  assert.match(html,/Corriger et renvoyer/);
  assert.match(html,/Number\(jd\.at\)>=Number\(jf\.at\)/);
  assert.match(html,/Historique des décisions/);
