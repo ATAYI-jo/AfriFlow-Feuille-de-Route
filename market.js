@@ -186,7 +186,16 @@
   function loadInitialImages() {
     /* Only load the first visible cards. Loading every Dropbox link repeatedly
        made a large catalogue perform needless requests on every ten-second turn. */
-    state.products.slice(0, 8).forEach(function (p) {
+    // Include all visible welcome-panel headlines, even when they fall beyond
+    // the initial catalogue slice. Images still resolve through the secured media API.
+    var visibleNews = state.context.kind !== "public" ? state.products.filter(function (item) {
+      return isAnnouncement(item) &&
+        (item.category === "Actualités mondiales" || item.category === "Veille agroalimentaire");
+    }).slice(0, 3) : [];
+    var batch = state.products.slice(0, 8).concat(visibleNews.filter(function (item) {
+      return !state.products.slice(0, 8).some(function (p) { return p.id === item.id; });
+    }));
+    batch.forEach(function (p) {
       if (state.imgs[p.id]) return;
       resolveImage(p, 0).then(function (url) { if (url) applyImage(p.id, url); else { var b = document.querySelector('[data-market-image="' + p.id + '"] .af-fb-hint'); if (!b && isAdmin()) render(); } });
     });
@@ -467,8 +476,15 @@
       ? '<ul class="af-side-news-list">' + news.map(function (item) {
           return '<li><button type="button" class="af-side-news-item" data-market-detail="' + esc(item.id) +
             '" aria-label="Lire l’actualité : ' + esc(item.name) + '">' +
-            (item.news_relevance === true ? '<span class="af-side-news-bell" aria-label="Pertinent pour AfriFloW">🔔</span>' : '') +
-            '<span>' + esc(item.name) + '</span></button></li>';
+            '<span class="af-side-news-thumb" data-market-image="' + esc(item.id) + '" data-alt="' + esc(item.name) + '">' +
+              (state.imgs[item.id]
+                ? '<img class="af-photo" src="' + esc(state.imgs[item.id]) + '" alt="" loading="lazy">'
+                : '<span class="af-market-fallback"><img src="logo.png" alt="" aria-hidden="true"></span>') +
+            '</span>' +
+            '<span class="af-side-news-copy">' +
+              (item.news_relevance === true ? '<span class="af-side-news-bell" aria-label="Pertinent pour AfriFloW">🔔</span>' : '') +
+              '<span>' + esc(item.name) + '</span>' +
+            '</span></button></li>';
         }).join("") + '</ul>'
       : '<p class="af-side-news-empty">Les nouvelles actualités apparaîtront ici après publication.</p>';
     return '<aside class="af-ali-side af-welcome-member" aria-label="Actualités réservées aux membres">' +
