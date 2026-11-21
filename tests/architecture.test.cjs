@@ -34,7 +34,9 @@ test('Tous les scripts JavaScript applicatifs sont syntaxiquement valides', () =
     'modules/documents/document-viewer.js',
     'modules/documents/word-editor.js', 'modules/admin/access-controls.js',
     'modules/auth/account-management.js', 'modules/documents/dropbox-browser.js',
-    'modules/assistant/chat-ui.js', 'modules/assistant/math-rendering.js'
+    'modules/assistant/chat-ui.js', 'modules/assistant/math-rendering.js',
+    'modules/collaboration/meetings.js', 'modules/roadmap/timeline.js',
+    'modules/ui/animated-background.js'
   ];
   for (const script of scripts) {
     assert.doesNotThrow(() => new vm.Script(read(script), { filename: script }), script);
@@ -136,4 +138,22 @@ test('Assistant IA et moteur mathématique chargés dans leur ordre initial', ()
             'Chargement de l’assistant inversé');
   assert.ok(!html.includes('/* ---------- Icônes (SVG intégrés) ---------- */'));
   assert.ok(!html.includes('var KATEX_JS='));
+});
+
+test('Réunions, feuille de route et décor chargé une seule fois', () => {
+  const extracted = [
+    'modules/collaboration/meetings.js',
+    'modules/roadmap/timeline.js',
+    'modules/ui/animated-background.js'
+  ];
+  for (const filename of extracted) {
+    const tag = '<script src="./' + filename + '?v=20261121-modularisation-5"></script>';
+    assert.equal(html.split(tag).length - 1, 1, filename + ' absent ou dupliqué');
+    assert.ok(fs.existsSync(path.join(root, filename)), filename + ' absent');
+  }
+  assert.ok(html.indexOf('modules/roadmap/timeline.js') < html.indexOf('modules/ui/animated-background.js'));
+  assert.ok(html.indexOf('modules/ui/animated-background.js') < html.indexOf('modules/collaboration/meetings.js'));
+  for (const m of ['var CFG="pub:meetcfg"', 'var START="2026-11-09"', 'var LS="afriflow_animbg_v1"']) {
+    assert.ok(!html.includes(m), 'Bloc initial encore présent dans index.html : ' + m);
+  }
 });
