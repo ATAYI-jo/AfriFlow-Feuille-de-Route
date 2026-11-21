@@ -75,8 +75,19 @@ function restorePreviousView(){
   viewRestored=true;
   var saved=previousView();
   if(!saved||saved.id==="home")return;
+  function restoreScroll(){
+    if(saved.y>0){
+      [350,1000].forEach(function(ms){setTimeout(function(){
+        var current=previousView();
+        if(current&&current.id===saved.id)window.scrollTo(0,saved.y);
+      },ms)});
+    }
+  }
   if(saved.id==="personal"){
-    if(typeof window.AfriOpenPersonal==="function")window.AfriOpenPersonal();
+    if(typeof window.AfriOpenPersonal==="function"){
+      window.AfriOpenPersonal();
+      restoreScroll();
+    }
     return;
   }
   var ids=BASE.concat(X.nav,[{id:"messages"},{id:"admin"}]).map(function(x){return x.id});
@@ -84,12 +95,7 @@ function restorePreviousView(){
   if(saved.id==="admin"&&!isAdmin())return;
   if(saved.id==="market"&&!window.AfriMarket)return;
   show(saved.id);
-  if(saved.y>0){
-    [350,1000].forEach(function(ms){setTimeout(function(){
-      var current=previousView();
-      if(current&&current.id===saved.id)window.scrollTo(0,saved.y);
-    },ms)});
-  }
+  restoreScroll();
 }
 window.AfriNav={
   remember:rememberView,
