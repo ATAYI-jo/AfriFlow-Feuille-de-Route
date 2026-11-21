@@ -695,9 +695,10 @@
   function catalogContent() {
     var products = filteredProducts();
     return '<section class="af-ali">' + catsHtml() + heroHtml() + sideHtml() + scrollCueHtml() + "</section>"
-      + marketShowcaseHtml()
+      // Le catalogue est la première section après l'en-tête de la vitrine.
       + '<div class="af-market-section-head" id="afProductsTop"><h2>' + (state.category ? esc(state.category) : "Nos produits") + "</h2><p>" + (products.length ? products.length + " produit" + (products.length > 1 ? "s" : "") : "Catalogue en préparation") + "</p></div>"
       + productsHtml(products)
+      + marketShowcaseHtml()
       + announcementsHtml()
       + (isAdmin() ? adminPanel() : "");
   }
