@@ -15,6 +15,36 @@ function invited(m,email){
 }
 function visibleMeeting(m){return isAdmin()||isCens()||invited(m,me())}
 function esc(s){return String(s==null?"":s).replace(/[&<>"']/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]})}
+function inviteeAvatar(u){
+  var value=String(u.avatar_value||""),src="";
+  if(u.avatar_kind==="photo"&&/^data:image\/(png|jpe?g|webp);base64,[a-z0-9+/=]+$/i.test(value))src=value;
+  else{
+    var c={seed:value||u.user_id||u.email||"afriflow"};
+    try{var obj=JSON.parse(value);if(obj&&typeof obj.seed==="string")c=obj}catch(e){}
+    var q=new URLSearchParams();q.set("seed",String(c.seed||"afriflow"));
+    if(c.v===1){
+      if(/^variant\d{2}$/.test(c.hairVariant||""))q.set("hairVariant",c.hairVariant);
+      ["hairColor","skinColor","backgroundColor"].forEach(function(k){
+        if(/^[0-9a-f]{6}$/i.test(String(c[k]||"")))q.set(k,c[k]);
+      });
+      if(c.glasses){q.set("glassesProbability","100");q.set("glassesVariant","variant01")}
+      if(c.earrings){q.set("earringsProbability","100");q.set("earringsVariant","variant01")}
+      if(c.flowers){q.set("hairAccessoriesProbability","100");q.set("hairAccessoriesVariant","flowers")}
+      if(c.flip)q.set("flip","horizontal");
+    }
+    src="https://api.dicebear.com/10.x/lorelei/svg?"+q.toString();
+  }
+  return '<img src="'+esc(src)+'" alt="" loading="lazy" referrerpolicy="no-referrer" style="width:48px;height:48px;border-radius:50%;object-fit:cover;flex:none;background:#e8f2ec;border:1px solid rgba(20,75,51,.18)">';
+}
+function inviteeCard(u){
+  var name=u.name||u.display_name||[u.first_name,u.last_name].filter(Boolean).join(" ")||u.email;
+  var role=[u.job_title,u.department].filter(Boolean).join(" · ")||"Poste non renseigné";
+  return '<label style="display:flex;align-items:center;gap:11px;padding:12px;border:1px solid rgba(20,75,51,.2);border-radius:14px;background:rgba(255,255,255,.76);min-width:0;cursor:pointer">'
+    +'<input type="checkbox" data-cs-invite="'+esc(String(u.email).toLowerCase())+'" style="width:18px;height:18px;flex:none;accent-color:#14633f">'
+    +inviteeAvatar(u)
+    +'<span style="min-width:0;display:flex;flex-direction:column;gap:3px"><strong style="font-size:.91rem;overflow-wrap:anywhere;color:#193d2b">'+esc(name)+'</strong>'
+    +'<small style="font-size:.79rem;color:#456152;overflow-wrap:anywhere">'+esc(role)+'</small></span></label>';
+}
 function toast(m){(window.toast||alert)(m)}
 function okUrl(u){return /^https:\/\/[^\s"'<>]+$/i.test(u||"")}
 function uid(){return "m"+Date.now().toString(36)+Math.floor(Math.random()*1e4).toString(36)}
@@ -182,9 +212,7 @@ async function render(){
    +'<label class="full">Lien propre à cette réunion (facultatif, sinon lien général)<input id="csL" placeholder="https://…" autocomplete="off"></label>'
    +'<label class="full">Destinataires<select id="csAudience"><option value="all">Tous les membres du Journal de Bord</option><option value="selected">Membres sélectionnés uniquement</option></select></label>'
    +'<div class="full" id="csPeople" hidden><p>Choisissez les personnes invitées. Seuls leurs comptes pourront pointer leur présence.</p>'
-   +'<div class="mt-grid" style="max-height:210px;overflow:auto">'+U.filter(function(u){return u&&u.email}).map(function(u){
-      return '<label style="display:flex;align-items:center;gap:7px"><input type="checkbox" data-cs-invite="'+esc(String(u.email).toLowerCase())+'"> '+esc(u.name||u.display_name||u.email)+'</label>';
-   }).join("")+'</div></div></div>'
+   +'<div class="mt-grid" style="max-height:300px;overflow:auto;grid-template-columns:repeat(auto-fit,minmax(min(100%,240px),1fr));gap:10px;padding:4px">'+U.filter(function(u){return u&&u.email}).map(inviteeCard).join("")+'</div></div></div>'
    +'<div class="mt-err" id="csErr" role="alert"></div><button type="button" class="p" id="csGo">Programmer</button>'
    +'<p style="color:var(--muted);font-size:.85rem;margin:12px 0 0">Le premier clic sur « Rejoindre » est enregistré côté serveur de 15 min avant le début à la fin de la réunion. Cela mesure le pointage, et non la durée de participation à Teams.</p></div>';
   var L=meets.slice().sort(function(a,b){return b.start-a.start});
