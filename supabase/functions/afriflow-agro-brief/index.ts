@@ -327,27 +327,59 @@ function relevantToAfriFlow(title:string) {
   return /togo|bénin|burkina|c[eé]d[eé]ao|commerce|export|import|douane|logist|transport|portuaire|fret|agric|alimentaire|approvisionnement|cha[iî]ne d.approvisionnement|cajou|mangue|march[eé] mondial|inflation|taux de change|investissement|entreprise|pme/.test(text);
 }
 async function worldArticles(slot: NewsSlot) {
-  const url = new URL("https://news.google.com/rss/search");
-  url.searchParams.set("q",queries[slot]+" when:2d");
-  url.searchParams.set("hl","fr");url.searchParams.set("gl","FR");url.searchParams.set("ceid","FR:fr");
-  const response=await fetch(url,{signal:AbortSignal.timeout(9000),headers:{"User-Agent":"AfriFloW-world-news/1.0"}});
-  if(!response.ok) throw new Error("Fil d’actualités indisponible");
-  const xml=await response.text();
-  const items=xml.match(/<item>[\s\S]*?<\/item>/g)||[];
-  const result=items.map((item)=>{
-    const t=item.match(/<title><!\[CDATA\[([\s\S]*?)\]\]><\/title>|<title>([\s\S]*?)<\/title>/);
-    return {title:stripHtml(t?.[1]||t?.[2]||""),
-      url:clean(item.match(/<link>([\s\S]*?)<\/link>/)?.[1],1500),
-      domain:stripHtml(item.match(/<source[^>]*>([\s\S]*?)<\/source>/)?.[1]||"Presse"),
-      date:clean(item.match(/<pubDate>([\s\S]*?)<\/pubDate>/)?.[1],60)};
-  });
+  const feeds:Record<NewsSlot,Array<{url:string;domain:string}>> = {
+    morning:[
+      {url:"https://feeds.bbci.co.uk/news/world/rss.xml",domain:"BBC News"},
+      {url:"https://www.france24.com/fr/rss",domain:"France 24"},
+      {url:"https://www.theguardian.com/world/rss",domain:"The Guardian"},
+      {url:"https://news.un.org/feed/subscribe/en/news/all/rss.xml",domain:"ONU"}
+    ],
+    afternoon:[
+      {url:"https://feeds.bbci.co.uk/news/technology/rss.xml",domain:"BBC News"},
+      {url:"https://feeds.bbci.co.uk/news/science_and_environment/rss.xml",domain:"BBC News"},
+      {url:"https://www.france24.com/fr/rss",domain:"France 24"},
+      {url:"https://www.theguardian.com/environment/rss",domain:"The Guardian"}
+    ],
+    evening:[
+      {url:"https://feeds.bbci.co.uk/news/business/rss.xml",domain:"BBC News"},
+      {url:"https://www.theguardian.com/business/rss",domain:"The Guardian"},
+      {url:"https://www.france24.com/fr/rss",domain:"France 24"},
+      {url:"https://www.theguardian.com/world/rss",domain:"The Guardian"}
+    ]
+  };
+  const results=await Promise.allSettled(feeds[slot].map(async(feed)=>{
+    const response=await fetch(feed.url,{signal:AbortSignal.timeout(8500),
+      headers:{"User-Agent":"AfriFloW-WorldNews/1.0","Accept":"application/rss+xml, application/xml, text/xml"}});
+    if(!response.ok)throw new Error(feed.domain+": "+response.status);
+    const xml=await response.text();
+    const items=xml.match(/<item\b[^>]*>[\s\S]*?<\/item>/gi)||[];
+    return items.map(item=>{
+      const titleTag=item.match(/<title(?:\s[^>]*)?>([\s\S]*?)<\/title>/i)?.[1]||"";
+      const title=stripHtml(titleTag.replace(/^<!\[CDATA\[([\s\S]*?)\]\]>$/,"$1"));
+      const linkRaw=item.match(/<link(?:\s[^>]*)?>([\s\S]*?)<\/link>/i)?.[1]||"";
+      const url=clean(linkRaw.replace(/^<!\[CDATA\[([\s\S]*?)\]\]>$/,"$1").replace(/&amp;/g,"&"),1500);
+      const date=clean(item.match(/<(?:pubDate|dc:date)>([\s\S]*?)<\/(?:pubDate|dc:date)>/i)?.[1],70);
+      return {title,url,domain:feed.domain,date};
+    });
+  }));
+  const all=results.flatMap((result)=>result.status==="fulfilled"?result.value:[]);
   const seen=new Set<string>();
-  return result.filter(a=>{
-    if(!a.title||!/^https:\/\//.test(a.url)||seen.has(a.url))return false;
-    const date=Date.parse(a.date);
-    if(!Number.isFinite(date)||Date.now()-date>48*60*60*1000||date>Date.now()+15*60*1000)return false;
-    seen.add(a.url);return true;
-  }).slice(0,18);
+  const recent=all.filter(article=>{
+    if(!article.title||!/^https:\/\//.test(article.url)||seen.has(article.url))return false;
+    const date=Date.parse(article.date);
+    if(!Number.isFinite(date)||Date.now()-date>72*60*60*1000||date>Date.now()+15*60*1000)return false;
+    seen.add(article.url);return true;
+  });
+  if(!recent.length)throw new Error("Aucune actualité récente provenant des sources RSS vérifiées");
+  const patterns:Record<NewsSlot,RegExp>={
+    morning:/diplomat|économ|gover|politic|politique|international|sommet|conflit|accord|peace|minister|présiden|presiden|economy|trade|world|guerre/i,
+    afternoon:/tech|science|climat|climate|environnement|environment|santé|health|recherch|innovation|numéri|digital|intelligenc|énerg|space|spatial/i,
+    evening:/business|entreprise|marché|market|inflation|commerce|trade|transport|logist|industrie|économ|econom|invest|banque|bank|afrique|africa|energy|énergie/i
+  };
+  return recent.sort((a,b)=>{
+    const score=(x:typeof a)=> (patterns[slot].test(x.title)?100:0)+(Number.isFinite(Date.parse(x.date))?Date.parse(x.date)/1e13:0);
+    return score(b)-score(a);
+  }).slice(0,20);
 }
 async function publishDailyBrief(service: ReturnType<typeof createClient>, day:string, slot:NewsSlot) {
   await service.from("afriflow_market_products").update({is_active:false})
