@@ -54,7 +54,7 @@ body.af-market-mode #market-view{display:block}
 .af-slide-deal{display:flex;align-items:center;gap:8px;margin:-10px 0 16px;font-size:.9rem}.af-slide-deal span{text-decoration:line-through;color:rgba(255,255,255,.72)}.af-slide-deal b{border-radius:99px;background:#f2504f;color:#fff;padding:4px 8px}
 .af-slide-media{flex:none;width:min(36%,300px);aspect-ratio:1;border-radius:26px;overflow:hidden;display:grid;place-items:center;background:rgba(255,255,255,.18);box-shadow:0 20px 50px rgba(0,0,0,.28);animation:afFloat 6s ease-in-out infinite}
 .af-slide-media .af-photo{width:100%;height:100%;object-fit:cover}
-.af-hero-logo{width:78%;height:78%;object-fit:contain;background:#fff;border-radius:50%;padding:14px}
+
 .af-slide-media .af-market-fallback{color:#fff}
 .af-dots{position:absolute;z-index:3;left:50%;bottom:18px;transform:translateX(-50%);display:flex;gap:8px}
 .af-dot{width:10px;height:10px;padding:0;border-radius:50%;border:0;background:rgba(255,255,255,.45);cursor:pointer;transition:width .3s,background .3s}
