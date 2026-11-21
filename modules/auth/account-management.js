@@ -233,7 +233,11 @@ AFRI.resolve=async function(email,ok){
   r.status=ok?"approved":"refused";r.done=iso();await putRow("req:"+email,r);
 };
 async function refreshMe(){
-  if(!loggedUserEmail||USER_ROLE==="admin")return;
+  // Client, pending partner and pending shareholder have no collaboration row.
+  // Never treat that as deletion of their market account.
+  var market=window.afriMarketSession;
+  if(!loggedUserEmail||USER_ROLE==="admin"||!market||
+     !["shareholder_approved","collaborator"].includes(market.access_mode))return;
   try{
     var u=await getRow(ukey(loggedUserEmail));
     if(!u){window.logout("Votre compte n'existe plus. Inscrivez-vous à nouveau.");return}
