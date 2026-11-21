@@ -86,7 +86,7 @@ setInterval(function(){
   if(document.hidden)return;
   marketplaceStep=(marketplaceStep+1)%marketplaceCycle.length;
   renderMarketplaceLabel();
-},2800);
+},1500);
 function buildNav(){
   var base=BASE.slice(); base.push({id:"messages",n:"Messagerie"}); if(isAdmin())base.push({id:"admin",n:"Administration"});
   var nb=base.length,h=""; base.concat(X.nav).forEach(function(it,i){

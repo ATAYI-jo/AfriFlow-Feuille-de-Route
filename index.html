@@ -833,7 +833,7 @@ body:not(.af-off) #scenery .ob.af-sky-hide{opacity:0}
 .af-mts{-webkit-mask-image:linear-gradient(#000 40%,transparent);mask-image:linear-gradient(#000 40%,transparent)}
 
 /* ---------- 3. Verre partout ---------- */
-button:not(.p):not(.danger):not(#logout-btn):not(.fdr-head):not(.nv):not(.nx):not(#menuBtn):not(#afPwaInstallBtn){
+button:not(.p):not(.danger):not(#logout-btn):not(.fdr-head):not(.nv):not(.nx):not(#menuBtn):not(#afPwaInstallBtn):not(#sideClose):not(#profileOpen){
  background:color-mix(in srgb,var(--card) 58%,transparent);
  -webkit-backdrop-filter:blur(12px) saturate(160%);backdrop-filter:blur(12px) saturate(160%);
  border-color:color-mix(in srgb,#fff var(--g-edge,60%),transparent);
@@ -939,7 +939,7 @@ collect();sched();
 :root[data-theme="dark"]{--g-neutral-edge:rgba(255,255,255,.14);--g-neutral-shadow:0 10px 30px rgba(0,0,0,.35),inset 0 1px 0 rgba(255,255,255,.06)}
 .toolbar,.map-panel,.step-card,.dcard,.journal-article,.addrow,.stm,.ed-bar,.pubbar,.lock-banner,.auth-box,.customizer-box,.fdr-tbl,.xlw,
 .start-pill,.plus-card,.border-sign,#side,#menuBtn,.fdr-bar,.fdr-ban,.mt-card,.mt-adm,.mt-box,.mt-m,.brand,.fdr-hero,
-button:not(.p):not(.danger):not(#logout-btn):not(.fdr-head):not(.nv):not(.nx):not(#menuBtn):not(#afPwaInstallBtn){
+button:not(.p):not(.danger):not(#logout-btn):not(.fdr-head):not(.nv):not(.nx):not(#menuBtn):not(#afPwaInstallBtn):not(#sideClose):not(#profileOpen){
  -webkit-backdrop-filter:blur(22px)!important;backdrop-filter:blur(22px)!important;
  border-color:var(--g-neutral-edge)!important;box-shadow:var(--g-neutral-shadow)!important}
 /* les liserés de couleur disparaissent (le statut reste lisible dans les pastilles) */
@@ -2077,8 +2077,19 @@ if(window.__sb&&window.__sb.functions){
 #side #navList .nvr{margin-bottom:0!important;gap:4px!important}
 #side #navList .nv:not([data-id="market"]){padding:6px 14px!important;min-height:38px;line-height:22px;box-sizing:border-box}
 #side #navList .nvr:has(.nv[data-id="market"]){margin-bottom:8px!important}
-#side #sideClose{display:inline-flex;align-items:center;justify-content:center;min-width:44px;min-height:44px}
-#side #sideClose .ic{width:22px;height:22px}
+/* Bouton Accueil sans plaque blanche ni effet verre, zone tactile conservée. */
+#side #sideClose{
+  display:inline-flex!important;align-items:center;justify-content:center;
+  min-width:44px;min-height:44px;padding:8px!important;
+  background:transparent!important;background-image:none!important;
+  border:0!important;border-radius:0!important;box-shadow:none!important;
+  -webkit-backdrop-filter:none!important;backdrop-filter:none!important;
+  color:var(--ink)!important;
+}
+#side #sideClose::before,#side #sideClose::after{content:none!important;display:none!important}
+#side #sideClose .ic{width:25px;height:25px}
+#side #sideClose:hover{color:var(--green)!important}
+#side #sideClose:focus-visible{outline:2px solid var(--green)!important;outline-offset:2px;border-radius:8px!important}
 /* Accueil reste utilisable par l’icône maison, sans doubler sa ligne dans le menu. */
 #side #navList .nvr-home{display:none!important}
 #side #navList .nv[data-id="market"]{
@@ -2628,6 +2639,16 @@ body.af-profile-open #afCloudSyncBadge{visibility:hidden!important}
 <style id="af-profile-css">
 .export-add{display:inline-flex!important;margin-top:9px!important;padding:7px 10px!important;border-radius:9px!important;font-size:.78rem!important;color:var(--green)!important;background:color-mix(in srgb,var(--green) 10%,var(--card))!important;border:1px solid color-mix(in srgb,var(--green) 30%,var(--line))!important;box-shadow:none!important}
 .side-profile{border:0!important;padding:0!important;background:transparent!important;box-shadow:none!important;flex:none}
+/* Enlever la plaque blanche imposée par .side-h img sans modifier la photo. */
+#side .side-profile,#side #sideAvatar,#side #sideAvatar .pf-avatar{
+  background:transparent!important;background-image:none!important;border:0!important;
+  box-shadow:none!important;-webkit-backdrop-filter:none!important;backdrop-filter:none!important;
+}
+#side .side-h #sideAvatar img{
+  background:transparent!important;background-image:none!important;padding:0!important;
+  border:0!important;border-radius:50%!important;box-shadow:none!important;
+}
+#side .side-profile:focus-visible{outline:2px solid var(--green)!important;outline-offset:3px;border-radius:50%!important}
 #sideAvatar,.pf-avatar{display:grid;place-items:center;width:52px;height:52px;overflow:hidden;border-radius:50%;background:linear-gradient(135deg,#e6f0e8,#c8dfcd);color:var(--green);border:2px solid color-mix(in srgb,var(--green) 36%,#fff);box-shadow:0 3px 12px rgba(17,63,38,.16)}
 #sideAvatar{width:72px;height:72px;background:transparent;border:0;box-shadow:none}#sideAvatar .ic{width:28px;height:28px}#sideAvatar .pf-avatar{width:72px;height:72px;border:0;box-shadow:none}.side-profile.needs-profile #sideAvatar{outline:3px solid color-mix(in srgb,var(--amber) 58%,transparent);outline-offset:3px}
 .pf-avatar{width:64px;height:64px;flex:none}.pf-avatar img{width:100%;height:100%;object-fit:cover;background:#e8f2ec}.pf-avatar.pf-dicebear img{transform:scale(1.34);transform-origin:center 43%;object-position:center 43%}#sideAvatar .pf-avatar.pf-dicebear img{transform:scale(1.48)}
