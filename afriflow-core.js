@@ -1083,7 +1083,7 @@ function enterApp(email, role, name, grants, market){
     return;
   }
   // Seul un actionnaire approuvé ou un administrateur reconnu peut ouvrir le workspace.
-  if(USER_ROLE!=="admin" && accessMode!=="shareholder_approved" && accessMode!=="collaborator"){
+  if(USER_ROLE!=="admin" && accessMode!=="shareholder_approved"){
     if(window.AfriMarket)window.AfriMarket.open({kind:"authenticated",market:market||{access_mode:"client"}});
     return;
   }
