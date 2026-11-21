@@ -595,8 +595,7 @@
       showcasePhoto(second) +
       (second ? '<button type="button" data-market-detail="' + esc(second.id) + '" class="af-showcase-text-link">Voir le produit ' + icon("back") + '</button>' : '<span>À découvrir</span>') + '</article>';
     var giftCard = '<article class="af-showcase-card af-showcase-gifts">' +
-      '<span class="af-showcase-eyebrow">' + icon("sparkle") + ' Cadeaux</span>' +
-      '<h3>Cadeaux AfriFloW</h3>' +
+      '<h3>' + icon("sparkle") + ' Cadeaux</h3>' +
       '<button type="button" class="af-gift-open" data-showcase-gifts aria-label="Découvrir le contenu des cadeaux">' +
         '<svg class="af-gift-art" viewBox="0 0 360 230" role="img" aria-label="Trois paquets cadeaux avec rubans dorés et verts">' +
           '<defs><linearGradient id="afGiftRed" x1="0" x2="1"><stop stop-color="#ef713e"/><stop offset="1" stop-color="#b73f32"/></linearGradient>' +
