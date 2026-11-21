@@ -28,6 +28,7 @@ begin
   privileged := coalesce((select auth.role())='service_role', false)
                 or current_user in ('postgres','supabase_admin');
   if tg_op='INSERT' then
+    new.selection_confirmed_at:=now();
     new.access_mode := case new.requested_role
       when 'shareholder' then 'shareholder_pending'
       when 'partner' then 'partner_waiting' else 'client' end;
