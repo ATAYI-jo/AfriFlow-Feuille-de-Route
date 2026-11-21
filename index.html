@@ -2616,8 +2616,9 @@ body.af-profile-open #afCloudSyncBadge{visibility:hidden!important}
   if (!area || !button || !help || !helpText || !close) return;
   function isStandalone() {
     return window.matchMedia('(display-mode: standalone)').matches ||
-      window.matchMedia('(display-mode: fullscreen)').matches && navigator.standalone === true ||
-      window.navigator.standalone === true;
+      window.matchMedia('(display-mode: fullscreen)').matches ||
+      window.navigator.standalone === true ||
+      /AfriFloW/i.test(navigator.userAgent || '');
   }
   function previouslyInstalled() {
     try { return localStorage.getItem(installedKey) === 'yes'; } catch (ignore) { return false; }
