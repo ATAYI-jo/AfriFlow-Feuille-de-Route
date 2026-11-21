@@ -43,6 +43,9 @@ async function ensureMemberProfile(us){
 }
 async function finish(us,intent){
   var email=String(us.email).toLowerCase(),isA=false;
+  var market=await ensureMarketProfile(us,intent);
+  if(market.access_mode==="onboarding_required")
+    return {ok:true,email:email,name:nameOf(us),grants:[],role:"reader",market:market};
   try{var a=await SB().rpc("af_is_admin");isA=a.data===true}catch(e){}
   var u=await getRow(ukey(email));
   if(!u){
@@ -51,7 +54,6 @@ async function finish(us,intent){
     if(ins.error&&ins.error.code!=="23505")throw ins.error;
   }
   ensureMemberProfile(us);
-  var market=await ensureMarketProfile(us,intent);
   var g=isA?["all"]:(u.grants||[]);
   return {ok:true,email:email,name:isA?"Administrateur":(u.name||nameOf(us)),grants:g,role:isA?"admin":(g.length?"editor":"reader"),market:market};
 }
@@ -168,7 +170,7 @@ AFRI.login=async function(email,pwd,intent,captchaToken){
       if(/invalid login/i.test(m))return {ok:false,error:"Email ou mot de passe incorrect. Compte créé avant la mise à jour de sécurité ? Cliquez sur « S'inscrire » avec le même email pour choisir un mot de passe."};
       return {ok:false,error:m};
     }
-    return await finish(r.data.user,intent);
+    return await finish(r.data.user); // A login must not silently select a new role.
   }catch(e){return {ok:false,error:fail(e)}}
 };
 AFRI.register=async function(email,name,pwd,intent,captchaToken){
