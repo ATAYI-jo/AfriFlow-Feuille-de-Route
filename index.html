@@ -1280,6 +1280,50 @@ async function decorate(){
     del.parentNode.before(blk);
   });
 }
+/* Formulaire de refus compatible mobile/PWA (window.prompt est indisponible). */
+function askJustificationRefusal(){
+  return new Promise(function(resolve){
+    var overlay=document.createElement("div");
+    overlay.className="af-jf-reject-overlay";
+    overlay.style.cssText="position:fixed;inset:0;z-index:20000;display:flex;align-items:center;justify-content:center;padding:16px;background:rgba(10,30,20,.64);box-sizing:border-box";
+    overlay.innerHTML='<section role="dialog" aria-modal="true" aria-labelledby="afJfRejectTitle" style="width:min(440px,100%);max-height:calc(100dvh - 32px);overflow:auto;box-sizing:border-box;background:var(--card,#fff);color:var(--ink,#152c20);border-radius:20px;padding:22px;box-shadow:0 18px 55px rgba(0,0,0,.30)">'
+      +'<h2 id="afJfRejectTitle" style="margin:0 0 8px">Refuser un justificatif</h2>'
+      +'<p style="margin:0 0 16px">Expliquez pourquoi le justificatif est refusé. Le collaborateur pourra consulter ce motif et corriger sa demande.</p>'
+      +'<label for="afJfRejectReason" style="display:block;margin-bottom:7px;font-weight:700">Motif du refus (obligatoire)</label>'
+      +'<textarea id="afJfRejectReason" maxlength="800" minlength="10" rows="4" style="display:block;width:100%;box-sizing:border-box;min-height:110px;padding:12px;border-radius:12px;font:inherit;background:var(--card,#fff);color:var(--ink,#152c20);border:1px solid var(--line,#b5c8bb)" placeholder="Décrivez précisément la raison du refus…"></textarea>'
+      +'<p id="afJfRejectError" role="alert" style="min-height:20px;font-size:.88rem;color:#b3261e;margin:7px 0"></p>'
+      +'<div style="display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap"><button type="button" id="afJfRejectCancel">Annuler</button><button type="button" id="afJfRejectConfirm" class="danger">Confirmer le refus</button></div></section>';
+    document.body.appendChild(overlay);
+    var reason=overlay.querySelector("#afJfRejectReason");
+    var previouslyFocused=document.activeElement;
+    var settled=false;
+    function finish(value){
+      if(settled)return;
+      settled=true;document.removeEventListener("keydown",onKey,true);
+      overlay.remove();
+      if(previouslyFocused&&previouslyFocused.isConnected&&previouslyFocused.focus)previouslyFocused.focus();
+      resolve(value);
+    }
+    function onKey(event){
+      if(event.key==="Escape"){event.preventDefault();finish(null);}
+      if(event.key==="Tab"){
+        var focusables=[reason,overlay.querySelector("#afJfRejectCancel"),overlay.querySelector("#afJfRejectConfirm")];
+        var pos=focusables.indexOf(document.activeElement);
+        if(event.shiftKey&&pos===0){event.preventDefault();focusables[2].focus();}
+        else if(!event.shiftKey&&pos===2){event.preventDefault();focusables[0].focus();}
+      }
+    }
+    document.addEventListener("keydown",onKey,true);
+    overlay.querySelector("#afJfRejectCancel").onclick=function(){finish(null)};
+    overlay.querySelector("#afJfRejectConfirm").onclick=function(){
+      var value=reason.value.trim();
+      if(value.length<10){overlay.querySelector("#afJfRejectError").textContent="Le motif doit contenir au moins 10 caractères.";reason.focus();return}
+      finish(value.slice(0,800));
+    };
+    overlay.addEventListener("click",function(event){if(event.target===overlay)finish(null)});
+    reason.focus();
+  });
+}
 document.addEventListener("click",async function(e){
   var b=e.target.closest("button[data-jf]");if(!b)return;
   var m=b.dataset.m,em=b.dataset.e;
@@ -1291,10 +1335,8 @@ document.addEventListener("click",async function(e){
     }
     var approved=b.dataset.jf==="ok",reason="";
     if(!approved){
-      reason=window.prompt("Motif obligatoire du refus (minimum 10 caractères) :","")||"";
-      if(!reason.trim())return;
-      if(reason.trim().length<10){toast("Veuillez préciser un motif de refus d’au moins 10 caractères.");return}
-      reason=reason.trim().slice(0,800);
+      reason=await askJustificationRefusal();
+      if(reason===null)return;
     }
     var previous=await SB().from(TB()).select("value").eq("key","att:jd-"+m+":"+em).maybeSingle();
     if(previous.error)throw previous.error;
