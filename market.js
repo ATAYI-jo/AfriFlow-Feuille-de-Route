@@ -203,6 +203,13 @@
     var batch = state.products.slice(0, 8).concat(visibleNews.filter(function (item) {
       return !state.products.slice(0, 8).some(function (p) { return p.id === item.id; });
     }));
+    // Promotional cards may show products outside the initial eight cards.
+    var additional = state.products.filter(function (item) {
+      return !isAnnouncement(item) && (item.is_active !== false);
+    }).slice(0, 10);
+    additional.forEach(function (item) {
+      if (!batch.some(function (p) { return p.id === item.id; })) batch.push(item);
+    });
     batch.forEach(function (p) {
       if (state.imgs[p.id]) return;
       resolveImage(p, 0).then(function (url) { if (url) applyImage(p.id, url); else { var b = document.querySelector('[data-market-image="' + p.id + '"] .af-fb-hint'); if (!b && isAdmin()) render(); } });
@@ -516,9 +523,72 @@
     return '<button type="button" class="af-scroll-cue" data-market-scroll="products" title="Défiler vers les produits" aria-label="Défiler vers les produits">' +
       icon("down") + '<span class="af-scroll-cue-label">Défiler</span></button>';
   }
+
+  /* Showcase is generated only from products already visible to the viewer.
+     Discounts use real compare_at_price; gift suggestions are not giveaways. */
+  function showcasePhoto(product, fallback) {
+    if (!product) return '<span class="af-showcase-empty-art" aria-hidden="true">' + icon("leaf") + '</span>';
+    return '<span class="af-showcase-picture" data-market-image="' + esc(product.id) + '" data-alt="' + esc(product.name) + '">' +
+      (state.imgs[product.id] ? '<img class="af-photo" src="' + esc(state.imgs[product.id]) + '" alt="" loading="lazy">' :
+       '<img class="af-showcase-placeholder" src="logo.png" alt="" aria-hidden="true">') + '</span>';
+  }
+  function marketShowcaseHtml() {
+    var offers = state.products.filter(function (item) { return !isAnnouncement(item) && item.is_active !== false; });
+    var featured = offers.filter(inStock);
+    var discounted = featured.filter(function (p) { return discountPercent(p) > 0; })
+      .sort(function (a, b) { return discountPercent(b) - discountPercent(a); });
+    var promo = discounted[0] || featured.find(function (p) { return !!p.promotion_label; }) || featured[0];
+    var gift = featured.find(function (p) { return /coffret|cadeau|assortiment|box|découverte/i.test(p.name || "") && (!promo || p.id !== promo.id); }) ||
+      featured.find(function (p) { return !promo || p.id !== promo.id; }) || promo;
+    var second = discounted.find(function (p) { return !promo || p.id !== promo.id; }) ||
+      featured.find(function (p) { return (!promo || p.id !== promo.id) && (!gift || p.id !== gift.id); }) || gift;
+    var promoText = promo ? (discountPercent(promo) ? "−" + discountPercent(promo) + " % sur ce produit" : "Produit à découvrir") : "Les saveurs d’Afrique";
+    var bigCard = '<article class="af-showcase-card af-showcase-main"><div class="af-showcase-copy">' +
+      '<span class="af-showcase-eyebrow">' + icon("sparkle") + ' À la une AfriFloW</span>' +
+      '<h3>' + (promo ? esc(promo.name) : "Découvrez nos produits d’Afrique") + '</h3>' +
+      '<p>' + esc(promoText) + '</p>' +
+      (promo ? '<button type="button" class="af-showcase-cta" data-market-detail="' + esc(promo.id) + '">Découvrir ' + icon("back") + '</button>' :
+        '<button type="button" class="af-showcase-cta" data-market-scroll="products">Voir le catalogue ' + icon("back") + '</button>') +
+      '</div><div class="af-showcase-art">' + showcasePhoto(promo) + '</div></article>';
+    var promoLabel = second && discountPercent(second) ? "−" + discountPercent(second) + " %" : "Sélection";
+    var offerCard = '<article class="af-showcase-card af-showcase-deal">' +
+      '<span class="af-showcase-pill">' + esc(promoLabel) + '</span>' +
+      '<h3>' + (second ? esc(second.name) : "Nos offres") + '</h3>' +
+      showcasePhoto(second) +
+      (second ? '<button type="button" data-market-detail="' + esc(second.id) + '" class="af-showcase-text-link">Voir le produit ' + icon("back") + '</button>' : '<span>À découvrir</span>') + '</article>';
+    var giftCard = '<article class="af-showcase-card af-showcase-gifts">' +
+      '<span class="af-showcase-eyebrow">' + icon("sparkle") + ' Idées cadeaux</span>' +
+      '<h3>' + (gift ? esc(gift.name) : "Des découvertes à offrir") + '</h3>' +
+      showcasePhoto(gift) +
+      '<p>Inspirations gourmandes et découvertes africaines</p>' +
+      (gift ? '<button type="button" data-market-detail="' + esc(gift.id) + '" class="af-showcase-text-link">Découvrir ' + icon("back") + '</button>' : '') + '</article>';
+    var photos = [
+      { file:"Market Scene in Ghana.jpg", place:"Marché d’Accra, Ghana", author:"Fquasie", license:"CC BY-SA 4.0" },
+      { file:"View of Mt. Kilimanjaro at a distance.jpg", place:"Kilimandjaro, Tanzanie", author:"Wikimedia Commons", license:"CC0 1.0" },
+      { file:"A typical african market in Northern Ghana.jpg", place:"Marché du nord du Ghana", author:"Sir Amugi", license:"CC BY-SA 4.0" }
+    ];
+    var photoHtml = photos.map(function (p, index) {
+      var href = 'https://commons.wikimedia.org/wiki/File:' + encodeURIComponent(p.file).replace(/%20/g, '_');
+      var src = 'https://commons.wikimedia.org/wiki/Special:FilePath/' + encodeURIComponent(p.file).replace(/%20/g, '_') + '?width=640';
+      return '<figure class="af-africa-frame" style="--frame-index:' + index + '">' +
+        '<img src="' + esc(src) + '" loading="lazy" decoding="async" alt="' + esc(p.place) + '">' +
+        '<figcaption>' + esc(p.place) + '</figcaption></figure>';
+    }).join('');
+    var credits = photos.map(function (p) {
+      return '<a href="https://commons.wikimedia.org/wiki/File:' + encodeURIComponent(p.file).replace(/%20/g, '_') +
+        '" target="_blank" rel="noopener noreferrer">' + esc(p.author + " · " + p.license) + '</a>';
+    }).join(' · ');
+    var africa = '<article class="af-showcase-card af-africa-gallery"><div class="af-africa-heading"><span class="af-showcase-eyebrow">' +
+      icon("globe") + ' Regards d’Afrique</span><h3>L’Afrique en images</h3><p>Marchés, paysages et territoires</p></div>' +
+      '<div class="af-africa-images" aria-label="Photographies d’Afrique">' + photoHtml + '</div>' +
+      '<div class="af-africa-credits">Photos : ' + credits + '</div></article>';
+    return '<section class="af-market-showcase" aria-label="Sélections AfriFloW et Afrique en images">' +
+      bigCard + offerCard + giftCard + africa + '</section>';
+  }
   function catalogContent() {
     var products = filteredProducts();
     return '<section class="af-ali">' + catsHtml() + heroHtml() + sideHtml() + scrollCueHtml() + "</section>"
+      + marketShowcaseHtml()
       + '<div class="af-market-section-head" id="afProductsTop"><h2>' + (state.category ? esc(state.category) : "Nos produits") + "</h2><p>" + (products.length ? products.length + " produit" + (products.length > 1 ? "s" : "") : "Catalogue en préparation") + "</p></div>"
       + productsHtml(products)
       + announcementsHtml()
