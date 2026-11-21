@@ -229,8 +229,10 @@ async function frenchBriefFallback(sources: Array<{ title: string; url: string; 
     });
     const data = await response.json().catch(() => ({}));
     if (!response.ok || data.success === false) throw new Error("Rédaction Cloudflare indisponible");
-    const output = String(data.result?.response || "").replace(/^```(?:json)?\s*|\s*```$/g, "").trim();
-    const obj = JSON.parse(output);
+    const raw = data.result?.response ?? data.result?.output ?? "";
+    const output = typeof raw === "string" ? raw.replace(/^```(?:json)?\s*|\s*```$/g, "").trim() : "";
+    const obj = (raw && typeof raw === "object" && !Array.isArray(raw))
+      ? raw : JSON.parse(output);
     const title = clean(obj.title, 160), description = String(obj.description || "").trim().slice(0,2200);
     if (title.length < 20 || description.length < 400) throw new Error("Synthèse insuffisante");
     return { title, description };
