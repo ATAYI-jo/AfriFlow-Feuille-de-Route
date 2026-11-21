@@ -188,7 +188,7 @@
       var cur = box.querySelector("img.af-photo");
       if (cur) { cur.onload = function () { fitMedia(box, cur); }; if (cur.getAttribute("src") !== url) cur.src = url; else fitMedia(box, cur); return; }
       var im = new Image(); im.className = "af-photo"; im.alt = box.dataset.alt || "Produit AfriFloW"; im.src = url;
-      im.onload = function () { if (!box.isConnected) return; fitMedia(box, im); box.querySelectorAll(".af-market-fallback").forEach(function (n) { n.remove(); }); box.insertBefore(im, box.firstChild); };
+      im.onload = function () { if (!box.isConnected) return; fitMedia(box, im); box.querySelectorAll(".af-market-fallback, .af-showcase-placeholder").forEach(function (n) { n.remove(); }); box.insertBefore(im, box.firstChild); };
     });
   }
   function loadInitialImages() {
@@ -564,7 +564,7 @@
       (gift ? '<button type="button" data-market-detail="' + esc(gift.id) + '" class="af-showcase-text-link">Découvrir ' + icon("back") + '</button>' : '') + '</article>';
     var photos = [
       { file:"Market Scene in Ghana.jpg", place:"Marché d’Accra, Ghana", author:"Fquasie", license:"CC BY-SA 4.0" },
-      { file:"View of Mt. Kilimanjaro at a distance.jpg", place:"Kilimandjaro, Tanzanie", author:"Wikimedia Commons", license:"CC0 1.0" },
+      { file:"View of Mt. Kilimanjaro at a distance.jpg", place:"Kilimandjaro, Tanzanie", author:"Tish Madesh", license:"CC0 1.0" },
       { file:"A typical african market in Northern Ghana.jpg", place:"Marché du nord du Ghana", author:"Sir Amugi", license:"CC BY-SA 4.0" }
     ];
     var photoHtml = photos.map(function (p, index) {
