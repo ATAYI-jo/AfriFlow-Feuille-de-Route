@@ -44,6 +44,16 @@ test('Anonymous page boots and locally hosted JavaScript loads', { timeout: 9000
     assert.equal(await page.locator('#market-view').count(), 1);
     assert.equal(await page.locator('#navList').count(), 1);
     assert.deepEqual(failedScripts, [], 'Local JavaScript returned HTTP errors');
+    assert.equal(await page.locator('script[src*="/modules/documents/word-editor.js"]').count(), 0,
+      'Word editor should not load before it is requested');
+    const loaderReady = await page.evaluate(() => typeof window.dvWordEdit === 'function' &&
+      typeof window.dvPerm === 'function' && typeof window.dvTogglePerm === 'function');
+    assert.ok(loaderReady, 'Word editor compatibility API should be available');
+    await page.evaluate(() => { window.dvPerm('__smoke_no_access__'); });
+    await page.waitForFunction(() =>
+      document.querySelector('script[src*="/modules/documents/word-editor.js"]') !== null,
+      { timeout: 10000 });
+
     const modules = await page.evaluate(() => ({
       supabase: typeof window.__sb !== 'undefined',
       messaging: typeof window.AFRI !== 'undefined',
