@@ -1,0 +1,42 @@
+name: AfriFloW - Quality checks
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main, 'refactor/**']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: afriflow-quality-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  static-and-regression:
+    name: JavaScript syntax and architecture
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Validate JavaScript syntax and critical module wiring
+        run: node --test tests/*.test.cjs
+
+  browser-smoke:
+    name: Chromium anonymous mobile smoke
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install browser test runner
+        run: npm install --no-save --no-package-lock playwright@1.56.1
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+      - name: Test critical anonymous application shell
+        run: node --test tests/browser-smoke.cjs
