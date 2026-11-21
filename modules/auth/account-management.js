@@ -45,7 +45,7 @@ async function finish(us,intent){
   var email=String(us.email).toLowerCase(),isA=false;
   try{var a=await SB().rpc("af_is_admin");isA=a.data===true}catch(e){}
   var market=await ensureMarketProfile(us,intent);
-  var allowed=isA||market.access_mode==="shareholder_approved";
+  var allowed=isA||["shareholder_approved","collaborator"].includes(market.access_mode);
   var u={email:email,name:nameOf(us),grants:[]};
   if(allowed){
     var stored=await getRow(ukey(email));
