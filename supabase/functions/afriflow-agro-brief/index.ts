@@ -324,7 +324,7 @@ const queries: Record<NewsSlot,string> = {
 };
 function relevantToAfriFlow(title:string) {
   const text = title.toLocaleLowerCase("fr");
-  return /afrique|africain|togo|bénin|burkina|c[eé]d[eé]ao|commerce|export|import|douane|logist|transport|portuaire|fret|agric|alimentaire|approvisionnement|cha[iî]ne d.approvisionnement|cajou|mangue|march[eé] mondial|inflation|taux de change|investissement|entreprise|pme/.test(text);
+  return /togo|bénin|burkina|c[eé]d[eé]ao|commerce|export|import|douane|logist|transport|portuaire|fret|agric|alimentaire|approvisionnement|cha[iî]ne d.approvisionnement|cajou|mangue|march[eé] mondial|inflation|taux de change|investissement|entreprise|pme/.test(text);
 }
 async function worldArticles(slot: NewsSlot) {
   const url = new URL("https://news.google.com/rss/search");
