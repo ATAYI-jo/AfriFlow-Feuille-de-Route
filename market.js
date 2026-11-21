@@ -452,11 +452,27 @@
     return '<div class="af-ali-hero" id="afHero"' + bg + ">" + slides + dots + (isAdmin() ? '<button type="button" class="af-hero-pencil" data-act="hero-edit" title="Modifier le texte et l’image du bandeau" aria-label="Modifier le bandeau">✎</button>' : "") + "</div>";
   }
   function sideHtml() {
-    var member = state.context.kind === "authenticated";
-    return '<aside class="af-ali-side"><div class="af-side-hello"><img src="logo.png" alt=""><div><b>Bienvenue sur AfriFloW</b><small>' + (member ? "Votre espace client" : "Achetez et échangez en direct") + "</small></div></div>"
-      + (member ? '<button type="button" class="af-market-primary" id="afMarketProfile">Mon compte</button>' : '')
-      + '<button type="button" class="af-market-secondary" data-act="quote">Demander un devis</button>'
-      + '<ul class="af-side-list"><li>Produits d’Afrique, sélectionnés</li><li>Contact direct avec AfriFloW</li><li>De l’Afrique vers le monde</li></ul></aside>';
+    // The welcome panel is rendered for both signed-in members and visitors.
+    // Private news are taken only from the catalogue returned under Supabase RLS.
+    var member = state.context && state.context.kind !== "public";
+    if (!member) {
+      return '<aside class="af-ali-side af-welcome-guest" aria-label="Bienvenue sur AfriFloW"><h2>Bienvenue</h2></aside>';
+    }
+    var news = state.products.filter(function (item) {
+      return isAnnouncement(item) &&
+        (item.category === "Actualités mondiales" || item.category === "Veille agroalimentaire");
+    }).slice(0, 3);
+    var headline = '<div class="af-side-news-heading"><span aria-hidden="true">📰</span><h2>Actualités AfriFloW</h2></div>';
+    var body = news.length
+      ? '<ul class="af-side-news-list">' + news.map(function (item) {
+          return '<li><button type="button" class="af-side-news-item" data-market-detail="' + esc(item.id) +
+            '" aria-label="Lire l’actualité : ' + esc(item.name) + '">' +
+            (item.news_relevance === true ? '<span class="af-side-news-bell" aria-label="Pertinent pour AfriFloW">🔔</span>' : '') +
+            '<span>' + esc(item.name) + '</span></button></li>';
+        }).join("") + '</ul>'
+      : '<p class="af-side-news-empty">Les nouvelles actualités apparaîtront ici après publication.</p>';
+    return '<aside class="af-ali-side af-welcome-member" aria-label="Actualités réservées aux membres">' +
+      headline + body + '<p class="af-side-news-footnote">Cliquez sur une actualité pour lire l’article et ses sources.</p></aside>';
   }
   function catsHtml() {
     var cats = categoryList();
@@ -465,11 +481,11 @@
   }
   function catalogContent() {
     var products = filteredProducts();
-    var announcements = state.products.filter(isAnnouncement);
-    return '<section class="af-ali">' + catsHtml() + heroHtml() + "</section>"
-      + announcementsHtml()
+    return '<section class="af-ali">' + catsHtml() + heroHtml() + sideHtml() + "</section>"
       + '<div class="af-market-section-head" id="afProductsTop"><h2>' + (state.category ? esc(state.category) : "Nos produits") + "</h2><p>" + (products.length ? products.length + " produit" + (products.length > 1 ? "s" : "") : "Catalogue en préparation") + "</p></div>"
-      + productsHtml(products) + (isAdmin() ? adminPanel() : "");
+      + productsHtml(products)
+      + announcementsHtml()
+      + (isAdmin() ? adminPanel() : "");
   }
   function waitContent() {
     return '<section class="af-market-wait"><h1>Espace partenaire en préparation</h1><p>Votre demande de rôle partenaire est enregistrée. Cet espace sera ouvert prochainement. En attendant, vous pouvez revenir à la vitrine publique de la Marketplace.</p><button type="button" class="af-market-primary" id="afPartnerCatalog">Voir la Marketplace</button></section>';
@@ -504,7 +520,11 @@
     var root = el("market-view"); if (!root) return;
     clearHero();
     var mode = roleMode(state.context.market);
-    root.innerHTML = top() + '<main class="af-market-main">' + (mode === "partner_waiting" ? partnerContent() + announcementsHtml() : mode === "shareholder_pending" ? shareholderWaitContent() + announcementsHtml() : catalogContent()) + "</main>";
+    root.innerHTML = top() + '<main class="af-market-main">' + (mode === "partner_waiting"
+      ? '<section class="af-ali">' + catsHtml() + heroHtml() + sideHtml() + '</section>' + partnerContent() + announcementsHtml()
+      : mode === "shareholder_pending"
+      ? '<section class="af-ali">' + catsHtml() + heroHtml() + sideHtml() + '</section>' + shareholderWaitContent() + announcementsHtml()
+      : catalogContent()) + "</main>";
     bind(); startHero();
   }
   function startHero() {
