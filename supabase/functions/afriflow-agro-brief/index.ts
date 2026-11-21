@@ -173,31 +173,31 @@ function sourceBrief(sources: Array<{ title: string; url: string; domain: string
    illustration is automatically published, with a strict no-text/no-logo
    prompt so it cannot fabricate a branded package or a factual claim. */
 async function createBriefIllustration(service: ReturnType<typeof createClient>, day: string, title: string, description: string) {
-  const key = Deno.env.get("GEMINI_IMAGE_API_KEY") || Deno.env.get("GEMINI_API_KEY") || "";
-  const provider = String(Deno.env.get("AFRIFLOW_IMAGE_PROVIDER") || "").toLowerCase();
-  if (!key || (provider && provider !== "gemini")) return null;
-  const model = clean(Deno.env.get("GEMINI_IMAGE_MODEL") || "gemini-3.1-flash-lite-image-preview", 100);
+  const token = Deno.env.get("CLOUDFLARE_API_TOKEN") || "";
+  const account = Deno.env.get("CLOUDFLARE_ACCOUNT_ID") || "";
+  if (!token || !account) throw new Error("Secrets Cloudflare manquants");
+  const model = clean(Deno.env.get("CLOUDFLARE_IMAGE_MODEL") || "@cf/black-forest-labs/flux-1-schnell", 120);
+  if (!/^@cf\/[a-z0-9._-]+\/[a-z0-9._-]+$/i.test(model)) throw new Error("Modèle Cloudflare invalide");
   const prompt = [
-    "Créer une illustration éditoriale premium pour une actualité agroalimentaire africaine.",
-    "Style : photographie de magazine, lumière naturelle, composition verticale ou carrée, ingrédients ou produits alimentaires finis réalistes, couleurs AfriFloW vert profond, orange chaud et or discret.",
-    "Ne montrer aucun emballage de marque, aucun logo, aucun texte, aucun prix, aucune personne identifiable, aucune carte, aucun graphique. Ne pas inventer de fait précis.",
-    `Sujet : ${clean(title, 180)}. Contexte : ${clean(description, 800)}`
-  ].join("\n");
-  const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(key)}`, {
-    method: "POST", headers: { "Content-Type": "application/json" }, signal: AbortSignal.timeout(8000),
-    body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }], generationConfig: { responseModalities: ["TEXT", "IMAGE"] } })
-  });
-  const data = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(clean(data?.error?.message, 220) || "Gemini Image indisponible");
-  const parts = asArray(data?.candidates?.[0]?.content?.parts) as Array<Record<string, unknown>>;
-  const item = parts.find((part) => typeof (part.inlineData as Record<string, unknown> | undefined)?.data === "string");
-  const inline = item?.inlineData as Record<string, unknown> | undefined, mime = clean(inline?.mimeType, 80).toLowerCase();
-  if (!inline?.data || !imageExtension(mime)) throw new Error("Gemini Image n’a pas renvoyé d’illustration utilisable");
-  const bytes = rawB64(String(inline.data));
-  if (!bytes.byteLength || bytes.byteLength > 9 * 1024 * 1024) throw new Error("Illustration IA invalide");
+    "Premium photorealistic editorial image for African agriculture and food-industry news.",
+    "Realistic food, fields or agricultural products relevant to the headline; natural light; sophisticated magazine photography.",
+    "Deep green and warm orange accents. No written text, no logos, no branded packaging, no fabricated chart, no identifiable people.",
+    `News headline: ${clean(title, 160)}. Context: ${clean(description, 650)}`
+  ].join("\n").slice(0, 2048);
+  const response = await fetch(
+    `https://api.cloudflare.com/client/v4/accounts/${encodeURIComponent(account)}/ai/run/${model}`,
+    { method: "POST", headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ prompt, steps: 4 }), signal: AbortSignal.timeout(30000) }
+  );
+  const result = await response.json().catch(() => ({}));
+  if (!response.ok || result.success === false || typeof result.result?.image !== "string") {
+    throw new Error(`Cloudflare image: ${clean(result.errors?.[0]?.message || response.status, 180)}`);
+  }
+  const bytes = rawB64(result.result.image);
+  if (!bytes.byteLength || bytes.byteLength > 9 * 1024 * 1024) throw new Error("Illustration Cloudflare invalide");
   const root = (Deno.env.get("DROPBOX_MARKET_ROOT") || `${Deno.env.get("DROPBOX_ROOT") || ""}/Market`).replace(/\/+$/, "");
-  if (!root.startsWith("/")) throw new Error("Dossier Market Dropbox non configuré");
-  const path = `${root}/news/${day}/${crypto.randomUUID()}.${imageExtension(mime)}`;
+  if (!root.startsWith("/")) throw new Error("Dossier Dropbox Market non configuré");
+  const path = `${root}/news/${day}/${crypto.randomUUID()}.jpg`;
   await uploadDropbox(service, path, bytes);
   return path;
 }
@@ -237,7 +237,7 @@ async function attachBriefIllustration(service: ReturnType<typeof createClient>,
     if (!illustration) throw new Error("Aucun générateur d’image configuré");
     const update = await service.from("afriflow_market_products").update({ original_path: illustration }).eq("id", id);
     if (update.error) throw update.error;
-    return "gemini";
+    return "cloudflare";
   } catch (imageError) {
     console.error("afriflow-agro-brief image", imageError instanceof Error ? imageError.message : "error");
     return null;
