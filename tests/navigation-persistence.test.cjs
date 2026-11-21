@@ -20,3 +20,23 @@ test("Logout clears saved navigation without granting access",()=>{
   assert.match(core,/if\(window\.AfriNav\)window\.AfriNav\.clear\(\)/);
   assert.match(workspace,/window\.AfriNav\.clear\(\);show\("home"\)/);
 });
+
+test("Refresh and cloud updates preserve scroll without navigation loops",()=>{
+  const workspace=read("afriflow-workspace.js");
+  assert.match(workspace,/function show\(id,options\)/);
+  assert.match(workspace,/if\(!preserving\)window\.scrollTo\(0,0\)/);
+  assert.match(workspace,/show\(saved\.id,\{restore:true\}\)/);
+  assert.match(workspace,/window\.addEventListener\("scroll",function\(\)/);
+  assert.match(workspace,/if\(!viewRestored\)restorePreviousView\(\)/);
+  assert.match(workspace,/cur==="treasury"\|\|cur==="direction"/);
+});
+test("Admin access and partner terms have responsive styles and share secure server flow",()=>{
+  const workspace=read("afriflow-workspace.js");
+  const market=read("market.js");
+  const css=read("market.css");
+  assert.match(workspace,/id="adPartnerTerms"/);
+  assert.match(workspace,/renderPartnerTermsAdmin\("adPartnerTerms"\)/);
+  assert.match(market,/renderPartnerTermsAdmin: loadPartnerTermsAdmin/);
+  assert.match(market,/partnerCall\("admin_save_partner"/);
+  assert.match(css,/:is\(#afAccessAdmin,#adMarketAccess\) \.af-access-user/);
+});
