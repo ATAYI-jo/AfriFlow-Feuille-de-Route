@@ -1,4 +1,5 @@
 /* Module extracted from index.html; synchronous load order intentionally preserved. */
+
 /* ===== Messagerie interne : envoi groupé, pièces jointes, archivage Dropbox ===== */
 (function(){
 var tab="in",unread=0,first=true,W=[],$=function(i){return document.getElementById(i)};
