@@ -165,7 +165,7 @@ async function dispatch() {
  (admins||[]).forEach((a:any)=>authorizedNewsEmails.add(String(a.email||"").toLowerCase()));
  const {data:news,error:newsError} = await sb.from("afriflow_market_products")
    .select("id,name,created_at").eq("is_active",true)
-   .eq("listing_type","announcement").eq("category","Veille agroalimentaire")
+   .eq("listing_type","announcement").in("category",["Veille agroalimentaire","Actualités mondiales"])
    .eq("audience","shareholders").like("promotion_label","Brief IA · %")
    .gte("created_at",new Date(now-15*60*1000).toISOString())
    .order("created_at",{ascending:false}).limit(15);
