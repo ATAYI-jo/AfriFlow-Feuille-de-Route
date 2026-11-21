@@ -75,3 +75,74 @@ DROP POLICY IF EXISTS af_access_audit_admin_read ON public.afriflow_access_audit
 CREATE POLICY af_access_audit_admin_read ON public.afriflow_access_audit
   FOR SELECT TO authenticated USING ((select public.af_is_admin()));
 GRANT SELECT ON public.afriflow_access_audit TO authenticated;
+
+-- Atomic and auditable decisions. Only the service role can execute the RPC.
+-- Always verify the actual administrator again inside the database transaction.
+CREATE OR REPLACE FUNCTION public.af_access_admin_decide(
+  p_actor uuid,p_target uuid,p_action text,p_reason text DEFAULT ''
+) RETURNS text LANGUAGE plpgsql SECURITY INVOKER SET search_path=public AS $$
+DECLARE
+  actor_email text; target_email text; prior public.afriflow_market_profiles%ROWTYPE;
+  next_role text; next_mode text; terms_enabled boolean;
+BEGIN
+  IF (select auth.role()) IS DISTINCT FROM 'service_role' THEN
+    RAISE EXCEPTION 'Droits insuffisants';
+  END IF;
+  SELECT lower(email) INTO actor_email FROM auth.users WHERE id=p_actor;
+  IF actor_email IS NULL OR NOT EXISTS(
+    SELECT 1 FROM public.afriflow_admins WHERE lower(email)=actor_email
+  ) THEN RAISE EXCEPTION 'Administration requise'; END IF;
+  IF p_actor=p_target THEN RAISE EXCEPTION 'Auto-modification interdite'; END IF;
+  SELECT lower(email) INTO target_email FROM auth.users WHERE id=p_target;
+  IF target_email IS NULL OR EXISTS(
+    SELECT 1 FROM public.afriflow_admins WHERE lower(email)=target_email
+  ) THEN RAISE EXCEPTION 'Compte introuvable ou protégé'; END IF;
+
+  SELECT * INTO prior FROM public.afriflow_market_profiles
+  WHERE user_id=p_target FOR UPDATE;
+  IF NOT FOUND THEN RAISE EXCEPTION 'Profil introuvable'; END IF;
+  next_role:=prior.requested_role;next_mode:=prior.access_mode;
+
+  IF p_action IN ('classify_client','classify_partner','classify_shareholder') THEN
+    IF prior.access_mode<>'collaborator' THEN RAISE EXCEPTION 'Classification réservée aux anciens collaborateurs'; END IF;
+    next_role:=substring(p_action from 10);
+    next_mode:=CASE next_role WHEN 'shareholder' THEN 'shareholder_pending'
+      WHEN 'partner' THEN 'partner_waiting' ELSE 'client' END;
+  ELSIF p_action='approve' THEN
+    IF prior.requested_role='shareholder' AND prior.access_mode='shareholder_pending' THEN
+      next_mode:='shareholder_approved';
+    ELSIF prior.requested_role='partner' AND prior.access_mode='partner_waiting' THEN
+      SELECT is_enabled INTO terms_enabled FROM public.afriflow_partner_terms
+      WHERE partner_user_id=p_target;
+      IF NOT coalesce(terms_enabled,false) THEN
+        RAISE EXCEPTION 'Conditions commerciales non activées';
+      END IF;
+      next_mode:='partner_approved';
+    ELSE RAISE EXCEPTION 'Demande non éligible à l’approbation'; END IF;
+  ELSIF p_action IN ('revoke','reject') THEN
+    IF prior.requested_role='shareholder' AND prior.access_mode IN ('shareholder_approved','shareholder_pending') THEN
+      next_mode:='shareholder_pending';
+    ELSIF prior.requested_role='partner' AND prior.access_mode IN ('partner_approved','partner_waiting') THEN
+      next_mode:='partner_waiting';
+    ELSE RAISE EXCEPTION 'Aucun droit correspondant'; END IF;
+  ELSE RAISE EXCEPTION 'Action invalide'; END IF;
+  IF (next_mode=prior.access_mode AND next_role=prior.requested_role) AND p_action<>'reject' THEN
+    RAISE EXCEPTION 'Aucun changement nécessaire';
+  END IF;
+  UPDATE public.afriflow_market_profiles
+  SET requested_role=next_role,access_mode=next_mode
+  WHERE user_id=p_target;
+  INSERT INTO public.afriflow_access_audit(
+    target_user_id,administrator_user_id,previous_role,previous_access,
+    new_role,new_access,action,reason
+  ) VALUES (
+    p_target,p_actor,prior.requested_role,prior.access_mode,
+    next_role,next_mode,p_action,coalesce(left(p_reason,500),'')
+  );
+  RETURN next_mode;
+END;
+$$;
+REVOKE ALL ON FUNCTION public.af_access_admin_decide(uuid,uuid,text,text)
+  FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.af_access_admin_decide(uuid,uuid,text,text)
+  TO service_role;
