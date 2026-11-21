@@ -68,7 +68,9 @@
 .af-download-link,.af-download-ios{box-sizing:border-box;display:block;width:100%;border:1px solid #1f5d3a;background:#1f5d3a;color:white;text-align:center;text-decoration:none;border-radius:10px;padding:12px;font:600 14px system-ui,sans-serif;margin-top:10px;cursor:pointer}
 .af-download-ios{background:transparent;color:var(--ink,#1d2a22);border-color:var(--line,#ddd)}
 #afDownloadStatus{font-size:12px}
-@media(max-width:600px){.af-pwa-install-area{align-items:stretch}.af-download-panel{width:100%}}
+@media(max-width:600px){.af-pwa-install-area{align-items:flex-end}.af-download-panel{width:min(100vw - 32px,400px)}}
+#afPwaInstallArea #afPwaInstallBtn{width:48px;min-width:48px;height:48px;min-height:48px;padding:0;border-radius:14px;flex:none}
+#afPwaInstallArea #afPwaInstallBtn svg{display:block;width:23px;height:23px}
 
 /* Lisibilité renforcée du téléchargement sur fonds sombres et clairs */
 #afPwaInstallArea #afPwaInstallBtn{background:#145c36!important;color:#ffffff!important;border:2px solid #ffffff!important;opacity:1!important;filter:none!important;text-shadow:none!important;box-shadow:0 4px 18px rgba(0,0,0,.35)!important;-webkit-text-fill-color:#ffffff!important}
@@ -192,7 +194,7 @@ window.ic=function(n,s){return '<svg class="ic"'+(s?' style="width:'+s+';height:
 <div class="wrap" id="view-home">
   <!-- AfriFloW distribution: downloads appear only after verified GitHub release assets -->
   <div id="afPwaInstallArea" class="af-pwa-install-area" hidden>
-    <button id="afPwaInstallBtn" class="af-pwa-install-button" type="button" aria-controls="afDownloadPanel" aria-expanded="false">↓ Télécharger AfriFloW</button>
+    <button id="afPwaInstallBtn" class="af-pwa-install-button" type="button" aria-label="Installer ou télécharger AfriFloW" title="Installer ou télécharger AfriFloW" aria-controls="afDownloadPanel" aria-expanded="false"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12m0 0 4-4m-4 4-4-4"/><path d="M4 17v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3"/></svg></button>
     <div id="afDownloadPanel" class="af-download-panel" hidden>
       <strong>Application AfriFloW</strong>
       <p>Choisissez votre appareil. Versions de test : connexion Internet nécessaire.</p>
@@ -2610,19 +2612,29 @@ body.af-profile-open #afCloudSyncBadge{visibility:hidden!important}
   var helpText = document.getElementById('afPwaHelpText');
   var close = document.getElementById('afPwaHelpClose');
   var updateReady = false;
+  var installedKey = 'afriflow_pwa_installed_v1';
   if (!area || !button || !help || !helpText || !close) return;
   function isStandalone() {
-    return window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true || /AfriFloW/i.test(navigator.userAgent || '');
+    return window.matchMedia('(display-mode: standalone)').matches ||
+      window.matchMedia('(display-mode: fullscreen)').matches ||
+      window.navigator.standalone === true ||
+      /AfriFloW/i.test(navigator.userAgent || '');
+  }
+  function previouslyInstalled() {
+    try { return localStorage.getItem(installedKey) === 'yes'; } catch (ignore) { return false; }
+  }
+  function markInstalled() {
+    try { localStorage.setItem(installedKey, 'yes'); } catch (ignore) {}
   }
   function updateVisibility() {
-    if (isStandalone()) {
-      area.hidden = !updateReady;
-      button.textContent = 'Mise à jour';
-      button.removeAttribute('aria-controls');
-    } else {
-      area.hidden = false;
-      button.textContent = '↓ Télécharger AfriFloW';
-      button.setAttribute('aria-controls', 'afDownloadPanel');
+    if (isStandalone()) markInstalled();
+    // Never show an installation/download invitation inside the installed app.
+    // In browser tabs, also honor an appinstalled event recorded on this origin.
+    area.hidden = isStandalone() || previouslyInstalled();
+    if (area.hidden) {
+      var panel = document.getElementById('afDownloadPanel');
+      if (panel) panel.hidden = true;
+      button.setAttribute('aria-expanded', 'false');
     }
   }
   function openHelp() {
@@ -2646,6 +2658,7 @@ body.af-profile-open #afCloudSyncBadge{visibility:hidden!important}
   });
   window.addEventListener('appinstalled', function () {
     promptEvent = null;
+    markInstalled();
     help.hidden = true;
     updateVisibility();
   });
@@ -2655,10 +2668,7 @@ body.af-profile-open #afCloudSyncBadge{visibility:hidden!important}
   var windowsLink = document.getElementById('afDownloadWindows');
   var status = document.getElementById('afDownloadStatus');
   button.addEventListener('click', function () {
-    if (isStandalone()) {
-      if (updateReady) location.reload();
-      return;
-    }
+    if (isStandalone() || previouslyInstalled()) return;
     panel.hidden = !panel.hidden;
     button.setAttribute('aria-expanded', String(!panel.hidden));
   });
