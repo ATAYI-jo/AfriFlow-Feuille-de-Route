@@ -59,13 +59,30 @@ function ask(title,fields,ok){
 
 /* ---------- Navigation ---------- */
 function isAdmin(){return window.USER_ROLE==="admin"}
+// Marketplace : texte, trois icônes, puis répétition en continu.
+// Le libellé accessible reste constant même pendant les rotations.
+var marketplaceCycle=["Marketplace","🛍️","Marketplace","🛒","Marketplace","🏬"],marketplaceStep=0;
+function renderMarketplaceLabel(){
+  var b=$("navList")&&$("navList").querySelector('.nv[data-id="market"]');
+  if(!b)return;
+  var reduced=window.matchMedia&&window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  b.textContent=reduced?"Marketplace":marketplaceCycle[marketplaceStep%marketplaceCycle.length];
+  b.setAttribute("aria-label","Marketplace");
+  b.setAttribute("title","Marketplace");
+}
+setInterval(function(){
+  if(document.hidden)return;
+  marketplaceStep=(marketplaceStep+1)%marketplaceCycle.length;
+  renderMarketplaceLabel();
+},2800);
 function buildNav(){
   var base=BASE.slice(); base.push({id:"messages",n:"Messagerie"}); if(isAdmin())base.push({id:"admin",n:"Administration"});
   var nb=base.length,h=""; base.concat(X.nav).forEach(function(it,i){
     var badge=(it.id==="admin"&&AF_PEND)?' ('+AF_PEND+')':''; if(it.id==="messages"&&window.MSG_UNREAD)badge=' ('+window.MSG_UNREAD+')';
-    h+='<div class="nvr"><button type="button" class="nv'+(it.id===cur?' on':'')+'" data-id="'+esc(it.id)+'">'+esc(it.n)+badge+'</button>'+(i>=nb&&isAdmin()?'<button type="button" class="nx" data-del="'+esc(it.id)+'" aria-label="Supprimer '+esc(it.n)+'">✕</button>':'')+'</div>';
+    h+='<div class="nvr'+(it.id==="home"?' nvr-home':'')+'"><button type="button" class="nv'+(it.id===cur?' on':'')+'" data-id="'+esc(it.id)+'">'+esc(it.n)+badge+'</button>'+(i>=nb&&isAdmin()?'<button type="button" class="nx" data-del="'+esc(it.id)+'" aria-label="Supprimer '+esc(it.n)+'">✕</button>':'')+'</div>';
   });
   $("navList").innerHTML=h;
+  renderMarketplaceLabel();
   $("admBox").innerHTML=isAdmin()?'<button type="button" class="p" id="addNav">＋ Ajouter un élément</button>':'';
 }
 function openNav(){$("side").classList.add("on");$("scrim").classList.add("on");$("menuBtn").setAttribute("aria-expanded","true")}

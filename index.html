@@ -2043,6 +2043,10 @@ if(window.__sb&&window.__sb.functions){
 #side #navList .nvr:has(.nv[data-id="market"]){margin-bottom:12px!important}
 #side #sideClose{display:inline-flex;align-items:center;justify-content:center;min-width:44px;min-height:44px}
 #side #sideClose .ic{width:22px;height:22px}
+/* Accueil reste utilisable par l’icône maison, sans doubler sa ligne dans le menu. */
+#side #navList .nvr-home{display:none!important}
+#side #navList .nv[data-id="market"]{justify-content:flex-start;min-height:48px}
+#side #navList .nv[data-id="market"]:not(:focus-visible){text-decoration:none}
 
 /* Accueil : logo seul, en cercle, grand et centré */
 .brand{justify-content:center!important;padding:30px 20px!important}
