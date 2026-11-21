@@ -9,6 +9,11 @@ function SB(){return window.__sb} function TB(){return window.__TABLE||"afriflow
 function me(){return String(window.loggedUserEmail||"").toLowerCase()}
 function isAdmin(){return window.USER_ROLE==="admin"}
 function isCens(){return isAdmin()||(cfg.censeurs||[]).indexOf(me())>-1}
+function invited(m,email){
+  if(!m||!Array.isArray(m.invitees))return true; // Older/all-member meetings.
+  return m.invitees.some(function(v){return String(v).trim().toLowerCase()===String(email).trim().toLowerCase()});
+}
+function visibleMeeting(m){return isAdmin()||isCens()||invited(m,me())}
 function esc(s){return String(s==null?"":s).replace(/[&<>"']/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]})}
 function toast(m){(window.toast||alert)(m)}
 function okUrl(u){return /^https:\/\/[^\s"'<>]+$/i.test(u||"")}
@@ -23,7 +28,7 @@ async function load(){
   var a=await SB().from(TB()).select("value").eq("key",CFG).maybeSingle();
   if(!a.error&&a.data&&a.data.value){cfg=a.data.value;cfg.censeurs=(cfg.censeurs||[]).map(function(x){return String(x).toLowerCase()})}
   var r=await SB().from(TB()).select("key,value").like("key",PRE+"%").limit(300);
-  if(!r.error)meets=(r.data||[]).map(function(x){return x.value}).filter(function(v){return v&&v.start}).sort(function(x,y){return x.start-y.start});
+  if(!r.error)meets=(r.data||[]).map(function(x){return x.value}).filter(function(v){return v&&v.start&&visibleMeeting(v)}).sort(function(x,y){return x.start-y.start});
   var q=SB().from(TB()).select("key,value").like("key",isCens()?ATT+"m%":ATT+"m%:"+me()).limit(5000);
   var t=await q; atts={};
   if(!t.error)(t.data||[]).forEach(function(x){atts[x.key]=x.value});
@@ -78,14 +83,22 @@ document.addEventListener("click",async function(e){
   window.open(a.href,"_blank","noopener,noreferrer");
 });
 async function mark(m){
-  if(!me()||!SB())return false;
-  var k=ATT+m.id+":"+me();if(atts[k])return true;           /* le premier clic est conservé */
-  var v={meet:m.id,email:me(),name:window.USER_NAME||"",at:Date.now()};
-  var r=await SB().from(TB()).insert({key:k,value:v,updated_at:new Date().toISOString()});
-  if(r.error&&r.error.code!=="23505"){toast("Présence non enregistrée : "+(r.error.message||r.error));return false}
-  if(!r.error)atts[k]=v;
-  if(typeof window.recordUserAction==="function")window.recordUserAction("Présence à la réunion : "+m.title);
-  drawCard();toast("Présence enregistrée.");return true;
+  if(!me()||!SB()||!invited(m,me())&&!isAdmin())return false;
+  var k=ATT+m.id+":"+me();
+  if(atts[k])return true; // First attendance is permanent.
+  try{
+    var result=await SB().functions.invoke("afriflow-meeting-checkin",{body:{meetingId:m.id}});
+    if(result.error){
+      var message=result.error.message||"Pointage impossible";
+      try{var details=await result.error.context.json();message=details.error||message}catch(ignore){}
+      toast("Présence non enregistrée : "+message);return false;
+    }
+    if(!result.data||!result.data.ok||!result.data.record)return false;
+    atts[k]=result.data.record;
+    if(typeof window.recordUserAction==="function")window.recordUserAction("Premier clic d'accès à la réunion : "+m.title);
+    drawCard();toast("Premier clic enregistré. La participation réelle à Teams doit être vérifiée séparément.");
+    return true;
+  }catch(error){toast("Présence non enregistrée : "+(error.message||error));return false}
 }
 
 /* ---------- Réglage admin (dans la page Administration) ---------- */
@@ -128,7 +141,10 @@ async function openPage(){
 }
 async function render(){
   var host=$("viewHost");if(!active||!host)return;
-  var U=[];try{U=window.AFRI?await window.AFRI.listUsers():[]}catch(e){}
+  var U=[];try{
+    U=window.AFRI?(await window.AFRI.listMembers()):[];
+    if(!U.length&&window.AFRI)U=await window.AFRI.listUsers();
+  }catch(e){}
   if(!active)return;
   var d=new Date(),dd=d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate());
   var h='<div class="toolbar"><b>Censeur</b><div class="toolbar-actions"><button type="button" id="csRef">Actualiser</button></div></div>'
@@ -137,14 +153,19 @@ async function render(){
    +'<label>Date<input type="date" id="csD" value="'+dd+'"></label><label>Heure de début<input type="time" id="csH" value="14:00"></label>'
    +'<label>Durée (min)<input type="number" id="csU" value="60" min="5" max="600"></label>'
    +'<label>Tolérance avant « retard » (min)<input type="number" id="csG" value="5" min="0" max="120"></label>'
-   +'<label class="full">Lien propre à cette réunion (facultatif, sinon lien général)<input id="csL" placeholder="https://…" autocomplete="off"></label></div>'
+   +'<label class="full">Lien propre à cette réunion (facultatif, sinon lien général)<input id="csL" placeholder="https://…" autocomplete="off"></label>'
+   +'<label class="full">Destinataires<select id="csAudience"><option value="all">Tous les membres du Journal de Bord</option><option value="selected">Membres sélectionnés uniquement</option></select></label>'
+   +'<div class="full" id="csPeople" hidden><p>Choisissez les personnes invitées. Seuls leurs comptes pourront pointer leur présence.</p>'
+   +'<div class="mt-grid" style="max-height:210px;overflow:auto">'+U.filter(function(u){return u&&u.email}).map(function(u){
+      return '<label style="display:flex;align-items:center;gap:7px"><input type="checkbox" data-cs-invite="'+esc(String(u.email).toLowerCase())+'"> '+esc(u.name||u.display_name||u.email)+'</label>';
+   }).join("")+'</div></div></div>'
    +'<div class="mt-err" id="csErr" role="alert"></div><button type="button" class="p" id="csGo">Programmer</button>'
-   +'<p style="color:var(--muted);font-size:.85rem;margin:12px 0 0">Présent : clic sur « Rejoindre » avant la fin de la tolérance · Retard : clic après · Absent : aucun clic à la fin de la réunion. Les clics sont comptés de 15 min avant le début jusqu\'à la fin.</p></div>';
+   +'<p style="color:var(--muted);font-size:.85rem;margin:12px 0 0">Le premier clic sur « Rejoindre » est enregistré côté serveur de 15 min avant le début à la fin de la réunion. Cela mesure le pointage, et non la durée de participation à Teams.</p></div>';
   var L=meets.slice().sort(function(a,b){return b.start-a.start});
   h+='<h3 style="color:var(--green)">Réunions et présences</h3>'+(L.length?L.map(function(m){
     var emails={};U.forEach(function(u){if(u&&u.email)emails[String(u.email).toLowerCase()]=u.name||""});
     Object.keys(atts).forEach(function(k){var v=atts[k];if(v&&v.meet===m.id&&v.email&&!(v.email in emails))emails[v.email]=v.name||""});
-    var rows=Object.keys(emails).sort().map(function(em){var rec=atts[ATT+m.id+":"+em],s=statut(m,rec);return {em:em,nm:emails[em],rec:rec,s:s}});
+    var rows=Object.keys(emails).filter(function(em){return invited(m,em)}).sort().map(function(em){var rec=atts[ATT+m.id+":"+em],s=statut(m,rec);return {em:em,nm:emails[em],rec:rec,s:s}});
     var c={ok:0,late:0,abs:0,wait:0};rows.forEach(function(r){c[r.s.k]++});
     return '<details class="mt-m"><summary><b>'+esc(m.title)+'</b><small>'+fdt(m.start)+' · '+m.dur+' min</small>'
      +'<span class="mt-sum"><span class="mt-pill mt-ok">'+c.ok+' présent(s)</span><span class="mt-pill mt-late">'+c.late+' retard(s)</span><span class="mt-pill mt-abs">'+c.abs+' absent(s)</span>'+(c.wait?'<span class="mt-pill mt-wait">'+c.wait+' en attente</span>':'')+'</span></summary>'
@@ -153,6 +174,8 @@ async function render(){
      +'</tbody></table></div><p style="margin:14px 0 0"><button type="button" class="danger" data-csdel="'+esc(m.id)+'">Supprimer cette réunion</button></p></div></details>';
   }).join(""):'<p style="color:var(--muted)">Aucune réunion programmée.</p>');
   host.innerHTML=h;host.onclick=onClick;
+  var audience=$("csAudience"),people=$("csPeople");
+  if(audience&&people)audience.onchange=function(){people.hidden=audience.value!=="selected"};
 }
 async function onClick(e){
   var b=e.target.closest("button");if(!b)return;
@@ -166,7 +189,10 @@ async function onClick(e){
       var st=new Date(d+"T"+hh).getTime();if(isNaN(st)){er.textContent="Date ou heure invalide.";return}
       if(st+du*6e4<Date.now()){er.textContent="Cette réunion est déjà terminée.";return}
       er.textContent="";b.disabled=true;
-      var m={id:uid(),title:t,start:st,dur:du,grace:g>=0?g:5,link:l,by:me(),created:Date.now()};
+      var selected=$("csAudience")&&$("csAudience").value==="selected";
+      var invitees=selected?Array.from(document.querySelectorAll("[data-cs-invite]:checked")).map(function(x){return x.dataset.csInvite}):null;
+      if(selected&&!invitees.length){er.textContent="Sélectionnez au moins une personne invitée.";return}
+      var m={id:uid(),title:t,start:st,dur:du,grace:g>=0?g:5,link:l,invitees:invitees,by:me(),created:Date.now()};
       var r=await SB().from(TB()).upsert({key:PRE+m.id,value:m,updated_at:new Date().toISOString()});
       b.disabled=false;
       if(r.error){er.textContent="Enregistrement impossible : "+(r.error.message||r.error);return}
