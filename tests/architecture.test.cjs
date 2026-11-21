@@ -29,7 +29,9 @@ test('Les points d’entrée des domaines critiques existent', () => {
 test('Tous les scripts JavaScript applicatifs sont syntaxiquement valides', () => {
   const scripts = [
     ...essentialScripts, 'document-excel-editor.js', 'document-permissions.js',
-    'document-urgency.js', 'updates.js'
+    'document-urgency.js', 'updates.js',
+    'modules/auth/oauth-icons.js', 'modules/messaging/internal-messaging.js',
+    'modules/documents/document-viewer.js'
   ];
   for (const script of scripts) {
     assert.doesNotThrow(() => new vm.Script(read(script), { filename: script }), script);
@@ -57,4 +59,27 @@ test('PWA : manifest et service worker référencés et présents', () => {
   for (const f of ['manifest.webmanifest', 'sw.js']) assert.ok(fs.existsSync(path.join(root, f)));
   const manifest = JSON.parse(read('manifest.webmanifest'));
   assert.equal(manifest.display, 'standalone');
+});
+
+test('Les trois scripts extraits sont chargés une fois et dans le bon ordre', () => {
+  const extracted = [
+    'modules/messaging/internal-messaging.js',
+    'modules/documents/document-viewer.js',
+    'modules/auth/oauth-icons.js'
+  ];
+  for (const script of extracted) {
+    assert.ok(fs.existsSync(path.join(root, script)), 'Module absent : ' + script);
+    const tag = '<script src="./' + script + '?v=20261121-modularisation-1"></script>';
+    assert.equal(html.split(tag).length - 1, 1, 'Chargement manquant ou dupliqué : ' + script);
+  }
+  assert.ok(html.indexOf('modules/messaging/internal-messaging.js') <
+            html.indexOf('modules/documents/document-viewer.js'));
+  assert.ok(html.indexOf('modules/documents/document-viewer.js') <
+            html.indexOf('modules/auth/oauth-icons.js'));
+});
+
+test('Aucun bloc extrait ne subsiste en double dans index.html', () => {
+  assert.doesNotMatch(html, /Messagerie interne : envoi groupé, pièces jointes, archivage Dropbox/);
+  assert.doesNotMatch(html, /var U=\\{pdf:"https:\/\/cdn\\.jsdelivr\\.net\/npm\/pdfjs-dist/);
+  assert.doesNotMatch(html, /var NM=\\{google:"Google",facebook:"Facebook",azure:"Microsoft"/);
 });
