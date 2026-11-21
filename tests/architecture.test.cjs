@@ -33,7 +33,8 @@ test('Tous les scripts JavaScript applicatifs sont syntaxiquement valides', () =
     'modules/auth/oauth-icons.js', 'modules/messaging/internal-messaging.js',
     'modules/documents/document-viewer.js',
     'modules/documents/word-editor.js', 'modules/admin/access-controls.js',
-    'modules/auth/account-management.js', 'modules/documents/dropbox-browser.js'
+    'modules/auth/account-management.js', 'modules/documents/dropbox-browser.js',
+    'modules/assistant/chat-ui.js', 'modules/assistant/math-rendering.js'
   ];
   for (const script of scripts) {
     assert.doesNotThrow(() => new vm.Script(read(script), { filename: script }), script);
@@ -121,4 +122,18 @@ test('Gestion des comptes et explorateur Dropbox chargés une fois', () => {
     'Le module comptes est toujours inline');
   assert.ok(!html.includes('var KEY="pub:dbxshow"'),
     'Explorateur Dropbox toujours inline');
+});
+
+test('Assistant IA et moteur mathématique chargés dans leur ordre initial', () => {
+  const paths = ['modules/assistant/chat-ui.js', 'modules/assistant/math-rendering.js'];
+  for (const filename of paths) {
+    const tag = '<script src="./' + filename + '?v=20261121-modularisation-4"></script>';
+    assert.equal(html.split(tag).length - 1, 1, filename + ' absent ou dupliqué');
+    assert.ok(fs.existsSync(path.join(root, filename)), filename + ' manquant');
+  }
+  assert.ok(html.indexOf('modules/assistant/chat-ui.js') <
+            html.indexOf('modules/assistant/math-rendering.js'),
+            'Chargement de l’assistant inversé');
+  assert.ok(!html.includes('/* ---------- Icônes (SVG intégrés) ---------- */'));
+  assert.ok(!html.includes('var KATEX_JS='));
 });
