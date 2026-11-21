@@ -21,7 +21,15 @@
       user: '<circle cx="12" cy="8" r="3.5"></circle><path d="M5 21a7 7 0 0 1 14 0"></path>',
       back: '<path d="m12 19-7-7 7-7"></path><path d="M5 12h14"></path>',
       heart: '<path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1.1-1.1a5.5 5.5 0 0 0-7.8 7.8L12 21l8.9-8.6a5.5 5.5 0 0 0-.1-7.8Z"></path>',
-      logout: '<path d="M10 17l5-5-5-5"></path><path d="M15 12H3"></path><path d="M14 4h5v16h-5"></path>'
+      logout: '<path d="M10 17l5-5-5-5"></path><path d="M15 12H3"></path><path d="M14 4h5v16h-5"></path>',
+      grid: '<rect x="3" y="3" width="7" height="7" rx="1.5"></rect><rect x="14" y="3" width="7" height="7" rx="1.5"></rect><rect x="3" y="14" width="7" height="7" rx="1.5"></rect><rect x="14" y="14" width="7" height="7" rx="1.5"></rect>',
+      news: '<path d="M4 4h16v16H4z"></path><path d="M8 8h8M8 12h8M8 16h5"></path>',
+      globe: '<circle cx="12" cy="12" r="9"></circle><path d="M3 12h18M12 3c3 3 3 15 0 18M12 3c-3 3-3 15 0 18"></path>',
+      categories: '<path d="M4 5h7v7H4zM14 5h6v6h-6zM4 15h7v5H4zM14 14h6v6h-6z"></path>',
+      down: '<path d="m5 9 7 7 7-7"></path>',
+      leaf: '<path d="M20 4C9 4 5 9 5 16c8 1 15-3 15-12Z"></path><path d="M4 20c3-6 6-8 11-11"></path>',
+      home: '<path d="m3 10 9-7 9 7v11H3z"></path><path d="M9 21v-7h6v7"></path>',
+      sparkle: '<path d="m12 2 2.5 7.5L22 12l-7.5 2.5L12 22l-2.5-7.5L2 12l7.5-2.5Z"></path>'
     };
     return '<svg class="af-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' + (paths[name] || paths.bag) + '</svg>';
   }
@@ -446,7 +454,7 @@
   function announcementsHtml() {
     var items = state.products.filter(isAnnouncement).slice(0, 6);
     if (!items.length) return "";
-    return '<section class="af-announcements"><div class="af-market-section-head"><h2>À la une chez AfriFloW</h2><p>Actualités, lancements et informations utiles</p></div><div class="af-market-grid af-announcements-grid">' + items.map(announcementCard).join("") + "</div></section>";
+    return '<section class="af-announcements" id="afMarketNews"><div class="af-market-section-head"><h2>À la une chez AfriFloW</h2><p>Actualités, lancements et informations utiles</p></div><div class="af-market-grid af-announcements-grid">' + items.map(announcementCard).join("") + "</div></section>";
   }
   function heroHtml() {
     var h = state.hero, bg = okImg(h.img) ? ' style="--hero-img:url(\'' + h.img + '\')"' : "";
@@ -490,14 +498,27 @@
     return '<aside class="af-ali-side af-welcome-member" aria-label="Actualités réservées aux membres">' +
       headline + body + '<p class="af-side-news-footnote">Cliquez sur une actualité pour lire l’article et ses sources.</p></aside>';
   }
+  function marketCategoryIcon(category) {
+    var text = String(category || "").toLocaleLowerCase("fr");
+    if (text.indexOf("actualité") > -1 || text.indexOf("veille") > -1) return icon("news");
+    if (text.indexOf("fruit") > -1 || text.indexOf("agri") > -1) return icon("leaf");
+    if (text.indexOf("bienvenue") > -1 || text.indexOf("afriflow") > -1) return icon("home");
+    return icon("categories");
+  }
   function catsHtml() {
     var cats = categoryList();
-    return '<aside class="af-ali-cats" aria-label="Catégories"><h3>Catégories</h3><button type="button" data-market-category="" class="' + (!state.category ? "on" : "") + '">Toute la Marketplace <i>›</i></button>'
-      + cats.map(function (c) { return '<button type="button" data-market-category="' + esc(c) + '" class="' + (state.category === c ? "on" : "") + '">' + esc(c) + " <i>›</i></button>"; }).join("") + "</aside>";
+    return '<aside class="af-ali-cats" id="afMarketCategories" aria-label="Catégories"><h3>' + icon("categories") + ' Catégories</h3><div class="af-cat-scroll">' +
+      '<button type="button" data-market-category="" class="' + (!state.category ? "on" : "") + '">' + icon("grid") + '<span>Toute la Marketplace</span><i>›</i></button>' +
+      cats.map(function (c) { return '<button type="button" data-market-category="' + esc(c) + '" class="' + (state.category === c ? "on" : "") + '">' +
+        marketCategoryIcon(c) + '<span>' + esc(c) + '</span><i>›</i></button>'; }).join("") + '</div></aside>';
+  }
+  function scrollCueHtml() {
+    return '<button type="button" class="af-scroll-cue" data-market-scroll="products" title="Défiler vers les produits" aria-label="Défiler vers les produits">' +
+      icon("down") + '<span class="af-scroll-cue-label">Défiler</span></button>';
   }
   function catalogContent() {
     var products = filteredProducts();
-    return '<section class="af-ali">' + catsHtml() + heroHtml() + sideHtml() + "</section>"
+    return '<section class="af-ali">' + catsHtml() + heroHtml() + sideHtml() + scrollCueHtml() + "</section>"
       + '<div class="af-market-section-head" id="afProductsTop"><h2>' + (state.category ? esc(state.category) : "Nos produits") + "</h2><p>" + (products.length ? products.length + " produit" + (products.length > 1 ? "s" : "") : "Catalogue en préparation") + "</p></div>"
       + productsHtml(products)
       + announcementsHtml()
@@ -520,7 +541,13 @@
       + (state.context.kind === "authenticated" ? '<button type="button" class="af-market-link" id="afMarketAccount">' + icon("user") + '<span>Mon compte</span></button>' : "")
       + (!partner ? '<button type="button" class="af-market-cart" id="afMarketCart" aria-label="Ouvrir le panier">' + icon("bag") + '<span>Panier</span><b>' + cartCount() + '</b></button>' : '')
       + (state.context.kind === "authenticated" ? '<button type="button" class="af-market-link" id="afMarketSignOut">' + icon("logout") + '<span>Déconnexion</span></button>' : "")
-      + '</div>' + (!partner ? '<nav class="af-market-nav" aria-label="Navigation Marketplace"><button type="button" data-market-category="">Tout le marché</button>' + categoryList().slice(0, 7).map(function (category) { return '<button type="button" data-market-category="' + esc(category) + '">' + esc(category) + '</button>'; }).join("") + '<button type="button" data-market-favorites>' + icon("heart") + '<span>Favoris (' + state.favorites.length + ')</span></button><span>Produits contrôlés · Devis sécurisé · Support AfriFloW</span></nav>' : '') + "</header>";
+      + '</div>' + (!partner ? '<nav class="af-market-nav" aria-label="Navigation Marketplace">' +
+        '<button type="button" data-market-category="">' + icon("grid") + 'Tout le marché</button>' +
+        '<button type="button" data-market-jump="categories">' + icon("categories") + 'Catégories</button>' +
+        '<button type="button" data-market-jump="products">' + icon("bag") + 'Nos produits</button>' +
+        '<button type="button" data-market-jump="news">' + icon("globe") + 'Actualités</button>' +
+        '<button type="button" data-market-favorites>' + icon("heart") + '<span>Favoris (' + state.favorites.length + ')</span></button>' +
+        '<span class="af-market-nav-trust">' + icon("sparkle") + 'Produits contrôlés · Support AfriFloW</span></nav>' : '') + "</header>";
   }
   function adminPanel() {
     var choices = state.adminProducts.length ? state.adminProducts : state.products;
@@ -537,9 +564,9 @@
     clearHero();
     var mode = roleMode(state.context.market);
     root.innerHTML = top() + '<main class="af-market-main">' + (mode === "partner_waiting"
-      ? '<section class="af-ali">' + catsHtml() + heroHtml() + sideHtml() + '</section>' + partnerContent() + announcementsHtml()
+      ? '<section class="af-ali">' + catsHtml() + heroHtml() + sideHtml() + scrollCueHtml() + '</section>' + partnerContent() + announcementsHtml()
       : mode === "shareholder_pending"
-      ? '<section class="af-ali">' + catsHtml() + heroHtml() + sideHtml() + '</section>' + shareholderWaitContent() + announcementsHtml()
+      ? '<section class="af-ali">' + catsHtml() + heroHtml() + sideHtml() + scrollCueHtml() + '</section>' + shareholderWaitContent() + announcementsHtml()
       : catalogContent()) + "</main>";
     bind(); startHero();
   }
@@ -559,6 +586,20 @@
     state.heroTimer = setInterval(function () { if (!paused && !document.hidden) go(state.heroIdx + 1); }, 10000);
   }
   function bind() {
+    function scrollMarketTo(id) {
+      var target = el(id);
+      if (!target && id === "afProductsTop") target = document.querySelector("#market-view .af-ali + *");
+      if (target) target.scrollIntoView({ behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "start" });
+    }
+    document.querySelectorAll("[data-market-jump]").forEach(function (button) {
+      button.onclick = function () {
+        var jump = button.dataset.marketJump;
+        scrollMarketTo(jump === "categories" ? "afMarketCategories" : jump === "news" ? "afMarketNews" : "afProductsTop");
+      };
+    });
+    document.querySelectorAll("[data-market-scroll]").forEach(function (button) {
+      button.onclick = function () { scrollMarketTo("afProductsTop"); };
+    });
     var home = el("afMarketHome"); if (home) home.onclick = function (event) { event.preventDefault(); state.category = ""; state.term = ""; render(); loadCatalog(); };
     var back = el("afMarketBack"); if (back) back.onclick = closeToWorkspace;
     var signIn = el("afMarketSignIn"); if (signIn) signIn.onclick = function () { openAuth("login"); };
