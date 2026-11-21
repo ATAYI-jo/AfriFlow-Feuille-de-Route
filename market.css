@@ -407,3 +407,63 @@ body.af-market-mode #market-view{display:block}
 @media(max-width:390px){
   #market-view .af-market-link#afMarketBack span{font-size:.69rem}
 }
+
+/* AfriFloW commercial showcase — data-backed offers and lightweight photo motion */
+#market-view .af-market-showcase{display:grid;grid-template-columns:minmax(0,1.65fr) repeat(2,minmax(0,1fr));gap:15px;margin:36px 0 28px;align-items:stretch}
+#market-view .af-showcase-card{position:relative;min-width:0;overflow:hidden;isolation:isolate;display:flex;flex-direction:column;min-height:230px;border:1px solid rgba(255,255,255,.68);border-radius:22px;padding:clamp(16px,2vw,26px);box-shadow:0 12px 32px rgba(15,63,39,.12);background:linear-gradient(135deg,rgba(255,255,255,.76),rgba(230,247,237,.61));-webkit-backdrop-filter:blur(18px) saturate(150%);backdrop-filter:blur(18px) saturate(150%)}
+#market-view .af-showcase-card h3{font-size:clamp(1.13rem,1.9vw,1.65rem);line-height:1.15;letter-spacing:-.025em;overflow-wrap:anywhere;margin:8px 0;color:#133c29}
+#market-view .af-showcase-card p{margin:5px 0 12px;font-size:.88rem;line-height:1.42}
+#market-view .af-showcase-eyebrow{display:inline-flex;align-items:center;gap:7px;max-width:100%;width:max-content;padding:7px 10px;border-radius:999px;background:rgba(255,255,255,.21);font-size:.73rem;font-weight:850;letter-spacing:.025em;text-transform:uppercase}
+#market-view .af-showcase-eyebrow .af-icon{height:16px;width:16px}
+#market-view .af-showcase-main{grid-column:span 2;display:grid;grid-template-columns:1fr minmax(0,.85fr);align-items:center;min-height:290px;background:linear-gradient(115deg,#135b3b 2%,#146c4b 52%,#d9932b 125%);color:white}
+#market-view .af-showcase-main::after{content:"";position:absolute;inset:auto -70px -150px auto;width:340px;height:340px;border-radius:50%;background:rgba(255,205,106,.12);pointer-events:none}
+#market-view .af-showcase-main h3{font-size:clamp(1.6rem,2.65vw,2.65rem);color:white;max-width:560px}
+#market-view .af-showcase-main .af-showcase-copy{z-index:2;align-self:center}
+#market-view .af-showcase-main .af-showcase-picture{height:260px;min-width:0;width:100%;display:block;position:relative;z-index:1}
+#market-view .af-showcase-picture{display:grid;place-items:center;min-height:0;overflow:hidden;width:100%;height:135px;border-radius:14px;position:relative;background:rgba(255,255,255,.25)}
+#market-view .af-showcase-picture .af-photo{width:100%;height:100%;display:block;object-fit:contain;object-position:center;filter:drop-shadow(0 8px 18px rgba(0,0,0,.11))}
+#market-view .af-showcase-main .af-showcase-picture .af-photo{object-fit:contain}
+#market-view .af-showcase-picture .af-showcase-placeholder{max-height:85%;max-width:85%;width:auto;height:auto;object-fit:contain;opacity:.57}
+#market-view .af-showcase-empty-art .af-icon{height:60px;width:60px;opacity:.65}
+#market-view .af-showcase-cta{display:inline-flex;align-items:center;gap:8px;max-width:100%;padding:11px 16px;border:1px solid rgba(255,255,255,.6);border-radius:12px;background:rgba(255,255,255,.9);font:inherit;font-size:.9rem;font-weight:850;color:#17402c;cursor:pointer;box-shadow:0 7px 19px rgba(5,49,28,.12)}
+#market-view .af-showcase-cta:hover,#market-view .af-showcase-text-link:hover{transform:translateY(-2px)}
+#market-view .af-showcase-cta .af-icon,#market-view .af-showcase-text-link .af-icon{transform:rotate(180deg)}
+#market-view .af-showcase-deal{background:linear-gradient(147deg,rgba(255,244,219,.95),rgba(255,202,138,.69))}
+#market-view .af-showcase-pill{align-self:flex-start;padding:6px 11px;border-radius:9px;background:#e34e37;color:#fff;font-size:.82rem;font-weight:850}
+#market-view .af-showcase-deal .af-showcase-picture,#market-view .af-showcase-gifts .af-showcase-picture{flex:1;max-height:155px;min-height:102px}
+#market-view .af-showcase-gifts{background:linear-gradient(150deg,rgba(232,246,237,.9),rgba(168,211,173,.55))}
+#market-view .af-showcase-text-link{margin-top:auto;border:0;padding:9px 0 0;background:transparent;color:#0a5c3a;display:inline-flex;align-items:center;gap:8px;align-self:flex-start;font:inherit;font-weight:850;font-size:.8rem;cursor:pointer}
+#market-view .af-africa-gallery{grid-column:span 1;background:linear-gradient(145deg,rgba(19,79,53,.95),rgba(36,113,74,.83));color:#fff;min-height:290px}
+#market-view .af-africa-gallery h3{color:#fff}
+#market-view .af-africa-gallery .af-africa-heading p{color:rgba(255,255,255,.85)}
+#market-view .af-africa-images{position:relative;min-height:145px;flex:1;border-radius:14px;overflow:hidden;isolation:isolate;background:rgba(255,255,255,.16)}
+#market-view .af-africa-frame{position:absolute;inset:0;margin:0;opacity:0;animation:afAfricaFrames 18s infinite;animation-delay:calc(var(--frame-index) * 6s)}
+#market-view .af-africa-frame img{width:100%;height:100%;display:block;object-fit:cover}
+#market-view .af-africa-frame figcaption{position:absolute;left:0;right:0;bottom:0;padding:19px 10px 9px;background:linear-gradient(transparent,rgba(0,0,0,.74));font-size:.75rem;font-weight:800}
+#market-view .af-africa-credits{font-size:.59rem;color:rgba(255,255,255,.8);line-height:1.45;margin-top:7px}
+#market-view .af-africa-credits a{color:#fff;text-decoration:underline;text-underline-offset:2px}
+@keyframes afAfricaFrames{0%,30%{opacity:1}33.34%,96%{opacity:0}100%{opacity:1}}
+@media(min-width:1101px){#market-view .af-showcase-main{grid-column:span 2}}
+@media(max-width:1000px){#market-view .af-market-showcase{grid-template-columns:repeat(2,minmax(0,1fr))}#market-view .af-showcase-main{grid-column:span 2}#market-view .af-africa-gallery{grid-column:span 1}}
+@media(max-width:700px){
+  #market-view .af-market-showcase{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:30px 0 20px}
+  #market-view .af-showcase-card{padding:12px;min-height:194px;border-radius:16px}
+  #market-view .af-showcase-main{grid-column:span 2;min-height:235px;grid-template-columns:minmax(0,1.1fr) minmax(0,.9fr)}
+  #market-view .af-showcase-main h3{font-size:clamp(1.24rem,4.8vw,1.85rem)}
+  #market-view .af-showcase-main .af-showcase-picture{height:195px}
+  #market-view .af-showcase-deal .af-showcase-picture,#market-view .af-showcase-gifts .af-showcase-picture{height:115px;min-height:95px}
+  #market-view .af-showcase-card h3{font-size:1rem}
+  #market-view .af-africa-gallery{grid-column:span 2;min-height:185px;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:10px;align-items:center}
+  #market-view .af-africa-gallery .af-africa-images{height:150px;min-height:150px}
+  #market-view .af-africa-credits{grid-column:1/-1;margin-top:0}
+}
+@media(max-width:390px){
+  #market-view .af-showcase-main{grid-template-columns:minmax(0,1fr) minmax(0,.8fr)}
+  #market-view .af-showcase-main .af-showcase-picture{height:170px}
+  #market-view .af-showcase-cta{padding:9px;font-size:.75rem}
+}
+@media(prefers-reduced-motion:reduce){
+  #market-view .af-africa-frame{animation:none!important}
+  #market-view .af-africa-frame:first-child{opacity:1}
+  #market-view .af-showcase-cta:hover,#market-view .af-showcase-text-link:hover{transform:none}
+}
