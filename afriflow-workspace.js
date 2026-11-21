@@ -42,7 +42,20 @@ function save(){
   clearTimeout(tm); tm=setTimeout(pushExtra,900);
 }
 window.hasExtra=function(){return !!(X.nav.length||X.tre.rows.length||Object.keys(X.pages).length||Object.keys(X.docs).length)};
-window.applyExtra=function(v){ if(editing()||W.open)return false; merge(v); setTimeout(syncPending,800); try{localStorage.setItem(KEY,JSON.stringify(X))}catch(e){} buildNav(); if(cur!=="home")show(cur); return true; };
+window.applyExtra=function(v){
+  if(editing()||W.open)return false;
+  merge(v);setTimeout(syncPending,800);
+  try{localStorage.setItem(KEY,JSON.stringify(X))}catch(e){}
+  buildNav();
+  // Cloud synchronization must not unexpectedly send the user back to top.
+  // Only refresh data-backed pages while keeping their current scroll position.
+  if(cur!=="home"&&cur!=="market"&&cur!=="personal"){
+    var y=window.scrollY||0;
+    show(cur,{restore:true});
+    requestAnimationFrame(function(){window.scrollTo(0,y)});
+  }
+  return true;
+};
 
 /* ---------- Dialogue ---------- */
 function ask(title,fields,ok){
@@ -62,7 +75,13 @@ function ask(title,fields,ok){
 var LAST_VIEW_KEY="afriflow_last_view_v1",viewRestored=false;
 function rememberView(id){
   if(!window.loggedUserEmail)return;
-  try{sessionStorage.setItem(LAST_VIEW_KEY,JSON.stringify({email:String(window.loggedUserEmail).toLowerCase(),id:id,y:0}))}catch(ignore){}
+  try{
+    var old=previousView(),same=old&&old.id===id;
+    sessionStorage.setItem(LAST_VIEW_KEY,JSON.stringify({
+      email:String(window.loggedUserEmail).toLowerCase(),id:id,
+      y:same?Math.max(0,Number(old.y)||0):0
+    }));
+  }catch(ignore){}
 }
 function previousView(){
   try{
@@ -94,7 +113,7 @@ function restorePreviousView(){
   if(ids.indexOf(saved.id)===-1)return;
   if(saved.id==="admin"&&!isAdmin())return;
   if(saved.id==="market"&&!window.AfriMarket)return;
-  show(saved.id);
+  show(saved.id,{restore:true});
   restoreScroll();
 }
 window.AfriNav={
@@ -102,10 +121,18 @@ window.AfriNav={
   clear:function(){try{sessionStorage.removeItem(LAST_VIEW_KEY)}catch(ignore){}},
   saved:previousView
 };
-window.addEventListener("pagehide",function(){
+function saveScrollPosition(){
   var v=previousView();
-  if(v){v.y=Math.max(0,Math.floor(window.scrollY||0));try{sessionStorage.setItem(LAST_VIEW_KEY,JSON.stringify(v))}catch(ignore){}}
-});
+  if(!v)return;
+  v.y=Math.max(0,Math.floor(window.scrollY||0));
+  try{sessionStorage.setItem(LAST_VIEW_KEY,JSON.stringify(v))}catch(ignore){}
+}
+var scrollSaveId=null;
+window.addEventListener("scroll",function(){
+  if(scrollSaveId!==null)return;
+  scrollSaveId=setTimeout(function(){scrollSaveId=null;saveScrollPosition()},180);
+},{passive:true});
+window.addEventListener("pagehide",saveScrollPosition);
 function isAdmin(){return window.USER_ROLE==="admin"}
 // Marketplace : texte, trois icônes, puis répétition en continu.
 // Le libellé accessible reste constant même pendant les rotations.
@@ -147,7 +174,9 @@ function buildNav(){
 }
 function openNav(){$("side").classList.add("on");$("scrim").classList.add("on");$("menuBtn").setAttribute("aria-expanded","true")}
 function closeNav(){$("side").classList.remove("on");$("scrim").classList.remove("on");$("menuBtn").setAttribute("aria-expanded","false")}
-function show(id){
+function show(id,options){
+  options=options||{};
+  var preserving=!!options.restore;
   wkClean(); cur=id; sel=null; W.tv=null; W.pv=null; W.tvAt=0;
   if(id==="market"&&window.AfriMarket){rememberView("market");window.AfriMarket.open({kind:"workspace",market:{access_mode:"collaborator"}});buildNav();closeNav();return}
   if(id==="admin"&&!isAdmin())cur=id="home";
@@ -159,7 +188,9 @@ function show(id){
     var run=function(){ if(id==="treasury")renTre(); else renEd(id) };
     if(cep(id))run(); else viewPub(id,function(p){ W.tvAt=p.at; if(id==="treasury")W.tv=p.tre; else W.pv=p; run() });
   }
-  buildNav(); closeNav(); window.scrollTo(0,0); if(window.AFRI)AFRI.page(pageName(id));
+  buildNav(); closeNav();
+  if(!preserving)window.scrollTo(0,0);
+  if(window.AFRI)AFRI.page(pageName(id));
 }
 $("menuBtn").onclick=openNav; $("scrim").onclick=closeNav; $("sideClose").onclick=closeNav;
 document.addEventListener("keydown",function(e){
@@ -738,6 +769,10 @@ window.getPages=function(){return BASE.concat(X.nav)};
 window.askDlg=ask;window.toast=toast;
 window.onPending=function(n){AF_PEND=n;buildNav()};
 
-window.onRole=function(){buildNav();if(!viewRestored)restorePreviousView();else if(cur!=="home")show(cur)};
+window.onRole=function(){
+  buildNav();
+  if(!viewRestored)restorePreviousView();
+  // Refreshing user permissions must not force navigation or reset scroll.
+};
 buildNav();
 })();
