@@ -1,0 +1,213 @@
+
+(function(){
+"use strict";
+var CFG="pub:meetcfg", PRE="meet:", ATT="att:", OPEN_BEFORE=15*6e4;
+var cfg={link:"",censeurs:[]}, meets=[], atts={}, active=false;
+
+function $(i){return document.getElementById(i)}
+function SB(){return window.__sb} function TB(){return window.__TABLE||"afriflow_state"}
+function me(){return String(window.loggedUserEmail||"").toLowerCase()}
+function isAdmin(){return window.USER_ROLE==="admin"}
+function isCens(){return isAdmin()||(cfg.censeurs||[]).indexOf(me())>-1}
+function esc(s){return String(s==null?"":s).replace(/[&<>"']/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]})}
+function toast(m){(window.toast||alert)(m)}
+function okUrl(u){return /^https:\/\/[^\s"'<>]+$/i.test(u||"")}
+function uid(){return "m"+Date.now().toString(36)+Math.floor(Math.random()*1e4).toString(36)}
+function fdt(ms){return new Date(ms).toLocaleString("fr-FR",{weekday:"long",day:"numeric",month:"long",hour:"2-digit",minute:"2-digit"})}
+function fh(ms){return new Date(ms).toLocaleTimeString("fr-FR",{hour:"2-digit",minute:"2-digit"})}
+function pad(n){return ("0"+n).slice(-2)}
+
+/* ---------- Lecture des données ---------- */
+async function load(){
+  if(!SB()||!me())return;
+  var a=await SB().from(TB()).select("value").eq("key",CFG).maybeSingle();
+  if(!a.error&&a.data&&a.data.value){cfg=a.data.value;cfg.censeurs=(cfg.censeurs||[]).map(function(x){return String(x).toLowerCase()})}
+  var r=await SB().from(TB()).select("key,value").like("key",PRE+"%").limit(300);
+  if(!r.error)meets=(r.data||[]).map(function(x){return x.value}).filter(function(v){return v&&v.start}).sort(function(x,y){return x.start-y.start});
+  var q=SB().from(TB()).select("key,value").like("key",isCens()?ATT+"m%":ATT+"m%:"+me()).limit(5000);
+  var t=await q; atts={};
+  if(!t.error)(t.data||[]).forEach(function(x){atts[x.key]=x.value});
+}
+
+/* ---------- Réunion en cours / prochaine ---------- */
+function pick(){
+  var n=Date.now();
+  var cur=meets.filter(function(m){return n>=m.start-OPEN_BEFORE&&n<=m.start+m.dur*6e4});
+  if(cur.length)return {m:cur[0],live:true};
+  var nx=meets.filter(function(m){return m.start>n})[0];
+  return nx?{m:nx,live:false}:null;
+}
+function statut(m,rec){
+  var n=Date.now(),end=m.start+m.dur*6e4;
+  if(rec){
+    if(rec.at<=m.start+m.grace*6e4)return {k:"ok",t:"Présent"};
+    return {k:"late",t:"Retard (+"+Math.max(1,Math.round((rec.at-m.start)/6e4))+" min)"};
+  }
+  if(n>end)return {k:"abs",t:"Absent"};
+  return {k:"wait",t:n<m.start?"À venir":"En attente"};
+}
+
+/* ---------- Carte « Réunion » sur l'accueil ---------- */
+var ICON='<svg viewBox="0 0 48 48" width="54" height="54" aria-hidden="true"><defs><linearGradient id="mtg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#7b83eb"/><stop offset="1" stop-color="#4b53bc"/></linearGradient></defs><rect width="48" height="48" rx="13" fill="url(#mtg)"/><rect x="8" y="15" width="21" height="18" rx="4" fill="#fff"/><path d="M31 21.5l9-5v15l-9-5z" fill="#fff" opacity=".92"/><circle cx="18.5" cy="21.4" r="2.7" fill="#5b5fc7"/><path d="M13 30a5.5 5.5 0 0 1 11 0z" fill="#5b5fc7"/></svg>';
+function drawCard(){
+  var host=$("meetCard");
+  if(!host){
+    var br=document.querySelector("#view-home .brand");if(!br)return;
+    host=document.createElement("div");host.id="meetCard";br.after(host);
+  }
+  if(!me()){host.innerHTML="";return}
+  var p=pick(),link=(p&&p.m.link)||cfg.link,sub;
+  if(p&&p.live)sub='<span class="mt-dot"></span>En cours : '+esc(p.m.title)+' · '+fh(p.m.start)+' – '+fh(p.m.start+p.m.dur*6e4)+(atts[ATT+p.m.id+":"+me()]?' · votre présence est enregistrée':'');
+  else if(p)sub='Prochaine réunion : '+esc(p.m.title)+' · '+fdt(p.m.start);
+  else sub=cfg.link?'Aucune réunion programmée · lien disponible':'Aucune réunion programmée';
+  host.innerHTML='<a class="mt-card'+(p&&p.live?' live':'')+'" id="meetGo" href="'+(okUrl(link)?esc(link):'#')+'" target="_blank" rel="noopener noreferrer">'
+    +ICON+'<span class="mt-txt"><b>Réunion en ligne</b><small>'+sub+'</small></span><span class="mt-btn">Rejoindre</span></a>';
+}
+document.addEventListener("click",async function(e){
+  var a=e.target.closest("#meetGo");if(!a)return;
+  e.preventDefault();
+  if(!okUrl(a.getAttribute("href"))){
+    toast(isAdmin()?"Aucun lien : renseignez-le dans Administration › Réunion en ligne.":"Le lien de la réunion n'a pas encore été configuré.");
+    return;
+  }
+  var p=pick();
+  if(p&&p.live){
+    var saved=await mark(p.m);
+    if(!saved)return; /* Ne pas ouvrir Teams si l’enregistrement de présence a échoué. */
+  }else if(p){toast("La présence sera comptabilisée à partir de 15 minutes avant le début de la réunion.");}
+  window.open(a.href,"_blank","noopener,noreferrer");
+});
+async function mark(m){
+  if(!me()||!SB())return false;
+  var k=ATT+m.id+":"+me();if(atts[k])return true;           /* le premier clic est conservé */
+  var v={meet:m.id,email:me(),name:window.USER_NAME||"",at:Date.now()};
+  var r=await SB().from(TB()).insert({key:k,value:v,updated_at:new Date().toISOString()});
+  if(r.error&&r.error.code!=="23505"){toast("Présence non enregistrée : "+(r.error.message||r.error));return false}
+  if(!r.error)atts[k]=v;
+  if(typeof window.recordUserAction==="function")window.recordUserAction("Présence à la réunion : "+m.title);
+  drawCard();toast("Présence enregistrée.");return true;
+}
+
+/* ---------- Réglage admin (dans la page Administration) ---------- */
+function injectAdmin(){
+  var ad=$("adOn");if(!isAdmin()||!ad||$("mtAdmin"))return;
+  var b=document.createElement("div");b.id="mtAdmin";b.className="mt-adm";
+  b.innerHTML='<h3>Réunion en ligne (Teams)</h3>'
+   +'<div class="mt-grid" style="grid-template-columns:1fr"><label>Lien de la réunion (https://…)<input id="mtLink" placeholder="https://teams.microsoft.com/l/meetup-join/…" autocomplete="off"></label>'
+   +'<label>Censeur(s) — adresses email séparées par des virgules<input id="mtCens" placeholder="prenom@exemple.com, autre@exemple.com" autocomplete="off"></label></div>'
+   +'<div class="mt-err" id="mtAErr" role="alert"></div><button type="button" class="p" id="mtASave">Enregistrer</button>';
+  ad.before(b);
+  $("mtLink").value=cfg.link||"";$("mtCens").value=(cfg.censeurs||[]).join(", ");
+  $("mtASave").onclick=async function(){
+    var l=$("mtLink").value.trim(),c=$("mtCens").value.split(/[,;\s]+/).map(function(x){return x.trim().toLowerCase()}).filter(Boolean),er=$("mtAErr");
+    if(l&&!okUrl(l)){er.textContent="Le lien doit commencer par https://";return}
+    er.textContent="";
+    var r=await SB().from(TB()).upsert({key:CFG,value:{link:l,censeurs:c,at:Date.now(),by:me()},updated_at:new Date().toISOString()});
+    if(r.error){er.textContent="Enregistrement impossible : "+(r.error.message||r.error);return}
+    cfg={link:l,censeurs:c};toast("Réunion en ligne enregistrée.");drawCard();inject();
+  };
+}
+
+/* ---------- Page « Censeur » ---------- */
+function mark2(){var nl=$("navList");if(nl)nl.querySelectorAll(".nv").forEach(function(b){b.classList.toggle("on",b.hasAttribute("data-cs-nav"))})}
+window.afRelinkDropbox=async function(index){
+ if(window.USER_ROLE!=="admin"){toast("Seul l'administrateur peut réassocier un fichier.");return}
+ window.__afRelinkIndex=index;
+ await openPage();
+ browse("");
+ setTimeout(function(){var b=$("dvBrowser");if(b)b.scrollIntoView({behavior:"smooth",block:"start"})},300);
+};
+async function openPage(){
+  var home=document.querySelector('#navList .nv[data-id="home"]');if(home)home.click();
+  active=true;$("view-home").style.display="none";$("viewHost").style.display="";
+  var sc=$("scrim");if(sc&&sc.classList.contains("on"))sc.click();
+  $("viewHost").innerHTML='<div class="toolbar"><b>Censeur</b></div><p style="color:var(--muted)">Chargement…</p>';
+  mark2();window.scrollTo(0,0);if(window.AFRI)window.AFRI.page("Censeur");
+  try{await load()}catch(e){}
+  if(active)render();
+}
+async function render(){
+  var host=$("viewHost");if(!active||!host)return;
+  var U=[];try{U=window.AFRI?await window.AFRI.listUsers():[]}catch(e){}
+  if(!active)return;
+  var d=new Date(),dd=d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate());
+  var h='<div class="toolbar"><b>Censeur</b><div class="toolbar-actions"><button type="button" id="csRef">Actualiser</button></div></div>'
+   +'<div class="mt-box"><h3>Programmer une réunion</h3><div class="mt-grid">'
+   +'<label class="full">Intitulé<input id="csT" maxlength="100" placeholder="Ex. Point hebdomadaire" autocomplete="off"></label>'
+   +'<label>Date<input type="date" id="csD" value="'+dd+'"></label><label>Heure de début<input type="time" id="csH" value="14:00"></label>'
+   +'<label>Durée (min)<input type="number" id="csU" value="60" min="5" max="600"></label>'
+   +'<label>Tolérance avant « retard » (min)<input type="number" id="csG" value="5" min="0" max="120"></label>'
+   +'<label class="full">Lien propre à cette réunion (facultatif, sinon lien général)<input id="csL" placeholder="https://…" autocomplete="off"></label></div>'
+   +'<div class="mt-err" id="csErr" role="alert"></div><button type="button" class="p" id="csGo">Programmer</button>'
+   +'<p style="color:var(--muted);font-size:.85rem;margin:12px 0 0">Présent : clic sur « Rejoindre » avant la fin de la tolérance · Retard : clic après · Absent : aucun clic à la fin de la réunion. Les clics sont comptés de 15 min avant le début jusqu\'à la fin.</p></div>';
+  var L=meets.slice().sort(function(a,b){return b.start-a.start});
+  h+='<h3 style="color:var(--green)">Réunions et présences</h3>'+(L.length?L.map(function(m){
+    var emails={};U.forEach(function(u){if(u&&u.email)emails[String(u.email).toLowerCase()]=u.name||""});
+    Object.keys(atts).forEach(function(k){var v=atts[k];if(v&&v.meet===m.id&&v.email&&!(v.email in emails))emails[v.email]=v.name||""});
+    var rows=Object.keys(emails).sort().map(function(em){var rec=atts[ATT+m.id+":"+em],s=statut(m,rec);return {em:em,nm:emails[em],rec:rec,s:s}});
+    var c={ok:0,late:0,abs:0,wait:0};rows.forEach(function(r){c[r.s.k]++});
+    return '<details class="mt-m"><summary><b>'+esc(m.title)+'</b><small>'+fdt(m.start)+' · '+m.dur+' min</small>'
+     +'<span class="mt-sum"><span class="mt-pill mt-ok">'+c.ok+' présent(s)</span><span class="mt-pill mt-late">'+c.late+' retard(s)</span><span class="mt-pill mt-abs">'+c.abs+' absent(s)</span>'+(c.wait?'<span class="mt-pill mt-wait">'+c.wait+' en attente</span>':'')+'</span></summary>'
+     +'<div class="mt-body"><div class="mt-tw"><table><thead><tr><th>Nom</th><th>Email</th><th>Statut</th><th>Clic à</th></tr></thead><tbody>'
+     +(rows.length?rows.map(function(r){return '<tr><td>'+esc(r.nm||"—")+'</td><td>'+esc(r.em)+'</td><td><span class="mt-pill mt-'+(r.s.k==="ok"?"ok":r.s.k==="late"?"late":r.s.k==="abs"?"abs":"wait")+'">'+esc(r.s.t)+'</span></td><td>'+(r.rec?fh(r.rec.at):"—")+'</td></tr>'}).join(""):'<tr><td colspan="4" style="color:var(--muted)">Aucun compte à afficher.</td></tr>')
+     +'</tbody></table></div><p style="margin:14px 0 0"><button type="button" class="danger" data-csdel="'+esc(m.id)+'">Supprimer cette réunion</button></p></div></details>';
+  }).join(""):'<p style="color:var(--muted)">Aucune réunion programmée.</p>');
+  host.innerHTML=h;host.onclick=onClick;
+}
+async function onClick(e){
+  var b=e.target.closest("button");if(!b)return;
+  try{
+    if(b.id==="csRef"){await load();render();return}
+    if(b.id==="csGo"){
+      var t=$("csT").value.trim(),d=$("csD").value,hh=$("csH").value,du=+$("csU").value,g=+$("csG").value,l=$("csL").value.trim(),er=$("csErr");
+      if(!t||!d||!hh){er.textContent="Indiquez l'intitulé, la date et l'heure.";return}
+      if(!(du>=5)){er.textContent="Durée invalide.";return}
+      if(l&&!okUrl(l)){er.textContent="Le lien doit commencer par https://";return}
+      var st=new Date(d+"T"+hh).getTime();if(isNaN(st)){er.textContent="Date ou heure invalide.";return}
+      if(st+du*6e4<Date.now()){er.textContent="Cette réunion est déjà terminée.";return}
+      er.textContent="";b.disabled=true;
+      var m={id:uid(),title:t,start:st,dur:du,grace:g>=0?g:5,link:l,by:me(),created:Date.now()};
+      var r=await SB().from(TB()).upsert({key:PRE+m.id,value:m,updated_at:new Date().toISOString()});
+      b.disabled=false;
+      if(r.error){er.textContent="Enregistrement impossible : "+(r.error.message||r.error);return}
+      meets.push(m);meets.sort(function(x,y){return x.start-y.start});toast("Réunion programmée.");drawCard();render();return;
+    }
+    if(b.dataset.csdel&&confirm("Supprimer cette réunion et ses présences ?")){
+      var id=b.dataset.csdel;
+      await SB().from(TB()).delete().eq("key",PRE+id);
+      try{await SB().from(TB()).delete().like("key",ATT+id+":%")}catch(x){}
+      meets=meets.filter(function(x){return x.id!==id});Object.keys(atts).forEach(function(k){if(k.indexOf(ATT+id+":")===0)delete atts[k]});
+      drawCard();render();
+    }
+  }catch(x){toast("Action impossible : "+(x&&x.message||x))}
+}
+
+/* ---------- Onglet « Censeur » dans le menu ---------- */
+function inject(){
+  var nl=$("navList");if(!nl||!nl.firstElementChild)return;
+  var has=nl.querySelector("[data-cs-nav]");
+  if(!isCens()){if(has)has.parentNode.remove();return}
+  if(has)return;
+  var row=document.createElement("div");row.className="nvr";
+  row.innerHTML='<button type="button" class="nv" data-cs-nav="1">Censeur</button>';
+  var f=nl.querySelector("[data-fdr-nav]");(f?f.parentNode:nl.firstElementChild).after(row);
+  if(active)mark2();
+}
+var nl0=$("navList");
+if(nl0){
+  new MutationObserver(inject).observe(nl0,{childList:true});
+  nl0.addEventListener("click",function(e){
+    var b=e.target.closest("button");if(!b)return;
+    if(b.hasAttribute("data-cs-nav"))openPage();else if(!b.hasAttribute("data-fdr-ren"))active=false;
+  });
+}
+var vh=$("viewHost");if(vh)new MutationObserver(injectAdmin).observe(vh,{childList:true});
+
+/* ---------- Démarrage ---------- */
+function refresh(){if(!me()){drawCard();return}load().then(function(){inject();drawCard();injectAdmin();if(active)render()}).catch(function(){})}
+var prev=window.onRole;
+window.onRole=function(){if(prev)prev();setTimeout(refresh,1300)};
+setInterval(function(){if(me())refresh();else drawCard()},60000);
+setInterval(function(){if(me())drawCard()},30000);
+if(me())setTimeout(refresh,1500);
+})();
