@@ -89,7 +89,7 @@ Deno.serve(async (req: Request) => {
         : { data: null };
       const isAdmin = !!admin.data;
       const isNewsBrief = record.listing_type === "announcement"
-        && record.category === "Veille agroalimentaire"
+        && ["Veille agroalimentaire","Actualités mondiales"].includes(record.category)
         && typeof record.promotion_label === "string"
         && record.promotion_label.startsWith("Brief IA · ");
       const allowed = isAdmin || (
