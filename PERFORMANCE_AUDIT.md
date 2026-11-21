@@ -44,3 +44,9 @@ Date : 21 novembre 2026. Périmètre : branche `refactor/modularisation-et-tests
 - Assistant IA : chat, pièces jointes, voix et rendu mathématique sur mobile.
 
 Les tests statiques sont nécessaires, mais **ne démontrent pas** l'absence de régression dans le navigateur.
+
+## Vérification supplémentaire avant fusion
+- CI enrichie d'un test Playwright Chromium en vue mobile (390 × 844).
+- Sert la branche localement sans identifiants et contrôle le chargement des scripts locaux, les points d'entrée et la structure de démarrage anonyme.
+- Le test de navigateur ne remplace pas la validation des parcours connectés Supabase/Dropbox, ni un audit Lighthouse avec mesures LCP/INP/CLS.
+- Lancer ce contrôle avec les tests statiques avant toute fusion, et corriger les échecs relevés.
