@@ -248,22 +248,8 @@ body.af-market-mode #market-view{display:block}
 .af-announcement-detail .af-news-relevance{margin:4px 0 6px}
 
 /* Restore the reference Marketplace header and 3-column welcome panel (2026-11-21). */
-@media(min-width:1101px){
-  #market-view .af-market-main{max-width:1640px;padding:24px 28px 88px}
-  #market-view .af-ali{display:grid;grid-template-columns:minmax(210px,270px) minmax(0,1fr) minmax(220px,285px);align-items:stretch;gap:18px;margin:0 0 26px}
-  #market-view .af-ali-cats,#market-view .af-ali-side{display:flex}
-  #market-view .af-ali-hero{width:100%;max-width:none;height:438px;min-height:438px;margin:0}
-  #market-view .af-ali-cats{flex-direction:column}
-  #market-view .af-ali-side{min-width:0}
-  #market-view .af-slide h1{font-size:clamp(2rem,3.2vw,3.35rem)}
-  #market-view .af-market-topline{max-width:1640px}
-}
-@media(min-width:801px) and (max-width:1100px){
-  #market-view .af-ali{display:grid;grid-template-columns:minmax(0,1fr) 250px;gap:14px}
-  #market-view .af-ali-cats{display:none}
-  #market-view .af-ali-side{display:flex}
-  #market-view .af-ali-hero{width:100%;max-width:none;height:335px;min-height:335px;margin:0}
-}
+
+
 #market-view .af-ali-side.af-welcome-guest{display:flex;align-items:center;justify-content:center;text-align:center;min-height:0}
 #market-view .af-welcome-guest h2{font-size:clamp(1.4rem,2.1vw,2rem);line-height:1.2;font-weight:850;margin:0;color:#153b29}
 #market-view .af-welcome-member{display:flex;flex-direction:column;align-items:stretch;gap:12px;overflow:hidden}
@@ -325,12 +311,20 @@ body.af-market-mode #market-view{display:block}
 @keyframes afScrollCueFloat{0%,100%{translate:0 0}50%{translate:0 7px}}
 @keyframes afScrollCueDown{0%,100%{translate:0 -2px}50%{translate:0 5px}}
 @media(min-width:1101px){
-  #market-view .af-ali{grid-template-columns:minmax(205px,250px) minmax(0,1fr) minmax(215px,265px);gap:16px;align-items:stretch}
-  #market-view .af-ali-hero{height:clamp(360px,31vw,438px);min-height:0}
-  #market-view .af-ali-cats,#market-view .af-ali-side{height:clamp(360px,31vw,438px);min-height:0}
+  #market-view .af-market-main{max-width:1640px;padding:24px 28px 88px}
+  #market-view .af-ali{display:grid;grid-template-columns:minmax(205px,250px) minmax(0,1fr) minmax(215px,265px);align-items:stretch;gap:16px;margin:0 0 26px}
+  #market-view .af-ali-cats,#market-view .af-ali-side{display:flex;height:clamp(360px,31vw,438px);min-height:0}
+  #market-view .af-ali-hero{width:100%;max-width:none;height:clamp(360px,31vw,438px);min-height:0;margin:0}
+  #market-view .af-ali-cats{flex-direction:column}
+  #market-view .af-ali-side{min-width:0}
+  #market-view .af-slide h1{font-size:clamp(2rem,3.2vw,3.35rem)}
+  #market-view .af-market-topline{max-width:1640px}
 }
 @media(min-width:801px) and (max-width:1100px){
-  #market-view .af-ali-hero,#market-view .af-ali-side{height:335px;max-height:335px}
+  #market-view .af-ali{display:grid;grid-template-columns:minmax(0,1fr) 250px;gap:14px}
+  #market-view .af-ali-cats{display:none}
+  #market-view .af-ali-side{display:flex;height:335px;max-height:335px}
+  #market-view .af-ali-hero{width:100%;max-width:none;height:335px;min-height:335px;max-height:335px;margin:0}
 }
 @media(max-width:1050px){
   #market-view .af-market-nav .af-market-nav-trust{display:none}
