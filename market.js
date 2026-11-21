@@ -94,11 +94,12 @@
   function isAnnouncement(product) { return product && product.listing_type === "announcement"; }
   function titleHtml(text) { return esc(text || DEF_TITLE).replace(/(Afri)(Flo[wW])/, "$1<span>$2</span>"); }
   function roleMode(profile) { return profile && profile.access_mode || "client"; }
-  function shouldUseMarket(profile) { return ["client", "shareholder_pending", "shareholder_approved", "partner_waiting"].indexOf(roleMode(profile)) > -1; }
+  function shouldUseMarket(profile) { return ["client", "shareholder_pending", "partner_waiting", "partner_approved"].indexOf(roleMode(profile)) > -1; }
   function productById(id) { return state.products.filter(function (p) { return p.id === id; })[0] || state.adminProducts.filter(function (p) { return p.id === id; })[0]; }
 
   function hideWorkspace() {
     document.body.classList.add("af-market-mode");
+    document.documentElement.classList.remove("af-role-checking");
     var auth = el("auth-screen"); if (auth) auth.classList.add("off");
   }
   function showWorkspace() {
@@ -109,11 +110,17 @@
   function clearHero() { if (state.heroTimer) { clearInterval(state.heroTimer); state.heroTimer = null; } }
   function open(context) {
     state.context = context || { kind: "public" }; loadShop(); state.currency.code = preferredCurrency(); hideWorkspace(); render(); loadCurrencyRates();
-    if (roleMode(state.context.market) === "partner_waiting") { loadPartnerPortal(); loadCatalog(); return; }
+    if (roleMode(state.context.market) === "partner_approved") { loadPartnerPortal(); loadCatalog(); return; }
+    if (roleMode(state.context.market) === "partner_waiting") { loadCatalog(); return; }
     loadHero(); loadCatalog();
   }
   function openPublic() { open({ kind: "public", market: { access_mode: "public" } }); }
   function closeToWorkspace() {
+    var profile=window.afriMarketSession;
+    if (!(profile && profile.access_mode === "shareholder_approved") && window.USER_ROLE !== "admin") {
+      notice("Cet espace est réservé aux actionnaires approuvés.");
+      return;
+    }
     clearTimers(); showWorkspace();
     var home = document.querySelector('#navList .nv[data-id="home"]');
     if (home) home.click();
@@ -642,7 +649,7 @@
     return '<section class="af-market-wait"><h1>Validation actionnaire en attente</h1><p>Votre demande a bien été reçue. Un administrateur AfriFloW doit la valider avant l’ouverture de tout espace actionnaire. Vous pouvez consulter la Marketplace pendant ce temps.</p><button type="button" class="af-market-primary" id="afShareholderCatalog">Voir la Marketplace</button></section>';
   }
   function top() {
-    var workspace = state.context.kind !== "public", partner = roleMode(state.context.market) === "partner_waiting";
+    var workspace = state.context.kind !== "public", partner = ["partner_waiting","partner_approved"].includes(roleMode(state.context.market));
     return '<header class="af-market-top"><div class="af-market-topline">'
       + '<a class="af-market-brand" href="#" id="afMarketHome"><img src="logo.png" alt=""><b>Afri<span>FloW</span> Marketplace</b></a>'
       + (partner ? '<div class="af-market-search af-partner-top-label">Portail commercial partenaire</div>' : '<form class="af-market-search" id="afMarketSearch"><input id="afMarketSearchInput" value="' + esc(state.term) + '" type="search" placeholder="Rechercher un produit, une catégorie…" aria-label="Rechercher dans la Marketplace"><button>' + icon("search") + '<span>Rechercher</span></button></form>')
@@ -674,8 +681,10 @@
     var root = el("market-view"); if (!root) return;
     clearHero();
     var mode = roleMode(state.context.market);
-    root.innerHTML = top() + '<main class="af-market-main">' + (mode === "partner_waiting"
+    root.innerHTML = top() + '<main class="af-market-main">' + (mode === "partner_approved"
       ? '<section class="af-ali">' + catsHtml() + heroHtml() + sideHtml() + scrollCueHtml() + '</section>' + partnerContent() + announcementsHtml()
+      : mode === "partner_waiting"
+      ? '<section class="af-market-wait"><h1>Votre demande de partenariat est en attente</h1><p>Une validation d\'AfriFloW est nécessaire avant d\'ouvrir votre espace partenaire.</p></section>'
       : mode === "shareholder_pending"
       ? '<section class="af-ali">' + catsHtml() + heroHtml() + sideHtml() + scrollCueHtml() + '</section>' + shareholderWaitContent() + announcementsHtml()
       : catalogContent()) + "</main>";
