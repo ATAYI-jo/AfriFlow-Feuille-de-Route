@@ -61,6 +61,20 @@ test('Anonymous page boots and locally hosted JavaScript loads', { timeout: 9000
     }));
     assert.ok(modules.supabase && modules.messaging && modules.market,
       'Startup APIs missing: ' + JSON.stringify(modules));
+    // Public Market and authentication dialog must coexist without a real user session.
+    await page.evaluate(() => window.AfriMarket.openPublic());
+    assert.equal(await page.locator('body.af-market-mode').count(), 1,
+      'Public Market should show the market mode');
+    await page.evaluate(() => window.AfriMarket.openAuth('login'));
+    assert.equal(await page.locator('#auth-screen:not(.off)').count(), 1,
+      'Login dialog should open from public Market');
+    await page.evaluate(() => window.AfriMarket.closeAuth());
+    assert.equal(await page.locator('#auth-screen.off').count(), 1,
+      'Login dialog should close and return to Market');
+    // Once loaded on first use, the Word module must remain a singleton.
+    const wordSources = await page.evaluate(() =>
+      [...document.querySelectorAll('script[src*="/modules/documents/word-editor.js"]')].length);
+    assert.equal(wordSources, 1, 'Word editor script should load only once');
     await page.close();
   } finally {
     if (browser) await browser.close();
