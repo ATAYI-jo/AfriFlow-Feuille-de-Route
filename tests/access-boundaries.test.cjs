@@ -69,3 +69,20 @@ test('Legacy auto-assigned Client profiles get exactly one explicit selection', 
   assert.match(sql, /'shareholder_pending'/);
   assert.match(sql, /'partner_waiting'/);
 });
+
+const css = read('market.css');
+test('Admin access area lists all roles, classifies legacy accounts and keeps decisions server-side', () => {
+  assert.match(market,/function loadAccessAdmin\(\)/);
+  assert.match(market,/id="afAccessAdmin"/);
+  assert.match(market,/loadQuotes\(\); loadPartnerAdmin\(\); loadAccessAdmin\(\)/);
+  assert.match(market,/admin_access_list/);
+  assert.match(market,/admin_access_decide/);
+  assert.match(css,/#afAccessAdmin \.af-access-user/);
+  assert.match(portal,/action === "admin_access_list"/);
+  assert.match(portal,/action === "admin_access_decide"/);
+  assert.match(portal,/if \(!isAdmin\) return reply/);
+  assert.match(portal,/admin\.getUserById\(targetId\)/);
+  assert.match(portal,/from\("afriflow_access_audit"\)\.insert/);
+  assert.match(sql,/create table if not exists public\.afriflow_access_audit/);
+  assert.match(sql,/old\.access_mode='collaborator'/);
+});
