@@ -5,6 +5,7 @@
   'use strict';
   var sb = null, account = '', firstMessages = true, known = new Set();
   var knownMeetings = new Set(), firstMeetings = true;
+  var knownDecisions = new Map(), firstDecisions = true;
   var audio = null, ringTimer = null, activeMeeting = null, lastToast = 0, busy = false;
   var ring = null, toast = null;
   var settingsKey = 'afriflow_alerts_enabled_v1';
@@ -186,9 +187,9 @@
     if (busy) return;
     var user=String(window.loggedUserEmail||'').toLowerCase();
     if (!user || !window.__sb) {
-      account='';firstMessages=true;known.clear();firstMeetings=true;knownMeetings.clear();endCall();updateButton();return;
+      account='';firstMessages=true;known.clear();firstMeetings=true;knownMeetings.clear();firstDecisions=true;knownDecisions.clear();endCall();updateButton();return;
     }
-    if (account!==user){account=user;known.clear();knownMeetings.clear();firstMessages=true;firstMeetings=true;updateButton();}
+    if (account!==user){account=user;known.clear();knownMeetings.clear();knownDecisions.clear();firstMessages=true;firstMeetings=true;firstDecisions=true;updateButton();}
     if (!navigator.onLine) return;
     busy=true;
     sb=window.__sb;
@@ -197,7 +198,9 @@
         sb.from(window.__TABLE||'afriflow_state').select('key,value').like('key','msg:'+account+':%').order('updated_at',{ascending:false}).limit(120),
         sb.from(window.__TABLE||'afriflow_state').select('value').like('key','meet:%').limit(300),
         sb.from(window.__TABLE||'afriflow_state').select('value').eq('key','pub:meetcfg').maybeSingle(),
-        sb.from(window.__TABLE||'afriflow_state').select('value').eq('key','pub:deadlines').maybeSingle()
+        sb.from(window.__TABLE||'afriflow_state').select('value').eq('key','pub:deadlines').maybeSingle(),
+        sb.from(window.__TABLE||'afriflow_state').select('key,value').like('key','att:jd-%:'+account).limit(200),
+        sb.from(window.__TABLE||'afriflow_state').select('key,value').like('key','att:j-%:'+account).limit(200)
       ]);
       var messages=queries[0].status==='fulfilled' && !queries[0].value.error ? (queries[0].value.data||[]) : null;
       if(messages){
@@ -235,6 +238,24 @@
           notice('Réunion bientôt', (m.title||'Réunion')+' commence dans moins de 15 minutes.','af-meet-soon-'+m.id);
         }
       });
+      // Alert only on decisions about the latest submitted version of a request.
+      var decisionRows=queries[4].status==='fulfilled'&&!queries[4].value.error?(queries[4].value.data||[]):[];
+      var justifications=queries[5].status==='fulfilled'&&!queries[5].value.error?(queries[5].value.data||[]):[];
+      var submitted={};
+      justifications.forEach(function(row){if(row.value&&row.value.mid)submitted[row.value.mid]=Number(row.value.at)||0;});
+      var fresh=new Map();
+      decisionRows.forEach(function(row){
+        var d=row.value;if(!d||!d.mid||d.email!==account)return;
+        var at=Number(d.at)||0;
+        if(!submitted[d.mid]||at<submitted[d.mid])return;
+        fresh.set(row.key,at);
+        if(!firstDecisions && knownDecisions.get(row.key)!==at){
+          notice(d.ok?'Justificatif accepté':'Justificatif refusé',
+            d.ok?'Consultez Mes présences.':'Consultez le motif du refus dans Mes présences.',
+            'afri-justification-'+d.mid);
+        }
+      });
+      knownDecisions=fresh;firstDecisions=false;
       var deadlines=queries[3].status==='fulfilled'&&!queries[3].value.error?queries[3].value.data?.value?.items||[]:[];
       deadlines.forEach(function(it){
         if(!it||it.done||!it.due)return;

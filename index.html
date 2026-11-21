@@ -1143,7 +1143,10 @@ btn.onclick=async function(){
     (d.data||[]).forEach(function(x){if(x.value&&x.value.mid)D[x.value.mid]=x.value});
   }catch(e){}
   var title=function(id){var m=meets.filter(function(x){return x.id===id})[0];return m?m.title:id};
-  var mine=Object.keys(J).map(function(id){var s=D[id];return '<div class="file-row"><div>'+esc(title(id))+'</div><small>'+(s?(s.ok?"✔ Accepté":"✖ Refusé"):"En attente")+'</small></div>'}).join("");
+  var mine=Object.keys(J).map(function(id){
+    var j=J[id],decision=D[id],pending=!decision||Number(j.at)>Number(decision.at);
+    return '<div class="file-row"><div>'+esc(title(id))+'</div><small>'+(pending?"En attente":decision.ok?"✔ Accepté":"✖ Refusé"+(decision.reason?" — "+esc(decision.reason):""))+'</small></div>';
+  }).join("");
   box.innerHTML='<h2 style="margin-top:0">Justificatif d\'absence / permission</h2>'
     +(meets.length?'<div class="fm"><label for="jfM">Réunion concernée</label><select id="jfM">'+meets.map(function(m){return '<option value="'+esc(m.id)+'">'+esc(m.title)+' · '+fdt(m.start)+'</option>'}).join("")+'</select>'
       +'<label for="jfR">Motif</label><textarea id="jfR" rows="4" maxlength="800"></textarea>'
@@ -1154,8 +1157,32 @@ btn.onclick=async function(){
     +'<div class="dact">'+(meets.length?'<button type="button" class="p" id="jfSend">Envoyer</button>':'')+'<button type="button" id="jfNo">Fermer</button></div>';
   box.onkeydown=null;$("xm").classList.add("on");
   $("jfNo").onclick=function(){$("xm").classList.remove("on")};
+  // Only a rejected request can be revised; preserve its previous decision.
+  function selectedJustification(){
+    var id=$("jfM")&&$("jfM").value,j=J[id],d=D[id];
+    return {j:j,d:d,rejected:!!(j&&d&&!d.ok&&Number(d.at)>=Number(j.at))};
+  }
+  function refreshJustificationForm(){
+    if(!$("jfM"))return;
+    var current=selectedJustification(),send=$("jfSend");
+    if(current.j){
+      $("jfR").value=current.j.reason||"";
+      if(send)send.textContent=current.rejected?"Corriger et renvoyer":"Envoyer";
+    }else{$("jfR").value="";if(send)send.textContent="Envoyer"}
+    if(send)send.disabled=!!(current.j&&!current.rejected);
+    var er=$("xerr");
+    if(er)er.textContent=current.j&&!current.rejected?"Ce justificatif a déjà été envoyé. Une nouvelle soumission sera possible après un refus.":current.rejected?"Motif du refus : "+(current.d.reason||"Non précisé. Vous pouvez corriger votre demande."):"";
+  }
+  if($("jfM")){
+    var requestedId=window.afriflowJustificationMeetingId||"";
+    if(requestedId&&[].some.call($("jfM").options,function(option){return option.value===requestedId}))$("jfM").value=requestedId;
+    window.afriflowJustificationMeetingId="";
+    $("jfM").addEventListener("change",refreshJustificationForm);refreshJustificationForm();
+  }
   if($("jfSend"))$("jfSend").onclick=async function(){
     var mid=$("jfM").value,reason=$("jfR").value.trim(),f=$("jfF").files[0],er=$("xerr"),sb=this;
+    var current=selectedJustification();
+    if(current.j&&!current.rejected){er.textContent="Demande déjà enregistrée. Attendez une décision avant de la modifier.";return}
     if(reason.length<5){er.textContent="Expliquez brièvement le motif.";return}
     if(f&&f.size>MAXF){er.textContent="Fichier trop lourd (1,2 Mo maximum).";return}
     er.textContent="";sb.disabled=true;
@@ -1164,8 +1191,9 @@ btn.onclick=async function(){
         var du=await new Promise(function(ok,ko){var fr=new FileReader();fr.onload=function(){ok(fr.result)};fr.onerror=function(){ko(new Error("Lecture du fichier impossible"))};fr.readAsDataURL(f)});
         await put("att:jf-"+mid+":"+me(),{mid:mid,email:me(),n:f.name,t:f.type,d:du});
       }
-      await put("att:j-"+mid+":"+me(),{mid:mid,email:me(),name:window.USER_NAME||"",reason:reason,at:Date.now(),file:f?f.name:""});
-      $("xm").classList.remove("on");toast("Justificatif envoyé au censeur.");
+      var submittedAt=Math.max(Date.now(),Number(current.d&&current.d.at||0)+1);
+      await put("att:j-"+mid+":"+me(),{mid:mid,email:me(),name:window.USER_NAME||"",reason:reason,at:submittedAt,file:f?f.name:(current.j&&current.j.file||""),revision:Number(current.j&&current.j.revision||0)+(current.j?1:0)});
+      $("xm").classList.remove("on");toast(current.rejected?"Justificatif corrigé et renvoyé au censeur.":"Justificatif envoyé au censeur.");
     }catch(x){er.textContent="Envoi impossible : "+(x.message||x);sb.disabled=false}
   };
 };
@@ -1190,17 +1218,20 @@ async function decorate(){
       var td=tr.children;if(td.length<4)return;
       var em=td[1].textContent.trim().toLowerCase(),j=L.filter(function(x){return x.email===em})[0];if(!j)return;
       var s=D[id+":"+em],pill=td[2].querySelector(".mt-pill");
-      if(s&&s.ok){if(pill&&pill.classList.contains("mt-abs")){pill.className="mt-pill mt-ok";pill.textContent="Excusé";exc++}}
-      else if(!s)td[2].insertAdjacentHTML("beforeend"," <span class=\"mt-pill mt-wait\">Justificatif reçu</span>");
+      var decided=s&&Number(s.at)>=Number(j.at);
+      if(decided&&s.ok){if(pill&&pill.classList.contains("mt-abs")){pill.className="mt-pill mt-ok";pill.textContent="Excusé";exc++}}
+      else if(!decided)td[2].insertAdjacentHTML("beforeend"," <span class=\"mt-pill mt-wait\">Justificatif reçu</span>");
     });
     var sum=d.querySelector(".mt-sum");
     if(exc&&sum){var ab=sum.querySelector(".mt-abs");if(ab)ab.textContent=Math.max(0,(parseInt(ab.textContent)||0)-exc)+" absent(s)";sum.insertAdjacentHTML("beforeend",'<span class="mt-pill mt-ok">'+exc+' excusé(s)</span>')}
     var blk=document.createElement("div");blk.className="jf-blk";
     blk.innerHTML='<h4 style="margin:0 0 6px;color:var(--green)">Justificatifs reçus ('+L.length+')</h4>'+L.map(function(j){
-      var s=D[id+":"+j.email],person=members[String(j.email||"").toLowerCase()]||{},name=person.name||j.name||j.email;
+      var s=D[id+":"+j.email],decided=s&&Number(s.at)>=Number(j.at),person=members[String(j.email||"").toLowerCase()]||{},name=person.name||j.name||j.email;
       return '<div class="jf-it"><div class="jf-person">'+portrait(person)+'<div><b>'+esc(name)+'</b><small>'+esc([person.job_title,person.department].filter(Boolean).join(" · ")||j.email)+' · '+fdt(j.at)+'</small><div style="margin-top:6px">'+esc(j.reason)+'</div></div></div><div class="dact">'
         +(j.file?'<button type="button" data-jf="file" data-m="'+esc(id)+'" data-e="'+esc(j.email)+'">📎 '+esc(j.file)+'</button>':'')
-        +'<span class="mt-pill '+(s?(s.ok?"mt-ok":"mt-abs"):"mt-wait")+'">'+(s?(s.ok?"Accepté":"Refusé"):"En attente")+'</span>'
+        +'<span class="mt-pill '+(decided?(s.ok?"mt-ok":"mt-abs"):"mt-wait")+'">'+(decided?(s.ok?"Accepté":"Refusé"):"En attente")+'</span>'
+        +(decided&&!s.ok&&s.reason?'<div style="margin-top:6px"><b>Motif du refus :</b> '+esc(s.reason)+'</div>':'')
+        +(s&&Array.isArray(s.history)&&s.history.length?'<details><summary>Historique des décisions</summary>'+s.history.map(function(h){return '<p>'+esc(h.ok?"Accepté":"Refusé")+' · '+fdt(h.at)+(h.reason?" — "+esc(h.reason):"")+'</p>'}).join("")+'</details>':'')
         +'<button type="button" class="p" data-jf="ok" data-m="'+esc(id)+'" data-e="'+esc(j.email)+'">Autoriser l’absence</button>'
         +'<button type="button" class="danger" data-jf="no" data-m="'+esc(id)+'" data-e="'+esc(j.email)+'">Refuser</button></div></div>';
     }).join("");
@@ -1216,8 +1247,19 @@ document.addEventListener("click",async function(e){
       if(!v){toast("Pièce introuvable");return}
       var a=document.createElement("a");a.href=v.d;a.download=v.n;document.body.appendChild(a);a.click();a.remove();return;
     }
-    await put("att:jd-"+m+":"+em,{mid:m,email:em,ok:b.dataset.jf==="ok",by:me(),at:Date.now()});
-    toast(b.dataset.jf==="ok"?"Justificatif accepté":"Justificatif refusé");
+    var approved=b.dataset.jf==="ok",reason="";
+    if(!approved){
+      reason=window.prompt("Motif obligatoire du refus (minimum 10 caractères) :","")||"";
+      if(!reason.trim())return;
+      if(reason.trim().length<10){toast("Veuillez préciser un motif de refus d’au moins 10 caractères.");return}
+      reason=reason.trim().slice(0,800);
+    }
+    var previous=await SB().from(TB()).select("value").eq("key","att:jd-"+m+":"+em).maybeSingle();
+    if(previous.error)throw previous.error;
+    var old=previous.data&&previous.data.value;
+    var history=old?(Array.isArray(old.history)?old.history.slice(-19):[]).concat([{ok:!!old.ok,reason:old.reason||"",by:old.by||"",at:old.at||0}]):[];
+    await put("att:jd-"+m+":"+em,{mid:m,email:em,ok:approved,reason:reason,by:me(),at:Date.now(),history:history});
+    toast(approved?"Justificatif accepté.":"Justificatif refusé : le motif est consultable dans « Mes présences ».");
     var rf=$("csRef");if(rf)rf.click();
   }catch(x){toast("Action impossible : "+(x.message||x))}
 });
@@ -1484,13 +1526,29 @@ async function renderPersonal(){
   if(err){root.innerHTML='<p style="color:#c0392b">Lecture impossible : '+esc(err)+'</p>';return}
   meets.sort(function(x,y){return y.start-x.start});
   if(!meets.length){root.innerHTML='<p style="color:var(--muted)">Aucune réunion programmée pour le moment.</p>';return}
+  // Notify locally once when a new decision is seen after opening/refreshing this page.
+  Object.keys(D).forEach(function(id){
+    var decision=D[id],request=J[id];if(!request||!decision||Number(decision.at)<Number(request.at))return;
+    var key="afriflow_justification_decision_"+q+"_"+id,seen="";
+    try{seen=localStorage.getItem(key)||""}catch(ignore){}
+    if(seen!==String(decision.at)){
+      try{localStorage.setItem(key,String(decision.at))}catch(ignore){}
+      toast(decision.ok?"Votre justificatif a été accepté.":"Votre justificatif a été refusé. Consultez le motif dans Mes présences.");
+    }
+  });
   root.innerHTML='<div class="journal-article" style="padding:22px"><div style="overflow-x:auto"><table class="t"><thead><tr><th>Réunion</th><th>Date</th><th>Ma présence</th><th>Mon justificatif</th></tr></thead><tbody>'
    +meets.map(function(m){
-     var ex=!!(D[m.id]&&D[m.id].ok),s=statut(m,A[m.id],ex),jf=J[m.id],jd=D[m.id];
-     var jt=!jf?'—':(jd?(jd.ok?'<span class="mt-pill mt-ok">Accepté</span>':'<span class="mt-pill mt-abs">Refusé</span>'):'<span class="mt-pill mt-wait">En attente du censeur</span>');
+     var jf=J[m.id],jd=D[m.id],decided=!!(jf&&jd&&Number(jd.at)>=Number(jf.at));
+     var ex=!!(decided&&jd.ok),s=statut(m,A[m.id],ex);
+     var jt=!jf?'—':(decided?(jd.ok?'<span class="mt-pill mt-ok">Accepté</span>':'<span class="mt-pill mt-abs">Refusé</span>'+(jd.reason?'<details><summary>Voir le motif</summary><p>'+esc(jd.reason)+'</p></details>':'')+' <button type="button" data-jp-resend="'+esc(m.id)+'">Corriger et renvoyer</button>'):'<span class="mt-pill mt-wait">En attente du censeur</span>');
+     if(jd&&Array.isArray(jd.history)&&jd.history.length)jt+='<details><summary>Historique</summary>'+jd.history.map(function(h){return '<p>'+esc(h.ok?"Accepté":"Refusé")+' · '+fdt(h.at)+(h.reason?" — "+esc(h.reason):"")+'</p>'}).join("")+'</details>';
      return '<tr><td><b>'+esc(m.title)+'</b></td><td>'+fdt(m.start)+'</td><td><span class="mt-pill mt-'+s[0]+'">'+esc(s[1])+'</span></td><td>'+jt+'</td></tr>';
    }).join("")+'</tbody></table></div><p style="color:var(--muted);font-size:.85rem;margin:14px 0 0">Seules les réunions auxquelles vous êtes invité et vos propres données sont affichées. Le premier clic sur « Rejoindre » constitue un pointage, pas une preuve de durée sur Teams. En cas d’absence, vous pouvez envoyer un justificatif au Censeur.</p></div>';
 }
+document.addEventListener("click",function(e){
+  var button=e.target.closest("button[data-jp-resend]");
+  if(button){window.afriflowJustificationMeetingId=button.getAttribute("data-jp-resend");var jf=document.getElementById("jfBtn");if(jf)jf.click();}
+});
 var xm=$("xm");
 if(xm)new MutationObserver(function(){if(!xm.classList.contains("on")&&jpActive&&$("jpRoot"))renderPersonal()}).observe(xm,{attributes:true,attributeFilter:["class"]});
 

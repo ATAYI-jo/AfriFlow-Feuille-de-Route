@@ -46,3 +46,18 @@ test('Native Teams launch waits for check-in and personal attendance includes ad
  assert.match(main,/const url = teamsUrl\(String\(rawUrl \|\| ''\)\)/);
  assert.match(preload,/openTeams: \(url\) => ipcRenderer\.invoke\('afriflow:open-teams'/);
 });
+
+test('Justification refusals require a reason and resubmissions reopen review',()=>{
+ assert.match(html,/Motif obligatoire du refus/);
+ assert.match(html,/reason\.trim\(\)\.length<10/);
+ assert.match(html,/Corriger et renvoyer/);
+ assert.match(html,/Number\(jd\.at\)>=Number\(jf\.at\)/);
+ assert.match(html,/Historique des décisions/);
+ assert.match(html,/history:history/);
+});
+test('Decisions notify active sessions via the AfriFloW alerts system',()=>{
+ const alerts=read('afriflow-alerts.js');
+ assert.match(alerts,/att:jd-%:/);
+ assert.match(alerts,/Justificatif refusé/);
+ assert.match(alerts,/knownDecisions/);
+});
