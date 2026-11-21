@@ -286,3 +286,13 @@ body.af-market-mode #market-view{display:block}
   #market-view .af-welcome-guest{min-height:95px}
   #market-view .af-welcome-member{min-height:0}
 }
+
+/* News thumbnails inside the authenticated welcome panel. */
+#market-view .af-side-news-item{align-items:center;gap:10px;min-height:76px}
+#market-view .af-side-news-thumb{position:relative;display:block;flex:0 0 72px;width:72px;height:66px;overflow:hidden;border-radius:9px;background:linear-gradient(135deg,#deecdf,#b7cfbd);border:1px solid rgba(18,70,40,.11)}
+#market-view .af-side-news-thumb>.af-photo{display:block;width:100%;height:100%;object-fit:cover;object-position:center}
+#market-view .af-side-news-thumb .af-market-fallback{display:flex;align-items:center;justify-content:center;width:100%;height:100%;padding:7px}
+#market-view .af-side-news-thumb .af-market-fallback img{display:block;width:100%;height:100%;object-fit:contain;opacity:.65}
+#market-view .af-side-news-copy{display:block;min-width:0;flex:1;overflow-wrap:anywhere}
+#market-view .af-side-news-copy .af-side-news-bell{display:inline-block;margin-right:4px;vertical-align:baseline}
+@media(max-width:390px){#market-view .af-side-news-thumb{flex-basis:62px;width:62px;height:60px}}
