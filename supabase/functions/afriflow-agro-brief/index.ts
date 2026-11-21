@@ -133,13 +133,53 @@ function stableAgroReference() {
   return [{ title: "À savoir : les indices internationaux des prix alimentaires sont publiés mensuellement", url: "https://www.fao.org/worldfoodsituation/foodpricesindex", domain: "FAO", date: today() }];
 }
 
-async function writeBrief(apiKey: string, sources: Array<{ title: string; url: string; domain: string; date: string }>) {
+
+function articleTextFromMarkup(html: string) {
+  const decode = (input: string) => input.replace(/&(?:amp|quot|apos|lt|gt|nbsp|#39|#x27);/gi, (key) =>
+    ({ "&amp;": "&", "&quot;": '"', "&apos;": "'", "&lt;": "<", "&gt;": ">", "&nbsp;": " ", "&#39;": "'", "&#x27;": "'" } as Record<string,string>)[key.toLowerCase()] || " ");
+  const metadata = [...html.matchAll(/<meta\b[^>]*>/gi)].map(x=>x[0]);
+  const desc = metadata.find(tag => /(?:name|property)=["'](?:description|og:description)["']/i.test(tag));
+  const description = desc ? decode(desc.match(/content=["']([^"']{100,2000})["']/i)?.[1] || "") : "";
+  let articleBody = "";
+  for(const block of html.matchAll(/<script\b[^>]*type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi)) {
+    try {
+      const json = JSON.parse(block[1]);
+      const flat = Array.isArray(json) ? json : Array.isArray(json?.["@graph"]) ? json["@graph"] : [json];
+      const found = flat.find((node:Record<string,unknown>) => typeof node?.articleBody === "string") as Record<string,unknown> | undefined;
+      if(found) { articleBody=String(found.articleBody);break; }
+    } catch {}
+  }
+  const article=html.match(/<article\b[^>]*>([\s\S]*?)<\/article>/i)?.[1] || "";
+  const paragraphs=[...article.matchAll(/<p\b[^>]*>([\s\S]*?)<\/p>/gi)]
+    .map(m=>decode(m[1].replace(/<[^>]+>/g," ")).replace(/\s+/g," ").trim())
+    .filter(t=>t.length>65 && !/cookie|newsletter|abonnez-vous|share this|subscribe/i.test(t))
+    .slice(0,25).join(" ");
+  return clean(articleBody || paragraphs || description, 7000);
+}
+async function fetchSourceArticle(source:{url:string;title:string;domain:string;date:string}) {
+  const url=new URL(source.url);
+  const allowed=["france24.com","bbc.com","bbc.co.uk","theguardian.com","news.un.org","reuters.com","apnews.com","rfi.fr"];
+  if(url.protocol!=="https:" || url.username || url.password ||
+    !allowed.some(host=>url.hostname===host || url.hostname.endsWith("."+host))) return "";
+  try {
+    const res=await fetch(url,{signal:AbortSignal.timeout(10000),redirect:"error",
+      headers:{"Accept":"text/html","User-Agent":"AfriFloW-news-editor/1.0"}});
+    if(!res.ok || !/text\/html/i.test(res.headers.get("content-type")||""))return "";
+    const html=(await res.text()).slice(0,350000);
+    return articleTextFromMarkup(html);
+  } catch(e) {
+    console.error("afriflow-world-news source unavailable",source.domain,e instanceof Error?e.message:"error");return "";
+  }
+}
+
+async function writeBrief(apiKey: string, sources: Array<{ title: string; url: string; domain: string; date: string }>, articleText: string) {
   const model = clean(Deno.env.get("GEMINI_AGRO_MODEL") || "gemini-3.8-flash", 80);
   const prompt = [
-    "Tu es le rédacteur des actualités mondiales d’AfriFloW. Rédige un bulletin factuel, neutre et entièrement en français pour tous les membres, basé EXCLUSIVEMENT sur le titre principal et les métadonnées ci-dessous.",
-    "Ne prétends jamais avoir lu les articles. Ne donne ni conseil financier, ni prix, ni chiffre qui n’est pas fourni. Si les sources sont insuffisantes, réponds avec un titre prudent et une synthèse qui le dit.",
-    "Réponds strictement en JSON valide : {\"title\":\"...\",\"description\":\"...\"}. title: 45 à 140 caractères. description: 350 à 1200 caractères, une synthèse claire qui cite les domaines sources entre parenthèses.",
-    JSON.stringify(sources)
+    "Tu es journaliste de synthèse pour AfriFloW. Rédige un texte informatif approfondi en français fondé exclusivement sur le contenu vérifié ci-dessous, sans prétendre avoir lu ce qui manque.",
+    "Explique les faits, le contexte, les acteurs et les enjeux selon le texte. Attribue les prises de position, conserve la nuance et le point d’interrogation éventuel; ne transforme jamais une accusation ou un débat en fait établi. Aucun fait ou chiffre inventé.",
+    "Réponds strictement en JSON valide : {\"title\":\"...\",\"description\":\"...\"}. title: 45 à 140 caractères. description: 750 à 2200 caractères, 3 à 5 paragraphes informatifs et structurés en texte simple.",
+    JSON.stringify(sources.slice(0,2)),
+    "Contenu vérifiable de l’article principal : "+articleText.slice(0,6500)
   ].join("\n\n");
   const response = await fetch("https://generativelanguage.googleapis.com/v1beta/interactions", {
     method: "POST",
@@ -154,8 +194,8 @@ async function writeBrief(apiKey: string, sources: Array<{ title: string; url: s
   const raw = clean(data?.output_text || data?.interaction?.output_text || outputContent?.text, 5000).replace(/^```json\s*|\s*```$/g, "");
   let brief: Record<string, unknown> = {};
   try { brief = JSON.parse(raw); } catch { throw new Error("Réponse IA invalide"); }
-  const title = clean(brief.title, 160), description = clean(brief.description, 4000);
-  if (title.length < 20 || description.length < 180) throw new Error("Bulletin IA trop court");
+  const title = clean(brief.title, 160), description = String(brief.description || "").trim().slice(0,4000);
+  if (title.length < 20 || description.length < 450) throw new Error("Synthèse IA trop courte");
   return { title, description };
 }
 
@@ -169,33 +209,34 @@ function sourceBrief(sources: Array<{ title: string; url: string; domain: string
   };
 }
 
-async function frenchBriefFallback(sources: Array<{ title: string; url: string; domain: string; date: string }>) {
+async function frenchBriefFallback(sources: Array<{ title: string; url: string; domain: string; date: string }>, articleText: string) {
   const token = Deno.env.get("CLOUDFLARE_API_TOKEN") || "";
   const account = Deno.env.get("CLOUDFLARE_ACCOUNT_ID") || "";
   if (!token || !account) return sourceBrief(sources);
   try {
     const model = "@cf/meta/llama-3.1-8b-instruct";
     const prompt = [
-      "Rédige en français un titre (max 160 caractères) et une brève synthèse (max 1000 caractères) de cette actualité internationale pour AfriFloW.",
-      "Utilise STRICTEMENT les titres et métadonnées de la liste. Tu ne connais pas le contenu des articles. Ne crée aucun chiffre, fait, citation ou événement non mentionné. Traduis les titres anglais en français. Ne donne pas de conseil financier.",
+      "Rédige en français un titre (max 160 caractères) et une synthèse journalistique détaillée (entre 650 et 1600 caractères) de cette actualité pour AfriFloW.",
+      "Utilise STRICTEMENT le contenu vérifiable fourni. Explique faits, contexte, acteurs et enjeux. Attribue les propos. Ne transforme aucune question en affirmation et n’invente rien.",
       "Réponds uniquement avec un objet JSON valide ayant les deux propriétés title et description. N'inclus aucun Markdown.",
-      JSON.stringify(sources.slice(0, 5))
+      JSON.stringify(sources.slice(0, 2)),
+      "Contenu vérifiable : "+articleText.slice(0,6000)
     ].join("\n");
     const response = await fetch(`https://api.cloudflare.com/client/v4/accounts/${encodeURIComponent(account)}/ai/run/${model}`, {
       method: "POST", headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-      body: JSON.stringify({ messages: [{ role: "user", content: prompt }], max_tokens: 380 }),
+      body: JSON.stringify({ messages: [{ role: "user", content: prompt }], max_tokens: 950 }),
       signal: AbortSignal.timeout(12000)
     });
     const data = await response.json().catch(() => ({}));
     if (!response.ok || data.success === false) throw new Error("Rédaction Cloudflare indisponible");
     const output = String(data.result?.response || "").replace(/^```(?:json)?\s*|\s*```$/g, "").trim();
     const obj = JSON.parse(output);
-    const title = clean(obj.title, 160), description = clean(obj.description, 1200);
-    if (title.length < 20 || description.length < 120) throw new Error("Bulletin trop court");
+    const title = clean(obj.title, 160), description = String(obj.description || "").trim().slice(0,2200);
+    if (title.length < 20 || description.length < 400) throw new Error("Synthèse insuffisante");
     return { title, description };
   } catch (error) {
     console.error("afriflow-agro-brief french fallback", error instanceof Error ? error.message : "error");
-    return sourceBrief(sources);
+    throw new Error("Impossible de rédiger une synthèse détaillée fiable");
   }
 }
 
@@ -407,11 +448,14 @@ async function publishDailyBrief(service: ReturnType<typeof createClient>, day:s
   }
   const lead=candidates.find(a=>!already.has(a.url));
   if(!lead)throw new Error("Aucun nouvel article distinct : pas de doublon publié");
+  const bodyText=await fetchSourceArticle(lead);
+  if(bodyText.length<350)throw new Error("Article sans texte vérifiable suffisant : aucune publication automatique");
   const sources=[lead,...candidates.filter(a=>a.url!==lead.url).slice(0,3)];
+  const sourceContext=bodyText.slice(0,6500);
   let brief:{title:string;description:string};
   const apiKey=Deno.env.get("GEMINI_API_KEY")||"";
-  try { if(!apiKey)throw new Error("Rédaction Gemini indisponible"); brief=await writeBrief(apiKey,sources); }
-  catch(error) { console.error("afriflow-world-news writing",error instanceof Error?error.message:"error");brief=await frenchBriefFallback(sources); }
+  try { if(!apiKey)throw new Error("Rédaction Gemini indisponible"); brief=await writeBrief(apiKey,sources,sourceContext); }
+  catch(error) { console.error("afriflow-world-news writing",error instanceof Error?error.message:"error");brief=await frenchBriefFallback(sources,sourceContext); }
   const isRelevant=relevantToAfriFlow(lead.title);
   const inserted=await service.from("afriflow_market_products").insert({
     name:brief.title,description:brief.description,category:topic,
