@@ -1246,28 +1246,38 @@ async function decorate(){
   var det=[].slice.call(vh.querySelectorAll("details.mt-m"));if(!det.length)return;
   var r1=await SB().from(TB()).select("key,value").like("key","att:j-%").limit(1000);
   var r2=await SB().from(TB()).select("key,value").like("key","att:jd-%").limit(1000);
-  var J={},D={},members={};
+  var r3=await SB().from(TB()).select("key,value").like("key","att:perm-%").limit(1000);
+  var J={},D={},P={},members={};
   try{(await window.AFRI.listMembers()).forEach(function(m){if(m.email)members[String(m.email).toLowerCase()]=m})}catch(e){}
   function portrait(m){var seed=encodeURIComponent((m&&m.avatar_value)||((m&&m.name)||"afriflow"));return '<img src="https://api.dicebear.com/10.x/lorelei/svg?seed='+seed+'&backgroundColor=e8f2ec" alt="" referrerpolicy="no-referrer">'}
   (r1.data||[]).forEach(function(x){if(x.value&&x.value.mid)(J[x.value.mid]=J[x.value.mid]||[]).push(x.value)});
   (r2.data||[]).forEach(function(x){if(x.value&&x.value.mid)D[x.value.mid+":"+x.value.email]=x.value});
+  (r3.data||[]).forEach(function(x){if(x.value&&x.value.mid)P[x.value.mid+":"+x.value.email]=x.value});
   det.forEach(function(d){
     if(!d.isConnected||d.dataset.jf)return;d.dataset.jf="1";
     var del=d.querySelector("[data-csdel]");if(!del)return;
-    var id=del.dataset.csdel,L=J[id]||[];if(!L.length)return;
+    var id=del.dataset.csdel,L=J[id]||[];
     var exc=0;
     d.querySelectorAll("tbody tr").forEach(function(tr){
       var td=tr.children;if(td.length<4)return;
-      var em=td[1].textContent.trim().toLowerCase(),j=L.filter(function(x){return x.email===em})[0];if(!j)return;
-      var s=D[id+":"+em],pill=td[2].querySelector(".mt-pill");
-      var decided=s&&Number(s.at)>=Number(j.at);
-      if(decided&&s.ok){if(pill&&pill.classList.contains("mt-abs")){pill.className="mt-pill mt-ok";pill.textContent="Excusé";exc++}}
-      else if(!decided)td[2].insertAdjacentHTML("beforeend"," <span class=\"mt-pill mt-wait\">Justificatif reçu</span>");
+      var em=td[1].textContent.trim().toLowerCase(),j=L.filter(function(x){return x.email===em})[0];
+      var perm=P[id+":"+em],s=D[id+":"+em],pill=td[2].querySelector(".mt-pill");
+      var decided=j&&s&&Number(s.at)>=Number(j.at);
+      if(perm){
+        if(pill&&pill.classList.contains("mt-abs")){pill.className="mt-pill mt-ok";pill.textContent="Excusé — permission";exc++}
+        else td[2].insertAdjacentHTML("beforeend",' <span class="mt-pill mt-ok">Permission accordée</span>');
+      }else if(decided&&s.ok){if(pill&&pill.classList.contains("mt-abs")){pill.className="mt-pill mt-ok";pill.textContent="Excusé";exc++}}
+      else if(j&&!decided)td[2].insertAdjacentHTML("beforeend"," <span class=\"mt-pill mt-wait\">Justificatif reçu</span>");
     });
     var sum=d.querySelector(".mt-sum");
     if(exc&&sum){var ab=sum.querySelector(".mt-abs");if(ab)ab.textContent=Math.max(0,(parseInt(ab.textContent)||0)-exc)+" absent(s)";sum.insertAdjacentHTML("beforeend",'<span class="mt-pill mt-ok">'+exc+' excusé(s)</span>')}
+    var permissions=Object.keys(P).filter(function(k){return k.indexOf(id+":")===0}).map(function(k){return P[k]});
+    if(!L.length&&!permissions.length)return;
     var blk=document.createElement("div");blk.className="jf-blk";
-    blk.innerHTML='<h4 style="margin:0 0 6px;color:var(--green)">Justificatifs reçus ('+L.length+')</h4>'+L.map(function(j){
+    blk.innerHTML=(permissions.length?'<h4 style="margin:0 0 6px;color:var(--green)">Permissions accordées ('+permissions.length+')</h4>'+permissions.map(function(p){
+      return '<div class="jf-it"><b>'+esc(p.email)+'</b> · '+esc(p.reason)+' <small>— '+esc(p.by)+' · '+fdt(p.at)+'</small></div>';
+    }).join(""):'')
+      +'<h4 style="margin:10px 0 6px;color:var(--green)">Justificatifs reçus ('+L.length+')</h4>'+L.map(function(j){
       var s=D[id+":"+j.email],decided=s&&Number(s.at)>=Number(j.at),person=members[String(j.email||"").toLowerCase()]||{},name=person.name||j.name||j.email;
       return '<div class="jf-it"><div class="jf-person">'+portrait(person)+'<div><b>'+esc(name)+'</b><small>'+esc([person.job_title,person.department].filter(Boolean).join(" · ")||j.email)+' · '+fdt(j.at)+'</small><div style="margin-top:6px">'+esc(j.reason)+'</div></div></div><div class="dact">'
         +(j.file?'<button type="button" data-jf="file" data-m="'+esc(id)+'" data-e="'+esc(j.email)+'">📎 '+esc(j.file)+'</button>':'')
@@ -1549,15 +1559,75 @@ async function mk(){
 function openJf(){var b=$("jfBtn");if(b)b.click();else toast("Fonction indisponible.")}
 document.addEventListener("click",function(e){
   var b=e.target.closest("button");if(!b)return;
-  if(b.id==="csMine"||b.id==="jpNew")openJf();
+  if(b.id==="csGrant")openCensorPermission();
+  else if(b.id==="jpNew")openJf();
   else if(b.id==="jpRef")renderPersonal();
 });
 function censeurBtn(){
-  var ref=$("csRef");if(!ref||$("csMine"))return;
-  var b=document.createElement("button");b.type="button";b.id="csMine";b.textContent="📎 Mon justificatif";
+  var ref=$("csRef");if(!ref||$("csGrant"))return;
+  var b=document.createElement("button");b.type="button";b.id="csGrant";b.textContent="Accorder une permission";
+  b.className="p";
   ref.before(b);
 }
 
+/* Permission accordée par le censeur (distincte d'un justificatif personnel). */
+async function openCensorPermission(){
+  if(!me()||!isCensor()){toast("Seul le censeur peut accorder une permission.");return}
+  var overlay=document.createElement("div");
+  overlay.style.cssText="position:fixed;inset:0;z-index:20000;display:flex;align-items:center;justify-content:center;padding:16px;background:rgba(10,30,20,.64);box-sizing:border-box";
+  overlay.innerHTML='<section role="dialog" aria-modal="true" aria-labelledby="csPermTitle" style="width:min(480px,100%);max-height:calc(100dvh - 32px);overflow:auto;box-sizing:border-box;background:var(--card,#fff);color:var(--ink,#172a20);border-radius:18px;padding:22px;box-shadow:0 16px 50px rgba(0,0,0,.3)">'
+    +'<h2 id="csPermTitle" style="margin:0 0 8px">Accorder une permission</h2>'
+    +'<p>Cette autorisation sera visible dans les présences du collaborateur, avec le motif et le nom du censeur.</p>'
+    +'<div class="fm"><label for="csPermPerson">Collaborateur</label><select id="csPermPerson" required><option value="">Chargement…</option></select>'
+    +'<label for="csPermMeeting">Réunion</label><select id="csPermMeeting" required><option value="">Chargement…</option></select>'
+    +'<label for="csPermReason">Motif de la permission</label><textarea id="csPermReason" required minlength="10" maxlength="800" rows="4" placeholder="Expliquez le motif de la permission…"></textarea></div>'
+    +'<div id="csPermErr" role="alert" style="min-height:20px;color:#b3261e;font-size:.88rem"></div>'
+    +'<div class="dact"><button type="button" id="csPermCancel">Annuler</button><button type="button" class="p" id="csPermSubmit" disabled>Accorder la permission</button></div></section>';
+  document.body.appendChild(overlay);
+  var person=overlay.querySelector("#csPermPerson"),meeting=overlay.querySelector("#csPermMeeting"),reason=overlay.querySelector("#csPermReason"),error=overlay.querySelector("#csPermErr"),submit=overlay.querySelector("#csPermSubmit"),oldFocus=document.activeElement;
+  function close(){document.removeEventListener("keydown",keys,true);overlay.remove();if(oldFocus&&oldFocus.isConnected&&oldFocus.focus)oldFocus.focus()}
+  function keys(e){
+    if(e.key==="Escape"){e.preventDefault();close()}
+    if(e.key==="Tab"){
+      var controls=[person,meeting,reason,overlay.querySelector("#csPermCancel"),submit].filter(function(x){return !x.disabled});
+      if(e.shiftKey&&document.activeElement===controls[0]){e.preventDefault();controls[controls.length-1].focus()}
+      else if(!e.shiftKey&&document.activeElement===controls[controls.length-1]){e.preventDefault();controls[0].focus()}
+    }
+  }
+  document.addEventListener("keydown",keys,true);
+  overlay.querySelector("#csPermCancel").onclick=close;
+  overlay.addEventListener("click",function(e){if(e.target===overlay)close()});
+  var meets=[],members=[];
+  try{
+    var rr=await Promise.all([
+      SB().from(TB()).select("value").like("key","meet:%").limit(300),
+      window.AFRI&&window.AFRI.listUsers?window.AFRI.listUsers():Promise.resolve([])
+    ]);
+    if(rr[0].error)throw rr[0].error;
+    meets=(rr[0].data||[]).map(function(x){return x.value}).filter(function(x){return x&&x.id&&x.start}).sort(function(a,b){return b.start-a.start});
+    members=(rr[1]||[]).filter(function(x){return x&&x.email}).map(function(x){return {email:String(x.email).trim().toLowerCase(),name:x.name||x.email}});
+    var unique={};members=members.filter(function(x){if(unique[x.email])return false;unique[x.email]=true;return true}).sort(function(a,b){return a.name.localeCompare(b.name)});
+    meeting.innerHTML='<option value="">Choisir une réunion</option>'+meets.map(function(m){return '<option value="'+esc(m.id)+'">'+esc(m.title)+' · '+fdt(m.start)+'</option>'}).join("");
+    person.innerHTML='<option value="">Choisir un collaborateur</option>'+members.map(function(x){return '<option value="'+esc(x.email)+'">'+esc(x.name)+' ('+esc(x.email)+')</option>'}).join("");
+    if(!meets.length||!members.length){error.textContent="Aucune réunion ou aucun collaborateur disponible.";return}
+    submit.disabled=false;person.focus();
+  }catch(e){error.textContent="Chargement impossible : "+(e.message||e);return}
+  submit.onclick=async function(){
+    var mid=meeting.value,email=person.value,m=meets.filter(function(x){return x.id===mid})[0],text=reason.value.trim();
+    if(!m||!members.some(function(x){return x.email===email})){error.textContent="Sélectionnez une réunion et un collaborateur valides.";return}
+    if(Array.isArray(m.invitees)&&!m.invitees.some(function(x){return String(x).toLowerCase()===email})){error.textContent="Ce collaborateur n'est pas invité à cette réunion.";return}
+    if(text.length<10||text.length>800){error.textContent="Le motif doit comporter entre 10 et 800 caractères.";return}
+    submit.disabled=true;error.textContent="";
+    try{
+      var key="att:perm-"+mid+":"+email,existing=await SB().from(TB()).select("value").eq("key",key).maybeSingle();
+      if(existing.error)throw existing.error;
+      if(existing.data){error.textContent="Une permission existe déjà pour cette réunion et ce collaborateur.";submit.disabled=false;return}
+      await put(key,{mid:mid,email:email,reason:text,by:me(),at:Date.now(),type:"censeur_permission"});
+      close();toast("Permission accordée au collaborateur.");
+      var rf=$("csRef");if(rf)rf.click();
+    }catch(e){error.textContent="Permission impossible : "+(e.message||e);submit.disabled=false}
+  };
+}
 var cfg2=null,jpActive=false;
 async function loadCfg(){
   try{var r=await SB().from(TB()).select("value").eq("key","pub:meetcfg").maybeSingle();cfg2=(r.data&&r.data.value)||{censeurs:[]}}catch(e){}
@@ -1591,7 +1661,7 @@ function statut(m,rec,exc){
 async function renderPersonal(){
   if(!jpActive)return;
   vh.innerHTML='<div class="toolbar"><b>Mes présences</b><div class="toolbar-actions"><button type="button" id="jpRef">Actualiser</button><button type="button" class="p" id="jpNew">📎 Envoyer un justificatif</button></div></div><div id="jpRoot"><p style="color:var(--muted)">Chargement…</p></div>';
-  var meets=[],A={},J={},D={},q=me(),err="";
+  var meets=[],A={},J={},D={},P={},q=me(),err="";
   try{
     var r=await SB().from(TB()).select("value").like("key","meet:%").limit(300);
     meets=(r.data||[]).map(function(x){return x.value}).filter(function(v){
@@ -1602,6 +1672,9 @@ async function renderPersonal(){
     var a=await SB().from(TB()).select("value").like("key","att:m%:"+q).limit(300);
     var j=await SB().from(TB()).select("value").like("key","att:j-%:"+q).limit(300);
     var d=await SB().from(TB()).select("value").like("key","att:jd-%:"+q).limit(300);
+    var p=await SB().from(TB()).select("value").like("key","att:perm-%:"+q).limit(300);
+    if(p.error)throw p.error;
+    (p.data||[]).forEach(function(x){if(x.value&&x.value.email===q&&x.value.mid)P[x.value.mid]=x.value});
     (a.data||[]).forEach(function(x){if(x.value&&x.value.email===q&&x.value.meet)A[x.value.meet]=x.value});
     (j.data||[]).forEach(function(x){if(x.value&&x.value.email===q&&x.value.mid)J[x.value.mid]=x.value});
     (d.data||[]).forEach(function(x){if(x.value&&x.value.email===q&&x.value.mid)D[x.value.mid]=x.value});
@@ -1623,8 +1696,9 @@ async function renderPersonal(){
   root.innerHTML='<div class="journal-article" style="padding:22px"><div style="overflow-x:auto"><table class="t"><thead><tr><th>Réunion</th><th>Date</th><th>Ma présence</th><th>Mon justificatif</th></tr></thead><tbody>'
    +meets.map(function(m){
      var jf=J[m.id],jd=D[m.id],decided=!!(jf&&jd&&Number(jd.at)>=Number(jf.at));
-     var ex=!!(decided&&jd.ok),s=statut(m,A[m.id],ex);
-     var jt=!jf?'—':(decided?(jd.ok?'<span class="mt-pill mt-ok">Accepté</span>':'<span class="mt-pill mt-abs">Refusé</span>'+(jd.reason?'<details><summary>Voir le motif</summary><p>'+esc(jd.reason)+'</p></details>':'')+' <button type="button" data-jp-resend="'+esc(m.id)+'">Corriger et renvoyer</button>'):'<span class="mt-pill mt-wait">En attente du censeur</span>');
+     var perm=P[m.id],ex=!!(perm||(decided&&jd.ok)),s=statut(m,A[m.id],ex);
+     if(perm&&!A[m.id])s=["ok","Excusé — permission accordée"];
+     var jt=perm?'<span class="mt-pill mt-ok">Permission accordée</span><details><summary>Voir le motif</summary><p>'+esc(perm.reason||"")+' — '+esc(perm.by||"")+' · '+fdt(perm.at)+'</p></details>':!jf?'—':(decided?(jd.ok?'<span class="mt-pill mt-ok">Accepté</span>':'<span class="mt-pill mt-abs">Refusé</span>'+(jd.reason?'<details><summary>Voir le motif</summary><p>'+esc(jd.reason)+'</p></details>':'')+' <button type="button" data-jp-resend="'+esc(m.id)+'">Corriger et renvoyer</button>'):'<span class="mt-pill mt-wait">En attente du censeur</span>');
      if(jd&&Array.isArray(jd.history)&&jd.history.length)jt+='<details><summary>Historique</summary>'+jd.history.map(function(h){return '<p>'+esc(h.ok?"Accepté":"Refusé")+' · '+fdt(h.at)+(h.reason?" — "+esc(h.reason):"")+'</p>'}).join("")+'</details>';
      return '<tr><td><b>'+esc(m.title)+'</b></td><td>'+fdt(m.start)+'</td><td><span class="mt-pill mt-'+s[0]+'">'+esc(s[1])+'</span></td><td>'+jt+'</td></tr>';
    }).join("")+'</tbody></table></div><p style="color:var(--muted);font-size:.85rem;margin:14px 0 0">Seules les réunions auxquelles vous êtes invité et vos propres données sont affichées. Le premier clic sur « Rejoindre » constitue un pointage, pas une preuve de durée sur Teams. En cas d’absence, vous pouvez envoyer un justificatif au Censeur.</p></div>';

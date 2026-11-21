@@ -64,3 +64,14 @@ test('Decisions notify active sessions via the AfriFloW alerts system',()=>{
  assert.match(alerts,/Justificatif refusé/);
  assert.match(alerts,/knownDecisions/);
 });
+
+test('Censeur can issue an explicit permission separately from personal justification',()=>{
+ assert.match(html,/id="csGrant"/);
+ assert.match(html,/function openCensorPermission\(\)/);
+ assert.match(html,/att:perm-/);
+ assert.match(html,/censeur_permission/);
+ assert.match(html,/Permission accordée/);
+ assert.match(html,/if\(text\.length<10\|\|text\.length>800\)/);
+ assert.match(html,/var perm=P\[m\.id\]/);
+ assert.doesNotMatch(html,/id="csMine"/);
+});
