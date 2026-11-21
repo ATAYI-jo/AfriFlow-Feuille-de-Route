@@ -72,9 +72,7 @@
 #afPwaInstallArea #afPwaInstallBtn{width:48px;min-width:48px;height:48px;min-height:48px;padding:0;border-radius:14px;flex:none}
 #afPwaInstallArea #afPwaInstallBtn svg{display:block;width:23px;height:23px}
 
-/* Lisibilité renforcée du téléchargement sur fonds sombres et clairs */
-#afPwaInstallArea #afPwaInstallBtn{background:#145c36!important;color:#ffffff!important;border:2px solid #ffffff!important;opacity:1!important;filter:none!important;text-shadow:none!important;box-shadow:0 4px 18px rgba(0,0,0,.35)!important;-webkit-text-fill-color:#ffffff!important}
-#afPwaInstallArea #afPwaInstallBtn:hover{background:#0d4829!important}
+/* Les styles du bouton d'installation sont définis uniquement dans afri-download-brand-2026. */
 #afPwaInstallArea #afDownloadPanel{background:#ffffff!important;color:#17251c!important;opacity:1!important;filter:none!important;border:1px solid #cad5cc!important}
 #afPwaInstallArea #afDownloadPanel strong{color:#173b26!important}
 #afPwaInstallArea #afDownloadPanel p{color:#33483b!important}
@@ -835,7 +833,7 @@ body:not(.af-off) #scenery .ob.af-sky-hide{opacity:0}
 .af-mts{-webkit-mask-image:linear-gradient(#000 40%,transparent);mask-image:linear-gradient(#000 40%,transparent)}
 
 /* ---------- 3. Verre partout ---------- */
-button:not(.p):not(.danger):not(#logout-btn):not(.fdr-head):not(.nv):not(.nx):not(#menuBtn){
+button:not(.p):not(.danger):not(#logout-btn):not(.fdr-head):not(.nv):not(.nx):not(#menuBtn):not(#afPwaInstallBtn){
  background:color-mix(in srgb,var(--card) 58%,transparent);
  -webkit-backdrop-filter:blur(12px) saturate(160%);backdrop-filter:blur(12px) saturate(160%);
  border-color:color-mix(in srgb,#fff var(--g-edge,60%),transparent);
@@ -941,7 +939,7 @@ collect();sched();
 :root[data-theme="dark"]{--g-neutral-edge:rgba(255,255,255,.14);--g-neutral-shadow:0 10px 30px rgba(0,0,0,.35),inset 0 1px 0 rgba(255,255,255,.06)}
 .toolbar,.map-panel,.step-card,.dcard,.journal-article,.addrow,.stm,.ed-bar,.pubbar,.lock-banner,.auth-box,.customizer-box,.fdr-tbl,.xlw,
 .start-pill,.plus-card,.border-sign,#side,#menuBtn,.fdr-bar,.fdr-ban,.mt-card,.mt-adm,.mt-box,.mt-m,.brand,.fdr-hero,
-button:not(.p):not(.danger):not(#logout-btn):not(.fdr-head):not(.nv):not(.nx):not(#menuBtn){
+button:not(.p):not(.danger):not(#logout-btn):not(.fdr-head):not(.nv):not(.nx):not(#menuBtn):not(#afPwaInstallBtn){
  -webkit-backdrop-filter:blur(22px)!important;backdrop-filter:blur(22px)!important;
  border-color:var(--g-neutral-edge)!important;box-shadow:var(--g-neutral-shadow)!important}
 /* les liserés de couleur disparaissent (le statut reste lisible dans les pastilles) */
