@@ -600,3 +600,20 @@ body.af-market-mode #market-view{display:block}
     white-space:nowrap;
   }
 }
+
+/* Administration AfriFloW — annuaire et décisions de rôles */
+#afAccessAdmin .af-access-summary{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin:16px 0}
+#afAccessAdmin .af-access-summary span{display:flex;justify-content:space-between;gap:8px;background:rgba(17,110,69,.07);border:1px solid rgba(17,110,69,.13);border-radius:12px;padding:12px;font-size:.86rem}
+#afAccessAdmin .af-access-user{display:grid;grid-template-columns:minmax(180px,1.5fr) minmax(130px,1fr) minmax(160px,1fr) auto;gap:9px;align-items:center;padding:12px;border-bottom:1px solid rgba(17,110,69,.14)}
+#afAccessAdmin .af-access-user strong,#afAccessAdmin .af-access-user small{display:block;overflow-wrap:anywhere}
+#afAccessAdmin .af-access-user small{font-size:.76rem;opacity:.76;margin-top:4px}
+#afAccessAdmin .af-access-user select,#afAccessAdmin .af-access-user input,#afAccessAdmin .af-access-filter input{width:100%;min-width:0;padding:10px;border-radius:9px;border:1px solid #b9d2c3;background:#fff;color:#123c2a;font:inherit}
+#afAccessAdmin .af-access-filter{display:block;margin:12px 0;font-weight:650}
+#afAccessAdmin .af-access-filter input{display:block;margin-top:6px;max-width:450px}
+#afAccessAdmin .af-access-user[hidden]{display:none}
+#afAccessAdmin .af-access-history{max-height:260px;overflow-y:auto;font-size:.81rem;line-height:1.5}
+#afAccessAdmin .af-access-history p{border-bottom:1px solid rgba(17,110,69,.12);padding:9px 0}
+@media(max-width:760px){
+  #afAccessAdmin .af-access-user{grid-template-columns:1fr;gap:9px}
+  #afAccessAdmin .af-access-user button{width:100%;min-height:42px}
+}

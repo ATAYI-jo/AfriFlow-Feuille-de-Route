@@ -387,6 +387,65 @@
     var gross = quantity * unit, share = gross * rate / 100, net = gross - share;
     box.innerHTML = '<b>Prévision :</b> CA ' + esc(partnerMoney(gross, "XOF")) + ' · AfriFloW ' + esc(partnerMoney(share, "XOF")) + ' · <b>net partenaire ' + esc(partnerMoney(net, "XOF")) + '</b>';
   }
+  async function accessCall(action,body) {
+    var result=await sb().functions.invoke("afriflow-access-admin",{body:Object.assign({action:action},body||{})});
+    if(result.error){
+      var message=result.error.message||"Service de gestion des accès indisponible";
+      try{var details=await result.error.context.json();message=details.error||message;}catch(ignore){}
+      throw new Error(message);
+    }
+    if(result.data&&result.data.error)throw new Error(result.data.error);
+    return result.data;
+  }
+  /* Gestion des comptes : décisions exclusivement exécutées par la fonction admin. */
+  async function loadAccessAdmin() {
+    var host=el("afAccessAdmin");
+    if(!host||!isAdmin()||!sb())return;
+    try{
+      var data=await accessCall("list");
+      var users=data.users||[], history=data.history||[];
+      var nClient=users.filter(function(u){return u.access_mode==="client"}).length;
+      var nPartner=users.filter(function(u){return u.requested_role==="partner"}).length;
+      var nShareholder=users.filter(function(u){return u.requested_role==="shareholder"}).length;
+      var legacy=users.filter(function(u){return u.legacy});
+      var labels={client:"Client",collaborator:"Ancien collaborateur",partner_waiting:"Partenaire en attente",partner_approved:"Partenaire approuvé",shareholder_pending:"Actionnaire en attente",shareholder_approved:"Actionnaire approuvé"};
+      host.innerHTML='<h3>Administration · Gestion des utilisateurs et des accès</h3>'
+       +'<p>La connexion Google ne confère aucun droit. Classez les anciens comptes, puis approuvez les demandes vérifiées. Toutes les décisions sont contrôlées et enregistrées côté serveur.</p>'
+       +'<div class="af-access-summary"><span>Clients <b>'+nClient+'</b></span><span>Partenaires <b>'+nPartner+'</b></span><span>Actionnaires <b>'+nShareholder+'</b></span><span>Historiques à examiner <b>'+legacy.length+'</b></span></div>'
+       +'<label class="af-access-filter">Rechercher un compte<input id="afAccessSearch" type="search" placeholder="Nom ou e-mail" autocomplete="off"></label>'
+       +'<div id="afAccessRows">'+(users.length?users.map(function(u){
+         var actions=u.legacy?'<option value="classify_client">Classer Client</option><option value="classify_partner">Classer Partenaire (en attente)</option><option value="classify_shareholder">Classer Actionnaire (en attente)</option>':
+           (u.access_mode==="partner_waiting"||u.access_mode==="shareholder_pending"?'<option value="approve">Approuver</option><option value="reject">Refuser / maintenir en attente</option>':
+           (u.access_mode==="partner_approved"||u.access_mode==="shareholder_approved"?'<option value="revoke">Révoquer l’accès</option>':""));
+         return '<form class="af-access-user" data-access-user="'+esc(u.user_id)+'" data-search="'+esc(((u.email||"")+" "+(u.name||"")).toLowerCase())+'">'
+           +'<div><strong>'+esc(u.email||u.user_id)+'</strong><small>'+esc(u.name||"")+' · '+esc(labels[u.access_mode]||u.access_mode)+'</small></div>'
+           +(actions?'<select name="decision" aria-label="Décision pour '+esc(u.email||"ce compte")+'">'+actions+'</select><input name="reason" maxlength="500" placeholder="Motif (recommandé)" aria-label="Motif de décision"><button type="submit" class="af-market-secondary">Appliquer</button>':'<span class="af-partner-enabled">Aucune action nécessaire</span>')
+           +'</form>';
+       }).join(""):'<p>Aucun utilisateur enregistré.</p>')+'</div>'
+       +'<h4>Historique des décisions</h4><div class="af-access-history">'
+       +(history.length?history.map(function(h){return '<p><time>'+esc(new Date(h.created_at).toLocaleString("fr-FR"))+'</time> · '+esc(h.action)+' · '+esc(h.previous_access||"—")+' → '+esc(h.new_access)+' · '+esc(h.reason||"Sans motif")+'</p>';}).join(""):'<p>Aucune décision enregistrée.</p>')
+       +'</div>';
+      var search=el("afAccessSearch");
+      if(search)search.oninput=function(){var value=search.value.trim().toLowerCase();host.querySelectorAll("[data-access-user]").forEach(function(row){row.hidden=!!value&&!row.dataset.search.includes(value);});};
+      host.querySelectorAll("form[data-access-user]").forEach(function(form){
+        form.onsubmit=async function(event){
+          event.preventDefault();
+          var fields=new FormData(form), decision=String(fields.get("decision")||"");
+          if(!decision)return;
+          var promptText=decision==="approve"?"Confirmer l’approbation de ce compte ?":decision==="revoke"?"Révoquer son accès maintenant ?":"Confirmer la classification ou la décision ?";
+          if(!window.confirm(promptText))return;
+          var button=form.querySelector("button");button.disabled=true;
+          try{
+            var result=await accessCall("decide",{
+              userId:form.dataset.accessUser,decision:decision,reason:String(fields.get("reason")||"")
+            });
+            notice(result.message||"Décision enregistrée");loadAccessAdmin();loadPartnerAdmin();
+          }catch(error){notice(error.message||"Décision impossible");button.disabled=false;}
+        };
+      });
+    }catch(error){host.innerHTML='<p class="af-market-error">'+esc(error.message||"Gestion des utilisateurs indisponible")+'</p>';}
+  }
+
   async function loadPartnerAdmin() {
     var box = el("afPartnerAdmin"); if (!box || !isAdmin() || !sb()) return;
     try {
@@ -673,7 +732,7 @@
       + '<form class="af-market-admin-card" id="afProductUpload"><h3>Ajouter une fiche</h3><div id="afDropboxStatus" class="af-market-status">Vérification de Dropbox…</div><button type="button" class="af-market-secondary" id="afDropboxReconnect">Reconnecter Dropbox</button><label>Type de fiche<select name="listingType"><option value="product">Produit commercial</option><option value="announcement">Annonce / actualité</option></select></label><label>Nom du produit ou titre de l’annonce<input required name="name" maxlength="160"></label><label>Catégorie<input required name="category" maxlength="80" value="Découvrir"></label><label>Prix (facultatif pour une annonce)<input name="price" type="number" min="0" step="0.01"></label><label>Ancien prix (promotion réelle)<input name="compareAtPrice" type="number" min="0" step="0.01"></label><label>Devise<select name="currency"><option>XOF</option><option>EUR</option><option>USD</option></select></label><label>Quantité minimale (facultatif)<input name="minimumOrderQuantity" type="number" min="1" step="1"></label><label>Pays / origine (facultatif)<input name="originCountry" maxlength="80" placeholder="Ex. Togo"></label><label>Délai ou livraison (facultatif)<input name="deliveryInfo" maxlength="160" placeholder="Ex. Expédition sous 3 à 5 jours"></label><label>Badge promotion (facultatif)<input name="promotionLabel" maxlength="40" placeholder="Ex. Offre de lancement"></label><label>Description<textarea name="description" maxlength="4000"></textarea></label><label>Photo originale<input required name="image" type="file" accept="image/jpeg,image/png,image/webp"></label><small>Les annonces sont séparées des produits et ne sont jamais ajoutées au panier.</small><button class="af-market-primary">Envoyer vers Dropbox</button></form>'
       + '<form class="af-market-admin-card" id="afVariantUpload"><h3>Ajouter une variante</h3><label>Produit<select required name="productId">' + opts + '</select></label><label>Image de variante<input required name="image" type="file" accept="image/jpeg,image/png,image/webp"></label><label>Origine<select name="source"><option value="manual">Retouche manuelle</option><option value="ai">Création IA validée manuellement</option></select></label><label>Consigne / provenance<textarea name="prompt" maxlength="2000" placeholder="Ex. conserver fidèlement le produit, éclairage naturel…"></textarea></label><small>Une variante reste invisible tant qu’elle n’est pas approuvée.</small><button class="af-market-primary">Envoyer la variante</button></form>'
       + '<form class="af-market-admin-card" id="afAiRequest"><h3>Pipeline IA</h3><div id="afAiStatus" class="af-market-status">Vérification de la configuration…</div><label>Produit<select required name="productId">' + opts + '</select></label><label>Consigne de transformation<textarea required name="prompt" minlength="8" maxlength="2000" placeholder="Conserver exactement le produit ; modifier seulement l’ambiance…"></textarea></label><small>L’IA travaille uniquement côté serveur. Chaque variante créée reste en attente de votre approbation.</small><button class="af-market-secondary">Créer une variante IA</button></form>'
-      + '</div><div id="afMarketAdminList" class="af-market-admin-list"><p>Chargement des brouillons et variantes…</p></div><div id="afMarketQuotes" class="af-market-admin-list"></div><div id="afPartnerAdmin" class="af-partner-admin"><p>Chargement des partenaires commerciaux…</p></div></section>';
+      + '</div><div id="afMarketAdminList" class="af-market-admin-list"><p>Chargement des brouillons et variantes…</p></div><div id="afMarketQuotes" class="af-market-admin-list"></div><div id="afAccessAdmin" class="af-partner-admin"><p>Chargement des utilisateurs et des accès…</p></div><div id="afPartnerAdmin" class="af-partner-admin"><p>Chargement des partenaires commerciaux…</p></div></section>';
   }
   function render() {
     var root = el("market-view"); if (!root) return;
@@ -839,7 +898,7 @@
   }
   async function loadAdminList() {
     var list = el("afMarketAdminList"); if (!list || !sb()) return;
-    loadQuotes(); loadPartnerAdmin();
+    loadQuotes(); loadPartnerAdmin(); loadAccessAdmin();
     try {
       var both = await Promise.all([
         sb().from("afriflow_market_products").select("id,name,description,category,listing_type,price,compare_at_price,currency,minimum_order_quantity,origin_country,delivery_info,promotion_label,is_in_stock,is_active,created_at").order("created_at", { ascending: false }).limit(100),
