@@ -63,3 +63,11 @@ Configurer Render pour déployer uniquement après une CI verte, ou gérer le d�
 - Les blocs d'origine sont conservés tels quels, sous des chemins externes et aux mêmes positions dans l'ordre de chargement.
 - Les tests syntaxiques et de chargement sont étendus aux deux modules.
 - Avant fusion, tester l'assistant en session connectée, l'envoi de pièces jointes, la synthèse vocale et l'affichage des formules. La CI seule ne garantit pas ces parcours.
+
+## Étape 6 — Réunions, feuille de route et fond animé
+- `modules/collaboration/meetings.js` : réunions Teams, présences et statut.
+- `modules/roadmap/timeline.js` : données et affichage de la feuille de route.
+- `modules/ui/animated-background.js` : décor et fond animé.
+- Extraction des scripts IIFE sans altérer leur code ni leur ordre d'initialisation.
+- Tests syntaxiques et d'intégration statique étendus.
+- Le chargement différé n'est pas encore activé : les modules ont besoin d'un audit de dépendances et de tests navigateur avant de changer leur calendrier d'exécution.
