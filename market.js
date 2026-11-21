@@ -892,7 +892,7 @@
   }
   async function loadAdminList() {
     var list = el("afMarketAdminList"); if (!list || !sb()) return;
-    loadQuotes(); loadPartnerAdmin();
+    loadQuotes(); loadPartnerAdmin(); loadAccessAdmin();
     try {
       var both = await Promise.all([
         sb().from("afriflow_market_products").select("id,name,description,category,listing_type,price,compare_at_price,currency,minimum_order_quantity,origin_country,delivery_info,promotion_label,is_in_stock,is_active,created_at").order("created_at", { ascending: false }).limit(100),
