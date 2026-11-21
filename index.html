@@ -1458,7 +1458,11 @@ async function renderPersonal(){
   var meets=[],A={},J={},D={},q=me(),err="";
   try{
     var r=await SB().from(TB()).select("value").like("key","meet:%").limit(300);
-    meets=(r.data||[]).map(function(x){return x.value}).filter(function(v){return v&&v.start});
+    meets=(r.data||[]).map(function(x){return x.value}).filter(function(v){
+      if(!v||!v.start)return false;
+      // Legacy meetings invite all members. New meetings may target specific people.
+      return !Array.isArray(v.invitees)||v.invitees.some(function(email){return String(email).toLowerCase()===q});
+    });
     var a=await SB().from(TB()).select("value").like("key","att:m%:"+q).limit(300);
     var j=await SB().from(TB()).select("value").like("key","att:j-%:"+q).limit(300);
     var d=await SB().from(TB()).select("value").like("key","att:jd-%:"+q).limit(300);
@@ -1475,7 +1479,7 @@ async function renderPersonal(){
      var ex=!!(D[m.id]&&D[m.id].ok),s=statut(m,A[m.id],ex),jf=J[m.id],jd=D[m.id];
      var jt=!jf?'—':(jd?(jd.ok?'<span class="mt-pill mt-ok">Accepté</span>':'<span class="mt-pill mt-abs">Refusé</span>'):'<span class="mt-pill mt-wait">En attente du censeur</span>');
      return '<tr><td><b>'+esc(m.title)+'</b></td><td>'+fdt(m.start)+'</td><td><span class="mt-pill mt-'+s[0]+'">'+esc(s[1])+'</span></td><td>'+jt+'</td></tr>';
-   }).join("")+'</tbody></table></div><p style="color:var(--muted);font-size:.85rem;margin:14px 0 0">Seules vos propres données sont affichées. Pour une absence, cliquez sur « Envoyer un justificatif » : seul le censeur le reçoit.</p></div>';
+   }).join("")+'</tbody></table></div><p style="color:var(--muted);font-size:.85rem;margin:14px 0 0">Seules les réunions auxquelles vous êtes invité et vos propres données sont affichées. Le premier clic sur « Rejoindre » constitue un pointage, pas une preuve de durée sur Teams. En cas d’absence, vous pouvez envoyer un justificatif au Censeur.</p></div>';
 }
 var xm=$("xm");
 if(xm)new MutationObserver(function(){if(!xm.classList.contains("on")&&jpActive&&$("jpRoot"))renderPersonal()}).observe(xm,{attributes:true,attributeFilter:["class"]});
