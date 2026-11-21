@@ -45,3 +45,17 @@ test('Approval and sensitive data checks exist server-side', () => {
   assert.match(view,/Documents réservés aux actionnaires approuvés/);
   assert.match(save,/Édition réservée aux actionnaires approuvés/);
 });
+
+const deletion = read('supabase/functions/afriflow-admin-user/index.ts');
+
+test('Deleted members are treated as entirely new users when they sign in again', () => {
+  // Removing the Supabase Auth identity and owned profile forces a fresh
+  // first-login selection, even when the person reuses the same Google email.
+  assert.match(deletion,/service\.auth\.admin\.deleteUser\(id\)/);
+  assert.match(deletion,/from\("afriflow_market_profiles"\)\.delete\(\)\.eq\("user_id", id\)/);
+  assert.match(deletion,/from\("afriflow_state"\)\.delete\(\)\.eq\("key", "user:" \+ targetEmail\)/);
+  assert.match(accounts,/var verified=await SB\(\)\.auth\.getUser\(\)/);
+  assert.match(accounts,/if\(verified\.error\|\|!us\|\|!us\.id\|\|!us\.email\)/);
+  assert.match(accounts,/access_mode:"onboarding_required"/);
+  assert.match(accounts,/AFRI\.promptRoleChoice\(\)/);
+});
