@@ -597,20 +597,7 @@
     var giftCard = '<article class="af-showcase-card af-showcase-gifts">' +
       '<h3>' + icon("sparkle") + ' Cadeaux</h3>' +
       '<button type="button" class="af-gift-open" data-showcase-gifts aria-label="Découvrir le contenu des cadeaux">' +
-        '<svg class="af-gift-art" viewBox="0 0 360 230" role="img" aria-label="Trois paquets cadeaux avec rubans dorés et verts">' +
-          '<defs><linearGradient id="afGiftRed" x1="0" x2="1"><stop stop-color="#ef713e"/><stop offset="1" stop-color="#b73f32"/></linearGradient>' +
-          '<linearGradient id="afGiftGreen" x1="0" x2="1"><stop stop-color="#1eaa71"/><stop offset="1" stop-color="#086b50"/></linearGradient>' +
-          '<linearGradient id="afGiftGold" x1="0" x2="1"><stop stop-color="#ffe8a0"/><stop offset=".5" stop-color="#efbd51"/><stop offset="1" stop-color="#cc8b25"/></linearGradient></defs>' +
-          '<ellipse cx="180" cy="213" rx="149" ry="11" fill="#17482d" opacity=".14"/>' +
-          '<g transform="translate(5 35) rotate(-7 76 126)"><rect x="26" y="101" width="118" height="100" rx="9" fill="url(#afGiftRed)"/>' +
-          '<rect x="18" y="88" width="134" height="29" rx="7" fill="#ef8c54"/><path d="M69 88V201" stroke="#ffe3a0" stroke-width="20"/>' +
-          '<path d="M18 100H152" stroke="#ffe3a0" stroke-width="12"/><path d="M82 85C17 87 47 40 76 65L82 85C95 30 141 49 82 85Z" fill="none" stroke="#ffe3a0" stroke-width="12" stroke-linejoin="round"/></g>' +
-          '<g transform="translate(128 -3)"><rect x="20" y="65" width="160" height="141" rx="11" fill="url(#afGiftGreen)"/>' +
-          '<rect x="9" y="51" width="182" height="32" rx="8" fill="#29bc80"/><path d="M99 53V206" stroke="url(#afGiftGold)" stroke-width="25"/>' +
-          '<path d="M9 65H191" stroke="#f4cc72" stroke-width="13"/><path d="M99 50C26 49 65 -12 96 30C119 -25 166 16 99 50Z" fill="none" stroke="#f4cc72" stroke-width="16" stroke-linejoin="round"/></g>' +
-          '<g transform="translate(258 92) rotate(9 42 65)"><rect x="4" y="33" width="87" height="82" rx="7" fill="#efa34f"/>' +
-          '<rect x="-1" y="24" width="97" height="25" rx="6" fill="#ffbf65"/><path d="M47 26V115" stroke="#ed5548" stroke-width="16"/>' +
-          '<path d="M0 37H94" stroke="#ed5548" stroke-width="11"/><path d="M46 22C1 18 25 -14 46 8C65 -14 92 13 46 22Z" fill="none" stroke="#ed5548" stroke-width="11"/></g></svg>' +
+        '<img class="af-gift-art af-gift-photo" src="./afriflow-cadeaux-photo.svg" alt="Trois paquets cadeaux vert menthe aux rubans dorés avec logo AfriFloW" loading="lazy" decoding="async">' +
         '<span class="af-gift-open-label">Voir ce que contient la sélection ' + icon("back") + '</span>' +
       '</button>' +
       '<p>Découvrez des produits d’Afrique pour composer un cadeau.</p>' +
