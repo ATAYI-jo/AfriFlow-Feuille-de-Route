@@ -1,0 +1,3 @@
+# Public QR verification endpoint; other actions require a validated Supabase user JWT in function code.
+[functions.afriflow-certificates]
+verify_jwt = false
