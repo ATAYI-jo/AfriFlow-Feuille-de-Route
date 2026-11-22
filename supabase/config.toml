@@ -1,3 +1,7 @@
 # Public QR verification endpoint; other actions require a validated Supabase user JWT in function code.
 [functions.afriflow-certificates]
 verify_jwt = false
+
+# Custom member ID login authenticates users with Supabase Auth and validates credentials server-side.
+[functions.afriflow-member-login]
+verify_jwt = false

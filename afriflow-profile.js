@@ -74,6 +74,19 @@ async function certificateCall(action,body){
  if(response.data&&response.data.error)throw new Error(response.data.error);
  return response.data;
 }
+
+async function loadIdentifiers(){
+ var host=$("pfIdentity");if(!host||!current)return;
+ try{
+  var q=await window.__sb.from("afriflow_member_ids").select("login_id,admin_number").eq("user_id",current.user.id).single();
+  if(q.error)throw q.error;
+  var id=q.data||{};
+  host.innerHTML='<h3>Mes références AfriFloW</h3><p class="profile-note">Références permanentes et personnelles : elles ne changent pas si vous modifiez votre pays ou votre rôle.</p>'
+    +'<p><strong>Identifiant de connexion :</strong> <code>'+esc(id.login_id||"")+'</code></p>'
+    +'<p><strong>Numéro administratif :</strong> <code>'+esc(id.admin_number||"")+'</code></p>'
+    +'<p class="profile-note">Vous pouvez utiliser l’identifiant avec votre mot de passe sur l’écran de connexion. Le numéro administratif sert uniquement aux dossiers.</p>';
+ }catch(e){if(host.isConnected)host.innerHTML='<h3>Mes références AfriFloW</h3><p class="profile-note">Identifiants indisponibles : '+esc(e.message||e)+'</p>'}
+}
 async function loadCertificatesProfile(){
  var host=$("pfCertificates");if(!host)return;
  try{
@@ -113,11 +126,12 @@ function profilePage(){
   $("profileMain").innerHTML='<div class="profile-tabs"><button type="button" class="on" data-profile-tab="me">Mon profil</button><button type="button" data-profile-tab="directory">Annuaire des membres</button></div><div class="profile-grid"><section class="profile-card"><h3>Mes informations</h3><p class="profile-status">'+esc(notice)+'</p><p class="profile-note">Le nom, la fonction, le pays, la ville et l’avatar sont visibles dans l’annuaire. Les coordonnées personnelles restent privées.</p><div class="profile-form">'
     +field("Prénom *","first",p.first_name,"text",false,"Ex. Aïcha")+field("Nom *","last",p.last_name,"text",false,"Ex. Mensah")
     +field("E-mail", "email",p.email||current.user.email,"email",true)+field("Téléphone *","phone",p.phone,"tel",false,"Ex. +228 …")+field("Date de naissance *","birth",p.birth_date,"date",false)
-    +field("Pays *","country",p.country||d.country,"text",false,"Ex. Togo")+field("Ville *","city",p.city||d.city,"text",false,"Ex. Lomé")+field("Adresse *","address",p.address,"text",true,"Quartier, rue, numéro")
+    +'<label>Pays de résidence (ISO 3166-1)<select id="pf_countryCode">'+(window.AfriCountries?window.AfriCountries.options(p.country_code||d.country_code||window.AfriCountries.match(p.country||d.country)):'<option value="">Indisponible</option>')+'</select></label>'+field("Ville *","city",p.city||d.city,"text",false,"Ex. Lomé")+field("Adresse *","address",p.address,"text",true,"Quartier, rue, numéro")
     +field("Fonction","job",p.job_title||d.job_title,"text",false,"Ex. Responsable export")+field("Département","department",p.department||d.department,"text",false,"Ex. Opérations")+field("Organisation","organization",p.organization||d.organization,"text",true,"Ex. AfriFloW")
     +field("Langues","languages",p.languages,"text",true,"Ex. Français, anglais")+field("Contact d’urgence","emergencyName",p.emergency_name,"text",false,"Nom")+field("Téléphone d’urgence","emergencyPhone",p.emergency_phone,"tel",false,"Numéro")
+    +'<div id="pfIdentity" class="wide pf-certificates"><h3>Références personnelles</h3><p class="profile-note">Chargement des identifiants...</p></div>'
     +'<label class="wide">Présentation publique<textarea id="pf_bio" maxlength="360" placeholder="Présentez brièvement votre expertise ou votre rôle.">'+esc(d.bio||"")+'</textarea></label><div class="wide"><b style="font-size:.84rem;color:var(--muted)">Portrait DiceBear personnalisable *</b>'+avatarEditor()+'<label style="margin-top:10px">ou ajouter une photo publique<input id="pf_photo" type="file" accept="image/png,image/jpeg,image/webp"></label><small style="display:block;color:var(--muted);margin-top:5px">Vous pouvez ajuster le portrait à tout moment. Ajouter une photo remplace le portrait généré ; choisir une nouvelle proposition le réactive.</small></div></div><div id="pfErr" role="alert" style="color:#b43b35;min-height:1.3em;margin-top:12px"></div><div class="profile-actions"><button type="button" id="pfSave" class="p">Enregistrer mon profil</button></div></section><aside class="profile-card"><h3>Informations proposées</h3><p class="profile-note">Pour un profil professionnel utile, vous pouvez aussi renseigner :</p><ul style="line-height:1.65;margin:0;padding-left:19px"><li>fonction et département ;</li><li>organisation et langues ;</li><li>ville et pays ;</li><li>une courte présentation ;</li><li>un contact d’urgence privé.</li></ul><div id="pfCertificates" class="pf-certificates"><h3>Mes certificats AfriFloW</h3><p class="profile-note">Chargement...</p></div></aside></div>';
-  bindProfile();loadCertificatesProfile();
+  bindProfile();loadIdentifiers();loadCertificatesProfile();
 }
 function directoryPage(){
   $("profileMain").innerHTML='<div class="profile-tabs"><button type="button" data-profile-tab="me">Mon profil</button><button type="button" class="on" data-profile-tab="directory">Annuaire des membres</button></div><section class="profile-card"><h3>Annuaire des membres</h3><p class="profile-note">Retrouvez les collègues inscrits et leur rôle. Les coordonnées personnelles ne sont pas affichées ici.</p><div id="memberDirectory" class="directory-grid"><p class="profile-note">Chargement…</p></div></section>';
@@ -185,12 +199,12 @@ function bindProfile(){
   $("pfSave").onclick=saveProfile;
 }
 async function saveProfile(){
-  var p=current.profile,d=current.directory,err=$("pfErr"),v=function(id){var x=$("pf_"+id);return x?x.value.trim():""},first=v("first"),last=v("last"),phone=v("phone"),birth=v("birth"),country=v("country"),city=v("city"),address=v("address");
-  var required=shareholderProfileRequired();if(required&&(!first||!last||!phone||!birth||!country||!city||!address||!chosen.kind||!chosen.value)){err.textContent="Renseignez les champs marqués d’un astérisque et choisissez un portrait.";return}
+  var p=current.profile,d=current.directory,err=$("pfErr"),v=function(id){var x=$("pf_"+id);return x?x.value.trim():""},first=v("first"),last=v("last"),phone=v("phone"),birth=v("birth"),countryCode=v("countryCode"),country=window.AfriCountries&&countryCode?window.AfriCountries.name(countryCode):(p.country||""),city=v("city"),address=v("address");
+  var required=shareholderProfileRequired();if(required&&(!first||!last||!phone||!birth||!countryCode||!city||!address||!chosen.kind||!chosen.value)){err.textContent="Renseignez les champs marqués d’un astérisque et choisissez un portrait.";return}
   var btn=$("pfSave");btn.disabled=true;err.textContent="";var now=new Date().toISOString(),display=(first+" "+last).trim()||String(current.user.email).split("@")[0],due=p.profile_due_at||new Date(Date.now()+15*86400000).toISOString();
   try{
-    var profile={user_id:current.user.id,email:String(current.user.email).toLowerCase(),first_name:first,last_name:last,phone:phone,address:address,birth_date:birth,country:country,city:city,job_title:v("job"),department:v("department"),organization:v("organization"),languages:v("languages"),emergency_name:v("emergencyName"),emergency_phone:v("emergencyPhone"),profile_completed_at:required?now:(p.profile_completed_at||null),profile_due_at:due,updated_at:now};
-    var pub={user_id:current.user.id,email:String(current.user.email).toLowerCase(),first_name:first,last_name:last,display_name:display,avatar_kind:chosen.kind,avatar_value:chosen.value,job_title:v("job"),department:v("department"),organization:v("organization"),country:country,city:city,bio:v("bio"),updated_at:now};
+    var profile={user_id:current.user.id,email:String(current.user.email).toLowerCase(),first_name:first,last_name:last,phone:phone,address:address,birth_date:birth,country:country,country_code:countryCode||null,city:city,job_title:v("job"),department:v("department"),organization:v("organization"),languages:v("languages"),emergency_name:v("emergencyName"),emergency_phone:v("emergencyPhone"),profile_completed_at:required?now:(p.profile_completed_at||null),profile_due_at:due,updated_at:now};
+    var pub={user_id:current.user.id,email:String(current.user.email).toLowerCase(),first_name:first,last_name:last,display_name:display,avatar_kind:chosen.kind,avatar_value:chosen.value,job_title:v("job"),department:v("department"),organization:v("organization"),country:country,country_code:countryCode||null,city:city,bio:v("bio"),updated_at:now};
     var a=await window.__sb.from("afriflow_profiles").upsert(profile,{onConflict:"user_id"});if(a.error)throw a.error;var b=await window.__sb.from("afriflow_member_directory").upsert(pub,{onConflict:"user_id"});if(b.error)throw b.error;
     current.profile=profile;current.directory=pub;window.USER_NAME=display;updateHeader(profile,pub);if(window.toast)toast("Profil enregistré.");profilePage();
   }catch(e){err.textContent="Enregistrement impossible : "+(e.message||e)}finally{btn.disabled=false}

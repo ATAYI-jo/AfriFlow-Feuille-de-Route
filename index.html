@@ -209,7 +209,7 @@ window.ic=function(n,s){return '<svg class="ic"'+(s?' style="width:'+s+';height:
     <input type="text" id="authName" placeholder="Nom complet" autocomplete="name" style="display:none">
     <label id="authMarketRoleLabel" for="authMarketRole" style="display:block;text-align:left;font-size:.85rem;color:var(--muted);margin:0 0 6px">Vous accédez à la Marketplace comme</label>
     <select id="authMarketRole" style="width:100%;padding:12px 16px;margin-bottom:14px;font:inherit"><option value="client">Client</option><option value="shareholder">Actionnaire</option><option value="partner">Partenaire</option></select>
-    <input type="email" id="authEmailInput" placeholder="Votre adresse email" autocomplete="email" inputmode="email" autocapitalize="off" autocorrect="off" spellcheck="false">
+    <input type="text" id="authEmailInput" placeholder="E-mail ou identifiant AF-000001" autocomplete="username" autocapitalize="off" autocorrect="off" spellcheck="false">
     <div class="auth-password-row" id="authPasswordRow"><input type="password" id="authPasswordInput" placeholder="Mot de passe" autocomplete="current-password" autocapitalize="off" autocorrect="off" spellcheck="false"><button type="button" class="auth-password-toggle" data-password-toggle="authPasswordInput" aria-label="Afficher le mot de passe" aria-pressed="false"><svg class="ic" aria-hidden="true"><use href="#i-eye"></use></svg></button></div>
     <div class="auth-password-row" id="authPassword2Row" style="display:none"><input type="password" id="authPassword2" placeholder="Confirmez le mot de passe" autocomplete="new-password" autocapitalize="off" autocorrect="off" spellcheck="false"><button type="button" class="auth-password-toggle" data-password-toggle="authPassword2" aria-label="Afficher le mot de passe de confirmation" aria-pressed="false"><svg class="ic" aria-hidden="true"><use href="#i-eye"></use></svg></button></div>
     <button type="button" class="auth-forgot" id="authForgot">Mot de passe oublié&nbsp;?</button>
@@ -372,7 +372,7 @@ window.ic=function(n,s){return '<svg class="ic"'+(s?' style="width:'+s+';height:
   </div>
 </div>
 
-<script src="./afriflow-core.js?v=20261122-restore"></script>
+<script src="./afriflow-core.js?v=20261122-member-ids"></script>
 
 <script src="./afriflow-workspace.js?v=20261122-auto-cert"></script>
 
@@ -471,7 +471,7 @@ window.ic=function(n,s){return '<svg class="ic"'+(s?' style="width:'+s+';height:
   document.addEventListener('visibilitychange', function(){ if(!document.hidden) cloudLoad(); });
 })();
 </script>
-<script src="./modules/auth/account-management.js?v=20261121-modularisation-3"></script>
+<script src="./modules/auth/account-management.js?v=20261122-member-ids"></script>
 
 <script src="./modules/messaging/internal-messaging.js?v=20261121-modularisation-1"></script>
   
@@ -2852,7 +2852,8 @@ body.af-profile-open #afCloudSyncBadge{visibility:hidden!important}
   <div class="profile-top"><h2>Profil AfriFloW</h2><button type="button" id="profileClose" class="profile-close"><svg class="ic" aria-hidden="true"><use href="#i-close"/></svg> Fermer</button></div>
   <main id="profileMain" class="profile-main"><p class="profile-note">Chargement du profil…</p></main>
 </section>
-<script src="./afriflow-profile.js?v=20261122-auto-cert"></script>
+<script src="./afriflow-countries.js?v=20261122"></script>
+<script src="./afriflow-profile.js?v=20261122-member-ids"></script>
 
 <!-- AfriFloW PWA install guidance -->
 <div id="afPwaHelp" class="af-pwa-dialog" role="dialog" aria-modal="true" aria-labelledby="afPwaHelpTitle" hidden>

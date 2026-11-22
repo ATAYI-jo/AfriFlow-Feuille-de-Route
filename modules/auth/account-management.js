@@ -155,7 +155,17 @@ AFRI.promptRoleChoice=async function(){
 AFRI.login=async function(email,pwd,intent,captchaToken){
   try{
     if(!SB())return {ok:false,error:"Service de comptes indisponible."};
-    var r=await SB().auth.signInWithPassword({email:email,password:pwd,options:{captchaToken:captchaToken}});
+    var r;
+    if(/^AF-[0-9]{6,12}$/i.test(String(email||"").trim())){
+      var login=await SB().functions.invoke("afriflow-member-login",{body:{identifier:email.trim().toUpperCase(),password:pwd,captchaToken:captchaToken||""}});
+      if(login.error){var detail=null;try{detail=await login.error.context.json()}catch(e){}return {ok:false,error:detail&&detail.error||"Connexion par identifiant indisponible."}}
+      if(!login.data||!login.data.access_token||!login.data.refresh_token)return {ok:false,error:"Identifiant ou mot de passe incorrect."};
+      var session=await SB().auth.setSession({access_token:login.data.access_token,refresh_token:login.data.refresh_token});
+      if(session.error||!session.data.user)return {ok:false,error:"Impossible de créer la session."};
+      r={data:{user:session.data.user},error:null};
+    }else{
+      r=await SB().auth.signInWithPassword({email:email,password:pwd,options:{captchaToken:captchaToken}});
+    }
     if(r.error){
       var m=r.error.message||"";
       if(/not confirmed/i.test(m))return {ok:false,error:"Email non confirmé : cliquez sur le lien reçu par email."};

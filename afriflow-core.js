@@ -111,7 +111,7 @@ function renderAuthStep(){
   $("authProgress").style.display=""; $("authProgress").textContent="Étape "+step+" sur "+finalStep;
   if(roleStep) $("authHint").textContent=register?"Choisissez votre profil AfriFloW. Les demandes Partenaire et Actionnaire nécessitent une approbation.":"Connectez-vous avec Google ou continuez par e-mail. Si vous n’avez pas de profil, vous le choisirez après la connexion.";
   else if(nameStep) $("authHint").textContent="Comment devons-nous vous appeler ?";
-  else if(emailStep) $("authHint").textContent="Quelle est votre adresse email ?";
+  else if(emailStep) $("authHint").textContent=register?"Quelle est votre adresse e-mail ?":"Entrez votre adresse e-mail ou votre identifiant personnel AfriFloW.";
   else $("authHint").textContent=register ? "Créez un mot de passe personnel d’au moins 8 caractères." : "Entrez votre mot de passe pour continuer.";
   if(roleStep) authStepFocus(register?"authMarketRole":"authNext"); else if(nameStep) authStepFocus("authName"); else if(emailStep) authStepFocus("authEmailInput"); else authStepFocus("authPasswordInput");
 }
@@ -119,7 +119,7 @@ function nextAuthStep(){
   var register=AUTH_MODE === "register", err=$("authError"); err.textContent="";
   if(AUTH_STEP === 2 && register && $("authName").value.trim().length < 2){ err.textContent="Indiquez votre nom complet."; return; }
   var emailStep=(!register && AUTH_STEP === 2)||(register && AUTH_STEP === 3);
-  if(emailStep && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test($("authEmailInput").value.trim())){err.textContent="Adresse email invalide.";return;}
+  if(emailStep && !(register?/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test($("authEmailInput").value.trim()):(/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test($("authEmailInput").value.trim())||/^AF-[0-9]{6,12}$/i.test($("authEmailInput").value.trim())))){err.textContent=register?"Adresse e-mail invalide.":"Indiquez votre e-mail ou votre identifiant AfriFloW.";return;}
   AUTH_STEP=Math.min(authFinalStep(),AUTH_STEP+1); renderAuthStep();
 }
 function setAuthMode(m){
@@ -176,7 +176,7 @@ async function verifyGlobalAuth(){
   var email = $("authEmailInput").value.trim().toLowerCase(), pwd = $("authPasswordInput").value, intent = $("authMarketRole").value, err = $("authError"), btn = $("authBtn");
   try{sessionStorage.setItem("afriflow_market_intent",intent)}catch(e){}
   err.style.color = "";
-  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){ err.textContent = "Adresse email invalide."; return; }
+  if(!(AUTH_MODE==="login"&&/^AF-[0-9]{6,12}$/i.test(email))&&!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){ err.textContent = AUTH_MODE==="login"?"Identifiant ou adresse e-mail invalide.":"Adresse e-mail invalide."; return; }
   var captchaError=captchaProblem(); if(captchaError){err.textContent=captchaError;return;}
   err.textContent = ""; btn.disabled = true;
   try {

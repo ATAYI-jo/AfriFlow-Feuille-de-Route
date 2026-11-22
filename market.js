@@ -678,15 +678,15 @@
     try{
       var results=await Promise.all([
         partnerCall("admin_dashboard"),
-        sb().from("afriflow_partner_markets").select("partner_user_id,market_name,updated_at")
+        sb().from("afriflow_partner_markets").select("partner_user_id,market_name,country_code,updated_at")
       ]);
       if(!host.isConnected)return;
       var data=results[0]||{},marketsRes=results[1];
       if(marketsRes.error)throw marketsRes.error;
       var partners=data.partners||[],orders=data.orders||[],reports=data.reports||[],marketMap={};
-      (marketsRes.data||[]).forEach(function(x){marketMap[x.partner_user_id]=x.market_name});
+      (marketsRes.data||[]).forEach(function(x){marketMap[x.partner_user_id]={name:x.market_name,code:x.country_code||""}});
       var categories=["Non renseigné"],marketNames={};
-      partners.forEach(function(p){var name=marketMap[p.user_id]||"Non renseigné";if(!marketNames[name]){marketNames[name]=true;if(name!=="Non renseigné")categories.push(name)}});
+      partners.forEach(function(p){var name=(marketMap[p.user_id]&&marketMap[p.user_id].name)||"Non renseigné";if(!marketNames[name]){marketNames[name]=true;if(name!=="Non renseigné")categories.push(name)}});
       categories.sort(function(a,b){return a==="Non renseigné"?-1:b==="Non renseigné"?1:a.localeCompare(b,"fr")});
       var byPartner=function(id,list){return list.filter(function(x){return x.partner_user_id===id})};
       var statusOptions=function(current,values,labels){
@@ -696,10 +696,10 @@
       var saleLabels={pending_review:"À contrôler",validated:"Validée",settled:"Réglée",rejected:"Refusée"};
       host.innerHTML='<div class="af-partner-market-tools"><label>Filtrer par marché<select id="afPartnerMarketFilter"><option value="">Tous les marchés</option>'+categories.map(function(n){return '<option value="'+esc(n)+'">'+esc(n)+'</option>'}).join("")+'</select></label><p>'+partners.length+' partenaire(s) · '+orders.length+' allocation(s) · '+reports.length+' vente(s) déclarée(s)</p></div>'
         +(partners.length?partners.map(function(p){
-          var market=marketMap[p.user_id]||"Non renseigné",pOrders=byPartner(p.user_id,orders),pSales=byPartner(p.user_id,reports),terms=p.terms||{};
+          var market=(marketMap[p.user_id]&&marketMap[p.user_id].name)||"Non renseigné",marketCode=(marketMap[p.user_id]&&marketMap[p.user_id].code)||"",pOrders=byPartner(p.user_id,orders),pSales=byPartner(p.user_id,reports),terms=p.terms||{};
           return '<section class="af-partner-market-card" data-market="'+esc(market)+'">'
             +'<div class="af-partner-market-heading"><div><h4>'+esc(p.email||"Partenaire")+'</h4><small>Marché : '+esc(market)+' · '+(terms.is_enabled?"Conditions actives":"Conditions à configurer")+'</small></div><div class="af-partner-market-badges"><span>'+pOrders.length+' allocation(s)</span><span>'+pSales.length+' déclaration(s)</span></div></div>'
-            +'<form data-market-assignment="'+esc(p.user_id)+'" class="af-market-assign"><label>Marché commercial (pays ou zone de vente)<input name="market" required minlength="2" maxlength="80" value="'+esc(market==="Non renseigné"?"":market)+'" placeholder="Ex. Marché togolais"></label><button type="submit" class="af-market-secondary">Enregistrer le marché</button></form>'
+            +'<form data-market-assignment="'+esc(p.user_id)+'" class="af-market-assign"><label>Marché commercial (pays ou zone de vente)<input name="market" required minlength="2" maxlength="80" value="'+esc(market==="Non renseigné"?"":market)+'" placeholder="Ex. Marché togolais"></label><label>Code pays du marché (ISO)<select name="country_code">'+(window.AfriCountries?window.AfriCountries.options(marketCode):'<option value="">Non renseigné</option>')+'</select></label><button type="submit" class="af-market-secondary">Enregistrer le marché</button></form>'
             +'<details><summary>Allocations et demandes ('+pOrders.length+')</summary>'
               +(pOrders.length?pOrders.map(function(o){var product=Array.isArray(o.product)?o.product[0]:o.product;return '<form class="af-partner-market-row" data-market-order="'+esc(o.id)+'"><div><b>'+esc(product&&product.name||"Produit")+'</b><small>'+esc(o.quantity_requested)+' unités · demande '+esc(new Date(o.created_at).toLocaleDateString("fr-FR"))+'</small></div><select aria-label="Statut de l’allocation" name="status">'+statusOptions(o.status,["requested","approved","supplied","rejected","closed"],orderLabels)+'</select><button type="submit" class="af-market-secondary">Mettre à jour</button></form>'}).join(""):'<p>Aucune allocation enregistrée.</p>')
             +'</details><details><summary>Ventes déclarées ('+pSales.length+')</summary>'
@@ -716,7 +716,7 @@
           var auth=await sb().auth.getUser(),user=auth.data&&auth.data.user;
           if(!user){notice("Session administrateur introuvable.");button.disabled=false;return}
           var r=await sb().from("afriflow_partner_markets").upsert({
-            partner_user_id:form.dataset.marketAssignment,market_name:market,
+            partner_user_id:form.dataset.marketAssignment,market_name:market,country_code:form.querySelector('[name="country_code"]').value||null,
             assigned_by:user.id,updated_at:new Date().toISOString()
           },{onConflict:"partner_user_id"});
           if(r.error){notice(r.error.message);button.disabled=false;return}
