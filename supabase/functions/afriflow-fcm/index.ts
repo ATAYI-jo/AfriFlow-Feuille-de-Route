@@ -1,6 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 const sb=createClient(Deno.env.get("SUPABASE_URL")!,Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,{auth:{persistSession:false,autoRefreshToken:false}});
-const CORS=["https://afriflow-africa.onrender.com","https://atayi-jo.github.io"];
+const CORS=["https://afriflow.pages.dev","https://afriflow-africa.onrender.com","https://atayi-jo.github.io"];
 const json=(req:Request,body:unknown,status=200)=>new Response(JSON.stringify(body),{status,headers:{
  "Content-Type":"application/json","Cache-Control":"no-store",
  "Access-Control-Allow-Origin":CORS.includes(req.headers.get("origin")||"")?req.headers.get("origin")!:"https://afriflow-africa.onrender.com",
