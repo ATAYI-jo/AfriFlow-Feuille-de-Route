@@ -123,10 +123,9 @@ async function profilePdf(data:any){
   const resp=await fetch(ORIGIN+"/logo.png",{signal:AbortSignal.timeout(2200)});
   if(resp.ok&&resp.headers.get("content-type")?.includes("image/png")){
    const bytes=new Uint8Array(await resp.arrayBuffer());
-   if(bytes.length<600000){const logo=await doc.embedPng(bytes),size=logo.scaleToFit(65,58);page.drawImage(logo,{x:156,y:h-118,width:size.width,height:size.height})}
+   if(bytes.length<600000){const logo=await doc.embedPng(bytes),size=logo.scaleToFit(65,58);page.drawImage(logo,{x:(w-size.width)/2,y:h-118,width:size.width,height:size.height})}
   }
  }catch(_e){}
- centered("AFRIFLOW",h-96,bold,24,green);
  centered("ATTESTATION DE "+(data.approved&&data.type==="partner"?"PARTENARIAT COMMERCIAL":data.approved&&data.type==="shareholder"?"STATUT ACTIONNAIRE":"PROFIL"),h-157,bold,16);
  centered("AfriFloW profile attestation",h-175,italic,10,grey);
  write("La Direction d'AfriFloW constate que",x,h-248,body,11);
