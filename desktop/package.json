@@ -5,7 +5,7 @@
   "main": "main.js",
   "private": true,
   "scripts": {
-    "dist": "electron-builder --win nsis --x64"
+    "dist": "electron-builder --win nsis --x64 --publish never"
   },
   "devDependencies": {
     "electron": "^39.0.0",
