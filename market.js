@@ -380,6 +380,10 @@
       }).join(""):'<p>Aucune allocation à tracer.</p>')+'</section>';
   }
   function partnerAnalyticsHtml(reports,orders){
+    function rawMoney(n,c){
+      try{return new Intl.NumberFormat("fr-FR",{style:"currency",currency:c,maximumFractionDigits:c==="XOF"||c==="XAF"?0:2}).format(n)}
+      catch(e){return Number(n).toLocaleString("fr-FR")+" "+c}
+    }
     var accepted=reports.filter(function(r){return r.status!=="rejected"});
     var currencies={};accepted.forEach(function(r){currencies[r.currency||"XOF"]=true});
     var codes=Object.keys(currencies);
@@ -393,7 +397,7 @@
     var max=Math.max(1,...rows.map(function(r){return r.total}));
     return '<section class="af-partner-card af-analytics"><h2>Tableau de bord commercial</h2><div class="af-analytics-stats"><span><b>'+orders.length+'</b> Allocations</span><span><b>'+reports.length+'</b> Déclarations de ventes</span><span><b>'+reports.filter(function(r){return r.status==="pending_review"}).length+'</b> En contrôle</span></div>'
       +(code?'<h3>Évolution mensuelle des ventes déclarées ('+esc(code)+')</h3><div class="af-chart" role="img" aria-label="Chiffre d’affaires déclaré des six derniers mois"><div class="af-chart-bars">'
-        +rows.map(function(r){return '<div class="af-chart-col" title="'+esc(r.label)+' : '+esc(partnerMoney(r.total,code))+'"><span>'+esc(r.total?partnerMoney(r.total,code):"0")+'</span><div class="af-chart-bar" style="height:'+Math.max(3,Math.round(r.total/max*110))+'px"></div><small>'+esc(r.label)+'</small></div>'}).join("")+'</div></div>'
+        +rows.map(function(r){return '<div class="af-chart-col" title="'+esc(r.label)+' : '+esc(rawMoney(r.total,code))+'"><span>'+esc(r.total?rawMoney(r.total,code):"0")+'</span><div class="af-chart-bar" style="height:'+Math.max(3,Math.round(r.total/max*110))+'px"></div><small>'+esc(r.label)+'</small></div>'}).join("")+'</div></div>'
         :'<p>Graphique monétaire indisponible : aucune vente enregistrée ou plusieurs devises différentes. Les montants ne sont pas additionnés entre devises.</p>')
       +'<small>Indicateurs calculés uniquement à partir des allocations et ventes déclarées dans AfriFloW ; ils ne remplacent pas une comptabilité validée.</small></section>';
   }
@@ -451,11 +455,15 @@
     var pending = reports.filter(function (report) { return report.status === "pending_review"; });
     var gross = reports.filter(function (report) { return report.status !== "rejected"; }).reduce(function (sum, report) { return sum + Number(report.gross_amount || 0); }, 0);
     var due = reports.filter(function (report) { return report.status !== "rejected" && report.status !== "settled"; }).reduce(function (sum, report) { return sum + Number(report.afriflow_amount || 0); }, 0);
+    var reportCurrencies={};reports.filter(function(r){return r.status!=="rejected"}).forEach(function(r){reportCurrencies[r.currency||"XOF"]=true});
+    var separateCurrencies=Object.keys(reportCurrencies).length>1;
+    var grossText=separateCurrencies?"Plusieurs devises":partnerMoney(gross,reports[0]&&reports[0].currency||"XOF");
+    var dueText=separateCurrencies?"Plusieurs devises":partnerMoney(due,reports[0]&&reports[0].currency||"XOF");
     var sellable = orders.filter(function (order) { return order.status === "approved" || order.status === "supplied"; });
     var productOpts = products.map(function (product) { return '<option value="' + esc(product.id) + '">' + esc(product.name) + ' · ' + esc(partnerMoney(product.price, product.currency)) + '</option>'; }).join("");
     var orderOpts = sellable.map(function (order) { var product = Array.isArray(order.product) ? order.product[0] : order.product; return '<option value="' + esc(order.id) + '">' + esc(product && product.name || "Produit") + ' · allocation ' + esc(order.quantity_requested) + ' unités</option>'; }).join("");
     return '<section class="af-partner-portal"><header class="af-partner-head"><div><span>PARTENAIRE COMMERCIAL</span><h1>Votre activité, en toute clarté.</h1><p>Commandez vos produits, déclarez vos ventes et suivez chaque montant en temps réel.</p></div><div class="af-partner-rate"><small>Part AfriFloW</small><strong>' + esc(Number(terms.commission_rate || 0).toLocaleString("fr-FR")) + ' %</strong><em>définie pour votre partenariat</em></div></header>'
-      + '<div class="af-partner-kpis"><article><small>Chiffre d’affaires déclaré</small><b>' + esc(partnerMoney(gross, reports[0] && reports[0].currency || "XOF")) + '</b><span>Toutes ventes hors refus</span></article><article><small>À reverser à AfriFloW</small><b>' + esc(partnerMoney(due, reports[0] && reports[0].currency || "XOF")) + '</b><span>Selon votre taux personnalisé</span></article><article><small>Déclarations à contrôler</small><b>' + pending.length + '</b><span>AfriFloW est déjà alerté</span></article></div>'
+      + '<div class="af-partner-kpis"><article><small>Chiffre d’affaires déclaré</small><b>' + esc(grossText) + '</b><span>Toutes ventes hors refus</span></article><article><small>À reverser à AfriFloW</small><b>' + esc(dueText) + '</b><span>Selon votre taux personnalisé</span></article><article><small>Déclarations à contrôler</small><b>' + pending.length + '</b><span>AfriFloW est déjà alerté</span></article></div>'
       + '<div class="af-partner-grid"><form class="af-partner-card" id="afPartnerOrder"><h2>Préparer une commande</h2><p>Choisissez un produit et la quantité souhaitée. AfriFloW confirme ensuite votre allocation.</p><label>Produit<select required name="productId"><option value="">Sélectionner un produit</option>' + productOpts + '</select></label><label>Quantité demandée<input required name="quantity" type="number" min="1" step="1" placeholder="Ex. 100"></label><label>Message facultatif<textarea name="note" maxlength="1200" placeholder="Lieu de vente, délai souhaité…"></textarea></label><button class="af-market-primary">Envoyer la demande</button></form>'
       + '<form class="af-partner-card af-partner-report" id="afPartnerSale"><h2>Déclarer une vente</h2><p>Le calcul est fait côté AfriFloW et une alerte urgente est envoyée à l’équipe.</p><label>Allocation validée<select required name="orderId"><option value="">Sélectionner une allocation</option>' + orderOpts + '</select></label><div class="af-partner-duo"><label>Quantité vendue<input required name="quantity" type="number" min="1" step="1"></label><label>Prix unitaire de vente<input required name="unitSalePrice" type="number" min="0" step="0.01"></label></div><label>Note facultative<textarea name="note" maxlength="1200" placeholder="Canal de vente, précision…"></textarea></label><div id="afPartnerCalc" class="af-partner-calc">Le montant net partenaire et la part AfriFloW seront calculés automatiquement.</div><button class="af-market-primary"' + (sellable.length ? "" : " disabled") + '>Déclarer et alerter</button></form></div>'
       + partnerAnalyticsHtml(reports,orders)
