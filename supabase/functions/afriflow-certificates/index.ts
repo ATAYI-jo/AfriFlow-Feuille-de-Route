@@ -197,36 +197,6 @@ Deno.serve(async(req:Request)=>{
    return json({certificates:data||[]});
   }
   if(action==="issue"){return json({error:"Émission manuelle désactivée : les attestations sont générées automatiquement depuis le profil."},410);}
-  if(false){
-   if(!isAdmin)return json({error:"Administration requise"},403);
-   const target=string(body.userId,40),type=string(body.type,20);
-   if(!uuid(target)||!["partner","shareholder"].includes(type))return json({error:"Parametres invalides"},400);
-   const {data:profile}=await db.from("afriflow_market_profiles").select("requested_role,access_mode").eq("user_id",target).maybeSingle();
-   if(!profile||profile.requested_role!==type||profile.access_mode!==type+"_approved")return json({error:"Compte non approuve pour ce type de certificat"},409);
-   const {data:identity}=await db.from("afriflow_profiles").select("first_name,last_name").eq("user_id",target).maybeSingle();
-   const fullName=string([identity?.first_name,identity?.last_name].filter(Boolean).join(" "),160);
-   if(fullName.length<3)return json({error:"Le titulaire doit completer son nom et prenom dans son profil."},409);
-   let market:string|null=null;
-   if(type==="partner"){
-    const [marketRes,termsRes]=await Promise.all([
-     db.from("afriflow_partner_markets").select("market_name").eq("partner_user_id",target).maybeSingle(),
-     db.from("afriflow_partner_terms").select("is_enabled").eq("partner_user_id",target).maybeSingle()
-    ]);
-    market=string(marketRes.data?.market_name,80)||null;
-    if(!market||!termsRes.data?.is_enabled)return json({error:"Le marche commercial et les conditions actives sont requis pour emettre le certificat partenaire."},409);
-   }else if(body.legalEvidenceConfirmed!==true)return json({error:"Verifiez les justificatifs d'actionnariat avant emission."},409);
-   const {data:existing,error:existingError}=await db.from("afriflow_certificates").select("id").eq("holder_user_id",target).eq("certificate_type",type).eq("status","active");
-   if(existingError)throw existingError;
-   // Explicit replacement; existing certificates are revoked before a new certificate is issued.
-   if((existing||[]).length){const r=await db.from("afriflow_certificates").update({status:"revoked",revoked_at:new Date().toISOString(),revoked_by:user.id,revocation_reason:"Reemission"}).eq("holder_user_id",target).eq("certificate_type",type).eq("status","active");if(r.error)throw r.error;}
-   const random=new Uint8Array(32);crypto.getRandomValues(random);const token=Array.from(random,x=>x.toString(16).padStart(2,"0")).join("");
-   const {data:issued,error:issueErr}=await db.from("afriflow_certificates").insert({
-    holder_user_id:target,certificate_type:type,holder_name:fullName,market_name:market,
-    issued_by:user.id,verification_token:token,legal_evidence_confirmed:type==="shareholder"
-   }).select("id").single();
-   if(issueErr)throw issueErr;
-   return json({ok:true,certificateId:issued.id});
-  }
   if(action==="revoke"){
    if(!isAdmin)return json({error:"Administration requise"},403);
    const id=string(body.certificateId,40),reason=string(body.reason,300);
