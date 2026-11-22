@@ -958,26 +958,35 @@
       '<p>Découvrez des produits d’Afrique pour composer un cadeau.</p>' +
       '<small class="af-gift-photo-credit">Photo : <a href="https://www.pexels.com/photo/elegant-gift-box-with-green-and-gold-ribbons-31496295/" target="_blank" rel="noopener noreferrer">Grzegorz Lewandowski / Pexels</a></small>' +
       '</article>';
+    // Curated country-specific photos (Wikimedia Commons) and representative strengths.
+    // A country is more than one industry: these are illustrative editorial themes.
     var photos = [
-      { file:"Market Scene in Ghana.jpg", place:"Marché d’Accra, Ghana", author:"Fquasie", license:"CC BY-SA 4.0" },
-      { file:"View of Mt. Kilimanjaro at a distance.jpg", place:"Kilimandjaro, Tanzanie", author:"Tish Madesh", license:"CC0 1.0" },
-      { file:"A typical african market in Northern Ghana.jpg", place:"Marché du nord du Ghana", author:"Sir Amugi", license:"CC BY-SA 4.0" }
+      { code:"CIV", country:"Côte d’Ivoire", strength:"Cacao", detail:"Culture du cacao et savoir-faire agricole", file:"Cacao fruit in Côte d'Ivoire (6).JPG", place:"Cacaoyère en Côte d’Ivoire" },
+      { code:"TGO", country:"Togo", strength:"Commerce et artisanat", detail:"Marchés et échanges à Lomé", file:"Lomé grand market.jpg", place:"Grand Marché de Lomé, Togo" },
+      { code:"GHA", country:"Ghana", strength:"Artisanat", detail:"Poterie et échanges dans les marchés", file:"A typical african market in Northern Ghana.jpg", place:"Marché dans le nord du Ghana" },
+      { code:"BEN", country:"Bénin", strength:"Patrimoine culturel", detail:"Ouidah et les traditions vodun", file:"Voodoo Temple (Ouidah, Benin).jpg", place:"Ouidah, Bénin" },
+      { code:"TZA", country:"Tanzanie", strength:"Paysages et tourisme", detail:"Le Kilimandjaro et les grands espaces", file:"View of Mt. Kilimanjaro at a distance.jpg", place:"Kilimandjaro, Tanzanie" },
+      { code:"KEN", country:"Kenya", strength:"Thé", detail:"Paysages agricoles et plantations de thé", file:"Tea Plantations Kenya.jpg", place:"Plantations de thé, Kenya" },
+      { code:"MAR", country:"Maroc", strength:"Artisanat et souks", detail:"Savoir-faire des marchés traditionnels", file:"MoroccoMarrakech souq.jpg", place:"Souk de Marrakech, Maroc" },
+      { code:"SEN", country:"Sénégal", strength:"Patrimoine et tourisme", detail:"L’île historique de Gorée", file:"Island of Gorée, Senegal.jpg", place:"Île de Gorée, Sénégal" }
     ];
     var photoHtml = photos.map(function (p, index) {
       var href = 'https://commons.wikimedia.org/wiki/File:' + encodeURIComponent(p.file).replace(/%20/g, '_');
       var src = 'https://commons.wikimedia.org/wiki/Special:FilePath/' + encodeURIComponent(p.file).replace(/%20/g, '_') + '?width=640';
-      return '<figure class="af-africa-frame" style="--frame-index:' + index + '">' +
-        '<img src="' + esc(src) + '" loading="lazy" decoding="async" alt="' + esc(p.place) + '">' +
-        '<figcaption>' + esc(p.place) + '</figcaption></figure>';
+      return '<figure class="af-africa-frame' + (index === 0 ? ' is-active' : '') + '" data-country="' + esc(p.code) + '">' +
+        '<img src="' + esc(src) + '" loading="' + (index === 0 ? 'eager' : 'lazy') + '" decoding="async" alt="' + esc(p.place) + '">' +
+        '<div class="af-country-map" data-country-map="' + esc(p.code) + '" aria-hidden="true"></div>' +
+        '<figcaption><strong>' + esc(p.country) + ' · ' + esc(p.strength) + '</strong><span>' + esc(p.detail) + '</span>' +
+        '<small>' + esc(p.place) + '</small></figcaption></figure>';
     }).join('');
-    var credits = photos.map(function (p) {
+    var credits = '<span>Photos documentaires localisées : </span>' + photos.map(function (p) {
       return '<a href="https://commons.wikimedia.org/wiki/File:' + encodeURIComponent(p.file).replace(/%20/g, '_') +
-        '" target="_blank" rel="noopener noreferrer">' + esc(p.author + " · " + p.license) + '</a>';
+        '" target="_blank" rel="noopener noreferrer" title="Photographie, auteur et licence sur Wikimedia Commons">' + esc(p.country) + '</a>';
     }).join(' · ');
     var africa = '<article class="af-showcase-card af-africa-gallery"><div class="af-africa-heading"><span class="af-showcase-eyebrow">' +
-      icon("globe") + ' Regards d’Afrique</span><h3>L’Afrique en images</h3><p>Marchés, paysages et territoires</p></div>' +
-      '<div class="af-africa-images" aria-label="Photographies d’Afrique">' + photoHtml + '</div>' +
-      '<div class="af-africa-credits">Photos : ' + credits + '</div></article>';
+      icon("globe") + ' Regards d’Afrique</span><h3>Les richesses de nos pays</h3><p>Productions, artisanat, paysages et patrimoine</p></div>' +
+      '<div class="af-africa-images" aria-label="Photographies géolocalisées par pays et leurs atouts">' + photoHtml + '</div>' +
+      '<div class="af-africa-credits">' + credits + '</div></article>';
     return '<section class="af-market-showcase" aria-label="Sélections AfriFloW et Afrique en images">' +
       bigCard + offerCard + giftCard + africa + '</section>';
   }
@@ -1085,9 +1094,62 @@
     }
     step();
   }
+  var africaGalleryTimer = null;
+  function startAfricaGallery() {
+    if (africaGalleryTimer) clearInterval(africaGalleryTimer);
+    africaGalleryTimer = null;
+    var gallery = document.querySelector("#market-view .af-africa-images");
+    if (!gallery) return;
+    var frames = Array.from(gallery.querySelectorAll(".af-africa-frame"));
+    if (!frames.length) return;
+    var current = 0;
+    // GeoJSON outlines are genuine country borders, not decorative approximations.
+    frames.forEach(function(frame){
+      var code = frame.getAttribute("data-country");
+      var target = frame.querySelector("[data-country-map]");
+      if (!code || !target) return;
+      fetch("https://raw.githubusercontent.com/johan/world.geo.json/master/countries/" + code + ".geo.json")
+        .then(function(response){ if(!response.ok) throw Error("Carte indisponible"); return response.json(); })
+        .then(function(json){
+          if (!target.isConnected || !json.geometry) return;
+          var polygons = json.geometry.type === "Polygon" ? [json.geometry.coordinates] :
+            json.geometry.type === "MultiPolygon" ? json.geometry.coordinates : [];
+          var dots = [];
+          polygons.forEach(function(poly){poly.forEach(function(ring){ring.forEach(function(pt){
+            if(Array.isArray(pt)&&Number.isFinite(pt[0])&&Number.isFinite(pt[1])) dots.push(pt);
+          });});});
+          if(!dots.length)return;
+          var minX=Math.min.apply(null,dots.map(function(p){return p[0];}));
+          var maxX=Math.max.apply(null,dots.map(function(p){return p[0];}));
+          var minY=Math.min.apply(null,dots.map(function(p){return p[1];}));
+          var maxY=Math.max.apply(null,dots.map(function(p){return p[1];}));
+          var scale=Math.min(85/Math.max(maxX-minX,.001),85/Math.max(maxY-minY,.001));
+          var dx=(100-(maxX-minX)*scale)/2,dy=(100-(maxY-minY)*scale)/2;
+          var path=polygons.map(function(poly){return poly.map(function(ring){
+            return ring.map(function(pt,i){
+              var x=(dx+(pt[0]-minX)*scale).toFixed(2);
+              var y=(100-dy-(pt[1]-minY)*scale).toFixed(2);
+              return (i?"L":"M")+x+" "+y;
+            }).join(" ")+" Z";
+          }).join(" ");}).join(" ");
+          var svg=document.createElementNS("http://www.w3.org/2000/svg","svg");
+          svg.setAttribute("viewBox","0 0 100 100");svg.setAttribute("focusable","false");
+          var shape=document.createElementNS("http://www.w3.org/2000/svg","path");
+          shape.setAttribute("d",path);svg.appendChild(shape);target.appendChild(svg);
+        }).catch(function(){/* Country label remains visible if maps cannot load. */});
+    });
+    africaGalleryTimer = setInterval(function(){
+      if (document.hidden || !gallery.isConnected) return;
+      frames[current].classList.remove("is-active");
+      current = (current+1)%frames.length;
+      frames[current].classList.add("is-active");
+    }, 6500);
+  }
   function render() {
     var root = el("market-view"); if (!root) return;
     clearHero();
+    if (africaGalleryTimer) clearInterval(africaGalleryTimer);
+    africaGalleryTimer = null;
     clearWelcomeAnimation();
     var mode = roleMode(state.context.market);
     root.innerHTML = top() + '<main class="af-market-main">' + (mode === "partner_approved"
@@ -1097,7 +1159,7 @@
       : mode === "shareholder_pending"
       ? '<section class="af-ali">' + catsHtml() + heroHtml() + sideHtml() + scrollCueHtml() + '</section>' + shareholderWaitContent() + announcementsHtml()
       : catalogContent()) + "</main>";
-    bind(); startHero(); startWelcomeAnimation();
+    bind(); startHero(); startWelcomeAnimation(); startAfricaGallery();
   }
   function startHero() {
     var hero = el("afHero"); if (!hero) return;
