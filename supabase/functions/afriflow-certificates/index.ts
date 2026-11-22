@@ -36,6 +36,19 @@ function lines(text:string,font:any,size:number,maxWidth:number){
 async function certificatePdf(row:any){
  const doc=await PDFDocument.create(),page=doc.addPage([595.28,841.89]),{width:w,height:h}=page.getSize();
  const font=await doc.embedFont(StandardFonts.Helvetica),bold=await doc.embedFont(StandardFonts.HelveticaBold);
+ // Use the official AfriFloW logo when its public PNG can be fetched;
+ // failure must never block certificate generation.
+ try{
+  const response=await fetch(ORIGIN+"/logo.png",{signal:AbortSignal.timeout(2500)});
+  if(response.ok&&response.headers.get("content-type")?.includes("image/png")){
+   const bytes=new Uint8Array(await response.arrayBuffer());
+   if(bytes.length<600000){
+    const logo=await doc.embedPng(bytes),size=logo.scaleToFit(62,58);
+    page.drawImage(logo,{x:70,y:h-117,width:size.width,height:size.height});
+   }
+  }
+ }catch(_e){}
+
  const green=rgb(.10,.34,.22),muted=rgb(.34,.42,.38),gold=rgb(.73,.55,.18);
  page.drawRectangle({x:0,y:h-18,width:w,height:18,color:green});
  page.drawRectangle({x:32,y:32,width:w-64,height:h-80,borderColor:green,borderWidth:1.2});
