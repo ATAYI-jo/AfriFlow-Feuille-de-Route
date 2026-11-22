@@ -727,3 +727,27 @@ body.af-market-mode #market-view{display:block}
 @media (prefers-reduced-motion:reduce) {
   #market-view .af-welcome-guest .af-welcome-animated { animation:none!important; }
 }
+
+/* Regards d'Afrique — verified country-specific imagery and cartographic silhouette. */
+#market-view .af-africa-images{min-height:168px;}
+#market-view .af-africa-frame{opacity:0;visibility:hidden;animation:none!important;transition:opacity .85s ease;overflow:hidden}
+#market-view .af-africa-frame.is-active{opacity:1;visibility:visible;z-index:1}
+#market-view .af-africa-frame:first-child:not(.is-active){opacity:0!important;visibility:hidden}
+#market-view .af-africa-frame img{filter:brightness(.78)}
+#market-view .af-africa-frame figcaption{display:flex;flex-direction:column;gap:3px;padding:28px 12px 11px;line-height:1.3;z-index:3}
+#market-view .af-africa-frame figcaption strong{font-size:.91rem}
+#market-view .af-africa-frame figcaption span{font-size:.72rem;font-weight:600}
+#market-view .af-africa-frame figcaption small{font-size:.63rem;opacity:.85}
+#market-view .af-country-map{position:absolute;top:6px;right:8px;width:73px;height:73px;z-index:2;pointer-events:none;filter:drop-shadow(0 4px 5px rgba(0,0,0,.42))}
+#market-view .af-country-map svg{display:block;width:100%;height:100%}
+#market-view .af-country-map path{fill:rgba(224,245,226,.68);stroke:#fff;stroke-width:1.35;stroke-linejoin:round;fill-rule:evenodd}
+#market-view .af-africa-credits{max-height:44px;overflow:auto;scrollbar-width:thin}
+@media(max-width:700px){
+  #market-view .af-country-map{width:56px;height:56px;right:5px;top:5px}
+  #market-view .af-africa-frame.is-active{opacity:1!important;visibility:visible!important}
+  #market-view .af-africa-frame figcaption strong{font-size:.78rem}
+  #market-view .af-africa-frame figcaption span{font-size:.65rem}
+}
+@media(prefers-reduced-motion:reduce){
+  #market-view .af-africa-frame{transition:none!important}
+}
