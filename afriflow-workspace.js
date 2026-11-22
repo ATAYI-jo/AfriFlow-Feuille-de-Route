@@ -748,13 +748,13 @@ async function renPartners(){
     +'<section class="mt-box" style="margin-top:18px"><h3>Demandes de partenariat et accès</h3><div id="partnersAccess">Chargement des demandes…</div></section>'
     +'<section class="mt-box" style="margin-top:18px"><h3>Conditions commerciales</h3><div id="partnersTerms">Chargement des conditions…</div></section>'
     +'<section class="mt-box" style="margin-top:18px"><h3>Contestations</h3><div id="partnersDisputes">Chargement des contestations…</div></section>'
-    +'<section class="mt-box" style="margin-top:18px"><h3>Certificats de partenariat et d’actionnariat</h3><p>La Direction émet les attestations après vérification des rôles et des justificatifs. Un marché doit être attribué au partenaire.</p><div id="partnersCertificates">Chargement des certificats…</div></section>';
+    ;
   if(window.AfriMarket){
     if(window.AfriMarket.renderPartnerManagement)window.AfriMarket.renderPartnerManagement("partnersBoard");
     if(window.AfriMarket.renderAccessAdmin)window.AfriMarket.renderAccessAdmin("partnersAccess");
     if(window.AfriMarket.renderPartnerTermsAdmin)window.AfriMarket.renderPartnerTermsAdmin("partnersTerms");
     if(window.AfriMarket.renderDisputesAdmin)window.AfriMarket.renderDisputesAdmin("partnersDisputes");
-    if(window.AfriMarket.renderCertificatesAdmin)window.AfriMarket.renderCertificatesAdmin("partnersCertificates");
+
   }else{$("partnersBoard").textContent="Module Marketplace indisponible."}
   $("partnersRefresh").onclick=renPartners;
 }
