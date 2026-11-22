@@ -150,7 +150,7 @@ Deno.serve(async(req:Request)=>{
    if(row.holder_user_id!==user.id&&!isAdmin)return json({error:"Acces refuse"},403);
    if(row.status!=="active"||!(await eligibility(db,row)))return json({error:"Ce certificat n'est plus valide. Une reemission est necessaire."},409);
    const pdf=await certificatePdf(row);
-   return new Response(pdf,{status:200,headers:{...cors,"Content-Type":"application/pdf","Content-Disposition":'attachment; filename="AfriFloW-certificat-'+row.id.slice(0,8)+'.pdf"',"Cache-Control":"no-store"}});
+   return new Response(pdf,{status:200,headers:{...cors,"Content-Type":"application/octet-stream","Content-Disposition":'attachment; filename="AfriFloW-certificat-'+row.id.slice(0,8)+'.pdf"',"Cache-Control":"no-store"}});
   }
   return json({error:"Action inconnue"},400);
  }catch(e){console.error("Certificate service error",e);return json({error:"Service certificats momentanement indisponible"},500);}
