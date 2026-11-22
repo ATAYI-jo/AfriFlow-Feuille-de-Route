@@ -606,6 +606,73 @@
       if(host.isConnected)host.innerHTML='<p class="af-market-error">'+esc(error.message||"Conditions commerciales indisponibles")+'</p>';
     }
   }
+  /* Espace de pilotage par marché : les validations utilisent toujours les fonctions
+     serveur existantes ; le navigateur ne peut pas accorder des droits d'approbation. */
+  async function loadPartnerManagement(targetId){
+    var host=el(targetId);
+    if(!host||!isAdmin()||!sb())return;
+    try{
+      var results=await Promise.all([
+        partnerCall("admin_dashboard"),
+        sb().from("afriflow_partner_markets").select("partner_user_id,market_name,updated_at")
+      ]);
+      if(!host.isConnected)return;
+      var data=results[0]||{},marketsRes=results[1];
+      if(marketsRes.error)throw marketsRes.error;
+      var partners=data.partners||[],orders=data.orders||[],reports=data.reports||[],marketMap={};
+      (marketsRes.data||[]).forEach(function(x){marketMap[x.partner_user_id]=x.market_name});
+      var categories=["Non renseigné"],marketNames={};
+      partners.forEach(function(p){var name=marketMap[p.user_id]||"Non renseigné";if(!marketNames[name]){marketNames[name]=true;if(name!=="Non renseigné")categories.push(name)}});
+      categories.sort(function(a,b){return a==="Non renseigné"?-1:b==="Non renseigné"?1:a.localeCompare(b,"fr")});
+      var byPartner=function(id,list){return list.filter(function(x){return x.partner_user_id===id})};
+      var statusOptions=function(current,values,labels){
+        return values.map(function(v){return '<option value="'+esc(v)+'"'+(current===v?" selected":"")+'>'+esc(labels[v])+'</option>'}).join("");
+      };
+      var orderLabels={requested:"Demandée",approved:"Validée",supplied:"Prête à vendre",rejected:"Refusée",closed:"Clôturée"};
+      var saleLabels={pending_review:"À contrôler",validated:"Validée",settled:"Réglée",rejected:"Refusée"};
+      host.innerHTML='<div class="af-partner-market-tools"><label>Filtrer par marché<select id="afPartnerMarketFilter"><option value="">Tous les marchés</option>'+categories.map(function(n){return '<option value="'+esc(n)+'">'+esc(n)+'</option>'}).join("")+'</select></label><p>'+partners.length+' partenaire(s) · '+orders.length+' allocation(s) · '+reports.length+' vente(s) déclarée(s)</p></div>'
+        +(partners.length?partners.map(function(p){
+          var market=marketMap[p.user_id]||"Non renseigné",pOrders=byPartner(p.user_id,orders),pSales=byPartner(p.user_id,reports),terms=p.terms||{};
+          return '<section class="af-partner-market-card" data-market="'+esc(market)+'">'
+            +'<div class="af-partner-market-heading"><div><h4>'+esc(p.email||"Partenaire")+'</h4><small>Marché : '+esc(market)+' · '+(terms.is_enabled?"Conditions actives":"Conditions à configurer")+'</small></div><div class="af-partner-market-badges"><span>'+pOrders.length+' allocation(s)</span><span>'+pSales.length+' déclaration(s)</span></div></div>'
+            +'<form data-market-assignment="'+esc(p.user_id)+'" class="af-market-assign"><label>Marché commercial (pays ou zone de vente)<input name="market" required minlength="2" maxlength="80" value="'+esc(market==="Non renseigné"?"":market)+'" placeholder="Ex. Marché togolais"></label><button type="submit" class="af-market-secondary">Enregistrer le marché</button></form>'
+            +'<details><summary>Allocations et demandes ('+pOrders.length+')</summary>'
+              +(pOrders.length?pOrders.map(function(o){var product=Array.isArray(o.product)?o.product[0]:o.product;return '<form class="af-partner-market-row" data-market-order="'+esc(o.id)+'"><div><b>'+esc(product&&product.name||"Produit")+'</b><small>'+esc(o.quantity_requested)+' unités · demande '+esc(new Date(o.created_at).toLocaleDateString("fr-FR"))+'</small></div><select aria-label="Statut de l’allocation" name="status">'+statusOptions(o.status,["requested","approved","supplied","rejected","closed"],orderLabels)+'</select><button type="submit" class="af-market-secondary">Mettre à jour</button></form>'}).join(""):'<p>Aucune allocation enregistrée.</p>')
+            +'</details><details><summary>Ventes déclarées ('+pSales.length+')</summary>'
+              +(pSales.length?pSales.map(function(r){var product=Array.isArray(r.product)?r.product[0]:r.product;return '<form class="af-partner-market-row" data-market-sale="'+esc(r.id)+'"><div><b>'+esc(product&&product.name||"Produit")+'</b><small>'+esc(r.quantity_sold)+' unités · CA '+esc(partnerMoney(r.gross_amount,r.currency))+' · '+esc(new Date(r.created_at).toLocaleDateString("fr-FR"))+'</small></div><select aria-label="Statut de la vente" name="status">'+statusOptions(r.status,["pending_review","validated","settled","rejected"],saleLabels)+'</select><button type="submit" class="af-market-secondary">Mettre à jour</button></form>'}).join(""):'<p>Aucune vente déclarée.</p>')
+            +'</details></section>';
+        }).join(""):'<p>Aucun partenaire enregistré pour le moment.</p>');
+      var filter=host.querySelector("#afPartnerMarketFilter");
+      if(filter)filter.onchange=function(){var chosen=filter.value;host.querySelectorAll("[data-market]").forEach(function(card){card.hidden=!!chosen&&card.dataset.market!==chosen})};
+      host.querySelectorAll("form[data-market-assignment]").forEach(function(form){
+        form.onsubmit=async function(e){
+          e.preventDefault();var market=form.querySelector('[name="market"]').value.trim(),button=form.querySelector("button");
+          if(market.length<2||market.length>80){notice("Indiquez un marché de 2 à 80 caractères.");return}
+          button.disabled=true;
+          var auth=await sb().auth.getUser(),user=auth.data&&auth.data.user;
+          if(!user){notice("Session administrateur introuvable.");button.disabled=false;return}
+          var r=await sb().from("afriflow_partner_markets").upsert({
+            partner_user_id:form.dataset.marketAssignment,market_name:market,
+            assigned_by:user.id,updated_at:new Date().toISOString()
+          },{onConflict:"partner_user_id"});
+          if(r.error){notice(r.error.message);button.disabled=false;return}
+          notice("Marché attribué.");loadPartnerManagement(targetId);
+        };
+      });
+      function bindStatus(selector,key,action){
+        host.querySelectorAll(selector).forEach(function(form){
+          form.onsubmit=async function(e){
+            e.preventDefault();var b=form.querySelector("button"),status=form.querySelector('[name="status"]').value;
+            b.disabled=true;
+            try{await partnerCall(action,{[key]:form.getAttribute(selector==="form[data-market-order]"?"data-market-order":"data-market-sale"),status:status});notice("Statut mis à jour.");loadPartnerManagement(targetId)}
+            catch(err){notice(err.message||"Mise à jour impossible");b.disabled=false}
+          };
+        });
+      }
+      bindStatus("form[data-market-order]","orderId","admin_set_order_status");
+      bindStatus("form[data-market-sale]","reportId","admin_set_report_status");
+    }catch(error){if(host.isConnected)host.innerHTML='<p class="af-market-error">Suivi des partenaires indisponible : '+esc(error.message||error)+'</p>'}
+  }
   async function loadPartnerAdmin() {
     var box = el("afPartnerAdmin"); if (!box || !isAdmin() || !sb()) return;
     try {
@@ -1104,7 +1171,7 @@
     } catch (error) { list.innerHTML = '<p class="af-market-error">Gestion du catalogue indisponible : ' + esc(error.message || error) + "</p>"; }
   }
 
-  window.AfriMarket = { open: open, openPublic: openPublic, closeToWorkspace: closeToWorkspace, openAuth: openAuth, closeAuth: closeAuth, shouldUseMarket: shouldUseMarket, renderAccessAdmin: loadAccessAdmin, renderPartnerTermsAdmin: loadPartnerTermsAdmin, renderDisputesAdmin: loadAdminDisputes };
+  window.AfriMarket = { open: open, openPublic: openPublic, closeToWorkspace: closeToWorkspace, openAuth: openAuth, closeAuth: closeAuth, shouldUseMarket: shouldUseMarket, renderAccessAdmin: loadAccessAdmin, renderPartnerTermsAdmin: loadPartnerTermsAdmin, renderDisputesAdmin: loadAdminDisputes, renderPartnerManagement: loadPartnerManagement };
   window.afriMarketInitial = function () {
     if (window.afriMarketSession) {
       if (shouldUseMarket(window.afriMarketSession)) open({ kind: "authenticated", market: window.afriMarketSession });
