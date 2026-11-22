@@ -2,6 +2,7 @@ package africa.afriflow.app;
 
 import android.Manifest;
 import android.app.Activity;
+import android.app.AlertDialog;
 import android.os.Build;
 import android.os.Bundle;
 import android.content.Intent;
@@ -85,6 +86,58 @@ public class MainActivity extends Activity {
     }catch(Exception e){android.util.Log.w("AfriFloW","FCM registration unavailable",e);}
     finally{if(connection!=null)connection.disconnect();}
   }
+  // Public GitHub release check: never silently installs an APK or deletes local data.
+  // Android only installs over an existing app when applicationId and signing certificate match.
+  private void checkForAppUpdate() {
+    long now=System.currentTimeMillis();
+    android.content.SharedPreferences pref=getSharedPreferences("afriflow_update",MODE_PRIVATE);
+    if(now-pref.getLong("last_check",0)<24L*60*60*1000)return;
+    pref.edit().putLong("last_check",now).apply();
+    worker.execute(()->{
+      HttpURLConnection conn=null;
+      try{
+        URL u=new URL("https://api.github.com/repos/ATAYI-jo/AfriFlow-Feuille-de-Route/releases/latest");
+        conn=(HttpURLConnection)u.openConnection();
+        conn.setConnectTimeout(8000);conn.setReadTimeout(8000);
+        conn.setRequestProperty("Accept","application/vnd.github+json");
+        conn.setRequestProperty("User-Agent","AfriFloW-Android");
+        if(conn.getResponseCode()!=200)return;
+        java.io.ByteArrayOutputStream out=new java.io.ByteArrayOutputStream();
+        try(java.io.InputStream in=conn.getInputStream()){
+          byte[] b=new byte[4096];int n;
+          while((n=in.read(b))!=-1 && out.size()<64000)out.write(b,0,n);
+        }
+        JSONObject response=new JSONObject(out.toString("UTF-8"));
+        String tag=response.optString("tag_name","");
+        if(!tag.matches("v[0-9]+\\.[0-9]+\\.[0-9]+"))return;
+        String latest=tag.substring(1);
+        String current=getPackageManager().getPackageInfo(getPackageName(),0).versionName;
+        if(!newerVersion(latest,current))return;
+        runOnUiThread(()->{
+          if(isFinishing() || isDestroyed())return;
+          new AlertDialog.Builder(this)
+            .setTitle("Mise à jour AfriFloW disponible")
+            .setMessage("Version "+latest+" disponible. L'installation peut conserver vos données si la signature correspond à celle de l'application déjà installée.")
+            .setNegativeButton("Plus tard",null)
+            .setPositiveButton("Voir la mise à jour",(dialog,which)->{
+              Intent intent=new Intent(Intent.ACTION_VIEW,Uri.parse("https://github.com/ATAYI-jo/AfriFlow-Feuille-de-Route/releases/latest"));
+              try{startActivity(intent);}catch(Exception ex){android.util.Log.w("AfriFloW","Update page unavailable",ex);}
+            }).show();
+        });
+      }catch(Exception ex){android.util.Log.w("AfriFloW","Update check failed",ex);}
+      finally{if(conn!=null)conn.disconnect();}
+    });
+  }
+  private static boolean newerVersion(String latest,String current){
+    try{
+      String[] a=latest.split("\\."),b=current.split("\\.");
+      for(int i=0;i<3;i++){
+        int x=Integer.parseInt(a[i]),y=Integer.parseInt(b[i]);
+        if(x!=y)return x>y;
+      }
+    }catch(Exception ignored){}
+    return false;
+  }
   @Override public void onCreate(Bundle state) {
     super.onCreate(state);
     web = new WebView(this);
@@ -131,6 +184,7 @@ public class MainActivity extends Activity {
       }
     });
     web.loadUrl(HOME);
+    checkForAppUpdate();
   }
   @Override protected void onActivityResult(int requestCode,int resultCode,Intent data) {
     super.onActivityResult(requestCode,resultCode,data);
