@@ -81,6 +81,74 @@ async function certificatePdf(row:any){
  center("Verification de validite : ce certificat peut etre revoque.",80,font,8,muted);
  return doc.save();
 }
+
+async function liveProfile(db:any,userId:string){
+ const [identity,role,market,terms]=await Promise.all([
+  db.from("afriflow_profiles").select("first_name,last_name,job_title,organization,country,city").eq("user_id",userId).maybeSingle(),
+  db.from("afriflow_market_profiles").select("requested_role,access_mode").eq("user_id",userId).maybeSingle(),
+  db.from("afriflow_partner_markets").select("market_name").eq("partner_user_id",userId).maybeSingle(),
+  db.from("afriflow_partner_terms").select("is_enabled").eq("partner_user_id",userId).maybeSingle()
+ ]);
+ for(const x of [identity,role,market,terms])if(x.error)throw x.error;
+ const p=identity.data||{},r=role.data||{},type=["partner","shareholder"].includes(r.requested_role)?r.requested_role:"member";
+ const approved=type!=="member"&&r.access_mode===type+"_approved"&&(type!=="partner"||terms.data?.is_enabled===true);
+ const marketName=type==="partner"?string(market.data?.market_name,80):"";
+ return {name:string([p.first_name,p.last_name].filter(Boolean).join(" "),160)||"Membre AfriFloW",
+   type,approved,market:marketName||null,roleStatus:string(r.access_mode,40)||"non renseigne",
+   job:string(p.job_title,120)||null,organization:string(p.organization,120)||null,
+   country:string(p.country,80)||null,city:string(p.city,80)||null};
+}
+async function profilePdf(data:any){
+ const doc=await PDFDocument.create(),page=doc.addPage([595.28,841.89]),w=595.28,h=841.89;
+ const regular=await doc.embedFont(StandardFonts.Helvetica),bold=await doc.embedFont(StandardFonts.HelveticaBold);
+ const green=rgb(.10,.34,.22),grey=rgb(.33,.41,.37),gold=rgb(.73,.55,.18);
+ page.drawRectangle({x:0,y:h-18,width:w,height:18,color:green});
+ page.drawRectangle({x:32,y:34,width:w-64,height:h-82,borderColor:green,borderWidth:1});
+ page.drawRectangle({x:41,y:43,width:w-82,height:h-100,borderColor:gold,borderWidth:.5});
+ const center=(text:string,y:number,font:any,size:number,color=green)=>{
+  const t=ascii(text);page.drawText(t,{x:(w-font.widthOfTextAtSize(t,size))/2,y,font,size,color});
+ };
+ try{
+  const resp=await fetch(ORIGIN+"/logo.png",{signal:AbortSignal.timeout(2200)});
+  if(resp.ok&&resp.headers.get("content-type")?.includes("image/png")){
+    const bytes=new Uint8Array(await resp.arrayBuffer());
+    if(bytes.length<600000){const logo=await doc.embedPng(bytes),size=logo.scaleToFit(55,50);page.drawImage(logo,{x:70,y:h-113,width:size.width,height:size.height})}
+  }
+ }catch(_e){}
+ center("AFRIFLOW",h-93,bold,27);
+ center("Du territoire africain vers le monde",h-118,regular,10,grey);
+ const title=data.type==="partner"&&data.approved?"ATTESTATION DE PARTENARIAT COMMERCIAL":
+  data.type==="shareholder"&&data.approved?"ATTESTATION DE STATUT ACTIONNAIRE":
+  "FICHE DE PROFIL AFRIFLOW";
+ center(title,h-185,bold,title.length>32?15:18);
+ center("Document actualise selon les informations enregistrees",h-211,regular,10,grey);
+ center("Titulaire",h-262,regular,12,grey);
+ let name=ascii(data.name),size=20;
+ while(size>11&&bold.widthOfTextAtSize(name,size)>455)size--;
+ center(name,h-297,bold,size);
+ const verified=data.approved?"Statut du compte : approuve par AfriFloW":"Statut du compte : non approuve / non certifie";
+ center(verified,h-335,bold,11,data.approved?green:gold);
+ const typeLabel=data.type==="partner"?"Partenaire commercial":data.type==="shareholder"?"Actionnaire":"Membre";
+ center("Role dans la plateforme : "+typeLabel,h-375,regular,12,grey);
+ if(data.type==="partner"){
+  center("Marche commercial attribue",h-424,bold,12,gold);
+  center(data.market||"Non renseigne",h-450,bold,16,green);
+ }
+ const notes=data.approved&&data.type==="partner"?
+  "Ce document atteste du statut de partenaire commercial dans le systeme AfriFloW, pour le marche affiche. Il ne remplace pas l'accord contractuel.":
+  data.approved&&data.type==="shareholder"?
+  "Ce document confirme le statut du compte dans AfriFloW. Il ne remplace ni les actes sociaux ni un titre de propriete des actions.":
+  "Informations issues du profil et des demandes de role. Cette fiche ne constitue pas un certificat de partenariat ou d'actionnariat.";
+ let y=data.type==="partner"?h-510:h-447;
+ for(const line of lines(notes,regular,11,450)){center(line,y,regular,11,grey);y-=19;}
+ const extra=[data.job?"Fonction : "+data.job:"",data.organization?"Organisation : "+data.organization:"",[data.city,data.country].filter(Boolean).length?"Localisation : "+[data.city,data.country].filter(Boolean).join(", "):""].filter(Boolean);
+ y=Math.min(y-32,275);
+ for(const t of extra.slice(0,3)){for(const line of lines(t,regular,10,438)){center(line,y,regular,10,grey);y-=17}}
+ center("Genere automatiquement le "+new Date().toLocaleDateString("fr-FR",{timeZone:"UTC"}),123,regular,10,grey);
+ center("Sans signature manuscrite - informations susceptibles d'evoluer",101,regular,9,grey);
+ center("L'exactitude du statut juridique doit etre verifiee avec les actes sociaux.",80,regular,8,grey);
+ return doc.save();
+}
 Deno.serve(async(req:Request)=>{
  if(req.method==="OPTIONS")return new Response(null,{headers:cors});
  if(req.headers.get("origin")&&req.headers.get("origin")!==ORIGIN)return json({error:"Origine non autorisee"},403);
@@ -103,6 +171,15 @@ Deno.serve(async(req:Request)=>{
   if(userError||!user?.id||!user.email||!user.email_confirmed_at)return json({error:"Session invalide"},401);
   const {data:admin}=await db.from("afriflow_admins").select("email").ilike("email",user.email).maybeSingle();
   const isAdmin=!!admin;
+  if(action==="profile_summary"){
+    const result=await liveProfile(db,user.id);
+    return json({profile:result});
+  }
+  if(action==="profile_pdf"){
+    const data=await liveProfile(db,user.id);
+    const pdf=await profilePdf(data);
+    return new Response(pdf,{status:200,headers:{...cors,"Content-Type":"application/octet-stream","Content-Disposition":'attachment; filename="AfriFloW-profil.pdf"',"Cache-Control":"no-store"}});
+  }
   if(action==="mine"){
    const {data, error}=await db.from("afriflow_certificates").select("*").eq("holder_user_id",user.id).order("issued_at",{ascending:false}).limit(20);
    if(error)throw error;
@@ -119,7 +196,8 @@ Deno.serve(async(req:Request)=>{
    if(error)throw error;
    return json({certificates:data||[]});
   }
-  if(action==="issue"){
+  if(action==="issue"){return json({error:"Émission manuelle désactivée : les attestations sont générées automatiquement depuis le profil."},410);}
+  if(false){
    if(!isAdmin)return json({error:"Administration requise"},403);
    const target=string(body.userId,40),type=string(body.type,20);
    if(!uuid(target)||!["partner","shareholder"].includes(type))return json({error:"Parametres invalides"},400);
