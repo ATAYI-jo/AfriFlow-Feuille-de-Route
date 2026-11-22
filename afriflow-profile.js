@@ -85,17 +85,26 @@ async function loadCertificatesProfile(){
    +'<div class="pf-cert-row"><b>'+esc(d.name||"Membre")+'</b><small>Rôle : '+esc(role)+'</small><small>'+esc(status)+'</small>'
    +(d.type==="partner"?'<small>Marché commercial : '+esc(d.market||"Non renseigné")+'</small>':'')
    +'<p class="profile-note">'+(d.approved?"Votre attestation reflète le statut actuel enregistré dans AfriFloW.":"Votre fiche est disponible. Elle ne certifie pas une qualité d’actionnaire ou de partenaire tant que le statut n’est pas approuvé.")+'</p>'
-   +'<div class="profile-actions"><button type="button" class="p" id="pfProfilePdf">Voir / télécharger en PDF</button></div></div>';
-  var btn=$("pfProfilePdf");if(btn)btn.onclick=async function(){
+   +'<div class="profile-actions"><button type="button" class="p" id="pfProfileView">Voir le document</button><button type="button" id="pfProfilePdf">Télécharger le PDF</button></div></div>';
+  ["pfProfileView","pfProfilePdf"].forEach(function(id){
+   var btn=$(id);if(!btn)return;
+   btn.onclick=async function(){
    btn.disabled=true;
    try{
     var blob=await certificateCall("profile_pdf");
     if(!(blob instanceof Blob))throw new Error("Réponse PDF indisponible");
-    var url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download="AfriFloW-attestation-de-profil.pdf";document.body.appendChild(a);a.click();a.remove();
-    setTimeout(function(){URL.revokeObjectURL(url)},30000);
+    var url=URL.createObjectURL(blob);
+    if(id==="pfProfileView"){
+      var opened=window.open(url,"_blank","noopener,noreferrer");
+      if(!opened){var a=document.createElement("a");a.href=url;a.download="AfriFloW-attestation-de-profil.pdf";document.body.appendChild(a);a.click();a.remove()}
+    }else{
+      var a=document.createElement("a");a.href=url;a.download="AfriFloW-attestation-de-profil.pdf";document.body.appendChild(a);a.click();a.remove();
+    }
+    setTimeout(function(){URL.revokeObjectURL(url)},60000);
    }catch(e){host.querySelector(".profile-note").textContent="Téléchargement impossible : "+(e.message||e)}
    finally{btn.disabled=false}
-  };
+   };
+  });
  }catch(e){if(host.isConnected)host.innerHTML='<h3>Mon attestation AfriFloW</h3><p class="profile-note">Service indisponible : '+esc(e.message||e)+'</p>'}
 }
 
