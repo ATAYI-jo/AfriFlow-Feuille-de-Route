@@ -84,9 +84,9 @@ async function certificatePdf(row:any){
 
 async function liveProfile(db:any,userId:string){
  const [identity,role,market,terms,ids]=await Promise.all([
-  db.from("afriflow_profiles").select("first_name,last_name,job_title,organization,country,city,birth_date").eq("user_id",userId).maybeSingle(),
+  db.from("afriflow_profiles").select("first_name,last_name,job_title,organization,country,country_code,city,birth_date").eq("user_id",userId).maybeSingle(),
   db.from("afriflow_market_profiles").select("requested_role,access_mode").eq("user_id",userId).maybeSingle(),
-  db.from("afriflow_partner_markets").select("market_name").eq("partner_user_id",userId).maybeSingle(),
+  db.from("afriflow_partner_markets").select("market_name,country_code").eq("partner_user_id",userId).maybeSingle(),
   db.from("afriflow_partner_terms").select("is_enabled").eq("partner_user_id",userId).maybeSingle(),
   db.from("afriflow_member_ids").select("login_id,admin_number").eq("user_id",userId).maybeSingle()
  ]);
@@ -97,7 +97,7 @@ async function liveProfile(db:any,userId:string){
  return {loginId:ids.data?.login_id||null,adminNumber:ids.data?.admin_number||null,name:string([p.first_name,p.last_name].filter(Boolean).join(" "),160)||"Membre AfriFloW",
    type,approved,market:marketName||null,roleStatus:string(r.access_mode,40)||"non renseigne",
    job:string(p.job_title,120)||null,birth:string(p.birth_date,10)||null,organization:string(p.organization,120)||null,
-   country:string(p.country,80)||null,city:string(p.city,80)||null};
+   country:string(p.country,80)||null,countryCode:string(p.country_code,2)||null,marketCode:string(market.data?.country_code,2)||null,city:string(p.city,80)||null};
 }
 async function profilePdf(data:any){
  // Institutional A4 certificate inspired by the user-provided school certificate:
@@ -146,7 +146,7 @@ async function profilePdf(data:any){
  if(data.adminNumber)write("N° de dossier administratif : "+data.adminNumber,x,h-327,body,10,grey);
  let yy=h-344;
  if(data.birth){write("Date de naissance (date of birth) : "+new Date(data.birth+"T12:00:00Z").toLocaleDateString("fr-FR",{timeZone:"UTC"}),x,yy,body,10.5);yy-=19;}
- if(data.city||data.country){write("Localisation (location) : "+[data.city,data.country].filter(Boolean).join(", "),x,yy,body,10.5);yy-=19;}
+ if(data.city||data.country){write("Localisation (location) : "+[data.city,data.country].filter(Boolean).join(", ")+(data.countryCode?" ("+data.countryCode+")":""),x,yy,body,10.5);yy-=19;}
  if(data.organization){write("Organisation (organization) : "+data.organization,x,yy,body,10.5);yy-=19;}
  yy-=30;
  const intro=data.approved&&data.type==="partner"
@@ -168,7 +168,7 @@ async function profilePdf(data:any){
  if(data.loginId)row("Identifiant (login ID) :",data.loginId);
  row("Role (role) :",data.type==="partner"?"Partenaire commercial":data.type==="shareholder"?"Actionnaire":"Membre AfriFloW");
  row("Statut (status) :",data.approved?"Approuve dans AfriFloW":"En attente ou non approuve");
- if(data.type==="partner")row("Marche commercial (market) :",data.market||"Non renseigne");
+ if(data.type==="partner")row("Marche commercial (market) :",(data.market||"Non renseigne")+(data.marketCode?" ("+data.marketCode+")":""));
  if(data.job)row("Fonction (position) :",data.job);
  // Date and organizational sign-off are textual, not a representation of
  // signed legal certification. No seal, no stamp and no imitated handwriting.
