@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex,nofollow"><title>Vérification du certificat — AfriFloW</title>
+<style>
+:root{font-family:system-ui,-apple-system,Segoe UI,sans-serif;color:#143729;background:#f5f9f5}
+*{box-sizing:border-box}body{margin:0;padding:24px}.sheet{margin:4vh auto;max-width:660px;border:1px solid #b6d3bf;border-radius:20px;padding:clamp(22px,5vw,45px);background:#fff;box-shadow:0 12px 42px #153f2714}
+.brand{text-align:center;font-size:1.7rem;font-weight:800;letter-spacing:.15em;color:#125933}
+h1{font-size:1.4rem;text-align:center;margin-top:34px}.lead{text-align:center;color:#5f7266}.result{margin-top:25px;border-radius:14px;background:#f3f8f5;padding:19px}.result.invalid{background:#fff0ef;color:#8c302b}
+dt{color:#6b7a71;font-size:.85rem;margin-top:12px}dd{margin:3px 0 0;font-weight:600;overflow-wrap:anywhere}
+footer{margin-top:30px;color:#607568;font-size:.85rem;text-align:center}
+a{color:#145f3a} 
+</style></head><body><main class="sheet"><div class="brand">AFRIFLOW</div>
+<h1>Vérification d'un certificat</h1><p class="lead">Contrôlez la validité d'une attestation émise par la Direction AfriFloW.</p>
+<div id="result" class="result" aria-live="polite">Vérification en cours…</div>
+<footer>La validité est vérifiée en temps réel et peut changer en cas de révocation ou de modification des habilitations.<p><a href="/">Retour à AfriFloW</a></p></footer>
+</main>
+<script>
+(function(){
+ "use strict";
+ var box=document.getElementById("result"),token=new URLSearchParams(location.search).get("token")||"";
+ function invalid(){box.className="result invalid";box.textContent="Certificat introuvable, invalide ou révoqué. Veuillez contacter AfriFloW."}
+ if(!/^[a-f0-9]{64}$/i.test(token)){invalid();return}
+ fetch("https://jgvwdpzevghfavmpjbqp.supabase.co/functions/v1/afriflow-certificates?action=verify&token="+encodeURIComponent(token),{cache:"no-store"})
+ .then(function(r){if(!r.ok)throw Error("Certificate not found");return r.json()})
+ .then(function(data){
+  if(!data.valid||!data.certificate){invalid();return}
+  var c=data.certificate;
+  box.textContent="";box.className="result";
+  var title=document.createElement("h2");title.textContent="✓ Certificat valide";box.appendChild(title);
+  function row(label,value){var dt=document.createElement("dt"),dd=document.createElement("dd");dt.textContent=label;dd.textContent=value;box.appendChild(dt);box.appendChild(dd)}
+  row("Référence",c.number);
+  row("Titulaire",c.name);
+  row("Document",c.type==="partner"?"Certificat de partenariat commercial":"Attestation de statut actionnaire");
+  if(c.type==="partner")row("Marché commercial",c.market||"Non renseigné");
+  row("Délivré le",new Date(c.issuedAt).toLocaleDateString("fr-FR"));
+ }).catch(invalid);
+})();
+</script></body></html>

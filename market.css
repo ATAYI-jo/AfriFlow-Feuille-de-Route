@@ -701,3 +701,13 @@ body.af-market-mode #market-view{display:block}
 .af-sim-stats b{display:block;font-size:1.12rem;margin-top:6px;overflow-wrap:anywhere}
 .af-sale-not-ready{padding:10px;border-radius:12px;background:#fff3db;color:#764a12}
 @media(max-width:770px){#afPartnerSimulator,.af-sim-stats{grid-template-columns:1fr}}
+
+/* Member certificates */
+.pf-certificates{margin-top:26px;padding:16px;border:1px solid #b7d4c2;border-radius:16px;background:rgba(243,250,245,.75)}
+.pf-cert-row{padding:12px 0;border-top:1px solid #d5e6dc;overflow-wrap:anywhere}
+.pf-cert-row small{display:block;margin-top:6px}
+.pf-cert-row .profile-actions{display:flex;align-items:center;flex-wrap:wrap;gap:12px;margin-top:13px}
+.af-cert-admin-row{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;border:1px solid #d5e6dc;padding:14px;border-radius:13px;margin:10px 0}
+.af-cert-admin-row small{display:block;margin-top:5px}
+.af-cert-actions{display:flex;align-items:center;flex-wrap:wrap;gap:12px}
+.af-cert-actions label{font-size:.83rem}

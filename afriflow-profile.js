@@ -66,6 +66,32 @@ function bindAvatarEditor(){
   var next=$("pfAvatarNew");if(next)next.onclick=function(){var c=activeDiceConfig(),base=current&&current.user&&current.user.id||"afriflow";c.seed=base+"-lorelei-"+Date.now().toString(36);chosen={kind:"dicebear",value:diceValue(c)};renderAvatarEditor()};
   var reset=$("pfAvatarReset");if(reset)reset.onclick=function(){var base=current&&current.user&&current.user.id||"afriflow";chosen={kind:"dicebear",value:base+"-lorelei-01"};renderAvatarEditor()};
 }
+
+async function certificateCall(action,body){
+ var sb=window.__sb;if(!sb)throw new Error("Connexion Supabase indisponible");
+ var response=await sb.functions.invoke("afriflow-certificates",{body:Object.assign({action:action},body||{})});
+ if(response.error){var message=response.error.message||"Service indisponible";try{var detail=await response.error.context.json();message=detail.error||message}catch(e){}throw new Error(message)}
+ if(response.data&&response.data.error)throw new Error(response.data.error);
+ return response.data;
+}
+async function loadCertificatesProfile(){
+ var host=$("pfCertificates");if(!host)return;
+ try{
+  var response=await certificateCall("mine"),certs=response.certificates||[],active=certs.filter(function(c){return c.status==="active"});
+  if(!host.isConnected)return;
+  host.innerHTML='<h3>Mes certificats AfriFloW</h3><p class="profile-note">Documents délivrés par la Direction. Un certificat partenaire mentionne obligatoirement son marché commercial.</p>'
+   +(active.length?active.map(function(c){return '<article class="pf-cert-row"><b>'+esc(c.type==="partner"?"Certificat de partenariat commercial":"Attestation de statut actionnaire")+'</b><small>Référence : '+esc(c.number)+' · délivré le '+esc(new Date(c.issuedAt).toLocaleDateString("fr-FR"))+'</small>'+(c.type==="partner"?'<small>Marché : '+esc(c.market||"Non renseigné")+'</small>':'')+'<div class="profile-actions"><button type="button" class="p" data-cert-download="'+esc(c.id)+'">Télécharger le PDF</button><a href="'+esc(c.verifyUrl)+'" target="_blank" rel="noopener noreferrer">Vérifier le certificat</a></div></article>'}).join(""):'<p class="profile-note">Aucun certificat actif. Après validation du rôle et vérification des justificatifs, la Direction peut émettre le document.</p>')
+   +(certs.some(function(c){return c.status!=="active"})?'<small>Certificats antérieurs ou invalides : '+certs.filter(function(c){return c.status!=="active"}).length+'</small>':'');
+  host.querySelectorAll("[data-cert-download]").forEach(function(btn){btn.onclick=async function(){
+   btn.disabled=true;
+   try{
+    var data=await certificateCall("download",{certificateId:btn.dataset.certDownload});
+    if(!(data instanceof Blob))throw new Error("Réponse PDF invalide");
+    var url=URL.createObjectURL(data),a=document.createElement("a");a.href=url;a.download="AfriFloW-certificat-"+btn.dataset.certDownload.slice(0,8)+".pdf";document.body.appendChild(a);a.click();a.remove();setTimeout(function(){URL.revokeObjectURL(url)},30000);
+   }catch(e){alert("Téléchargement impossible : "+(e.message||e))}finally{btn.disabled=false}
+  }});
+ }catch(e){if(host.isConnected)host.innerHTML='<h3>Mes certificats AfriFloW</h3><p class="profile-note">Certificats indisponibles : '+esc(e.message||e)+'</p>'}
+}
 function profilePage(){
   var p=current.profile,d=current.directory,required=shareholderProfileRequired(),complete=!!p.profile_completed_at,notice=!required?'Ces informations sont facultatives pour votre compte. Vous pouvez les compléter ou les modifier à tout moment.':complete?'Votre profil actionnaire est complet. Vous pourrez le modifier à tout moment.':'Complétez les informations demandées et choisissez un avatar. '+dayText(p.profile_due_at||new Date(Date.now()+15*86400000).toISOString());
   $("profileMain").innerHTML='<div class="profile-tabs"><button type="button" class="on" data-profile-tab="me">Mon profil</button><button type="button" data-profile-tab="directory">Annuaire des membres</button></div><div class="profile-grid"><section class="profile-card"><h3>Mes informations</h3><p class="profile-status">'+esc(notice)+'</p><p class="profile-note">Le nom, la fonction, le pays, la ville et l’avatar sont visibles dans l’annuaire. Les coordonnées personnelles restent privées.</p><div class="profile-form">'
@@ -74,8 +100,8 @@ function profilePage(){
     +field("Pays *","country",p.country||d.country,"text",false,"Ex. Togo")+field("Ville *","city",p.city||d.city,"text",false,"Ex. Lomé")+field("Adresse *","address",p.address,"text",true,"Quartier, rue, numéro")
     +field("Fonction","job",p.job_title||d.job_title,"text",false,"Ex. Responsable export")+field("Département","department",p.department||d.department,"text",false,"Ex. Opérations")+field("Organisation","organization",p.organization||d.organization,"text",true,"Ex. AfriFloW")
     +field("Langues","languages",p.languages,"text",true,"Ex. Français, anglais")+field("Contact d’urgence","emergencyName",p.emergency_name,"text",false,"Nom")+field("Téléphone d’urgence","emergencyPhone",p.emergency_phone,"tel",false,"Numéro")
-    +'<label class="wide">Présentation publique<textarea id="pf_bio" maxlength="360" placeholder="Présentez brièvement votre expertise ou votre rôle.">'+esc(d.bio||"")+'</textarea></label><div class="wide"><b style="font-size:.84rem;color:var(--muted)">Portrait DiceBear personnalisable *</b>'+avatarEditor()+'<label style="margin-top:10px">ou ajouter une photo publique<input id="pf_photo" type="file" accept="image/png,image/jpeg,image/webp"></label><small style="display:block;color:var(--muted);margin-top:5px">Vous pouvez ajuster le portrait à tout moment. Ajouter une photo remplace le portrait généré ; choisir une nouvelle proposition le réactive.</small></div></div><div id="pfErr" role="alert" style="color:#b43b35;min-height:1.3em;margin-top:12px"></div><div class="profile-actions"><button type="button" id="pfSave" class="p">Enregistrer mon profil</button></div></section><aside class="profile-card"><h3>Informations proposées</h3><p class="profile-note">Pour un profil professionnel utile, vous pouvez aussi renseigner :</p><ul style="line-height:1.65;margin:0;padding-left:19px"><li>fonction et département ;</li><li>organisation et langues ;</li><li>ville et pays ;</li><li>une courte présentation ;</li><li>un contact d’urgence privé.</li></ul></aside></div>';
-  bindProfile();
+    +'<label class="wide">Présentation publique<textarea id="pf_bio" maxlength="360" placeholder="Présentez brièvement votre expertise ou votre rôle.">'+esc(d.bio||"")+'</textarea></label><div class="wide"><b style="font-size:.84rem;color:var(--muted)">Portrait DiceBear personnalisable *</b>'+avatarEditor()+'<label style="margin-top:10px">ou ajouter une photo publique<input id="pf_photo" type="file" accept="image/png,image/jpeg,image/webp"></label><small style="display:block;color:var(--muted);margin-top:5px">Vous pouvez ajuster le portrait à tout moment. Ajouter une photo remplace le portrait généré ; choisir une nouvelle proposition le réactive.</small></div></div><div id="pfErr" role="alert" style="color:#b43b35;min-height:1.3em;margin-top:12px"></div><div class="profile-actions"><button type="button" id="pfSave" class="p">Enregistrer mon profil</button></div></section><aside class="profile-card"><h3>Informations proposées</h3><p class="profile-note">Pour un profil professionnel utile, vous pouvez aussi renseigner :</p><ul style="line-height:1.65;margin:0;padding-left:19px"><li>fonction et département ;</li><li>organisation et langues ;</li><li>ville et pays ;</li><li>une courte présentation ;</li><li>un contact d’urgence privé.</li></ul><div id="pfCertificates" class="pf-certificates"><h3>Mes certificats AfriFloW</h3><p class="profile-note">Chargement...</p></div></aside></div>';
+  bindProfile();loadCertificatesProfile();
 }
 function directoryPage(){
   $("profileMain").innerHTML='<div class="profile-tabs"><button type="button" data-profile-tab="me">Mon profil</button><button type="button" class="on" data-profile-tab="directory">Annuaire des membres</button></div><section class="profile-card"><h3>Annuaire des membres</h3><p class="profile-note">Retrouvez les collègues inscrits et leur rôle. Les coordonnées personnelles ne sont pas affichées ici.</p><div id="memberDirectory" class="directory-grid"><p class="profile-note">Chargement…</p></div></section>';

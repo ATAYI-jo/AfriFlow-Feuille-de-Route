@@ -632,6 +632,46 @@
   }
   /* Espace de pilotage par marché : les validations utilisent toujours les fonctions
      serveur existantes ; le navigateur ne peut pas accorder des droits d'approbation. */
+
+  async function certificatesCall(action,body){
+    var result=await sb().functions.invoke("afriflow-certificates",{body:Object.assign({action:action},body||{})});
+    if(result.error){var msg=result.error.message||"Certificats indisponibles";try{var details=await result.error.context.json();msg=details.error||msg}catch(e){}throw new Error(msg)}
+    if(result.data&&result.data.error)throw new Error(result.data.error);
+    return result.data;
+  }
+  async function loadCertificateAdmin(targetId){
+    var host=el(targetId);if(!host||!isAdmin()||!sb())return;
+    try{
+      var results=await Promise.all([partnerCall("admin_dashboard"),certificatesCall("admin_list")]);
+      if(!host.isConnected)return;
+      var data=results[0],certs=results[1].certificates||[];
+      var people=(data.partners||[]).map(function(x){return Object.assign({},x,{kind:"partner"})}).concat((data.shareholders||[]).map(function(x){return Object.assign({},x,{kind:"shareholder"})}));
+      host.innerHTML='<p>Émission administrative après validation. Les anciens certificats sont révoqués lors d’une réémission.</p>'
+      +(people.length?people.map(function(person){
+        var active=certs.filter(function(c){return c.holder_user_id===person.user_id&&c.certificate_type===person.kind&&c.status==="active"})[0];
+        var roleOk=person.kind==="partner"?(person.terms&&person.terms.is_enabled):person.access_mode==="shareholder_approved";
+        return '<article class="af-cert-admin-row"><div><strong>'+esc(person.email||"Membre")+'</strong><small>'+esc(person.kind==="partner"?"Partenaire commercial":"Actionnaire")+(active?' · Certificat émis le '+esc(new Date(active.issued_at).toLocaleDateString("fr-FR")):" · Aucun certificat actif")+'</small></div>'
+          +'<div class="af-cert-actions">'+(person.kind==="shareholder"?'<label><input type="checkbox" data-cert-evidence> Justificatifs d’actionnariat vérifiés par la Direction</label>':'')
+          +'<button type="button" class="af-market-secondary" data-cert-issue="'+esc(person.user_id)+'" data-cert-type="'+esc(person.kind)+'"'+(roleOk?'':' disabled')+'>'+(active?"Réémettre":"Émettre le certificat")+'</button>'
+          +(active?'<label>Motif de révocation<input type="text" data-cert-reason minlength="5" maxlength="300" placeholder="Motif obligatoire"></label><button type="button" class="af-market-secondary" data-cert-revoke="'+esc(active.id)+'">Révoquer</button>':'')+'</div></article>';
+      }).join(""):'<p>Aucun partenaire ou actionnaire déclaré.</p>');
+      host.querySelectorAll("[data-cert-issue]").forEach(function(btn){btn.onclick=async function(){
+        var evidence=btn.closest(".af-cert-admin-row").querySelector("[data-cert-evidence]");
+        if(evidence&&!evidence.checked){notice("Vérifiez les justificatifs d’actionnariat avant émission.");return}
+        if(btn.dataset.confirm!=="yes"){btn.dataset.confirm="yes";btn.textContent="Confirmer l’émission";return}
+        btn.disabled=true;
+        try{await certificatesCall("issue",{userId:btn.dataset.certIssue,type:btn.dataset.certType,legalEvidenceConfirmed:!!(evidence&&evidence.checked)});notice("Certificat émis. Le titulaire peut désormais le télécharger dans son profil.");loadCertificateAdmin(targetId)}
+        catch(err){notice(err.message||"Émission impossible");btn.disabled=false}
+      }});
+      host.querySelectorAll("[data-cert-revoke]").forEach(function(btn){btn.onclick=async function(){
+        var field=btn.closest(".af-cert-admin-row").querySelector("[data-cert-reason]"),reason=field?field.value.trim():"";
+        if(reason.length<5){notice("Le motif doit comporter au moins cinq caractères.");return}
+        if(btn.dataset.confirm!=="yes"){btn.dataset.confirm="yes";btn.textContent="Confirmer la révocation";return}
+        btn.disabled=true;try{await certificatesCall("revoke",{certificateId:btn.dataset.certRevoke,reason:reason});notice("Certificat révoqué.");loadCertificateAdmin(targetId)}
+        catch(err){notice(err.message||"Révocation impossible");btn.disabled=false}
+      }});
+    }catch(e){if(host.isConnected)host.innerHTML='<p class="af-market-error">Certificats indisponibles : '+esc(e.message||e)+'</p>'}
+  }
   async function loadPartnerManagement(targetId){
     var host=el(targetId);
     if(!host||!isAdmin()||!sb())return;
@@ -1207,7 +1247,7 @@
     } catch (error) { list.innerHTML = '<p class="af-market-error">Gestion du catalogue indisponible : ' + esc(error.message || error) + "</p>"; }
   }
 
-  window.AfriMarket = { open: open, openPublic: openPublic, closeToWorkspace: closeToWorkspace, openAuth: openAuth, closeAuth: closeAuth, shouldUseMarket: shouldUseMarket, renderAccessAdmin: loadAccessAdmin, renderPartnerTermsAdmin: loadPartnerTermsAdmin, renderDisputesAdmin: loadAdminDisputes, renderPartnerManagement: loadPartnerManagement };
+  window.AfriMarket = { open: open, openPublic: openPublic, closeToWorkspace: closeToWorkspace, openAuth: openAuth, closeAuth: closeAuth, shouldUseMarket: shouldUseMarket, renderAccessAdmin: loadAccessAdmin, renderPartnerTermsAdmin: loadPartnerTermsAdmin, renderDisputesAdmin: loadAdminDisputes, renderPartnerManagement: loadPartnerManagement, renderCertificatesAdmin: loadCertificateAdmin };
   window.afriMarketInitial = function () {
     if (window.afriMarketSession) {
       if (shouldUseMarket(window.afriMarketSession)) open({ kind: "authenticated", market: window.afriMarketSession });
