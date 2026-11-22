@@ -644,3 +644,28 @@ body.af-market-mode #market-view{display:block}
   #adMarketAccess .af-access-user{grid-template-columns:minmax(0,1fr)!important}
   #adMarketAccess .af-access-user button{width:100%}
 }
+
+/* Portail partenaire : indicateurs, traçabilité et contestations */
+.af-analytics,.af-trace,.af-disputes{width:100%;box-sizing:border-box}
+.af-analytics-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin:14px 0}
+.af-analytics-stats span{background:rgba(25,100,62,.09);border-radius:12px;padding:14px}
+.af-analytics-stats b{display:block;font-size:1.5rem;color:#195d39}
+.af-chart{overflow-x:auto;padding:14px;background:rgba(255,255,255,.5);border-radius:14px}
+.af-chart-bars{display:flex;justify-content:space-around;gap:9px;align-items:flex-end;min-width:360px;height:190px}
+.af-chart-col{width:15%;height:100%;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:7px;text-align:center;font-size:.7rem}
+.af-chart-col span{font-size:.67rem;word-break:break-word}
+.af-chart-bar{background:linear-gradient(#44a66e,#165d3a);width:65%;min-height:3px;border-radius:7px 7px 2px 2px}
+.af-trace-item{border:1px solid rgba(15,91,50,.19);border-radius:12px;padding:14px;margin:10px 0;background:rgba(255,255,255,.55)}
+.af-trace-item summary{cursor:pointer;display:flex;flex-wrap:wrap;align-items:center;gap:10px}
+.af-trace-meta{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:8px;margin:16px 0}
+.af-trace-meta code{overflow-wrap:anywhere;font-size:.8rem}
+.af-trace-steps{line-height:1.9}
+.af-disputes form{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.af-disputes form label{display:grid;gap:5px}
+.af-disputes form label:nth-of-type(4){grid-column:1/-1}
+.af-disputes form input,.af-disputes form select,.af-disputes form textarea,.af-dispute-admin select,.af-dispute-admin textarea{width:100%;box-sizing:border-box;padding:12px;border:1px solid #b9d2c3;border-radius:10px;background:#fff;color:#123c2a;font:inherit}
+.af-disputes form button{justify-self:start}
+.af-dispute-entry,.af-dispute-admin{margin:12px 0;padding:15px;border:1px solid #b9d2c3;border-radius:12px;background:rgba(255,255,255,.62)}
+.af-dispute-entry small,.af-dispute-admin small{display:block;overflow-wrap:anywhere}
+.af-dispute-admin label{display:block;max-width:600px;margin:10px 0}
+@media(max-width:700px){.af-disputes form{grid-template-columns:1fr}.af-disputes form label:nth-of-type(4){grid-column:auto}}

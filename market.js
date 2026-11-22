@@ -4,7 +4,7 @@
   var DEF_TITLE = "AfriFloW – De l’Afrique vers le monde", HERO_KEY = "pub:markethero", HERO_LS = "afriflow_markethero_v1", EXT = ["jpg", "jpeg", "webp", "png"];
   function readHeroLocal() { try { return JSON.parse(localStorage.getItem(HERO_LS) || "{}") || {}; } catch (error) { return {}; } }
   /* Le bandeau est toujours repris depuis le serveur : aucune ancienne image locale ne réapparaît au rechargement. */
-  var state = { products: [], adminProducts: [], category: "", term: "", context: { kind: "public" }, timers: [], heroTimer: null, rotationTimer: null, rotationStep: 0, heroIdx: 0, imgs: {}, imgErr: {}, hero: {}, aiPolling: {}, partner: null, partnerAdmin: null, cart: [], favorites: [], currency: { code: "", rates: {}, loading: false } };
+  var state = { products: [], adminProducts: [], category: "", term: "", context: { kind: "public" }, timers: [], heroTimer: null, rotationTimer: null, rotationStep: 0, heroIdx: 0, imgs: {}, imgErr: {}, hero: {}, aiPolling: {}, partner: null, partnerAdmin: null, disputes: [], disputesAdmin: [], cart: [], favorites: [], currency: { code: "", rates: {}, loading: false } };
 
   function el(id) { return document.getElementById(id); }
   function loadStored(key, fallback) { try { var value = JSON.parse(localStorage.getItem(key) || ""); return Array.isArray(value) ? value : fallback; } catch (error) { return fallback; } }
@@ -358,6 +358,95 @@
     var labels = { requested: "À valider", approved: "Validée", supplied: "Prête à vendre", rejected: "Refusée", closed: "Clôturée", pending_review: "À contrôler", validated: "Validée", settled: "Réglée" };
     return '<span class="af-market-tag ' + esc(status) + '">' + esc(labels[status] || status) + "</span>";
   }
+
+  function disputeType(v){
+    return ({qualite:"Qualité",quantite:"Quantité",livraison:"Livraison",emballage:"Emballage",tracabilite:"Traçabilité",autre:"Autre"})[v]||v;
+  }
+  function disputeStatus(v){
+    return ({open:"Ouverte",in_review:"En cours d’examen",resolved:"Résolue",rejected:"Non retenue"})[v]||v;
+  }
+  function partnerTraceHtml(orders,reports,products){
+    return '<section class="af-partner-card af-trace" aria-label="Traçabilité des allocations"><h2>Traçabilité des produits</h2><p>Informations vérifiées dans les demandes et déclarations AfriFloW. Une étape non enregistrée n’est pas présentée comme réalisée.</p>'
+      +(orders.length?orders.map(function(o){
+        var p=products.filter(function(x){return x.id===o.product_id})[0]||((Array.isArray(o.product)?o.product[0]:o.product)||{});
+        var sales=reports.filter(function(r){return r.order_id===o.id});
+        var qty=sales.filter(function(r){return r.status!=="rejected"}).reduce(function(n,r){return n+Number(r.quantity_sold||0)},0);
+        return '<details class="af-trace-item"><summary><b>'+esc(p.name||"Produit")+'</b> · '+esc(String(o.quantity_requested||0))+' unités · '+partnerStatus(o.status)+'</summary>'
+          +'<div class="af-trace-meta"><span>Identifiant allocation : <code>'+esc(o.id)+'</code></span><span>Origine déclarée : '+esc(p.origin_country||"Non renseignée")+'</span><span>Numéro de lot : non renseigné dans le système actuel</span><span>Quantités vendues déclarées (hors rejets) : '+esc(qty)+'</span></div>'
+          +'<ol class="af-trace-steps"><li>Demande enregistrée : '+esc(new Date(o.created_at).toLocaleString("fr-FR"))+'</li>'
+          +'<li>Statut actuel : '+esc(partnerStatus(o.status).replace(/<[^>]*>/g,""))+' (dernière mise à jour : '+esc(new Date(o.updated_at||o.created_at).toLocaleString("fr-FR"))+')</li>'
+          +sales.map(function(r){return '<li>Vente déclarée le '+esc(new Date(r.created_at).toLocaleString("fr-FR"))+' · '+esc(r.quantity_sold)+' unités · '+esc(disputeStatus(r.status))+'</li>'}).join("")
+          +'</ol><p><small>Les dates détaillées de préparation, transport et livraison ne sont pas encore renseignées.</small></p></details>';
+      }).join(""):'<p>Aucune allocation à tracer.</p>')+'</section>';
+  }
+  function partnerAnalyticsHtml(reports,orders){
+    function rawMoney(n,c){
+      try{return new Intl.NumberFormat("fr-FR",{style:"currency",currency:c,maximumFractionDigits:c==="XOF"||c==="XAF"?0:2}).format(n)}
+      catch(e){return Number(n).toLocaleString("fr-FR")+" "+c}
+    }
+    var accepted=reports.filter(function(r){return r.status!=="rejected"});
+    var currencies={};accepted.forEach(function(r){currencies[r.currency||"XOF"]=true});
+    var codes=Object.keys(currencies);
+    var code=codes.length===1?codes[0]:null;
+    var rows=[],now=new Date();
+    for(var i=5;i>=0;i--){
+      var d=new Date(now.getFullYear(),now.getMonth()-i,1),year=d.getFullYear(),month=d.getMonth();
+      var sample=code?accepted.filter(function(r){var x=new Date(r.created_at);return (r.currency||"XOF")===code&&x.getFullYear()===year&&x.getMonth()===month}):[];
+      rows.push({label:d.toLocaleDateString("fr-FR",{month:"short"}),total:sample.reduce(function(n,r){return n+Number(r.gross_amount||0)},0)});
+    }
+    var max=Math.max(1,...rows.map(function(r){return r.total}));
+    return '<section class="af-partner-card af-analytics"><h2>Tableau de bord commercial</h2><div class="af-analytics-stats"><span><b>'+orders.length+'</b> Allocations</span><span><b>'+reports.length+'</b> Déclarations de ventes</span><span><b>'+reports.filter(function(r){return r.status==="pending_review"}).length+'</b> En contrôle</span></div>'
+      +(code?'<h3>Évolution mensuelle des ventes déclarées ('+esc(code)+')</h3><div class="af-chart" role="img" aria-label="Chiffre d’affaires déclaré des six derniers mois"><div class="af-chart-bars">'
+        +rows.map(function(r){return '<div class="af-chart-col" title="'+esc(r.label)+' : '+esc(rawMoney(r.total,code))+'"><span>'+esc(r.total?rawMoney(r.total,code):"0")+'</span><div class="af-chart-bar" style="height:'+Math.max(3,Math.round(r.total/max*110))+'px"></div><small>'+esc(r.label)+'</small></div>'}).join("")+'</div></div>'
+        :'<p>Graphique monétaire indisponible : aucune vente enregistrée ou plusieurs devises différentes. Les montants ne sont pas additionnés entre devises.</p>')
+      +'<small>Indicateurs calculés uniquement à partir des allocations et ventes déclarées dans AfriFloW ; ils ne remplacent pas une comptabilité validée.</small></section>';
+  }
+  function partnerDisputesHtml(orders,products){
+    var opts=orders.map(function(o){
+      var p=products.filter(function(x){return x.id===o.product_id})[0]||((Array.isArray(o.product)?o.product[0]:o.product)||{});
+      return '<option value="'+esc(o.id)+'">'+esc(p.name||"Produit")+' · '+esc(o.quantity_requested)+' unités</option>';
+    }).join("");
+    return '<section class="af-partner-card af-disputes"><h2>Signaler un problème de produit</h2><p>Contestez un défaut de qualité, de quantité, d’emballage, de livraison ou de traçabilité. AfriFloW répondra dans votre espace.</p>'
+      +'<form id="afPartnerDisputeForm"><label>Allocation concernée<select name="orderId" required><option value="">Choisir une allocation</option>'+opts+'</select></label>'
+      +'<label>Nature du problème<select name="category" required><option value="qualite">Qualité du produit</option><option value="quantite">Quantité manquante</option><option value="livraison">Livraison ou transport</option><option value="emballage">Emballage endommagé</option><option value="tracabilite">Origine / lot / traçabilité</option><option value="autre">Autre</option></select></label>'
+      +'<label>Référence du lot, si connue<input name="batch" maxlength="100" placeholder="Facultatif — code imprimé sur le sachet"></label>'
+      +'<label>Expliquez précisément le problème<textarea name="description" required minlength="15" maxlength="3000" rows="4" placeholder="Produit, quantité, défaut constaté, date, conséquences…"></textarea></label>'
+      +'<button type="submit" class="af-market-primary"'+(orders.length?"":" disabled") +'>Envoyer la contestation</button></form>'
+      +'<h3>Mes contestations ('+state.disputes.length+')</h3>'
+      +(state.disputes.length?state.disputes.map(function(d){return '<article class="af-dispute-entry"><div><b>'+esc(disputeType(d.category))+'</b> · '+esc(disputeStatus(d.status))+'</div><small>'+esc(new Date(d.created_at).toLocaleString("fr-FR"))+' · Allocation '+esc(d.order_id)+'</small><p>'+esc(d.description)+'</p>'+(d.batch_reference?'<small>Lot déclaré : '+esc(d.batch_reference)+'</small>':'')+(d.admin_response?'<p><b>Réponse AfriFloW :</b> '+esc(d.admin_response)+'</p>':'')+'</article>'}).join(""):'<p>Aucune contestation envoyée.</p>')
+      +'</section>';
+  }
+  async function loadPartnerDisputes(){
+    if(!sb())return;
+    var result=await sb().from("afriflow_partner_disputes").select("id,order_id,category,description,batch_reference,status,admin_response,created_at").order("created_at",{ascending:false}).limit(100);
+    if(result.error){notice("Contestations indisponibles : "+result.error.message);return}
+    state.disputes=result.data||[];
+    if(roleMode(state.context.market)==="partner_approved")render();
+  }
+  async function loadAdminDisputes(target){
+    var host=el(target);if(!host||!isAdmin()||!sb())return;
+    var r=await sb().from("afriflow_partner_disputes").select("id,partner_user_id,order_id,category,description,batch_reference,status,admin_response,created_at").order("created_at",{ascending:false}).limit(150);
+    if(r.error){host.textContent="Contestations indisponibles : "+r.error.message;return}
+    if(!host.isConnected)return;
+    host.innerHTML='<h3>Contestations des partenaires ('+r.data.length+')</h3>'
+      +(r.data.length?r.data.map(function(d){
+        return '<form class="af-dispute-admin" data-dispute="'+esc(d.id)+'"><b>'+esc(disputeType(d.category))+'</b> · '+esc(d.partner_user_id)+'<small>Allocation : '+esc(d.order_id)+' · '+esc(new Date(d.created_at).toLocaleString("fr-FR"))+'</small><p>'+esc(d.description)+'</p>'
+        +(d.batch_reference?'<small>Lot indiqué : '+esc(d.batch_reference)+'</small>':'')
+        +'<label>État<select name="status"><option value="open"'+(d.status==="open"?' selected':'')+'>Ouverte</option><option value="in_review"'+(d.status==="in_review"?' selected':'')+'>En cours</option><option value="resolved"'+(d.status==="resolved"?' selected':'')+'>Résolue</option><option value="rejected"'+(d.status==="rejected"?' selected':'')+'>Non retenue</option></select></label>'
+        +'<label>Réponse au partenaire<textarea name="response" maxlength="3000" rows="3">'+esc(d.admin_response||"")+'</textarea></label><button type="submit" class="af-market-secondary">Enregistrer la décision</button></form>';
+      }).join(""):'<p>Aucune contestation en attente ou enregistrée.</p>');
+    host.querySelectorAll("form[data-dispute]").forEach(function(form){
+      form.onsubmit=async function(ev){
+        ev.preventDefault();
+        var b=form.querySelector("button"),fields=new FormData(form),status=String(fields.get("status")),response=String(fields.get("response")||"").trim();
+        if(["resolved","rejected"].includes(status)&&response.length<10){notice("Indiquez une réponse d’au moins 10 caractères pour clôturer.");return}
+        b.disabled=true;
+        var result=await sb().from("afriflow_partner_disputes").update({status:status,admin_response:response||null}).eq("id",form.dataset.dispute).select("id");
+        if(result.error){notice(result.error.message);b.disabled=false;return}
+        notice("Décision enregistrée.");loadAdminDisputes(target);
+      };
+    });
+  }
   function partnerContent() {
     var data = state.partner;
     if (!data) return '<section class="af-market-wait"><h1>Préparation de votre espace partenaire</h1><p>Nous vérifions vos conditions commerciales sécurisées…</p></section>';
@@ -366,20 +455,27 @@
     var pending = reports.filter(function (report) { return report.status === "pending_review"; });
     var gross = reports.filter(function (report) { return report.status !== "rejected"; }).reduce(function (sum, report) { return sum + Number(report.gross_amount || 0); }, 0);
     var due = reports.filter(function (report) { return report.status !== "rejected" && report.status !== "settled"; }).reduce(function (sum, report) { return sum + Number(report.afriflow_amount || 0); }, 0);
+    var reportCurrencies={};reports.filter(function(r){return r.status!=="rejected"}).forEach(function(r){reportCurrencies[r.currency||"XOF"]=true});
+    var separateCurrencies=Object.keys(reportCurrencies).length>1;
+    var grossText=separateCurrencies?"Plusieurs devises":partnerMoney(gross,reports[0]&&reports[0].currency||"XOF");
+    var dueText=separateCurrencies?"Plusieurs devises":partnerMoney(due,reports[0]&&reports[0].currency||"XOF");
     var sellable = orders.filter(function (order) { return order.status === "approved" || order.status === "supplied"; });
     var productOpts = products.map(function (product) { return '<option value="' + esc(product.id) + '">' + esc(product.name) + ' · ' + esc(partnerMoney(product.price, product.currency)) + '</option>'; }).join("");
     var orderOpts = sellable.map(function (order) { var product = Array.isArray(order.product) ? order.product[0] : order.product; return '<option value="' + esc(order.id) + '">' + esc(product && product.name || "Produit") + ' · allocation ' + esc(order.quantity_requested) + ' unités</option>'; }).join("");
     return '<section class="af-partner-portal"><header class="af-partner-head"><div><span>PARTENAIRE COMMERCIAL</span><h1>Votre activité, en toute clarté.</h1><p>Commandez vos produits, déclarez vos ventes et suivez chaque montant en temps réel.</p></div><div class="af-partner-rate"><small>Part AfriFloW</small><strong>' + esc(Number(terms.commission_rate || 0).toLocaleString("fr-FR")) + ' %</strong><em>définie pour votre partenariat</em></div></header>'
-      + '<div class="af-partner-kpis"><article><small>Chiffre d’affaires déclaré</small><b>' + esc(partnerMoney(gross, reports[0] && reports[0].currency || "XOF")) + '</b><span>Toutes ventes hors refus</span></article><article><small>À reverser à AfriFloW</small><b>' + esc(partnerMoney(due, reports[0] && reports[0].currency || "XOF")) + '</b><span>Selon votre taux personnalisé</span></article><article><small>Déclarations à contrôler</small><b>' + pending.length + '</b><span>AfriFloW est déjà alerté</span></article></div>'
+      + '<div class="af-partner-kpis"><article><small>Chiffre d’affaires déclaré</small><b>' + esc(grossText) + '</b><span>Toutes ventes hors refus</span></article><article><small>À reverser à AfriFloW</small><b>' + esc(dueText) + '</b><span>Selon votre taux personnalisé</span></article><article><small>Déclarations à contrôler</small><b>' + pending.length + '</b><span>AfriFloW est déjà alerté</span></article></div>'
       + '<div class="af-partner-grid"><form class="af-partner-card" id="afPartnerOrder"><h2>Préparer une commande</h2><p>Choisissez un produit et la quantité souhaitée. AfriFloW confirme ensuite votre allocation.</p><label>Produit<select required name="productId"><option value="">Sélectionner un produit</option>' + productOpts + '</select></label><label>Quantité demandée<input required name="quantity" type="number" min="1" step="1" placeholder="Ex. 100"></label><label>Message facultatif<textarea name="note" maxlength="1200" placeholder="Lieu de vente, délai souhaité…"></textarea></label><button class="af-market-primary">Envoyer la demande</button></form>'
       + '<form class="af-partner-card af-partner-report" id="afPartnerSale"><h2>Déclarer une vente</h2><p>Le calcul est fait côté AfriFloW et une alerte urgente est envoyée à l’équipe.</p><label>Allocation validée<select required name="orderId"><option value="">Sélectionner une allocation</option>' + orderOpts + '</select></label><div class="af-partner-duo"><label>Quantité vendue<input required name="quantity" type="number" min="1" step="1"></label><label>Prix unitaire de vente<input required name="unitSalePrice" type="number" min="0" step="0.01"></label></div><label>Note facultative<textarea name="note" maxlength="1200" placeholder="Canal de vente, précision…"></textarea></label><div id="afPartnerCalc" class="af-partner-calc">Le montant net partenaire et la part AfriFloW seront calculés automatiquement.</div><button class="af-market-primary"' + (sellable.length ? "" : " disabled") + '>Déclarer et alerter</button></form></div>'
+      + partnerAnalyticsHtml(reports,orders)
+      + partnerTraceHtml(orders,reports,products)
+      + partnerDisputesHtml(orders,products)
       + '<section class="af-partner-card af-partner-follow"><h2>Suivi des allocations</h2>' + (orders.length ? '<div class="af-partner-list">' + orders.map(function (order) { var product = Array.isArray(order.product) ? order.product[0] : order.product; return '<article><div><b>' + esc(product && product.name || "Produit") + '</b><small>' + esc(order.quantity_requested) + ' unités demandées · ' + esc(partnerMoney(order.unit_price, order.currency)) + ' / unité</small></div>' + partnerStatus(order.status) + '</article>'; }).join("") + '</div>' : '<p class="af-partner-empty">Aucune demande produit pour le moment.</p>') + '</section>'
       + '<section class="af-partner-card af-partner-follow"><h2>Historique financier</h2>' + (reports.length ? '<div class="af-partner-list">' + reports.map(function (report) { var product = Array.isArray(report.product) ? report.product[0] : report.product; return '<article><div><b>' + esc(product && product.name || "Produit") + '</b><small>' + esc(report.quantity_sold) + ' vendu(s) · CA ' + esc(partnerMoney(report.gross_amount, report.currency)) + ' · net partenaire ' + esc(partnerMoney(report.partner_net_amount, report.currency)) + '</small></div>' + partnerStatus(report.status) + '</article>'; }).join("") + '</div>' : '<p class="af-partner-empty">Vos ventes déclarées apparaîtront ici.</p>') + '</section>'
       + (terms.payment_notes ? '<p class="af-partner-note"><b>Note AfriFloW :</b> ' + esc(terms.payment_notes) + '</p>' : '') + '</section>';
   }
   async function loadPartnerPortal() {
     if (!sb()) return;
-    try { state.partner = await partnerCall("dashboard"); render(); }
+    try { state.partner = await partnerCall("dashboard"); render(); await loadPartnerDisputes(); }
     catch (error) { state.partner = { enabled: false, error: error.message || "Portail indisponible" }; render(); notice(error.message || "Portail partenaire indisponible"); }
   }
   function updatePartnerCalculation() {
@@ -513,7 +609,7 @@
   async function loadPartnerAdmin() {
     var box = el("afPartnerAdmin"); if (!box || !isAdmin() || !sb()) return;
     try {
-      state.partnerAdmin = await partnerCall("admin_dashboard"); var partners = state.partnerAdmin.partners || [], shareholders = state.partnerAdmin.shareholders || [];
+      state.partnerAdmin = await partnerCall("admin_dashboard");loadAdminDisputes("afDisputeAdmin"); var partners = state.partnerAdmin.partners || [], shareholders = state.partnerAdmin.shareholders || [];
       var orders = state.partnerAdmin.orders || [], reports = state.partnerAdmin.reports || [];
       function choices(current, values, labels) { return values.map(function (value) { return '<option value="' + value + '"' + (current === value ? " selected" : "") + '>' + labels[value] + '</option>'; }).join(""); }
       var orderLabels = { requested: "À valider", approved: "Validée", supplied: "Prête à vendre", rejected: "Refusée", closed: "Clôturée" }, reportLabels = { pending_review: "À contrôler", validated: "Validée", settled: "Réglée", rejected: "Refusée" };
@@ -797,7 +893,7 @@
       + '<form class="af-market-admin-card" id="afProductUpload"><h3>Ajouter une fiche</h3><div id="afDropboxStatus" class="af-market-status">Vérification de Dropbox…</div><button type="button" class="af-market-secondary" id="afDropboxReconnect">Reconnecter Dropbox</button><label>Type de fiche<select name="listingType"><option value="product">Produit commercial</option><option value="announcement">Annonce / actualité</option></select></label><label>Nom du produit ou titre de l’annonce<input required name="name" maxlength="160"></label><label>Catégorie<input required name="category" maxlength="80" value="Découvrir"></label><label>Prix (facultatif pour une annonce)<input name="price" type="number" min="0" step="0.01"></label><label>Ancien prix (promotion réelle)<input name="compareAtPrice" type="number" min="0" step="0.01"></label><label>Devise<select name="currency"><option>XOF</option><option>EUR</option><option>USD</option></select></label><label>Quantité minimale (facultatif)<input name="minimumOrderQuantity" type="number" min="1" step="1"></label><label>Pays / origine (facultatif)<input name="originCountry" maxlength="80" placeholder="Ex. Togo"></label><label>Délai ou livraison (facultatif)<input name="deliveryInfo" maxlength="160" placeholder="Ex. Expédition sous 3 à 5 jours"></label><label>Badge promotion (facultatif)<input name="promotionLabel" maxlength="40" placeholder="Ex. Offre de lancement"></label><label>Description<textarea name="description" maxlength="4000"></textarea></label><label>Photo originale<input required name="image" type="file" accept="image/jpeg,image/png,image/webp"></label><small>Les annonces sont séparées des produits et ne sont jamais ajoutées au panier.</small><button class="af-market-primary">Envoyer vers Dropbox</button></form>'
       + '<form class="af-market-admin-card" id="afVariantUpload"><h3>Ajouter une variante</h3><label>Produit<select required name="productId">' + opts + '</select></label><label>Image de variante<input required name="image" type="file" accept="image/jpeg,image/png,image/webp"></label><label>Origine<select name="source"><option value="manual">Retouche manuelle</option><option value="ai">Création IA validée manuellement</option></select></label><label>Consigne / provenance<textarea name="prompt" maxlength="2000" placeholder="Ex. conserver fidèlement le produit, éclairage naturel…"></textarea></label><small>Une variante reste invisible tant qu’elle n’est pas approuvée.</small><button class="af-market-primary">Envoyer la variante</button></form>'
       + '<form class="af-market-admin-card" id="afAiRequest"><h3>Pipeline IA</h3><div id="afAiStatus" class="af-market-status">Vérification de la configuration…</div><label>Produit<select required name="productId">' + opts + '</select></label><label>Consigne de transformation<textarea required name="prompt" minlength="8" maxlength="2000" placeholder="Conserver exactement le produit ; modifier seulement l’ambiance…"></textarea></label><small>L’IA travaille uniquement côté serveur. Chaque variante créée reste en attente de votre approbation.</small><button class="af-market-secondary">Créer une variante IA</button></form>'
-      + '</div><div id="afMarketAdminList" class="af-market-admin-list"><p>Chargement des brouillons et variantes…</p></div><div id="afMarketQuotes" class="af-market-admin-list"></div><div id="afAccessAdmin" class="af-partner-admin"><p>Chargement des utilisateurs et des accès…</p></div><div id="afPartnerAdmin" class="af-partner-admin"><p>Chargement des partenaires commerciaux…</p></div></section>';
+      + '</div><div id="afMarketAdminList" class="af-market-admin-list"><p>Chargement des brouillons et variantes…</p></div><div id="afMarketQuotes" class="af-market-admin-list"></div><div id="afAccessAdmin" class="af-partner-admin"><p>Chargement des utilisateurs et des accès…</p></div><div id="afPartnerAdmin" class="af-partner-admin"><p>Chargement des partenaires commerciaux…</p></div><div id="afDisputeAdmin" class="af-partner-admin"><p>Chargement des contestations…</p></div></section>';
   }
   function render() {
     var root = el("market-view"); if (!root) return;
@@ -863,6 +959,23 @@
     var refreshPartner = el("afPartnerRefresh"); if (refreshPartner) refreshPartner.onclick = loadPartnerPortal;
     var orderForm = el("afPartnerOrder"); if (orderForm) orderForm.onsubmit = async function (event) { event.preventDefault(); var button = orderForm.querySelector("button"), form = new FormData(orderForm); button.disabled = true; try { var result = await partnerCall("request_order", { productId: form.get("productId"), quantity: form.get("quantity"), note: form.get("note") }); notice(result.message); loadPartnerPortal(); } catch (error) { button.disabled = false; notice(error.message || "Demande impossible"); } };
     var saleForm = el("afPartnerSale"); if (saleForm) { saleForm.querySelectorAll("input").forEach(function (input) { input.oninput = updatePartnerCalculation; }); saleForm.onsubmit = async function (event) { event.preventDefault(); var button = saleForm.querySelector("button"), form = new FormData(saleForm); button.disabled = true; try { var result = await partnerCall("report_sale", { orderId: form.get("orderId"), quantity: form.get("quantity"), unitSalePrice: form.get("unitSalePrice"), note: form.get("note") }); notice(result.message + " Net partenaire : " + partnerMoney(result.calculation.partnerNet, result.calculation.currency)); loadPartnerPortal(); } catch (error) { button.disabled = false; notice(error.message || "Déclaration impossible"); } }; }
+    var disputeForm=el("afPartnerDisputeForm");
+    if(disputeForm)disputeForm.onsubmit=async function(ev){
+      ev.preventDefault();
+      var fields=new FormData(disputeForm),button=disputeForm.querySelector('button[type="submit"]');
+      var orderId=String(fields.get("orderId")||""),description=String(fields.get("description")||"").trim();
+      var allowed=state.partner&&state.partner.orders&&state.partner.orders.some(function(o){return o.id===orderId});
+      if(!allowed||description.length<15){notice("Sélectionnez votre allocation et décrivez le défaut (15 caractères minimum).");return}
+      var auth=await sb().auth.getUser(),userId=auth.data&&auth.data.user&&auth.data.user.id;
+      if(!userId){notice("Connexion requise.");return}
+      button.disabled=true;
+      var result=await sb().from("afriflow_partner_disputes").insert({
+        partner_user_id:userId,order_id:orderId,category:String(fields.get("category")),
+        description:description,batch_reference:String(fields.get("batch")||"").trim()||null
+      });
+      if(result.error){notice("Envoi impossible : "+result.error.message);button.disabled=false;return}
+      notice("Contestation envoyée à AfriFloW.");loadPartnerDisputes();
+    };
     var search = el("afMarketSearch"); if (search) search.onsubmit = function (event) { event.preventDefault(); state.term = el("afMarketSearchInput").value; render(); loadCatalog(false); };
     document.querySelectorAll("[data-market-category]").forEach(function (button) { button.onclick = function () { state.category = button.dataset.marketCategory || ""; render(); loadCatalog(false); }; });
     document.querySelectorAll("[data-market-favorites]").forEach(function (button) { button.onclick = function () { var favorites = state.products.filter(function (product) { return state.favorites.indexOf(product.id) > -1; }); if (!favorites.length) return notice("Vous n’avez pas encore enregistré de favori."); state.term = ""; state.category = ""; var target = el("afProductsTop"); if (target) target.scrollIntoView({ behavior: "smooth" }); var grid = el("afMarketGrid"); if (grid) { grid.innerHTML = favorites.map(productCard).join(""); bind(); } }; });
@@ -991,7 +1104,7 @@
     } catch (error) { list.innerHTML = '<p class="af-market-error">Gestion du catalogue indisponible : ' + esc(error.message || error) + "</p>"; }
   }
 
-  window.AfriMarket = { open: open, openPublic: openPublic, closeToWorkspace: closeToWorkspace, openAuth: openAuth, closeAuth: closeAuth, shouldUseMarket: shouldUseMarket, renderAccessAdmin: loadAccessAdmin, renderPartnerTermsAdmin: loadPartnerTermsAdmin };
+  window.AfriMarket = { open: open, openPublic: openPublic, closeToWorkspace: closeToWorkspace, openAuth: openAuth, closeAuth: closeAuth, shouldUseMarket: shouldUseMarket, renderAccessAdmin: loadAccessAdmin, renderPartnerTermsAdmin: loadPartnerTermsAdmin, renderDisputesAdmin: loadAdminDisputes };
   window.afriMarketInitial = function () {
     if (window.afriMarketSession) {
       if (shouldUseMarket(window.afriMarketSession)) open({ kind: "authenticated", market: window.afriMarketSession });
