@@ -1,6 +1,6 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 
-const origins = new Set(["https://afriflow-africa.onrender.com", "https://atayi-jo.github.io"]);
+const origins = new Set(["https://afriflow.pages.dev","https://afriflow-africa.onrender.com", "https://atayi-jo.github.io"]);
 /* XOF and XAF are pegged to the euro.  Keeping that relationship explicit
    avoids presenting an invented conversion when a product is priced in FCFA. */
 const currencies = new Set(["XOF", "XAF", "EUR", "USD", "GBP", "CHF", "CAD", "CNY", "JPY", "ZAR"]);
