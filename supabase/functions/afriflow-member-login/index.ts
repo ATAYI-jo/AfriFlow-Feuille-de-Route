@@ -1,7 +1,7 @@
 // Username sign-in bridge: validates the password with Supabase Auth.
 // Identifiers are public-ish; the private email is never disclosed to a visitor.
 import { createClient } from "npm:@supabase/supabase-js@2.49.10";
-const ORIGIN="https://afriflow-africa.onrender.com";
+const ORIGIN="https://afriflow.pages.dev";
 const cors={"Access-Control-Allow-Origin":ORIGIN,"Access-Control-Allow-Headers":"authorization,apikey,content-type,x-client-info","Access-Control-Allow-Methods":"POST, OPTIONS","Vary":"Origin","Cache-Control":"no-store"};
 const response=(body:unknown,status=200)=>new Response(JSON.stringify(body),{status,headers:{...cors,"Content-Type":"application/json; charset=utf-8"}});
 const invalid=()=>response({error:"Identifiant ou mot de passe incorrect."},401);
