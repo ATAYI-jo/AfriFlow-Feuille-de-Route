@@ -1,6 +1,6 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 
-const origins=new Set(["https://afriflow-africa.onrender.com","https://atayi-jo.github.io"]);
+const origins=new Set(["https://afriflow.pages.dev","https://afriflow-africa.onrender.com","https://atayi-jo.github.io"]);
 function cors(req:Request){
  const origin=req.headers.get("origin")||"",custom=(Deno.env.get("AFRIFLOW_ALLOWED_ORIGINS")||"").split(",").map(x=>x.trim()).filter(Boolean);
  return {...((custom.length?new Set(custom):origins).has(origin)?{"Access-Control-Allow-Origin":origin,Vary:"Origin"}:{}),
