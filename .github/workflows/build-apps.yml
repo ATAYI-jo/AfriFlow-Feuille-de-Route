@@ -116,7 +116,9 @@ jobs:
           test -f release/windows/latest.yml
           cp release/windows/AfriFloW-Windows-Setup.exe release/AfriFloW-Windows-Setup.exe
           cp release/windows/latest.yml release/latest.yml
-          find release/windows -name '*.blockmap' -exec cp {} release/ \\;
+          for file in release/windows/*.blockmap; do
+            if [ -f "$file" ]; then cp "$file" release/; fi
+          done
       - name: Publish versioned GitHub release for updates
         env:
           GH_TOKEN: ${{ github.token }}
