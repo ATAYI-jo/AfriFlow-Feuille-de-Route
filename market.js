@@ -1096,7 +1096,7 @@
     } catch (error) { list.innerHTML = '<p class="af-market-error">Gestion du catalogue indisponible : ' + esc(error.message || error) + "</p>"; }
   }
 
-  window.AfriMarket = { open: open, openPublic: openPublic, closeToWorkspace: closeToWorkspace, openAuth: openAuth, closeAuth: closeAuth, shouldUseMarket: shouldUseMarket, renderAccessAdmin: loadAccessAdmin, renderPartnerTermsAdmin: loadPartnerTermsAdmin };
+  window.AfriMarket = { open: open, openPublic: openPublic, closeToWorkspace: closeToWorkspace, openAuth: openAuth, closeAuth: closeAuth, shouldUseMarket: shouldUseMarket, renderAccessAdmin: loadAccessAdmin, renderPartnerTermsAdmin: loadPartnerTermsAdmin, renderDisputesAdmin: loadAdminDisputes };
   window.afriMarketInitial = function () {
     if (window.afriMarketSession) {
       if (shouldUseMarket(window.afriMarketSession)) open({ kind: "authenticated", market: window.afriMarketSession });
