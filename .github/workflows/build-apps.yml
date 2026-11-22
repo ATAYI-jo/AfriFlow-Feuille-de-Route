@@ -1,6 +1,9 @@
 name: Build AfriFloW Android and Windows
 permissions:
   contents: write
+concurrency:
+  group: afriflow-native-${{ github.ref }}
+  cancel-in-progress: true
 on:
   workflow_dispatch:
   push:
