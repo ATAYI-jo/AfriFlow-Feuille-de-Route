@@ -84,7 +84,10 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: AfriFloW-Windows-EXE-test
-          path: desktop/dist/AfriFloW-Windows-Setup.exe
+          path: |
+            desktop/dist/AfriFloW-Windows-Setup.exe
+            desktop/dist/latest.yml
+            desktop/dist/*.blockmap
           if-no-files-found: error
   release:
     needs: [android, windows]
@@ -100,15 +103,28 @@ jobs:
           name: AfriFloW-Windows-EXE-test
           path: release/windows
       - name: Prepare release files
+        shell: bash
         run: |
+          VERSION=$(node -p "require('./desktop/package.json').version")
+          echo "RELEASE_TAG=v${VERSION}" >> "$GITHUB_ENV"
           mv release/android/app-debug.apk release/AfriFloW-Android-test.apk
-          mv release/windows/AfriFloW-Windows-Setup.exe release/AfriFloW-Windows-Setup.exe
-      - name: Publish prerelease
+          test -f release/windows/AfriFloW-Windows-Setup.exe
+          test -f release/windows/latest.yml
+          cp release/windows/AfriFloW-Windows-Setup.exe release/AfriFloW-Windows-Setup.exe
+          cp release/windows/latest.yml release/latest.yml
+          find release/windows -name '*.blockmap' -exec cp {} release/ \\;
+      - name: Publish versioned GitHub release for updates
         env:
           GH_TOKEN: ${{ github.token }}
+        shell: bash
         run: |
-          if gh release view v0.1.0-beta --repo "${{ github.repository }}" >/dev/null 2>&1; then
-            gh release upload v0.1.0-beta release/AfriFloW-Android-test.apk release/AfriFloW-Windows-Setup.exe --clobber --repo "${{ github.repository }}"
+          set -euo pipefail
+          FILES=(release/AfriFloW-Android-test.apk release/AfriFloW-Windows-Setup.exe release/latest.yml)
+          for file in release/*.blockmap; do
+            if [ -f "$file" ]; then FILES+=("$file"); fi
+          done
+          if gh release view "$RELEASE_TAG" --repo "${{ github.repository }}" >/dev/null 2>&1; then
+            gh release upload "$RELEASE_TAG" "${FILES[@]}" --clobber --repo "${{ github.repository }}"
           else
-            gh release create v0.1.0-beta release/AfriFloW-Android-test.apk release/AfriFloW-Windows-Setup.exe --prerelease --latest=false --title "AfriFloW applications - version test" --notes "Versions de test non validées. L'application charge le site AfriFloW en ligne. Sur Windows, installateur non signé. Sur Android, APK signé en mode debug. Les connexions OAuth, téléchargements, caméra et autres fonctions devront être vérifiés." --repo "${{ github.repository }}"
+            gh release create "$RELEASE_TAG" "${FILES[@]}" --latest --title "AfriFloW $RELEASE_TAG" --notes "Windows : mise à jour sans désinstallation depuis les versions compatibles avec electron-updater. Android : APK de test ; la continuité de signature doit être validée avant mise à jour par-dessus une ancienne APK."
           fi
