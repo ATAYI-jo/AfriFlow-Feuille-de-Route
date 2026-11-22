@@ -1,4 +1,5 @@
-const { app, BrowserWindow, shell, Tray, Menu, Notification, ipcMain, nativeImage, powerMonitor } = require('electron');
+const { app, BrowserWindow, shell, Tray, Menu, Notification, ipcMain, nativeImage, powerMonitor, dialog } = require('electron');
+const { autoUpdater } = require('electron-updater');
 const path = require('path');
 const fs = require('fs');
 const HOME = 'https://afriflow.pages.dev/';
@@ -8,6 +9,36 @@ const single = app.requestSingleInstanceLock();
 let win, tray, quitting = false;
 let startAtLogin = true;
 let lastRecovery = 0;
+let updateReady = false;
+// Keep the same installation and userData directory; do not uninstall to update.
+function installDownloadedUpdate() {
+  if (!updateReady) return;
+  quitting = true;
+  autoUpdater.quitAndInstall(false, true);
+}
+function checkForUpdates() {
+  if (process.platform !== 'win32' || !app.isPackaged) return;
+  autoUpdater.checkForUpdates().catch(err => console.warn('AfriFloW update check:', err.message));
+}
+function configureUpdates() {
+  if (process.platform !== 'win32' || !app.isPackaged) return;
+  autoUpdater.autoDownload = true;
+  autoUpdater.autoInstallOnAppQuit = true;
+  autoUpdater.allowPrerelease = false;
+  autoUpdater.on('error', err => console.warn('AfriFloW update:', err.message));
+  autoUpdater.on('update-downloaded', info => {
+    updateReady = true;
+    const choice = dialog.showMessageBoxSync({
+      type: 'info', title: 'Mise à jour AfriFloW',
+      message: `La version ${info.version} est prête. Installer maintenant ?`,
+      detail: 'Vos documents et vos paramètres sont conservés. La mise à jour remplace l’application sans désinstallation.',
+      buttons: ['Installer maintenant', 'Plus tard'], defaultId: 0, cancelId: 1
+    });
+    if (choice === 0) installDownloadedUpdate();
+  });
+  setTimeout(checkForUpdates, 30_000);
+  setInterval(checkForUpdates, 6 * 60 * 60 * 1000);
+}
 function preferencesPath(){return path.join(app.getPath('userData'),'desktop-preferences.json');}
 function readPreferences(){
   try {
@@ -175,6 +206,9 @@ function createTray() {
         test.show();
       }},
       {type:'separator'},
+      {label:'Vérifier les mises à jour',click:checkForUpdates},
+      {label:'Installer la mise à jour téléchargée',enabled:updateReady,click:installDownloadedUpdate},
+      {type:'separator'},
       {label:'Quitter complètement',click:()=>{quitting=true;app.quit();}}
     ]));
   }
@@ -187,6 +221,7 @@ app.whenReady().then(()=>{
   readPreferences();
   // Enable background launch by default on the first run, but honor manual opt-out.
   configureStartup();
+  configureUpdates();
   createTray();
   createWindow();
   powerMonitor.on('resume',()=>{
