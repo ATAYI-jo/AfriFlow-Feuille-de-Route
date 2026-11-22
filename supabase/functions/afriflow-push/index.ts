@@ -7,15 +7,16 @@ const sb = createClient(SUPABASE_URL, SERVICE_KEY, {
   auth: { persistSession: false, autoRefreshToken: false },
 });
 const ALLOWED_ORIGINS = new Set([
+  "https://afriflow.pages.dev",
   "https://afriflow-africa.onrender.com",
   "https://atayi-jo.github.io",
 ]);
-const ownSite = "https://afriflow-africa.onrender.com/";
+const ownSite = "https://afriflow.pages.dev/";
 const clean = (x: unknown) => String(x ?? "").slice(0, 260);
 function headers(req: Request) {
   const origin = req.headers.get("Origin") || "";
   return {
-    "Access-Control-Allow-Origin": ALLOWED_ORIGINS.has(origin) ? origin : "https://afriflow-africa.onrender.com",
+    "Access-Control-Allow-Origin": ALLOWED_ORIGINS.has(origin) ? origin : "https://afriflow.pages.dev",
     "Vary": "Origin",
     "Access-Control-Allow-Headers": "authorization,apikey,content-type,x-client-info,x-afri-cron",
     "Access-Control-Allow-Methods": "GET,POST,OPTIONS",
