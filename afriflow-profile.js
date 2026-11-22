@@ -77,21 +77,28 @@ async function certificateCall(action,body){
 async function loadCertificatesProfile(){
  var host=$("pfCertificates");if(!host)return;
  try{
-  var response=await certificateCall("mine"),certs=response.certificates||[],active=certs.filter(function(c){return c.status==="active"});
+  var response=await certificateCall("profile_summary"),d=response.profile||{};
   if(!host.isConnected)return;
-  host.innerHTML='<h3>Mes certificats AfriFloW</h3><p class="profile-note">Documents délivrés par la Direction. Un certificat partenaire mentionne obligatoirement son marché commercial.</p>'
-   +(active.length?active.map(function(c){return '<article class="pf-cert-row"><b>'+esc(c.type==="partner"?"Certificat de partenariat commercial":"Attestation de statut actionnaire")+'</b><small>Référence : '+esc(c.number)+' · délivré le '+esc(new Date(c.issuedAt).toLocaleDateString("fr-FR"))+'</small>'+(c.type==="partner"?'<small>Marché : '+esc(c.market||"Non renseigné")+'</small>':'')+'<div class="profile-actions"><button type="button" class="p" data-cert-download="'+esc(c.id)+'">Télécharger le PDF</button><a href="'+esc(c.verifyUrl)+'" target="_blank" rel="noopener noreferrer">Vérifier le certificat</a></div></article>'}).join(""):'<p class="profile-note">Aucun certificat actif. Après validation du rôle et vérification des justificatifs, la Direction peut émettre le document.</p>')
-   +(certs.some(function(c){return c.status!=="active"})?'<small>Certificats antérieurs ou invalides : '+certs.filter(function(c){return c.status!=="active"}).length+'</small>':'');
-  host.querySelectorAll("[data-cert-download]").forEach(function(btn){btn.onclick=async function(){
+  var role=d.type==="partner"?"Partenaire commercial":d.type==="shareholder"?"Actionnaire":"Membre AfriFloW";
+  var status=d.approved?"Statut confirmé dans AfriFloW":"Statut non approuvé ou à confirmer";
+  host.innerHTML='<h3>Mon attestation AfriFloW</h3><p class="profile-note">Document généré automatiquement à partir de votre profil et de votre statut actuel. Aucun administrateur ne doit émettre le document.</p>'
+   +'<div class="pf-cert-row"><b>'+esc(d.name||"Membre")+'</b><small>Rôle : '+esc(role)+'</small><small>'+esc(status)+'</small>'
+   +(d.type==="partner"?'<small>Marché commercial : '+esc(d.market||"Non renseigné")+'</small>':'')
+   +'<p class="profile-note">'+(d.approved?"Votre attestation reflète le statut actuel enregistré dans AfriFloW.":"Votre fiche est disponible. Elle ne certifie pas une qualité d’actionnaire ou de partenaire tant que le statut n’est pas approuvé.")+'</p>'
+   +'<div class="profile-actions"><button type="button" class="p" id="pfProfilePdf">Voir / télécharger en PDF</button></div></div>';
+  var btn=$("pfProfilePdf");if(btn)btn.onclick=async function(){
    btn.disabled=true;
    try{
-    var data=await certificateCall("download",{certificateId:btn.dataset.certDownload});
-    if(!(data instanceof Blob))throw new Error("Réponse PDF invalide");
-    var url=URL.createObjectURL(data),a=document.createElement("a");a.href=url;a.download="AfriFloW-certificat-"+btn.dataset.certDownload.slice(0,8)+".pdf";document.body.appendChild(a);a.click();a.remove();setTimeout(function(){URL.revokeObjectURL(url)},30000);
-   }catch(e){alert("Téléchargement impossible : "+(e.message||e))}finally{btn.disabled=false}
-  }});
- }catch(e){if(host.isConnected)host.innerHTML='<h3>Mes certificats AfriFloW</h3><p class="profile-note">Certificats indisponibles : '+esc(e.message||e)+'</p>'}
+    var blob=await certificateCall("profile_pdf");
+    if(!(blob instanceof Blob))throw new Error("Réponse PDF indisponible");
+    var url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download="AfriFloW-attestation-de-profil.pdf";document.body.appendChild(a);a.click();a.remove();
+    setTimeout(function(){URL.revokeObjectURL(url)},30000);
+   }catch(e){host.querySelector(".profile-note").textContent="Téléchargement impossible : "+(e.message||e)}
+   finally{btn.disabled=false}
+  };
+ }catch(e){if(host.isConnected)host.innerHTML='<h3>Mon attestation AfriFloW</h3><p class="profile-note">Service indisponible : '+esc(e.message||e)+'</p>'}
 }
+
 function profilePage(){
   var p=current.profile,d=current.directory,required=shareholderProfileRequired(),complete=!!p.profile_completed_at,notice=!required?'Ces informations sont facultatives pour votre compte. Vous pouvez les compléter ou les modifier à tout moment.':complete?'Votre profil actionnaire est complet. Vous pourrez le modifier à tout moment.':'Complétez les informations demandées et choisissez un avatar. '+dayText(p.profile_due_at||new Date(Date.now()+15*86400000).toISOString());
   $("profileMain").innerHTML='<div class="profile-tabs"><button type="button" class="on" data-profile-tab="me">Mon profil</button><button type="button" data-profile-tab="directory">Annuaire des membres</button></div><div class="profile-grid"><section class="profile-card"><h3>Mes informations</h3><p class="profile-status">'+esc(notice)+'</p><p class="profile-note">Le nom, la fonction, le pays, la ville et l’avatar sont visibles dans l’annuaire. Les coordonnées personnelles restent privées.</p><div class="profile-form">'
