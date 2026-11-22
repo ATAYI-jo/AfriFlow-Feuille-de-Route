@@ -1,7 +1,7 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
-const originSet=new Set(["https://afriflow-africa.onrender.com","https://atayi-jo.github.io"]);
+const originSet=new Set(["https://afriflow.pages.dev","https://afriflow-africa.onrender.com","https://atayi-jo.github.io"]);
 const root=(Deno.env.get("DROPBOX_ROOT")||"").replace(/\/+$/,"");
-function cors(req:Request){const o=req.headers.get("origin")||"";return {"Access-Control-Allow-Origin":originSet.has(o)?o:"https://afriflow-africa.onrender.com","Vary":"Origin","Access-Control-Allow-Headers":"authorization, apikey, content-type, x-client-info","Access-Control-Allow-Methods":"POST, OPTIONS","Content-Type":"application/json","Cache-Control":"no-store"}}
+function cors(req:Request){const o=req.headers.get("origin")||"";return {"Access-Control-Allow-Origin":originSet.has(o)?o:"https://afriflow.pages.dev","Vary":"Origin","Access-Control-Allow-Headers":"authorization, apikey, content-type, x-client-info","Access-Control-Allow-Methods":"POST, OPTIONS","Content-Type":"application/json","Cache-Control":"no-store"}}
 function out(req:Request,data:unknown,status=200){return new Response(JSON.stringify(data),{status,headers:cors(req)})}
 function safePath(input:unknown){const p=String(input||"");if(!p.startsWith("/")||p.includes("\\")||p.split("/").includes("..")||p.split("/").includes("."))throw Error("Chemin Dropbox invalide");if(root&&p.toLowerCase()!==root.toLowerCase()&&!p.toLowerCase().startsWith(root.toLowerCase()+"/"))throw Error("Chemin hors du dossier autorisé");return p}
 Deno.serve(async(req:Request)=>{
