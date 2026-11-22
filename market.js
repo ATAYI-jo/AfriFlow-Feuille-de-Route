@@ -653,20 +653,20 @@
         return '<article class="af-cert-admin-row"><div><strong>'+esc(person.email||"Membre")+'</strong><small>'+esc(person.kind==="partner"?"Partenaire commercial":"Actionnaire")+(active?' · Certificat émis le '+esc(new Date(active.issued_at).toLocaleDateString("fr-FR")):" · Aucun certificat actif")+'</small></div>'
           +'<div class="af-cert-actions">'+(person.kind==="shareholder"?'<label><input type="checkbox" data-cert-evidence> Justificatifs d’actionnariat vérifiés par la Direction</label>':'')
           +'<button type="button" class="af-market-secondary" data-cert-issue="'+esc(person.user_id)+'" data-cert-type="'+esc(person.kind)+'"'+(roleOk?'':' disabled')+'>'+(active?"Réémettre":"Émettre le certificat")+'</button>'
-          +(active?'<button type="button" class="af-market-secondary" data-cert-revoke="'+esc(active.id)+'">Révoquer</button>':'')+'</div></article>';
+          +(active?'<label>Motif de révocation<input type="text" data-cert-reason minlength="5" maxlength="300" placeholder="Motif obligatoire"></label><button type="button" class="af-market-secondary" data-cert-revoke="'+esc(active.id)+'">Révoquer</button>':'')+'</div></article>';
       }).join(""):'<p>Aucun partenaire ou actionnaire déclaré.</p>');
       host.querySelectorAll("[data-cert-issue]").forEach(function(btn){btn.onclick=async function(){
         var evidence=btn.closest(".af-cert-admin-row").querySelector("[data-cert-evidence]");
         if(evidence&&!evidence.checked){notice("Vérifiez les justificatifs d’actionnariat avant émission.");return}
-        if(!confirm("Confirmer l’émission officielle du certificat pour ce membre ?"))return;
+        if(btn.dataset.confirm!=="yes"){btn.dataset.confirm="yes";btn.textContent="Confirmer l’émission";return}
         btn.disabled=true;
         try{await certificatesCall("issue",{userId:btn.dataset.certIssue,type:btn.dataset.certType,legalEvidenceConfirmed:!!(evidence&&evidence.checked)});notice("Certificat émis. Le titulaire peut désormais le télécharger dans son profil.");loadCertificateAdmin(targetId)}
         catch(err){notice(err.message||"Émission impossible");btn.disabled=false}
       }});
       host.querySelectorAll("[data-cert-revoke]").forEach(function(btn){btn.onclick=async function(){
-        var reason=window.prompt("Motif de révocation (obligatoire) :");if(reason===null)return;reason=reason.trim();
+        var field=btn.closest(".af-cert-admin-row").querySelector("[data-cert-reason]"),reason=field?field.value.trim():"";
         if(reason.length<5){notice("Le motif doit comporter au moins cinq caractères.");return}
-        if(!confirm("Révoquer ce certificat ? Le QR code indiquera qu'il est invalide."))return;
+        if(btn.dataset.confirm!=="yes"){btn.dataset.confirm="yes";btn.textContent="Confirmer la révocation";return}
         btn.disabled=true;try{await certificatesCall("revoke",{certificateId:btn.dataset.certRevoke,reason:reason});notice("Certificat révoqué.");loadCertificateAdmin(targetId)}
         catch(err){notice(err.message||"Révocation impossible");btn.disabled=false}
       }});
