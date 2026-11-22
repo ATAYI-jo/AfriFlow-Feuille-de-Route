@@ -106,7 +106,12 @@ async function profilePdf(data:any){
  const body=await doc.embedFont(StandardFonts.Helvetica),
        bold=await doc.embedFont(StandardFonts.HelveticaBold),
        italic=await doc.embedFont(StandardFonts.HelveticaOblique);
- const ink=rgb(.08,.10,.10),grey=rgb(.34,.38,.37),green=rgb(.08,.32,.22);
+ // AfriFloW identity: institutional deep green + living green and mango-orange accents.
+ // The document keeps a white background and sober typography; color is used sparingly.
+ const ink=rgb(.08,.10,.10),grey=rgb(.34,.38,.37),
+       green=rgb(24/255,93/255,52/255),
+       leaf=rgb(60/255,145/255,55/255),
+       orange=rgb(231/255,135/255,17/255);
  const x=63,right=w-62,contentWidth=right-x;
  const write=(value:string,atX:number,y:number,font:any=body,size=11,color=ink)=>{
   page.drawText(ascii(value),{x:atX,y,font,size,color});
@@ -126,13 +131,17 @@ async function profilePdf(data:any){
    if(bytes.length<600000){const logo=await doc.embedPng(bytes),size=logo.scaleToFit(65,58);page.drawImage(logo,{x:(w-size.width)/2,y:h-118,width:size.width,height:size.height})}
   }
  }catch(_e){}
- centered("ATTESTATION DE "+(data.approved&&data.type==="partner"?"PARTENARIAT COMMERCIAL":data.approved&&data.type==="shareholder"?"STATUT ACTIONNAIRE":"PROFIL"),h-157,bold,16);
+ // Balanced visual anchor below the centered official AfriFloW logo.
+ page.drawLine({start:{x:w/2-31,y:h-131},end:{x:w/2+17,y:h-131},thickness:2.5,color:leaf});
+ page.drawLine({start:{x:w/2+19,y:h-131},end:{x:w/2+31,y:h-131},thickness:2.5,color:orange});
+ const title="ATTESTATION DE "+(data.approved&&data.type==="partner"?"PARTENARIAT COMMERCIAL":data.approved&&data.type==="shareholder"?"STATUT ACTIONNAIRE":"PROFIL");
+ centered(title,h-157,bold,title.length>35?14:16,green);
  centered("AfriFloW profile attestation",h-175,italic,10,grey);
  write("La Direction d'AfriFloW constate que",x,h-248,body,11);
  write("AfriFloW management confirms that",x,h-265,italic,10,grey);
  let name=ascii(data.name||"Membre AfriFloW"),nameSize=15;
  while(nameSize>10&&bold.widthOfTextAtSize(name,nameSize)>contentWidth)nameSize--;
- write(name,x,h-305,bold,nameSize);
+ write(name,x,h-305,bold,nameSize,ink);
  let yy=h-344;
  if(data.birth){write("Date de naissance (date of birth) : "+new Date(data.birth+"T12:00:00Z").toLocaleDateString("fr-FR",{timeZone:"UTC"}),x,yy,body,10.5);yy-=19;}
  if(data.city||data.country){write("Localisation (location) : "+[data.city,data.country].filter(Boolean).join(", "),x,yy,body,10.5);yy-=19;}
@@ -145,11 +154,12 @@ async function profilePdf(data:any){
   :"dispose d'un profil AfriFloW dont le statut institutionnel reste a confirmer.";
  yy=wrapped(intro,x,yy,contentWidth,body,11,16);
  yy-=13;
- page.drawLine({start:{x,y:yy},end:{x:right,y:yy},thickness:.7,color:green});
+ page.drawLine({start:{x,y:yy},end:{x:right,y:yy},thickness:1,color:green});
+ page.drawLine({start:{x:right-47,y:yy},end:{x:right,y:yy},thickness:2.2,color:orange});
  yy-=33;
  const labelX=x,valueX=240,valueWidth=right-valueX;
  function row(label:string,value:string){
-  write(label,labelX,yy,bold,10);
+  write(label,labelX,yy,bold,10,green);
   const next=wrapped(value||"Non renseigne",valueX,yy,valueWidth,body,10.5,15);
   yy=Math.min(yy-25,next-12);
  }
@@ -164,10 +174,11 @@ async function profilePdf(data:any){
  write("Etabli automatiquement le "+date,signX,152,body,10);
  write("Automatically generated on "+date,signX,136,italic,9.5,grey);
  write("Pour AfriFloW",signX,103,body,11);
- write("La Direction",signX,85,bold,11);
+ write("La Direction",signX,85,bold,11,green);
  // Plain disclaimer is mandatory because an account role does not establish
  // legal share ownership or a signed commercial mandate.
- page.drawLine({start:{x,y:59},end:{x:right,y:59},thickness:.4,color:grey});
+ page.drawLine({start:{x,y:59},end:{x:right,y:59},thickness:.5,color:leaf});
+ page.drawLine({start:{x:right-40,y:59},end:{x:right,y:59},thickness:1.3,color:orange});
  write("Document genere depuis les donnees du profil, sans signature ni tampon.",x,46,italic,8,grey);
  write("Ne remplace pas un acte d'actionnariat ou un accord de partenariat.",x,34,italic,8,grey);
  return doc.save();
