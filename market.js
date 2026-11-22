@@ -838,7 +838,7 @@
     // Private news are taken only from the catalogue returned under Supabase RLS.
     var member = state.context && state.context.kind !== "public";
     if (!member) {
-      return '<aside class="af-ali-side af-welcome-guest" aria-label="Bienvenue sur AfriFloW"><h2>Bienvenue</h2></aside>';
+      return '<aside class="af-ali-side af-welcome-guest" aria-label="Bienvenue sur AfriFloW"><h2 class="af-welcome-animated" aria-hidden="true" lang="fr">Bienvenue</h2></aside>';
     }
     var news = state.products.filter(function (item) {
       return isAnnouncement(item) &&
@@ -1026,9 +1026,69 @@
       + '<form class="af-market-admin-card" id="afAiRequest"><h3>Pipeline IA</h3><div id="afAiStatus" class="af-market-status">Vérification de la configuration…</div><label>Produit<select required name="productId">' + opts + '</select></label><label>Consigne de transformation<textarea required name="prompt" minlength="8" maxlength="2000" placeholder="Conserver exactement le produit ; modifier seulement l’ambiance…"></textarea></label><small>L’IA travaille uniquement côté serveur. Chaque variante créée reste en attente de votre approbation.</small><button class="af-market-secondary">Créer une variante IA</button></form>'
       + '</div><div id="afMarketAdminList" class="af-market-admin-list"><p>Chargement des brouillons et variantes…</p></div><div id="afMarketQuotes" class="af-market-admin-list"></div><div id="afAccessAdmin" class="af-partner-admin"><p>Chargement des utilisateurs et des accès…</p></div><div id="afPartnerAdmin" class="af-partner-admin"><p>Chargement des partenaires commerciaux…</p></div><div id="afDisputeAdmin" class="af-partner-admin"><p>Chargement des contestations…</p></div></section>';
   }
+  // Translations in widely used official languages; independent of the user's locale.
+  // Keep the accessible label stable while the decorative text is animated.
+  var welcomeTranslations = [
+    ["fr", "Bienvenue"], ["en", "Welcome"], ["pt", "Bem-vindo"],
+    ["es", "Bienvenido"], ["ar", "أهلاً وسهلاً"], ["sw", "Karibu"],
+    ["de", "Willkommen"], ["it", "Benvenuto"], ["nl", "Welkom"],
+    ["zh", "欢迎"], ["hi", "स्वागत है"], ["ja", "ようこそ"],
+    ["ko", "환영합니다"], ["ru", "Добро пожаловать"], ["tr", "Hoş geldiniz"],
+    ["id", "Selamat datang"], ["el", "Καλώς ήρθατε"], ["he", "ברוכים הבאים"]
+  ];
+  var welcomeTimer = null;
+  function clearWelcomeAnimation() {
+    if (welcomeTimer !== null) clearTimeout(welcomeTimer);
+    welcomeTimer = null;
+  }
+  function startWelcomeAnimation() {
+    clearWelcomeAnimation();
+    var title = document.querySelector("#market-view .af-welcome-animated");
+    if (!title) return;
+    var reduced = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (reduced) { title.textContent = "Bienvenue"; return; }
+    var words = welcomeTranslations, index = 0;
+    var segmenter = typeof Intl !== "undefined" && Intl.Segmenter
+      ? new Intl.Segmenter(undefined, { granularity: "grapheme" }) : null;
+    function characters(word) {
+      return segmenter ? Array.from(segmenter.segment(word), function (part) { return part.segment; }) : Array.from(word);
+    }
+    function step() {
+      if (!title.isConnected) { clearWelcomeAnimation(); return; }
+      var entry = words[index], letters = characters(entry[1]), visible = 0, deleting = false;
+      title.lang = entry[0];
+      title.dir = entry[0] === "ar" || entry[0] === "he" ? "rtl" : "ltr";
+      title.textContent = "";
+      function tick() {
+        if (!title.isConnected) { clearWelcomeAnimation(); return; }
+        if (document.hidden) {
+          welcomeTimer = setTimeout(tick, 1000);
+          return;
+        }
+        if (!deleting) {
+          visible = Math.min(visible + 1, letters.length);
+          title.textContent = letters.slice(0, visible).join("");
+          if (visible === letters.length) {
+            deleting = true;
+            welcomeTimer = setTimeout(tick, 1800);
+          } else welcomeTimer = setTimeout(tick, 95);
+        } else {
+          visible = Math.max(visible - 1, 0);
+          title.textContent = letters.slice(0, visible).join("");
+          if (visible === 0) {
+            index = (index + 1) % words.length;
+            welcomeTimer = setTimeout(step, 380);
+          } else welcomeTimer = setTimeout(tick, 60);
+        }
+      }
+      tick();
+    }
+    step();
+  }
   function render() {
     var root = el("market-view"); if (!root) return;
     clearHero();
+    clearWelcomeAnimation();
     var mode = roleMode(state.context.market);
     root.innerHTML = top() + '<main class="af-market-main">' + (mode === "partner_approved"
       ? '<section class="af-ali">' + catsHtml() + heroHtml() + sideHtml() + scrollCueHtml() + '</section>' + partnerContent() + announcementsHtml()
@@ -1037,7 +1097,7 @@
       : mode === "shareholder_pending"
       ? '<section class="af-ali">' + catsHtml() + heroHtml() + sideHtml() + scrollCueHtml() + '</section>' + shareholderWaitContent() + announcementsHtml()
       : catalogContent()) + "</main>";
-    bind(); startHero();
+    bind(); startHero(); startWelcomeAnimation();
   }
   function startHero() {
     var hero = el("afHero"); if (!hero) return;
