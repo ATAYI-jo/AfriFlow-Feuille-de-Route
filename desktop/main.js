@@ -1,8 +1,8 @@
 const { app, BrowserWindow, shell, Tray, Menu, Notification, ipcMain, nativeImage, powerMonitor } = require('electron');
 const path = require('path');
 const fs = require('fs');
-const HOME = 'https://afriflow-africa.onrender.com/';
-const allowed = new Set(['afriflow-africa.onrender.com','atayi-jo.github.io']);
+const HOME = 'https://afriflow.pages.dev/';
+const allowed = new Set(['afriflow.pages.dev','afriflow-africa.onrender.com','atayi-jo.github.io']);
 const teamsHosts = new Set(['teams.microsoft.com','teams.live.com','teams.microsoft.us']);
 const single = app.requestSingleInstanceLock();
 let win, tray, quitting = false;
