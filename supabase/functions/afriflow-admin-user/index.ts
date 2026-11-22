@@ -1,6 +1,6 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 
-const origins = new Set(["https://afriflow-africa.onrender.com", "https://atayi-jo.github.io"]);
+const origins = new Set(["https://afriflow.pages.dev","https://afriflow-africa.onrender.com", "https://atayi-jo.github.io"]);
 function headers(req: Request) {
   const configured = (Deno.env.get("AFRIFLOW_ALLOWED_ORIGINS") || "").split(",").map((value) => value.trim()).filter(Boolean);
   const origin = req.headers.get("origin") || "";
