@@ -711,3 +711,19 @@ body.af-market-mode #market-view{display:block}
 .af-cert-admin-row small{display:block;margin-top:5px}
 .af-cert-actions{display:flex;align-items:center;flex-wrap:wrap;gap:12px}
 .af-cert-actions label{font-size:.83rem}
+
+/* Progressive multilingual welcome — keep layout steady as words type and erase. */
+#market-view .af-welcome-guest .af-welcome-animated {
+  min-height:1.25em;
+  max-width:100%;
+  min-width:0;
+  overflow-wrap:anywhere;
+  text-wrap:balance;
+  unicode-bidi:plaintext;
+  font-size:clamp(1.2rem,2.1vw,2rem);
+  line-height:1.25;
+  text-align:center;
+}
+@media (prefers-reduced-motion:reduce) {
+  #market-view .af-welcome-guest .af-welcome-animated { animation:none!important; }
+}
