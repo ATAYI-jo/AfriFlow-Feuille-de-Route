@@ -3,7 +3,7 @@ import { createClient } from "npm:@supabase/supabase-js@2.49.10";
 import { PDFDocument, StandardFonts, rgb } from "npm:pdf-lib@1.17.1";
 import qrcode from "npm:qrcode-generator@1.4.4";
 
-const ORIGIN="https://afriflow-africa.onrender.com";
+const ORIGIN="https://afriflow.pages.dev";
 const cors={"Access-Control-Allow-Origin":ORIGIN,"Access-Control-Allow-Headers":"authorization,apikey,content-type,x-client-info","Access-Control-Allow-Methods":"GET, POST, OPTIONS","Vary":"Origin"};
 const json=(body:unknown,status=200)=>new Response(JSON.stringify(body),{status,headers:{...cors,"Content-Type":"application/json; charset=utf-8","Cache-Control":"no-store"}});
 const uuid=(s:unknown)=>typeof s==="string"&&/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(s);
