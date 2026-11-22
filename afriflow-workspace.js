@@ -111,9 +111,9 @@ function restorePreviousView(){
     }
     return;
   }
-  var ids=BASE.concat(X.nav,[{id:"messages"},{id:"admin"}]).map(function(x){return x.id});
+  var ids=BASE.concat(X.nav,[{id:"messages"},{id:"partners"},{id:"admin"}]).map(function(x){return x.id});
   if(ids.indexOf(saved.id)===-1)return;
-  if(saved.id==="admin"&&!isAdmin())return;
+  if((saved.id==="admin"||saved.id==="partners")&&!isAdmin())return;
   if(saved.id==="market"&&!window.AfriMarket)return;
   show(saved.id,{restore:true});
   restoreScroll();
@@ -165,7 +165,7 @@ setInterval(function(){
   renderMarketplaceLabel();
 },3000);
 function buildNav(){
-  var base=BASE.slice(); base.push({id:"messages",n:"Messagerie"}); if(isAdmin())base.push({id:"admin",n:"Administration"});
+  var base=BASE.slice(); base.push({id:"messages",n:"Messagerie"}); if(isAdmin()){base.push({id:"partners",n:"Partenaires"});base.push({id:"admin",n:"Administration"})}
   var nb=base.length,h=""; base.concat(X.nav).forEach(function(it,i){
     var badge=(it.id==="admin"&&AF_PEND)?' ('+AF_PEND+')':''; if(it.id==="messages"&&window.MSG_UNREAD)badge=' ('+window.MSG_UNREAD+')';
     h+='<div class="nvr'+(it.id==="home"?' nvr-home':'')+'"><button type="button" class="nv'+(it.id===cur?' on':'')+'" data-id="'+esc(it.id)+'">'+esc(it.n)+badge+'</button>'+(i>=nb&&isAdmin()?'<button type="button" class="nx" data-del="'+esc(it.id)+'" aria-label="Supprimer '+esc(it.n)+'">✕</button>':'')+'</div>';
@@ -181,11 +181,11 @@ function show(id,options){
   var preserving=!!options.restore;
   wkClean(); cur=id; sel=null; W.tv=null; W.pv=null; W.tvAt=0;
   if(id==="market"&&window.AfriMarket){rememberView("market");window.AfriMarket.open({kind:"workspace",market:{access_mode:"collaborator"}});buildNav();closeNav();return}
-  if(id==="admin"&&!isAdmin())cur=id="home";
+  if((id==="admin"||id==="partners")&&!isAdmin())cur=id="home";
   rememberView(id);
   $("view-home").style.display=id==="home"?"":"none";
   $("viewHost").style.display=id==="home"?"none":"";
-  if(id==="admin")renAdmin();else if(id==="messages"){if(window.renMsg)window.renMsg()}
+  if(id==="admin")renAdmin();else if(id==="partners")renPartners();else if(id==="messages"){if(window.renMsg)window.renMsg()}
   else if(id!=="home"){
     var run=function(){ if(id==="treasury")renTre(); else renEd(id) };
     if(cep(id))run(); else viewPub(id,function(p){ W.tvAt=p.at; if(id==="treasury")W.tv=p.tre; else W.pv=p; run() });
@@ -309,7 +309,7 @@ var W={open:false,id:null,page:null,sl:null,S:null,D:null,kd:null,tv:null,pv:nul
   mammoth:["https://cdn.jsdelivr.net/npm/mammoth@1.6.0/mammoth.browser.min.js",function(){return window.mammoth}]};
 function lib(n){ var l=LIBS[n]; if(l[1]())return Promise.resolve(); return libs[n]||(libs[n]=loadJs(l[0]).catch(function(e){delete libs[n];throw new Error("Module "+n+" indisponible (connexion ?)")})); }
 function toast(m){var t=document.createElement("div");t.textContent=m;t.setAttribute("role","status");t.style.cssText="position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:var(--green);color:#fff;padding:10px 18px;border-radius:12px;z-index:1200;max-width:90vw;box-shadow:0 8px 24px rgba(0,0,0,.25)";document.body.appendChild(t);setTimeout(function(){t.remove()},5000)}
-function pageName(id){return (BASE.concat(X.nav,[{id:"admin",n:"Administration"},{id:"messages",n:"Messagerie"}]).filter(function(x){return x.id===id})[0]||{n:"Direction"}).n}
+function pageName(id){return (BASE.concat(X.nav,[{id:"admin",n:"Administration"},{id:"partners",n:"Partenaires"},{id:"messages",n:"Messagerie"}]).filter(function(x){return x.id===id})[0]||{n:"Direction"}).n}
 function safeName(s){return String(s||"").replace(/[<>:"\/\\|?*\u0000-\u001f]/g,"-").trim().slice(0,80)||"Sans titre"}
 function fdt(t){return new Date(t).toLocaleString("fr-FR",{dateStyle:"short",timeStyle:"short"})}
 function uid(){return "d"+Date.now().toString(36)+Math.floor(Math.random()*1e4).toString(36)}
@@ -739,6 +739,22 @@ function gtxt(g){g=g||[];return g.length?(g.indexOf("all")>-1?"Tout (modificatio
 function drawOnline(){
   var el=$("adOn");if(!el)return;var L=window.AFRI?AFRI.onlineList():[];
   el.innerHTML='<h3>En ligne maintenant ('+L.length+')</h3>'+(L.length?'<div class="xlw"><table class="t"><thead><tr><th>Nom</th><th>Email</th><th>Rôle</th><th>Page consultée</th><th>Connecté depuis</th></tr></thead><tbody>'+L.map(function(u){return '<tr><td>'+esc(u.name||"—")+'</td><td>'+esc(u.email)+(u.email===loggedUserEmail?' (vous)':'')+'</td><td>'+(u.role==="admin"?"Administrateur":u.role==="editor"?"Éditeur":"Lecteur")+'</td><td>'+esc(u.page||"")+'</td><td>'+new Date(u.since).toLocaleTimeString("fr-FR",{hour:"2-digit",minute:"2-digit"})+'</td></tr>'}).join("")+'</tbody></table></div>':'<p style="color:var(--muted)">Connexion au canal en temps réel en cours…</p>');
+}
+async function renPartners(){
+  if(!isAdmin()){show("home");return}
+  var host=$("viewHost");
+  host.innerHTML='<div class="toolbar"><b>Partenaires · Suivi des marchés</b><div class="toolbar-actions"><button type="button" id="partnersRefresh">Actualiser</button></div></div>'
+    +'<section class="mt-box"><h3>Partenaires par marché commercial</h3><p>Attribuez un marché à chaque partenaire et suivez ses allocations, déclarations de ventes et contestations. Les marchés non attribués restent explicitement non renseignés.</p><div id="partnersBoard">Chargement des partenaires…</div></section>'
+    +'<section class="mt-box" style="margin-top:18px"><h3>Demandes de partenariat et accès</h3><div id="partnersAccess">Chargement des demandes…</div></section>'
+    +'<section class="mt-box" style="margin-top:18px"><h3>Conditions commerciales</h3><div id="partnersTerms">Chargement des conditions…</div></section>'
+    +'<section class="mt-box" style="margin-top:18px"><h3>Contestations</h3><div id="partnersDisputes">Chargement des contestations…</div></section>';
+  if(window.AfriMarket){
+    if(window.AfriMarket.renderPartnerManagement)window.AfriMarket.renderPartnerManagement("partnersBoard");
+    if(window.AfriMarket.renderAccessAdmin)window.AfriMarket.renderAccessAdmin("partnersAccess");
+    if(window.AfriMarket.renderPartnerTermsAdmin)window.AfriMarket.renderPartnerTermsAdmin("partnersTerms");
+    if(window.AfriMarket.renderDisputesAdmin)window.AfriMarket.renderDisputesAdmin("partnersDisputes");
+  }else{$("partnersBoard").textContent="Module Marketplace indisponible."}
+  $("partnersRefresh").onclick=renPartners;
 }
 async function renAdmin(){
   var h=$("viewHost");
