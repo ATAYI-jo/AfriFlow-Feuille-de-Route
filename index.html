@@ -3027,11 +3027,11 @@ if ('serviceWorker' in navigator) {
 }
 </script>
 <style>
-#intro{background:rgba(16,61,42,.22)!important}
-#intro .intro-video-backdrop{display:block!important;opacity:.42!important;filter:blur(22px) saturate(125%)!important}
-#intro::before{display:block!important;content:""!important;position:absolute!important;inset:0!important;background:linear-gradient(135deg,rgba(255,255,255,.18),rgba(15,67,44,.24))!important;-webkit-backdrop-filter:blur(10px)!important;backdrop-filter:blur(10px)!important;z-index:1!important}
+#intro{background:#fff!important}
+#intro .intro-video-backdrop{display:none!important;opacity:0!important;filter:none!important}
+#intro::before{display:none!important;content:none!important;background:none!important;-webkit-backdrop-filter:none!important;backdrop-filter:none!important}
 #intro::after{display:none!important}
-#intro #introVideo{position:relative!important;z-index:2!important;width:100vw!important;height:100dvh!important;max-width:100vw!important;max-height:100dvh!important;object-fit:contain!important;background:transparent!important;border:0!important;border-radius:0!important;box-shadow:none!important;mix-blend-mode:normal!important;filter:none!important;-webkit-backdrop-filter:none!important;backdrop-filter:none!important}
+#intro #introVideo{position:relative!important;z-index:2!important;width:100vw!important;height:100dvh!important;max-width:100vw!important;max-height:100dvh!important;object-fit:contain!important;background:#fff!important;border:0!important;border-radius:0!important;box-shadow:none!important;mix-blend-mode:normal!important;filter:none!important;-webkit-backdrop-filter:none!important;backdrop-filter:none!important}
 /* Accueil : le logo centré est conservé ; le bandeau titre illustré est retiré. */
 #view-home .brand{justify-content:center!important;padding:30px 20px!important;gap:0!important}
 #view-home .brand>div:not(.logo-img){display:none!important}
