@@ -40,15 +40,16 @@ Deno.serve(async (req: Request) => {
 
     if (action === "dashboard") {
       if (!isApprovedPartner) return reply(req, { error: "Votre espace partenaire attend une approbation d’AfriFloW." }, 403);
-      const [terms, products, orders, reports] = await Promise.all([
+      const [terms, products, orders, reports, market] = await Promise.all([
         service.from("afriflow_partner_terms").select("commission_rate,is_enabled,payment_notes").eq("partner_user_id", user.id).maybeSingle(),
         service.from("afriflow_market_products").select("id,name,category,description,price,currency,minimum_order_quantity,is_in_stock").eq("listing_type", "product").eq("is_active", true).eq("is_in_stock", true).order("created_at", { ascending: false }).limit(100),
         service.from("afriflow_partner_orders").select("id,product_id,quantity_requested,unit_price,currency,status,note,created_at,product:afriflow_market_products(name)").eq("partner_user_id", user.id).order("created_at", { ascending: false }).limit(100),
-        service.from("afriflow_partner_sales_reports").select("id,order_id,product_id,quantity_sold,unit_sale_price,gross_amount,commission_rate,afriflow_amount,partner_net_amount,currency,status,note,created_at,product:afriflow_market_products(name)").eq("partner_user_id", user.id).order("created_at", { ascending: false }).limit(100)
+        service.from("afriflow_partner_sales_reports").select("id,order_id,product_id,quantity_sold,unit_sale_price,gross_amount,commission_rate,afriflow_amount,partner_net_amount,currency,status,note,created_at,product:afriflow_market_products(name)").eq("partner_user_id", user.id).order("created_at", { ascending: false }).limit(100),
+        service.from("afriflow_partner_markets").select("market_name,country_code").eq("partner_user_id", user.id).maybeSingle()
       ]);
-      const failure = [terms, products, orders, reports].find((result) => result.error);
+      const failure = [terms, products, orders, reports, market].find((result) => result.error);
       if (failure?.error) throw new Error("Chargement du portail partenaire indisponible");
-      return reply(req, { ok: true, enabled: Boolean(terms.data?.is_enabled), terms: terms.data || { commission_rate: 0, payment_notes: "" }, products: products.data || [], orders: orders.data || [], reports: reports.data || [] });
+      return reply(req, { ok: true, enabled: Boolean(terms.data?.is_enabled), terms: terms.data || { commission_rate: 0, payment_notes: "" }, products: products.data || [], orders: orders.data || [], reports: reports.data || [], market: market.data || null });
     }
 
     if (action === "request_order") {
