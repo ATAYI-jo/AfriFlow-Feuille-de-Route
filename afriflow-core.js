@@ -1150,7 +1150,7 @@ function initIntro(){
   // Preserve every source frame; allow a quiet 850 ms hold before the existing fade.
   v.addEventListener("ended", function(){setTimeout(finish,850)});
   v.addEventListener("error", finish);
-  if(bg){
+  if(bg && getComputedStyle(bg).display !== 'none'){
     bg.muted=true; bg.volume=0;
     bg.play().catch(function(){});
     v.addEventListener("timeupdate",function(){ if(Math.abs(bg.currentTime-v.currentTime)>.25){try{bg.currentTime=v.currentTime}catch(e){}} });
