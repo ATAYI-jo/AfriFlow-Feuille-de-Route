@@ -37,3 +37,23 @@ Les migrations à appliquer dans l’ordre sont dans `supabase/migrations/`. Les
 - `afriflow-market-admin` — JWT obligatoire et contrôle de l’administrateur dans `afriflow_admins`
 
 Après toute modification du Market, vérifier les politiques RLS et les conseillers Supabase. Les alertes déjà présentes sur les modules Push et Réunion sont antérieures au Market.
+
+
+## Signalements partenaires — Dropbox comme archive documentaire
+
+Les nouvelles **photos, vidéos et snapshots JSON des dossiers de signalement** sont envoyés à Dropbox via la fonction Supabase `afriflow-partner-dropbox`. L'interface ne reçoit jamais de jeton Dropbox. Supabase conserve les comptes, l'état des contestations et un index technique minimal afin de sécuriser les accès et les droits de l'administration.
+
+Dossier créé à la première contestation :
+```text
+<racine Dropbox configurée ou /AfriFlow>/Marches/<code-pays>-<marché>/
+  Partenaires/<user-id>/Signalements/<dispute-id>/
+    Dossier_Signalement.json
+    Photos/<uuid>.jpg
+    Videos/<uuid>.mp4
+```
+
+Photos : JPEG, PNG, WebP. Vidéos : MP4 ou WebM. Maximum **3 fichiers, 25 Mio par fichier** depuis le formulaire (transfert fragmenté). La fonction crée les dossiers Dropbox selon l'attribution administrative du marché. Les consultations sont autorisées au partenaire propriétaire et aux administrateurs AfriFloW, puis fournissent des liens Dropbox temporaires. Le JSON est réactualisé après l'envoi de pièces et lors de la décision de l'administration.
+
+Secrets serveur nécessaires : `DROPBOX_APP_KEY`, `DROPBOX_APP_SECRET` si nécessaire, et l'autorisation de renouvellement disponible dans `afriflow_private_integrations` ou `DROPBOX_REFRESH_TOKEN`. Racine : `DROPBOX_PARTNER_ROOT` facultatif, sinon `DROPBOX_ROOT`, sinon `/AfriFlow`.
+
+La table `afriflow_partner_dropbox_files` indexe les références Dropbox (RLS propriétaire/admin). Les dossiers existants dans l'ancien stockage Supabase restent accessibles en lecture et ne sont pas supprimés. Le bucket Supabase historique est conservé pour éviter toute perte. Avant la mise en exploitation, effectuer un test authentifié de création de contestation, transfert d'une photo et d'une vidéo, réouverture des pièces et décision administrateur, puis contrôler le contenu dans Dropbox. La configuration ne doit pas être présentée comme validée de bout en bout sans ce test.
