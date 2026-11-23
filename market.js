@@ -27,6 +27,10 @@
       globe: '<circle cx="12" cy="12" r="9"></circle><path d="M3 12h18M12 3c3 3 3 15 0 18M12 3c-3 3-3 15 0 18"></path>',
       categories: '<path d="M4 5h7v7H4zM14 5h6v6h-6zM4 15h7v5H4zM14 14h6v6h-6z"></path>',
       down: '<path d="m5 9 7 7 7-7"></path>',
+      alert: '<path d="M10.3 3.9 2.6 17.2A2 2 0 0 0 4.3 20h15.4a2 2 0 0 0 1.7-2.8L13.7 3.9a2 2 0 0 0-3.4 0Z"></path><path d="M12 9v4M12 17h.01"></path>',
+      camera: '<path d="M4 7h4l2-3h4l2 3h4v13H4z"></path><circle cx="12" cy="13" r="3"></circle>',
+      video: '<rect x="3" y="6" width="14" height="12" rx="2"></rect><path d="m17 10 4-3v10l-4-3"></path>',
+      bell: '<path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4"></path>',
       leaf: '<path d="M20 4C9 4 5 9 5 16c8 1 15-3 15-12Z"></path><path d="M4 20c3-6 6-8 11-11"></path>',
       home: '<path d="m3 10 9-7 9 7v11H3z"></path><path d="M9 21v-7h6v7"></path>',
       sparkle: '<path d="m12 2 2.5 7.5L22 12l-7.5 2.5L12 22l-2.5-7.5L2 12l7.5-2.5Z"></path>'
@@ -406,7 +410,7 @@
       var p=products.filter(function(x){return x.id===o.product_id})[0]||((Array.isArray(o.product)?o.product[0]:o.product)||{});
       return '<option value="'+esc(o.id)+'">'+esc(p.name||"Produit")+' · '+esc(o.quantity_requested)+' unités</option>';
     }).join("");
-    return '<section class="af-partner-card af-disputes af-partner-section" id="afPartnerDisputeSection"><div class="af-dispute-title"><span class="af-dispute-mark" aria-hidden="true">!</span><div><h2>Signaler un problème de produit</h2><p>Votre signalement est confidentiel et suivi par AfriFloW.</p></div></div><p>Contestez un défaut de qualité, de quantité, d’emballage, de livraison ou de traçabilité. AfriFloW répondra dans votre espace.</p>'
+    return '<section class="af-partner-card af-disputes af-partner-section" id="afPartnerDisputeSection"><div class="af-dispute-title"><span class="af-dispute-mark" aria-hidden="true">'+icon("alert")+'</span><div><h2>Signaler un problème de produit</h2><p>Votre signalement est confidentiel et suivi par AfriFloW.</p></div></div><p>Contestez un défaut de qualité, de quantité, d’emballage, de livraison ou de traçabilité. AfriFloW répondra dans votre espace.</p>'
       +'<form id="afPartnerDisputeForm"><label>Allocation concernée<select name="orderId" required><option value="">Choisir une allocation</option>'+opts+'</select></label>'
       +'<label>Nature du problème<select name="category" required><option value="qualite">Qualité du produit</option><option value="quantite">Quantité manquante</option><option value="livraison">Livraison ou transport</option><option value="emballage">Emballage endommagé</option><option value="tracabilite">Origine / lot / traçabilité</option><option value="autre">Autre</option></select></label>'
       +'<label>Référence du lot, si connue<input name="batch" maxlength="100" placeholder="Facultatif — code imprimé sur le sachet"></label>'
@@ -447,7 +451,7 @@
   function disputeEvidenceHtml(disputeId,files){
     var items=(files||[]).filter(function(f){return f.dispute_id===disputeId});
     return items.length?'<div class="af-dispute-evidence-list"><strong>Pièces jointes</strong>'
-      +items.map(function(f){return '<button type="button" class="af-dispute-evidence-link" data-dispute-file="'+esc(f.object_path||"")+'" data-dropbox-file="'+esc(f.id||"")+'" data-dispute-id="'+esc(disputeId)+'">'+esc(f.content_type.startsWith("video/")?"🎬 Vidéo : ":"📷 Photo : ")+esc(f.file_name)+'</button>';}).join("")
+      +items.map(function(f){return '<button type="button" class="af-dispute-evidence-link" data-dispute-file="'+esc(f.object_path||"")+'" data-dropbox-file="'+esc(f.id||"")+'" data-dispute-id="'+esc(disputeId)+'">'+icon(f.content_type.startsWith("video/")?"video":"camera")+'<span>'+esc(f.file_name)+'</span>'+'</button>';}).join("")
       +'</div>':"";
   }
   function bindDisputeEvidenceLinks(root){
@@ -632,7 +636,8 @@
       + partnerDisputesHtml(orders,products)
       + '<section class="af-partner-card af-partner-follow"><h2>Suivi des allocations</h2>' + (orders.length ? '<div class="af-partner-list">' + orders.map(function (order) { var product = Array.isArray(order.product) ? order.product[0] : order.product; return '<article><div><b>' + esc(product && product.name || "Produit") + '</b><small>' + esc(order.quantity_requested) + ' unités demandées · ' + esc(partnerMoney(order.unit_price, order.currency)) + ' / unité</small></div>' + partnerStatus(order.status) + '</article>'; }).join("") + '</div>' : '<p class="af-partner-empty">Aucune demande produit pour le moment.</p>') + '</section>'
       + '<section class="af-partner-card af-partner-follow"><h2>Historique financier</h2>' + (reports.length ? '<div class="af-partner-list">' + reports.map(function (report) { var product = Array.isArray(report.product) ? report.product[0] : report.product; return '<article><div><b>' + esc(product && product.name || "Produit") + '</b><small>' + esc(report.quantity_sold) + ' vendu(s) · CA ' + esc(partnerMoney(report.gross_amount, report.currency)) + ' · net partenaire ' + esc(partnerMoney(report.partner_net_amount, report.currency)) + '</small></div>' + partnerStatus(report.status) + '</article>'; }).join("") + '</div>' : '<p class="af-partner-empty">Vos ventes déclarées apparaîtront ici.</p>') + '</section>'
-      + (terms.payment_notes ? '<p class="af-partner-note"><b>Note AfriFloW :</b> ' + esc(terms.payment_notes) + '</p>' : '') + '</div></section>';
+      + '</div>'
+      + (terms.payment_notes ? '<aside class="af-partner-note" aria-label="Conditions financières AfriFloW"><b>Note AfriFloW :</b> ' + esc(terms.payment_notes) + '</aside>' : '') + '</section>';
   }
   async function loadPartnerPortal() {
     if (!sb()) return;
@@ -1016,7 +1021,7 @@
   }
   function relevantBell(item) {
     return item && item.news_relevance === true
-      ? '<span class="af-news-relevance" title="Actualité en lien avec les activités AfriFloW" aria-label="Actualité pertinente pour AfriFloW">🔔 Pertinent pour AfriFloW</span>'
+      ? '<span class="af-news-relevance" title="Actualité en lien avec les activités AfriFloW" aria-label="Actualité pertinente pour AfriFloW">'+icon("bell")+' Pertinent pour AfriFloW</span>'
       : "";
   }
   function announcementCard(item) {
@@ -1050,7 +1055,7 @@
       return isAnnouncement(item) &&
         (item.category === "Actualités mondiales" || item.category === "Veille agroalimentaire");
     }).slice(0, 3);
-    var headline = '<div class="af-side-news-heading"><span aria-hidden="true">📰</span><h2>Actualités AfriFloW</h2></div>';
+    var headline = '<div class="af-side-news-heading"><span aria-hidden="true">'+icon("news")+'</span><h2>Actualités AfriFloW</h2></div>';
     var body = news.length
       ? '<ul class="af-side-news-list">' + news.map(function (item) {
           return '<li><button type="button" class="af-side-news-item" data-market-detail="' + esc(item.id) +
@@ -1061,7 +1066,7 @@
                 : '<span class="af-market-fallback"><img src="logo.png" alt="" aria-hidden="true"></span>') +
             '</span>' +
             '<span class="af-side-news-copy">' +
-              (item.news_relevance === true ? '<span class="af-side-news-bell" aria-label="Pertinent pour AfriFloW">🔔</span>' : '') +
+              (item.news_relevance === true ? '<span class="af-side-news-bell" aria-label="Pertinent pour AfriFloW">'+icon("bell")+'</span>' : '') +
               '<span>' + esc(item.name) + '</span>' +
             '</span></button></li>';
         }).join("") + '</ul>'
@@ -1361,7 +1366,6 @@
     root.innerHTML = top() + '<main class="af-market-main">' + (mode === "partner_approved"
       ? '<div class="af-partner-top-section">'+partnerLandingHeader()+'<button type="button" class="af-partner-scroll-cue" data-partner-scroll="afProductsTop" aria-label="Défiler vers les produits">'+icon("down")+'<span>Défiler</span></button></div>'
         + partnerLandingProducts()
-        + '<div class="af-partner-next-cue"><button type="button" class="af-partner-scroll-cue" data-partner-scroll="afPartnerActivity" aria-label="Défiler vers les outils du partenaire">'+icon("down")+'<span>Activité</span></button></div>'
         + partnerContent()
       : mode === "partner_waiting"
       ? '<section class="af-ali">' + catsHtml() + heroHtml() + sideHtml() + scrollCueHtml() + '</section>' + waitContent() + announcementsHtml()
@@ -1394,7 +1398,20 @@
     function scrollMarketTo(id) {
       var target = el(id);
       if (!target && id === "afProductsTop") target = document.querySelector("#market-view .af-ali + *");
-      if (target) target.scrollIntoView({ behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "start" });
+      if (!target) return;
+      var reduced=window.matchMedia&&window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      var top=target.getBoundingClientRect().top+window.scrollY-96;
+      if (reduced) { window.scrollTo(0,Math.max(0,top)); return; }
+      // Explicit eased animation for hosts where native scrollIntoView is abrupt.
+      var from=window.scrollY,to=Math.max(0,top),start=null,duration=Math.min(950,Math.max(420,Math.abs(to-from)*0.65));
+      function frame(now){
+        if(start===null)start=now;
+        var t=Math.min(1,(now-start)/duration);
+        var ease=t<.5?4*t*t*t:1-Math.pow(-2*t+2,3)/2;
+        window.scrollTo(0,from+(to-from)*ease);
+        if(t<1)window.requestAnimationFrame(frame);
+      }
+      window.requestAnimationFrame(frame);
     }
     document.querySelectorAll("[data-market-jump]").forEach(function (button) {
       button.onclick = function () {
