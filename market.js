@@ -472,7 +472,7 @@
       + '<div class="af-partner-wallet"><span class="af-partner-eyebrow">VOS GAINS SUR VENTES</span><h2>Part partenaire validée</h2><div class="af-partner-wallet-value">'+(ready?validated:'<span class="af-partner-money-line">En cours de chargement</span>')+'</div>'
       + '<p>Ventes validées et non encore marquées comme réglées. Montant à confirmer avant tout retrait.</p>'
       + '<div class="af-partner-wallet-pending"><span>En attente de validation</span><strong>'+(ready?pending:'—')+'</strong></div></div>'
-      + '<div class="af-partner-welcome"><span class="af-partner-eyebrow">ESPACE PARTENAIRE AFRIFLOW</span><h1 aria-label="Bienvenue, '+esc(partnerFirstName())+'"><span class="af-welcome-animated af-partner-welcome-word" lang="fr" aria-hidden="true">Bienvenue</span><span class="af-partner-welcome-name" aria-hidden="true">, '+esc(partnerFirstName())+'</span></h1><p>Retrouvez vos produits, vos ventes et le suivi de votre activité commerciale.</p></div>'
+      + '<div class="af-partner-welcome"><h1 class="af-partner-welcome-title" aria-label="Bienvenue, '+esc(partnerFirstName())+'"><span class="af-welcome-animated af-partner-welcome-word" lang="fr" aria-hidden="true">Bienvenue</span><span class="af-partner-welcome-name" aria-hidden="true">'+esc(partnerFirstName())+'</span></h1></div>'
       + '</section>';
   }
   function partnerLandingProducts() {
