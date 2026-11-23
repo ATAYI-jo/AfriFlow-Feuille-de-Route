@@ -775,11 +775,13 @@ async function renAdmin(){
   var h=$("viewHost");
   h.innerHTML='<div class="toolbar"><b>Administration</b><div class="toolbar-actions"><button type="button" id="adRef">Actualiser</button></div></div>'
     +'<section class="mt-box" aria-label="Validation des partenaires" style="margin-bottom:22px"><h3>Demandes de partenariat et accès Marketplace</h3><p>Approuvez les partenaires en attente et consultez l’historique des décisions, sans quitter Administration.</p><div id="adMarketAccess" class="af-partner-admin"><p>Chargement des demandes partenaires…</p></div><div id="adPartnerTerms" class="af-partner-admin" style="margin-top:24px"><p>Chargement des conditions commerciales…</p></div><div id="adDisputes" class="af-partner-admin" style="margin-top:24px"><p>Chargement des contestations…</p></div></section>'
+    +'<details class="mt-box af-admin-market-settings" style="margin-bottom:22px"><summary>Affectation des marchés commerciaux</summary><div id="adMarketAssignments" class="af-partner-admin">Chargement des affectations…</div></details>'
     +'<div id="adOn"></div><div id="adBody"><p style="color:var(--muted)">Chargement des comptes…</p></div>';
   if(window.AfriMarket&&window.AfriMarket.renderAccessAdmin){
     window.AfriMarket.renderAccessAdmin("adMarketAccess");
     if(window.AfriMarket.renderPartnerTermsAdmin)window.AfriMarket.renderPartnerTermsAdmin("adPartnerTerms");
     if(window.AfriMarket.renderDisputesAdmin)window.AfriMarket.renderDisputesAdmin("adDisputes");
+    if(window.AfriMarket.renderMarketAssignmentsAdmin)window.AfriMarket.renderMarketAssignmentsAdmin("adMarketAssignments");
   }else{
     $("adMarketAccess").textContent="Module Marketplace non disponible.";
     $("adPartnerTerms").textContent="Module Marketplace non disponible.";
