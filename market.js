@@ -547,10 +547,10 @@
     return '<section class="af-partner-portal"><div class="af-partner-portal-intro"><h2>Votre activité commerciale</h2><p>Préparez les allocations, déclarez vos ventes et consultez vos résultats.</p><span>Part AfriFloW : ' + esc(Number(terms.commission_rate || 0).toLocaleString("fr-FR")) + ' %</span></div>'
       + '<div class="af-partner-kpis"><article><small>Chiffre d’affaires déclaré</small><b>' + esc(grossText) + '</b><span>Toutes ventes hors refus</span></article><article><small>À reverser à AfriFloW</small><b>' + esc(dueText) + '</b><span>Selon votre taux personnalisé</span></article><article><small>Déclarations à contrôler</small><b>' + pending.length + '</b><span>AfriFloW est déjà alerté</span></article></div>'
       + '<section class="af-partner-card af-sale-simulator af-partner-section" aria-label="Simulateur de vente"><div class="af-sale-sim-header"><h2>Simuler une vente</h2><span class="af-sim-badge">Simulation · Aucun enregistrement</span></div><p>Testez librement un scénario commercial. Les ventes simulées ne modifient ni les stocks, ni le chiffre d’affaires déclaré, ni les commissions dues. Aucune alerte n’est envoyée.</p>'
-      +'<form id="afPartnerSimulator"><label>Produit<select required name="productId"><option value="">Choisir un produit</option>'+simulatorOpts+'</select></label><label>Quantité prévue<input name="quantity" type="number" min="1" max="1000000" step="1" required placeholder="Ex. 50"></label><div class="af-sim-catalog-price"><span>Prix catalogue unitaire</span><strong id="afSimulationCatalogPrice">Sélectionnez un produit</strong><small id="afSimulationFormula">Quantité × prix catalogue = chiffre d’affaires prévisionnel</small></div><div id="afSimulationOutput" class="af-sim-output" role="status" aria-live="polite">Sélectionnez un produit et indiquez la quantité pour obtenir une simulation.</div><button type="submit" class="af-market-secondary af-partner-submit">Calculer la simulation</button></form>'
+      +'<form id="afPartnerSimulator" class="af-partner-sim-form"><label>Produit<select required name="productId"><option value="">Choisir un produit</option>'+simulatorOpts+'</select></label><label>Quantité prévue<input name="quantity" type="number" min="1" max="1000000" step="1" required placeholder="Ex. 50"></label><div class="af-sim-catalog-price"><span>Prix catalogue unitaire</span><strong id="afSimulationCatalogPrice">Sélectionnez un produit</strong><small id="afSimulationFormula">Quantité × prix catalogue = chiffre d’affaires prévisionnel</small></div><div id="afSimulationOutput" class="af-sim-output" role="status" aria-live="polite">Sélectionnez un produit et indiquez la quantité pour obtenir une simulation.</div><button type="submit" class="af-market-secondary af-partner-submit">Calculer la simulation</button></form>'
       +'<small>Les prévisions sont indicatives, hors éventuels frais, taxes, remises ou retours. Pour enregistrer une véritable vente, utilisez la déclaration ci-dessous après validation de votre allocation.</small></section>'
-      + '<div class="af-partner-grid"><form class="af-partner-card af-partner-section af-partner-order" id="afPartnerOrder"><h2>1. Préparer une commande</h2><p>Sélectionnez les produits souhaités. AfriFloW valide ensuite votre allocation avant toute vente réelle.</p><label>Produit<select required name="productId"><option value="">Sélectionner un produit</option>' + productOpts + '</select></label><label>Quantité demandée<input required name="quantity" type="number" min="1" step="1" placeholder="Ex. 100"></label><label>Message facultatif<textarea name="note" maxlength="1200" placeholder="Lieu de vente, délai souhaité…"></textarea></label><button type="submit" class="af-market-primary af-partner-submit">Envoyer la demande</button></form>'
-      + '<form class="af-partner-card af-partner-report af-partner-section" id="afPartnerSale"><h2>2. Déclarer une vente réelle</h2><p>Une allocation validée est obligatoire. Le prix unitaire est fixé dans cette allocation, sans saisie manuelle.</p><label>Allocation validée<select required name="orderId"><option value="">Sélectionner une allocation</option>' + orderOpts + '</select></label>'+(sellable.length?"":'<p class="af-sale-not-ready">Aucune allocation validée. Vos demandes doivent être approuvées par AfriFloW avant une déclaration réelle. Le simulateur ci-dessus reste accessible.</p>')+'<div class="af-partner-duo"><label>Quantité vendue<input required name="quantity" type="number" min="1" step="1"></label><div class="af-partner-price-readonly"><span>Prix unitaire d’allocation</span><strong id="afPartnerSaleUnitPrice">Sélectionnez une allocation</strong><small>Fixé lors de la commande, non modifiable</small></div></div><label>Note facultative<textarea name="note" maxlength="1200" placeholder="Canal de vente, précision…"></textarea></label><div id="afPartnerCalc" class="af-partner-calc">Le montant net partenaire et la part AfriFloW seront calculés automatiquement.</div><button type="submit" class="af-market-primary af-partner-submit"' + (sellable.length ? "" : " disabled") + '>Déclarer et alerter</button></form></div>'
+      + '<div class="af-partner-grid"><form class="af-partner-card af-partner-section af-partner-order" id="afPartnerOrder"><h2>1. Préparer une commande</h2><p>Sélectionnez les produits souhaités. AfriFloW valide ensuite votre allocation avant toute vente réelle.</p><label>Produit<select required name="productId"><option value="">Sélectionner un produit</option>' + productOpts + '</select></label><label>Quantité demandée<input required name="quantity" type="number" min="1" step="1" placeholder="Ex. 100"></label><label>Message facultatif<textarea name="note" maxlength="1200" placeholder="Lieu de vente, délai souhaité…"></textarea></label><button type="submit" class="af-market-primary af-partner-submit">Envoyer la demande</button><p class="af-partner-form-status" id="afPartnerOrderStatus" aria-live="polite"></p></form>'
+      + '<form class="af-partner-card af-partner-report af-partner-section" id="afPartnerSale"><h2>2. Déclarer une vente réelle</h2><p>Une allocation validée est obligatoire. Le prix unitaire est fixé dans cette allocation, sans saisie manuelle.</p><label>Allocation validée<select required name="orderId"><option value="">Sélectionner une allocation</option>' + orderOpts + '</select></label>'+(sellable.length?"":'<p class="af-sale-not-ready">Aucune allocation validée. Vos demandes doivent être approuvées par AfriFloW avant une déclaration réelle. Le simulateur ci-dessus reste accessible.</p>')+'<div class="af-partner-duo"><label>Quantité vendue<input required name="quantity" type="number" min="1" step="1"></label><div class="af-partner-price-readonly"><span>Prix unitaire d’allocation</span><strong id="afPartnerSaleUnitPrice">Sélectionnez une allocation</strong><small>Fixé lors de la commande, non modifiable</small></div></div><label>Note facultative<textarea name="note" maxlength="1200" placeholder="Canal de vente, précision…"></textarea></label><div id="afPartnerCalc" class="af-partner-calc">Le montant net partenaire et la part AfriFloW seront calculés automatiquement.</div><button type="submit" class="af-market-primary af-partner-submit"' + (sellable.length ? "" : " disabled") + '>Déclarer et alerter</button><p class="af-partner-form-status" id="afPartnerSaleStatus" aria-live="polite"></p></form></div>'
       + partnerAnalyticsHtml(reports,orders)
       + partnerTraceHtml(orders,reports,products)
       + partnerDisputesHtml(orders,products)
@@ -1345,7 +1345,20 @@
     var partner = el("afPartnerCatalog"); if (partner) partner.onclick = function () { state.context.market = { access_mode: "client" }; render(); loadCatalog(); };
     var shareholder = el("afShareholderCatalog"); if (shareholder) shareholder.onclick = function () { state.context.market = { access_mode: "client" }; render(); loadCatalog(); };
     var refreshPartner = el("afPartnerRefresh"); if (refreshPartner) refreshPartner.onclick = loadPartnerPortal;
-    var orderForm = el("afPartnerOrder"); if (orderForm) orderForm.onsubmit = async function (event) { event.preventDefault(); var button = orderForm.querySelector("button"), form = new FormData(orderForm); button.disabled = true; try { var result = await partnerCall("request_order", { productId: form.get("productId"), quantity: form.get("quantity"), note: form.get("note") }); notice(result.message); loadPartnerPortal(); } catch (error) { button.disabled = false; notice(error.message || "Demande impossible"); } };
+    var orderForm=el("afPartnerOrder");
+    if(orderForm)orderForm.onsubmit=async function(event){
+      event.preventDefault();
+      var button=orderForm.querySelector('button[type="submit"]'),status=el("afPartnerOrderStatus"),form=new FormData(orderForm);
+      if(!orderForm.reportValidity())return;
+      button.disabled=true;
+      if(status)status.textContent="Envoi de votre demande…";
+      try{
+        var result=await partnerCall("request_order",{productId:form.get("productId"),quantity:form.get("quantity"),note:form.get("note")});
+        if(status)status.textContent=result.message||"Demande envoyée.";
+        notice(result.message||"Demande envoyée.");
+        await loadPartnerPortal();
+      }catch(error){button.disabled=false;if(status)status.textContent=error.message||"Demande impossible";notice(error.message||"Demande impossible");}
+    };
     var simulator=el("afPartnerSimulator");
     if(simulator){
       simulator.querySelector('[name="productId"]').onchange=runPartnerSaleSimulation;
@@ -1359,15 +1372,18 @@
       saleForm.querySelector('[name="orderId"]').onchange=updatePartnerCalculation;
       saleForm.onsubmit=async function(event){
         event.preventDefault();
-        var button=saleForm.querySelector('button[type="submit"]'),form=new FormData(saleForm);
+        var button=saleForm.querySelector('button[type="submit"]'),status=el("afPartnerSaleStatus"),form=new FormData(saleForm);
+        if(!saleForm.reportValidity())return;
         var order=(state.partner&&state.partner.orders||[]).find(function(o){return o.id===form.get("orderId")&&["approved","supplied"].includes(o.status)});
         if(!order||!Number.isFinite(Number(order.unit_price))){notice("Choisissez une allocation validée avec un prix unitaire défini.");return}
         button.disabled=true;
+        if(status)status.textContent="Enregistrement de la vente…";
         try{
           var result=await partnerCall("report_sale",{orderId:form.get("orderId"),quantity:form.get("quantity"),note:form.get("note")});
+          if(status)status.textContent=result.message||"Vente enregistrée.";
           notice(result.message+" Net partenaire : "+partnerFormatEarnings(result.calculation.partnerNet,result.calculation.currency));
           loadPartnerPortal();
-        }catch(error){button.disabled=false;notice(error.message||"Déclaration impossible");}
+        }catch(error){button.disabled=false;if(status)status.textContent=error.message||"Déclaration impossible";notice(error.message||"Déclaration impossible");}
       };
       updatePartnerCalculation();
     }
