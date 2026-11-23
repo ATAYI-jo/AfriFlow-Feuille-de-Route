@@ -1299,3 +1299,47 @@ body.af-market-mode #market-view{display:block}
     max-width:100%;
   }
 }
+
+
+/* Partner header polish: legible official logo, fluid full name, no white tile. */
+#market-view .af-partner-wallet-top{position:relative;isolation:isolate;}
+#market-view .af-partner-wallet-top::before{
+  content:"";position:absolute;left:-12px;top:-12px;
+  width:clamp(92px,10vw,126px);height:clamp(92px,10vw,126px);
+  border-radius:50%;pointer-events:none;z-index:0;
+  background:radial-gradient(circle,rgba(255,255,255,.29),rgba(255,255,255,.10) 48%,transparent 75%);
+  filter:blur(7px);
+}
+#market-view .af-partner-wallet-top .af-partner-company-logo{
+  position:relative;z-index:1;
+  width:clamp(78px,8.5vw,108px);
+  height:clamp(78px,8.5vw,108px);
+  padding:0;border:0;border-radius:0;background:none;box-shadow:none;
+  object-fit:contain;
+  filter:drop-shadow(0 7px 12px rgba(0,0,0,.26)) drop-shadow(0 0 7px rgba(255,255,255,.17));
+}
+#market-view .af-partner-identity{
+  display:flex;justify-content:center;align-items:center;min-width:0;
+  width:100%;padding-inline:4px;
+}
+#market-view .af-partner-identity .af-partner-full-name{
+  display:block;width:100%;max-width:100%;margin:0 auto;
+  font-size:clamp(1rem,1.85vw,1.65rem);
+  font-weight:850;line-height:1.24;letter-spacing:-.012em;
+  text-align:center;color:#152f24;
+  white-space:normal;overflow-wrap:break-word;word-break:normal;
+  text-wrap:balance;
+}
+@media(min-width:1100px){
+  #market-view .af-partner-identity .af-partner-full-name{
+    white-space:normal;font-size:clamp(1.1rem,1.55vw,1.65rem);
+  }
+}
+@media(max-width:760px){
+  #market-view .af-partner-wallet-top .af-partner-company-logo{width:80px;height:80px;padding:0}
+  #market-view .af-partner-wallet-top::before{width:96px;height:96px;left:-8px;top:-8px}
+  #market-view .af-partner-identity .af-partner-full-name{
+    font-size:clamp(1rem,4.8vw,1.4rem);
+    line-height:1.26;white-space:normal;
+  }
+}
