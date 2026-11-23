@@ -411,7 +411,7 @@
       +'<label>Nature du problème<select name="category" required><option value="qualite">Qualité du produit</option><option value="quantite">Quantité manquante</option><option value="livraison">Livraison ou transport</option><option value="emballage">Emballage endommagé</option><option value="tracabilite">Origine / lot / traçabilité</option><option value="autre">Autre</option></select></label>'
       +'<label>Référence du lot, si connue<input name="batch" maxlength="100" placeholder="Facultatif — code imprimé sur le sachet"></label>'
       +'<label>Expliquez précisément le problème<textarea name="description" required minlength="15" maxlength="3000" rows="4" placeholder="Produit, quantité, défaut constaté, date, conséquences…"></textarea></label>'
-      +'<label class="af-dispute-attachments">Photos ou vidéos du produit (facultatif)<input type="file" name="evidence" accept="image/jpeg,image/png,image/webp,video/mp4,video/webm" multiple><small>Jusqu’à 3 fichiers, 25 Mo maximum chacun. Les pièces sont privées et accessibles uniquement au partenaire et à l’administration AfriFloW.</small></label>'
+      +'<label class="af-dispute-attachments">Photos ou vidéos du produit (facultatif)<input type="file" name="evidence" accept="image/jpeg,image/png,image/webp,video/mp4,video/webm" multiple><small>Jusqu’à 3 fichiers, 25 Mo maximum chacun. Les pièces sont stockées dans Dropbox en privé, accessibles uniquement au partenaire et à l’administration AfriFloW.</small></label>'
       +'<p class="af-partner-form-status" id="afPartnerDisputeStatus" role="status" aria-live="polite"></p>'
       +'<button type="submit" class="af-market-primary"'+(orders.length?"":" disabled") +'>Envoyer la contestation</button></form>'
       +'<h3>Mes contestations ('+state.disputes.length+')</h3>'
@@ -420,10 +420,34 @@
       +'</section>';
   }
 
+  async function partnerDropboxCall(body){
+    var r=await sb().functions.invoke("afriflow-partner-dropbox",{body:body});
+    if(r.error||!r.data||r.data.error)throw new Error(r.data&&r.data.error||r.error&&r.error.message||"Dropbox indisponible");
+    return r.data;
+  }
+  function partnerChunkBase64(bytes){
+    var s="";for(var i=0;i<bytes.length;i+=16384)s+=String.fromCharCode.apply(null,bytes.subarray(i,i+16384));
+    return btoa(s);
+  }
+  async function partnerDropboxUpload(disputeId,file,onProgress){
+    var fileId=crypto.randomUUID(),size=2*1024*1024,offset=0,ticket="",last=null;
+    while(offset<file.size){
+      var end=Math.min(file.size,offset+size);
+      var bytes=new Uint8Array(await file.slice(offset,end).arrayBuffer());
+      var action=!ticket?"upload_start":end===file.size?"upload_finish":"upload_append";
+      last=await partnerDropboxCall({action:action,disputeId:disputeId,fileId:fileId,fileName:file.name,mime:file.type,size:file.size,offset:offset,ticket:ticket,data:partnerChunkBase64(bytes)});
+      ticket=last.ticket||ticket;offset=end;
+      if(onProgress)onProgress(offset,file.size);
+    }
+    if(last&&last.ticket){
+      last=await partnerDropboxCall({action:"upload_finish",disputeId:disputeId,fileId:fileId,fileName:file.name,mime:file.type,size:file.size,offset:file.size,ticket:ticket,data:""});
+    }
+    return last;
+  }
   function disputeEvidenceHtml(disputeId,files){
     var items=(files||[]).filter(function(f){return f.dispute_id===disputeId});
     return items.length?'<div class="af-dispute-evidence-list"><strong>Pièces jointes</strong>'
-      +items.map(function(f){return '<button type="button" class="af-dispute-evidence-link" data-dispute-file="'+esc(f.object_path)+'">'+esc(f.content_type.startsWith("video/")?"🎬 Vidéo : ":"📷 Photo : ")+esc(f.file_name)+'</button>';}).join("")
+      +items.map(function(f){return '<button type="button" class="af-dispute-evidence-link" data-dispute-file="'+esc(f.object_path||"")+'" data-dropbox-file="'+esc(f.id||"")+'" data-dispute-id="'+esc(disputeId)+'">'+esc(f.content_type.startsWith("video/")?"🎬 Vidéo : ":"📷 Photo : ")+esc(f.file_name)+'</button>';}).join("")
       +'</div>':"";
   }
   function bindDisputeEvidenceLinks(root){
@@ -434,10 +458,16 @@
         var tab=window.open("about:blank","_blank");
         if(tab){tab.opener=null;tab.document.title="Pièce jointe AfriFloW";}
         try{
-          var result=await sb().storage.from("afriflow-partner-evidence").createSignedUrl(path,90);
-          if(result.error||!result.data||!result.data.signedUrl)throw new Error(result.error&&result.error.message||"Lien indisponible");
-          if(tab)tab.location.replace(result.data.signedUrl);
-          else window.location.assign(result.data.signedUrl);
+          var url;
+          if(button.dataset.dropboxFile){
+            url=(await partnerDropboxCall({action:"download",disputeId:button.dataset.disputeId,fileId:button.dataset.dropboxFile})).url;
+          }else{
+            var result=await sb().storage.from("afriflow-partner-evidence").createSignedUrl(path,90);
+            if(result.error||!result.data||!result.data.signedUrl)throw new Error(result.error&&result.error.message||"Lien indisponible");
+            url=result.data.signedUrl;
+          }
+          if(tab)tab.location.replace(url);
+          else window.location.assign(url);
         }catch(error){if(tab)tab.close();notice("Impossible d’ouvrir la pièce : "+error.message);}
       };
     });
@@ -449,9 +479,12 @@
     state.disputes=result.data||[];
     var ids=state.disputes.map(function(d){return d.id});
     if(ids.length){
-      var media=await sb().from("afriflow_partner_dispute_files").select("dispute_id,object_path,file_name,content_type").in("dispute_id",ids);
-      state.disputeFiles=media.error?[]:media.data||[];
-      if(media.error)notice("Pièces jointes indisponibles : "+media.error.message);
+      var media=await Promise.all([
+        sb().from("afriflow_partner_dispute_files").select("dispute_id,object_path,file_name,content_type").in("dispute_id",ids),
+        sb().from("afriflow_partner_dropbox_files").select("id,dispute_id,dropbox_path,file_name,content_type").in("dispute_id",ids)
+      ]);
+      state.disputeFiles=(media[0].data||[]).concat(media[1].data||[]);
+      if(media[0].error||media[1].error)notice("Certaines pièces jointes sont indisponibles.");
     }else state.disputeFiles=[];
     if(roleMode(state.context.market)==="partner_approved")render();
   }
@@ -461,8 +494,11 @@
     if(r.error){host.textContent="Contestations indisponibles : "+r.error.message;return}
     if(!host.isConnected)return;
     var fileIds=(r.data||[]).map(function(d){return d.id});
-    var fileRows=fileIds.length?await sb().from("afriflow_partner_dispute_files").select("dispute_id,object_path,file_name,content_type").in("dispute_id",fileIds):{data:[]};
-    state.adminDisputeFiles=fileRows.error?[]:fileRows.data||[];
+    var fileRows=fileIds.length?await Promise.all([
+      sb().from("afriflow_partner_dispute_files").select("dispute_id,object_path,file_name,content_type").in("dispute_id",fileIds),
+      sb().from("afriflow_partner_dropbox_files").select("id,dispute_id,dropbox_path,file_name,content_type").in("dispute_id",fileIds)
+    ]):[{data:[]},{data:[]}];
+    state.adminDisputeFiles=(fileRows[0].data||[]).concat(fileRows[1].data||[]);
     host.innerHTML='<h3>Contestations des partenaires ('+r.data.length+')</h3>'
       +(r.data.length?r.data.map(function(d){
         return '<form class="af-dispute-admin" data-dispute="'+esc(d.id)+'"><b>'+esc(disputeType(d.category))+'</b> · '+esc(d.partner_user_id)+'<small>Allocation : '+esc(d.order_id)+' · '+esc(new Date(d.created_at).toLocaleString("fr-FR"))+'</small><p>'+esc(d.description)+'</p>'
@@ -480,6 +516,8 @@
         b.disabled=true;
         var result=await sb().from("afriflow_partner_disputes").update({status:status,admin_response:response||null}).eq("id",form.dataset.dispute).select("id");
         if(result.error){notice(result.error.message);b.disabled=false;return}
+        try{await partnerDropboxCall({action:"archive",disputeId:form.dataset.dispute});}
+        catch(error){notice("Décision enregistrée, mais archive Dropbox à synchroniser : "+error.message);}
         notice("Décision enregistrée.");loadAdminDisputes(target);
       };
     });
@@ -1455,20 +1493,19 @@
           description:description,batch_reference:String(fields.get("batch")||"").trim()||null
         }).select("id").single();
         if(result.error)throw result.error;
-        var failures=[];
-        for(var i=0;i<files.length;i++){
-          var file=files[i],extension=({"image/jpeg":"jpg","image/png":"png","image/webp":"webp","video/mp4":"mp4","video/webm":"webm"})[file.type];
-          var path=userId+"/"+result.data.id+"/"+crypto.randomUUID()+"."+extension;
-          if(status)status.textContent="Transfert des pièces : "+(i+1)+"/"+files.length+"…";
-          var uploaded=await sb().storage.from("afriflow-partner-evidence").upload(path,file,{contentType:file.type,upsert:false});
-          if(uploaded.error){failures.push(file.name+" : "+uploaded.error.message);continue}
-          var indexed=await sb().from("afriflow_partner_dispute_files").insert({
-            dispute_id:result.data.id,partner_user_id:userId,object_path:path,
-            file_name:file.name.slice(0,200),content_type:file.type,file_size:file.size
-          });
-          if(indexed.error)failures.push(file.name+" : "+indexed.error.message);
+        var failures=[],archived=false;
+        try{await partnerDropboxCall({action:"archive",disputeId:result.data.id});archived=true;}
+        catch(error){failures.push("Dossier Dropbox : "+error.message);}
+        if(archived)for(var i=0;i<files.length;i++){
+          var file=files[i];
+          try{
+            if(status)status.textContent="Transfert Dropbox : "+(i+1)+"/"+files.length+"…";
+            await partnerDropboxUpload(result.data.id,file,function(sent,total){
+              if(status)status.textContent="Transfert Dropbox "+(i+1)+"/"+files.length+" : "+Math.round(sent/total*100)+" %";
+            });
+          }catch(error){failures.push(file.name+" : "+error.message);}
         }
-        var summary=failures.length?"Signalement enregistré, mais certaines pièces n’ont pas été ajoutées : "+failures.join("; "):"Signalement enregistré"+(files.length?" avec "+files.length+" pièce(s) jointe(s).":".");
+        var summary=failures.length?"Signalement enregistré dans AfriFloW, mais archive Dropbox incomplète : "+failures.join("; "):"Signalement archivé sur Dropbox"+(files.length?" avec "+files.length+" pièce(s) jointe(s).":".");
         if(status)status.textContent=summary;
         notice(summary);
         await loadPartnerDisputes();
