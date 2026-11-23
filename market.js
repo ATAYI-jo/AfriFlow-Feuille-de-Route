@@ -541,16 +541,16 @@
     var grossText=separateCurrencies?"Plusieurs devises":partnerMoney(gross,reports[0]&&reports[0].currency||"XOF");
     var dueText=separateCurrencies?"Plusieurs devises":partnerMoney(due,reports[0]&&reports[0].currency||"XOF");
     var sellable = orders.filter(function (order) { return order.status === "approved" || order.status === "supplied"; });
-    var productOpts = products.map(function (product) { return '<option value="' + esc(product.id) + '">' + esc(product.name) + ' · ' + esc(partnerMoney(product.price, product.currency)) + '</option>'; }).join("");
+    var productOpts = products.map(function (product) { return '<option value="' + esc(product.id) + '">' + esc(product.name) + ' · ' + esc(partnerFormatEarnings(product.price,product.currency||"XOF")) + '</option>'; }).join("");
     var orderOpts = sellable.map(function (order) { var product = Array.isArray(order.product) ? order.product[0] : order.product; return '<option value="' + esc(order.id) + '">' + esc(product && product.name || "Produit") + ' · allocation ' + esc(order.quantity_requested) + ' unités</option>'; }).join("");
-    var simulatorOpts=products.map(function(product){return '<option value="'+esc(product.id)+'">'+esc(product.name)+' · '+esc(partnerMoney(product.price,product.currency))+'</option>'}).join("");
+    var simulatorOpts=products.map(function(product){return '<option value="'+esc(product.id)+'">'+esc(product.name)+' · '+esc(partnerFormatEarnings(product.price,product.currency||"XOF"))+'</option>'}).join("");
     return '<section class="af-partner-portal"><div class="af-partner-portal-intro"><h2>Votre activité commerciale</h2><p>Préparez les allocations, déclarez vos ventes et consultez vos résultats.</p><span>Part AfriFloW : ' + esc(Number(terms.commission_rate || 0).toLocaleString("fr-FR")) + ' %</span></div>'
       + '<div class="af-partner-kpis"><article><small>Chiffre d’affaires déclaré</small><b>' + esc(grossText) + '</b><span>Toutes ventes hors refus</span></article><article><small>À reverser à AfriFloW</small><b>' + esc(dueText) + '</b><span>Selon votre taux personnalisé</span></article><article><small>Déclarations à contrôler</small><b>' + pending.length + '</b><span>AfriFloW est déjà alerté</span></article></div>'
-      + '<section class="af-partner-card af-sale-simulator" aria-label="Simulateur de vente"><div class="af-sale-sim-header"><h2>Simuler une vente</h2><span class="af-sim-badge">Simulation · Aucun enregistrement</span></div><p>Testez librement un scénario commercial. Les ventes simulées ne modifient ni les stocks, ni le chiffre d’affaires déclaré, ni les commissions dues. Aucune alerte n’est envoyée.</p>'
-      +'<form id="afPartnerSimulator"><label>Produit<select required name="productId"><option value="">Choisir un produit</option>'+simulatorOpts+'</select></label><label>Quantité prévue<input name="quantity" type="number" min="1" max="1000000" step="1" required placeholder="Ex. 50"></label><div class="af-sim-catalog-price"><span>Prix catalogue unitaire</span><strong id="afSimulationCatalogPrice">Sélectionnez un produit</strong><small>Prix officiel récupéré automatiquement, non modifiable dans cette simulation.</small></div><div id="afSimulationOutput" class="af-sim-output" role="status" aria-live="polite">Sélectionnez un produit et indiquez la quantité pour obtenir une simulation.</div><button type="submit" class="af-market-secondary">Calculer la simulation</button></form>'
+      + '<section class="af-partner-card af-sale-simulator af-partner-section" aria-label="Simulateur de vente"><div class="af-sale-sim-header"><h2>Simuler une vente</h2><span class="af-sim-badge">Simulation · Aucun enregistrement</span></div><p>Testez librement un scénario commercial. Les ventes simulées ne modifient ni les stocks, ni le chiffre d’affaires déclaré, ni les commissions dues. Aucune alerte n’est envoyée.</p>'
+      +'<form id="afPartnerSimulator"><label>Produit<select required name="productId"><option value="">Choisir un produit</option>'+simulatorOpts+'</select></label><label>Quantité prévue<input name="quantity" type="number" min="1" max="1000000" step="1" required placeholder="Ex. 50"></label><div class="af-sim-catalog-price"><span>Prix catalogue unitaire</span><strong id="afSimulationCatalogPrice">Sélectionnez un produit</strong><small id="afSimulationFormula">Quantité × prix catalogue = chiffre d’affaires prévisionnel</small></div><div id="afSimulationOutput" class="af-sim-output" role="status" aria-live="polite">Sélectionnez un produit et indiquez la quantité pour obtenir une simulation.</div><button type="submit" class="af-market-secondary af-partner-submit">Calculer la simulation</button></form>'
       +'<small>Les prévisions sont indicatives, hors éventuels frais, taxes, remises ou retours. Pour enregistrer une véritable vente, utilisez la déclaration ci-dessous après validation de votre allocation.</small></section>'
-      + '<div class="af-partner-grid"><form class="af-partner-card" id="afPartnerOrder"><h2>Préparer une commande</h2><p>Choisissez un produit et la quantité souhaitée. AfriFloW confirme ensuite votre allocation.</p><label>Produit<select required name="productId"><option value="">Sélectionner un produit</option>' + productOpts + '</select></label><label>Quantité demandée<input required name="quantity" type="number" min="1" step="1" placeholder="Ex. 100"></label><label>Message facultatif<textarea name="note" maxlength="1200" placeholder="Lieu de vente, délai souhaité…"></textarea></label><button class="af-market-primary">Envoyer la demande</button></form>'
-      + '<form class="af-partner-card af-partner-report" id="afPartnerSale"><h2>Déclarer une vente réelle</h2><p>Cette action enregistre une vente et déclenche une alerte à AfriFloW. Une allocation validée est obligatoire.</p><label>Allocation validée<select required name="orderId"><option value="">Sélectionner une allocation</option>' + orderOpts + '</select></label>'+(sellable.length?"":'<p class="af-sale-not-ready">Aucune allocation validée. Vos demandes doivent être approuvées par AfriFloW avant une déclaration réelle. Le simulateur ci-dessus reste accessible.</p>')+'<div class="af-partner-duo"><label>Quantité vendue<input required name="quantity" type="number" min="1" step="1"></label><label>Prix unitaire de vente<input required name="unitSalePrice" type="number" min="0" step="0.01"></label></div><label>Note facultative<textarea name="note" maxlength="1200" placeholder="Canal de vente, précision…"></textarea></label><div id="afPartnerCalc" class="af-partner-calc">Le montant net partenaire et la part AfriFloW seront calculés automatiquement.</div><button class="af-market-primary"' + (sellable.length ? "" : " disabled") + '>Déclarer et alerter</button></form></div>'
+      + '<div class="af-partner-grid"><form class="af-partner-card af-partner-section af-partner-order" id="afPartnerOrder"><h2>1. Préparer une commande</h2><p>Sélectionnez les produits souhaités. AfriFloW valide ensuite votre allocation avant toute vente réelle.</p><label>Produit<select required name="productId"><option value="">Sélectionner un produit</option>' + productOpts + '</select></label><label>Quantité demandée<input required name="quantity" type="number" min="1" step="1" placeholder="Ex. 100"></label><label>Message facultatif<textarea name="note" maxlength="1200" placeholder="Lieu de vente, délai souhaité…"></textarea></label><button type="submit" class="af-market-primary af-partner-submit">Envoyer la demande</button></form>'
+      + '<form class="af-partner-card af-partner-report af-partner-section" id="afPartnerSale"><h2>2. Déclarer une vente réelle</h2><p>Une allocation validée est obligatoire. Le prix unitaire est fixé dans cette allocation, sans saisie manuelle.</p><label>Allocation validée<select required name="orderId"><option value="">Sélectionner une allocation</option>' + orderOpts + '</select></label>'+(sellable.length?"":'<p class="af-sale-not-ready">Aucune allocation validée. Vos demandes doivent être approuvées par AfriFloW avant une déclaration réelle. Le simulateur ci-dessus reste accessible.</p>')+'<div class="af-partner-duo"><label>Quantité vendue<input required name="quantity" type="number" min="1" step="1"></label><div class="af-partner-price-readonly"><span>Prix unitaire d’allocation</span><strong id="afPartnerSaleUnitPrice">Sélectionnez une allocation</strong><small>Fixé lors de la commande, non modifiable</small></div></div><label>Note facultative<textarea name="note" maxlength="1200" placeholder="Canal de vente, précision…"></textarea></label><div id="afPartnerCalc" class="af-partner-calc">Le montant net partenaire et la part AfriFloW seront calculés automatiquement.</div><button type="submit" class="af-market-primary af-partner-submit"' + (sellable.length ? "" : " disabled") + '>Déclarer et alerter</button></form></div>'
       + partnerAnalyticsHtml(reports,orders)
       + partnerTraceHtml(orders,reports,products)
       + partnerDisputesHtml(orders,products)
@@ -567,33 +567,52 @@
   function runPartnerSaleSimulation(){
     var form=el("afPartnerSimulator"),out=el("afSimulationOutput"),data=state.partner;
     if(!form||!out||!data)return;
-    var products=data.products||[],productId=form.querySelector('[name="productId"]').value;
-    var product=products.filter(function(p){return p.id===productId})[0];
-    var rawQty=form.querySelector('[name="quantity"]').value;
-    var qty=Number(rawQty),price=product&&product.price!=null?Number(product.price):NaN;
+    var selected=form.querySelector('[name="productId"]').value;
+    var product=(data.products||[]).find(function(p){return p.id===selected});
+    var rawQty=form.querySelector('[name="quantity"]').value.trim();
+    var quantity=Number(rawQty),price=product&&product.price!=null?Number(product.price):NaN;
+    var currency=String(product&&product.currency||"XOF").toUpperCase();
     var rate=Number(data.terms&&data.terms.commission_rate);
-    var priceBox=el("afSimulationCatalogPrice");
-    if(priceBox) priceBox.textContent=product&&Number.isFinite(price)&&price>=0
-      ? partnerFormatEarnings(price,String(product.currency||"XOF").toUpperCase())
-      : "Prix indisponible";
-    if(!product||rawQty===""||!Number.isSafeInteger(qty)||qty<1||qty>1000000||!Number.isFinite(price)||price<0||!Number.isFinite(rate)||rate<0||rate>100){
-      out.textContent="Sélectionnez un produit avec un prix catalogue valide et indiquez une quantité entière positive.";
+    var priceBox=el("afSimulationCatalogPrice"),formula=el("afSimulationFormula");
+    if(priceBox)priceBox.textContent=product&&Number.isFinite(price)&&price>=0?partnerFormatEarnings(price,currency):"Sélectionnez un produit";
+    if(formula)formula.textContent=product&&Number.isSafeInteger(quantity)&&quantity>0&&Number.isFinite(price)&&price>=0
+      ?quantity.toLocaleString("fr-FR")+" × "+partnerFormatEarnings(price,currency)+" = "+partnerFormatEarnings(Math.round(quantity*price*100)/100,currency)
+      :"Quantité × prix catalogue = chiffre d’affaires prévisionnel";
+    if(!product||!rawQty||!Number.isSafeInteger(quantity)||quantity<1||quantity>1000000||!Number.isFinite(price)||price<0||!Number.isFinite(rate)||rate<0||rate>100){
+      out.textContent="Sélectionnez un produit et indiquez une quantité valide pour calculer la simulation.";
       return;
     }
     var round=function(n){return Math.round((n+Number.EPSILON)*100)/100};
-    var gross=round(qty*price),share=round(gross*rate/100),net=round(gross-share);
+    var gross=round(quantity*price),share=round(gross*rate/100),net=round(gross-share);
     if(!Number.isFinite(gross)||gross>1000000000000){out.textContent="Montant trop élevé pour cette simulation.";return}
-    var currency=product.currency||"XOF";
-    out.innerHTML='<strong>Résultat simulé — sans enregistrement</strong><div class="af-sim-stats"><span>CA prévisionnel<b>'+esc(partnerMoney(gross,currency))+'</b></span><span>Part AfriFloW ('+esc(rate)+' %)<b>'+esc(partnerMoney(share,currency))+'</b></span><span>Part partenaire ('+esc(round(100-rate))+' %)<b>'+esc(partnerMoney(net,currency))+'</b></span></div><small>Scénario fictif. Aucune vente, commission, allocation ou notification n’a été enregistrée.</small>';
+    out.innerHTML='<strong>Simulation — sans enregistrement</strong>'
+      +'<div class="af-sim-formula">'+esc(quantity.toLocaleString("fr-FR"))+' × '+esc(partnerFormatEarnings(price,currency))+' = <strong>'+esc(partnerFormatEarnings(gross,currency))+'</strong></div>'
+      +'<div class="af-sim-stats"><span>Chiffre d’affaires prévu<b>'+esc(partnerFormatEarnings(gross,currency))+'</b></span><span>Part AfriFloW ('+esc(rate)+' %)<b>'+esc(partnerFormatEarnings(share,currency))+'</b></span><span>Part partenaire ('+esc(round(100-rate))+' %)<b>'+esc(partnerFormatEarnings(net,currency))+'</b></span></div>'
+      +'<small>Simulation indicative. Aucun stock, paiement ou montant dû n’a été modifié.</small>';
   }
   function updatePartnerCalculation() {
-    var box = el("afPartnerCalc"), form = el("afPartnerSale"), terms = state.partner && state.partner.terms; if (!box || !form || !terms) return;
-    var quantity = Number(form.querySelector('[name="quantity"]').value), unit = Number(form.querySelector('[name="unitSalePrice"]').value), rate = Number(terms.commission_rate || 0);
-    if (!(quantity > 0) || !(unit >= 0)) { box.textContent = "Le montant net partenaire et la part AfriFloW seront calculés automatiquement."; return; }
-    var orderId=form.querySelector('[name="orderId"]').value,order=(state.partner&&state.partner.orders||[]).filter(function(o){return o.id===orderId})[0];
-    if(!order){box.textContent="Sélectionnez d’abord une allocation validée.";return}
-    var gross=Math.round(quantity*unit*100)/100,share=Math.round(gross*rate)/100,net=Math.round((gross-share)*100)/100,currency=order.currency||"XOF";
-    box.innerHTML='<b>Prévision :</b> CA '+esc(partnerMoney(gross,currency))+' · AfriFloW '+esc(partnerMoney(share,currency))+' · <b>net partenaire '+esc(partnerMoney(net,currency))+'</b>';
+    var box=el("afPartnerCalc"),form=el("afPartnerSale"),terms=state.partner&&state.partner.terms;
+    if(!box||!form||!terms)return;
+    var orderId=form.querySelector('[name="orderId"]').value;
+    var order=(state.partner&&state.partner.orders||[]).find(function(o){return o.id===orderId&&["approved","supplied"].includes(o.status)});
+    var unitBox=el("afPartnerSaleUnitPrice");
+    if(!order){
+      if(unitBox)unitBox.textContent="Sélectionnez une allocation";
+      box.textContent="Sélectionnez une allocation validée pour afficher le calcul.";
+      return;
+    }
+    var unit=Number(order.unit_price),currency=String(order.currency||"XOF").toUpperCase();
+    if(unitBox)unitBox.textContent=Number.isFinite(unit)&&unit>=0?partnerFormatEarnings(unit,currency):"Prix indisponible";
+    var rawQty=form.querySelector('[name="quantity"]').value;
+    var qty=Number(rawQty),rate=Number(terms.commission_rate);
+    if(rawQty===""||!Number.isSafeInteger(qty)||qty<1||!Number.isFinite(unit)||unit<0||!Number.isFinite(rate)||rate<0||rate>100){
+      box.textContent="Indiquez la quantité vendue pour calculer les montants.";
+      return;
+    }
+    var round=function(n){return Math.round((n+Number.EPSILON)*100)/100};
+    var gross=round(qty*unit),share=round(gross*rate/100),net=round(gross-share);
+    box.innerHTML='<strong>Calcul de la vente</strong><div class="af-sim-formula">'+esc(qty.toLocaleString("fr-FR"))+' × '+esc(partnerFormatEarnings(unit,currency))+' = <b>'+esc(partnerFormatEarnings(gross,currency))+'</b></div>'
+      +'<div class="af-sim-stats"><span>CA déclaré<b>'+esc(partnerFormatEarnings(gross,currency))+'</b></span><span>Part AfriFloW<b>'+esc(partnerFormatEarnings(share,currency))+'</b></span><span>Part partenaire<b>'+esc(partnerFormatEarnings(net,currency))+'</b></span></div>';
   }
   async function accessCall(action,body) {
     var result=await sb().functions.invoke("afriflow-access-admin",{body:Object.assign({action:action},body||{})});
@@ -1329,12 +1348,29 @@
     var orderForm = el("afPartnerOrder"); if (orderForm) orderForm.onsubmit = async function (event) { event.preventDefault(); var button = orderForm.querySelector("button"), form = new FormData(orderForm); button.disabled = true; try { var result = await partnerCall("request_order", { productId: form.get("productId"), quantity: form.get("quantity"), note: form.get("note") }); notice(result.message); loadPartnerPortal(); } catch (error) { button.disabled = false; notice(error.message || "Demande impossible"); } };
     var simulator=el("afPartnerSimulator");
     if(simulator){
-      var productInput=simulator.querySelector('[name="productId"]');
-      productInput.onchange=runPartnerSaleSimulation;
-      simulator.querySelectorAll("input").forEach(function(input){input.oninput=runPartnerSaleSimulation});
+      simulator.querySelector('[name="productId"]').onchange=runPartnerSaleSimulation;
+      simulator.querySelector('[name="quantity"]').oninput=runPartnerSaleSimulation;
       simulator.onsubmit=function(event){event.preventDefault();runPartnerSaleSimulation()};
+      runPartnerSaleSimulation();
     }
-    var saleForm = el("afPartnerSale"); if (saleForm) { saleForm.querySelectorAll("input").forEach(function (input) { input.oninput = updatePartnerCalculation; });saleForm.querySelector('[name="orderId"]').onchange=updatePartnerCalculation; saleForm.onsubmit = async function (event) { event.preventDefault(); var button = saleForm.querySelector("button"), form = new FormData(saleForm); button.disabled = true; try { var result = await partnerCall("report_sale", { orderId: form.get("orderId"), quantity: form.get("quantity"), unitSalePrice: form.get("unitSalePrice"), note: form.get("note") }); notice(result.message + " Net partenaire : " + partnerMoney(result.calculation.partnerNet, result.calculation.currency)); loadPartnerPortal(); } catch (error) { button.disabled = false; notice(error.message || "Déclaration impossible"); } }; }
+    var saleForm=el("afPartnerSale");
+    if(saleForm){
+      saleForm.querySelector('[name="quantity"]').oninput=updatePartnerCalculation;
+      saleForm.querySelector('[name="orderId"]').onchange=updatePartnerCalculation;
+      saleForm.onsubmit=async function(event){
+        event.preventDefault();
+        var button=saleForm.querySelector('button[type="submit"]'),form=new FormData(saleForm);
+        var order=(state.partner&&state.partner.orders||[]).find(function(o){return o.id===form.get("orderId")&&["approved","supplied"].includes(o.status)});
+        if(!order||!Number.isFinite(Number(order.unit_price))){notice("Choisissez une allocation validée avec un prix unitaire défini.");return}
+        button.disabled=true;
+        try{
+          var result=await partnerCall("report_sale",{orderId:form.get("orderId"),quantity:form.get("quantity"),note:form.get("note")});
+          notice(result.message+" Net partenaire : "+partnerFormatEarnings(result.calculation.partnerNet,result.calculation.currency));
+          loadPartnerPortal();
+        }catch(error){button.disabled=false;notice(error.message||"Déclaration impossible");}
+      };
+      updatePartnerCalculation();
+    }
     var disputeForm=el("afPartnerDisputeForm");
     if(disputeForm)disputeForm.onsubmit=async function(ev){
       ev.preventDefault();
