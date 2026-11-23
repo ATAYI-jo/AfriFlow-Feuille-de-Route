@@ -447,6 +447,38 @@
       };
     });
   }
+  function partnerFirstName() {
+    var full = String(window.USER_NAME || "").trim();
+    if (!full && window.afriMarketSession) full = String(window.afriMarketSession.display_name || window.afriMarketSession.first_name || "").trim();
+    if (!full && window.loggedUserEmail) full = String(window.loggedUserEmail).split("@")[0];
+    var first = full.split(/\s+/).filter(Boolean)[0] || "Partenaire";
+    return first.charAt(0).toLocaleUpperCase("fr") + first.slice(1);
+  }
+  function partnerBalanceByCurrency(reports, status) {
+    var sums = {};
+    reports.filter(function(r){return status.indexOf(r.status)>-1;}).forEach(function(r){
+      var currency=String(r.currency || "XOF").toUpperCase();
+      var amount=Number(r.partner_net_amount);
+      if(Number.isFinite(amount) && amount>=0) sums[currency]=(sums[currency]||0)+amount;
+    });
+    var currencies=Object.keys(sums).sort();
+    return currencies.length ? currencies.map(function(currency){return '<span class="af-partner-money-line">'+esc(partnerMoney(sums[currency],currency))+'</span>';}).join("") : '<span class="af-partner-money-line">—</span>';
+  }
+  function partnerLandingHeader() {
+    var data = state.partner, reports = data && data.enabled && Array.isArray(data.reports) ? data.reports : [];
+    var ready = Boolean(data && data.enabled), validated = partnerBalanceByCurrency(reports,["validated"]);
+    var pending = partnerBalanceByCurrency(reports,["pending_review"]);
+    return '<section class="af-partner-landing" aria-label="Tableau de bord partenaire">'
+      + '<div class="af-partner-welcome"><span class="af-partner-eyebrow">ESPACE PARTENAIRE AFRIFLOW</span><h1>Bienvenue, '+esc(partnerFirstName())+'</h1><p>Retrouvez vos produits, vos ventes et le suivi de votre activité commerciale.</p></div>'
+      + '<div class="af-partner-wallet"><span class="af-partner-eyebrow">VOS GAINS SUR VENTES</span><h2>Part partenaire validée</h2><div class="af-partner-wallet-value">'+(ready?validated:'<span class="af-partner-money-line">En cours de chargement</span>')+'</div>'
+      + '<p>Ventes validées et non encore marquées comme réglées. Montant à confirmer avant tout retrait.</p>'
+      + '<div class="af-partner-wallet-pending"><span>En attente de validation</span><strong>'+(ready?pending:'—')+'</strong></div></div></section>';
+  }
+  function partnerLandingProducts() {
+    var products=filteredProducts().filter(function(item){return !isAnnouncement(item);});
+    return '<section class="af-partner-catalog" aria-label="Produits AfriFloW"><div class="af-market-section-head" id="afProductsTop"><h2>Nos produits AfriFloW</h2><p>Découvrez les références disponibles à la vente.</p></div>'
+      + productsHtml(products) + '</section>';
+  }
   function partnerContent() {
     var data = state.partner;
     if (!data) return '<section class="af-market-wait"><h1>Préparation de votre espace partenaire</h1><p>Nous vérifions vos conditions commerciales sécurisées…</p></section>';
@@ -463,7 +495,7 @@
     var productOpts = products.map(function (product) { return '<option value="' + esc(product.id) + '">' + esc(product.name) + ' · ' + esc(partnerMoney(product.price, product.currency)) + '</option>'; }).join("");
     var orderOpts = sellable.map(function (order) { var product = Array.isArray(order.product) ? order.product[0] : order.product; return '<option value="' + esc(order.id) + '">' + esc(product && product.name || "Produit") + ' · allocation ' + esc(order.quantity_requested) + ' unités</option>'; }).join("");
     var simulatorOpts=products.map(function(product){return '<option value="'+esc(product.id)+'">'+esc(product.name)+' · '+esc(partnerMoney(product.price,product.currency))+'</option>'}).join("");
-    return '<section class="af-partner-portal"><header class="af-partner-head"><div><span>PARTENAIRE COMMERCIAL</span><h1>Votre activité, en toute clarté.</h1><p>Commandez vos produits, déclarez vos ventes et suivez chaque montant en temps réel.</p></div><div class="af-partner-rate"><small>Part AfriFloW</small><strong>' + esc(Number(terms.commission_rate || 0).toLocaleString("fr-FR")) + ' %</strong><em>définie pour votre partenariat</em></div></header>'
+    return '<section class="af-partner-portal"><div class="af-partner-portal-intro"><h2>Votre activité commerciale</h2><p>Préparez les allocations, déclarez vos ventes et consultez vos résultats.</p><span>Part AfriFloW : ' + esc(Number(terms.commission_rate || 0).toLocaleString("fr-FR")) + ' %</span></div>'
       + '<div class="af-partner-kpis"><article><small>Chiffre d’affaires déclaré</small><b>' + esc(grossText) + '</b><span>Toutes ventes hors refus</span></article><article><small>À reverser à AfriFloW</small><b>' + esc(dueText) + '</b><span>Selon votre taux personnalisé</span></article><article><small>Déclarations à contrôler</small><b>' + pending.length + '</b><span>AfriFloW est déjà alerté</span></article></div>'
       + '<section class="af-partner-card af-sale-simulator" aria-label="Simulateur de vente"><div class="af-sale-sim-header"><h2>Simuler une vente</h2><span class="af-sim-badge">Simulation · Aucun enregistrement</span></div><p>Testez librement un scénario commercial. Les ventes simulées ne modifient ni les stocks, ni le chiffre d’affaires déclaré, ni les commissions dues. Aucune alerte n’est envoyée.</p>'
       +'<form id="afPartnerSimulator"><label>Produit<select required name="productId"><option value="">Choisir un produit</option>'+simulatorOpts+'</select></label><label>Quantité prévue<input name="quantity" type="number" min="1" max="1000000" step="1" required placeholder="Ex. 50"></label><label>Prix de vente unitaire<input name="price" type="number" min="0" step="0.01" required placeholder="Prix dans la devise du produit"></label><div id="afSimulationOutput" class="af-sim-output" role="status" aria-live="polite">Sélectionnez un produit et indiquez la quantité et le prix pour obtenir une simulation.</div><button type="submit" class="af-market-secondary">Calculer la simulation</button></form>'
@@ -1178,7 +1210,7 @@
     clearWelcomeAnimation();
     var mode = roleMode(state.context.market);
     root.innerHTML = top() + '<main class="af-market-main">' + (mode === "partner_approved"
-      ? '<section class="af-ali">' + catsHtml() + heroHtml() + sideHtml() + scrollCueHtml() + '</section>' + partnerContent() + announcementsHtml()
+      ? partnerLandingHeader() + partnerLandingProducts() + partnerContent()
       : mode === "partner_waiting"
       ? '<section class="af-ali">' + catsHtml() + heroHtml() + sideHtml() + scrollCueHtml() + '</section>' + waitContent() + announcementsHtml()
       : mode === "shareholder_pending"
