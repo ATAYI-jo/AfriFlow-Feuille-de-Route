@@ -1593,3 +1593,25 @@ body.af-market-mode #market-view{display:block}
 #market-view .af-partner-event-notice span{display:flex;align-items:center;gap:8px}
 #market-view .af-partner-event-notice .af-icon{width:19px;height:19px;flex:none;stroke-width:1.8}
 #market-view .af-partner-event-notice button{min-height:40px}
+
+
+/* Partner notifications also render in the administrative workspace, outside #market-view. */
+#viewHost .af-partner-market-card.af-partner-market-attention{
+ border:2px solid rgba(218,134,58,.88)!important;
+ background:linear-gradient(135deg,rgba(255,243,219,.95),rgba(243,251,238,.93))!important;
+ box-shadow:0 12px 32px rgba(169,93,39,.18);
+}
+#viewHost .af-partner-market-unread{
+ display:inline-flex;padding:7px 12px;
+ border-radius:30px;background:#a95428;color:white;font-size:.82rem;font-weight:800;
+}
+#viewHost .af-partner-event-notice{
+ padding:16px;margin:12px 0 18px;
+ background:rgba(255,244,218,.94);
+ border:1px solid rgba(171,111,52,.45);
+ border-radius:14px;color:#694129;
+}
+#viewHost .af-partner-event-notice>div{display:grid;gap:8px;margin:10px 0}
+#viewHost .af-partner-event-notice span{display:flex;align-items:center;gap:8px}
+#viewHost .af-partner-event-notice .af-icon{width:19px;height:19px;stroke-width:1.8;flex-shrink:0}
+#viewHost .af-partner-event-notice button{min-height:39px}
