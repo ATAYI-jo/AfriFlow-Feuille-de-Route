@@ -1095,10 +1095,12 @@ function enterApp(email, role, name, grants, market){
  $("editStatusIndicator").innerHTML = USER_ROLE === "admin" ? ic("unlock") + " Connecté : " + esc(email) + " — administrateur" : (canEdit() ? ic("unlock") + " Connecté : " + esc(email) + " — modification active" : ic("lock") + " Connecté : " + esc(email) + " — lecture seule");
   renderRoadmap();
   if(window.onRole) window.onRole();
+  window.dispatchEvent(new CustomEvent('afriflow:verified-role',{detail:{role:USER_ROLE}}));
 }
 function logout(msg){
   if(window.AFRI){ AFRI.stop(); AFRI.signOut(); }
   loggedUserEmail = ""; USER_ROLE = "reader"; USER_NAME = ""; USER_GRANTS = []; window.afriMarketSession = null; document.body.classList.add("ro");
+  window.dispatchEvent(new CustomEvent('afriflow:verified-role',{detail:{role:'reader'}}));
   try { localStorage.removeItem(SESSION_KEY); if(window.AfriNav)window.AfriNav.clear(); } catch(e){}
   closeDrawer(); $("customizer-modal").classList.remove("on");
   $("authPasswordInput").value = ""; $("authError").textContent = msg || "";

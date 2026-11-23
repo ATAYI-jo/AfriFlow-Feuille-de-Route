@@ -15,9 +15,7 @@
   </script>
 <!-- Web / Windows / Android : synchronisation des versions déployées, 2026-11-10. -->
 <meta charset="utf-8">
-<!-- Fetch the Three.js module and original GLB early while the intro starts. -->
-<link rel="modulepreload" href="./avatar-3d/intro-assistant.js?v=20261123b">
-<link rel="preload" href="./avatar-3d/models/afriflow-assistante.glb" as="fetch" type="model/gltf-binary" crossorigin="anonymous">
+<!-- Intro Three.js loads on admin preview only; ordinary visitors receive the standard video. -->
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>AfriFloW – Accueil</title>
 <link rel="icon" href="logo.png">
@@ -379,10 +377,7 @@ window.ic=function(n,s){return '<svg class="ic"'+(s?' style="width:'+s+';height:
 <script type="importmap">
 {"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.164.1/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.164.1/examples/jsm/"}}
 </script>
-<script type="module">
-  import { installIntroAssistant } from './avatar-3d/intro-assistant.js?v=20261123b';
-  installIntroAssistant(document.getElementById('introVideo'), document.getElementById('intro'));
-</script>
+<script src="./avatar-3d/admin-intro-preview.js?v=20261123-admin-only" defer></script>
 <style>
   #intro .af-intro-avatar {
     position: absolute; z-index: 5; right: max(1vw, 8px); bottom: 3%;

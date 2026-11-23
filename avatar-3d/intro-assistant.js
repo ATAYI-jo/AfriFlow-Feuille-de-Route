@@ -210,5 +210,5 @@ export function installIntroAssistant(video, container) {
   add(window, 'afriflow:intro-finish', stop);
   add(document, 'visibilitychange', () => { if (!document.hidden) lastTime = performance.now(); });
   if (!video.paused && !video.ended) start();
-  return { stop };
+  return { stop, start };
 }
