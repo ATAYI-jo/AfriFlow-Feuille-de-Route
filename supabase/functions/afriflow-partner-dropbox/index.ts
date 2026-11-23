@@ -1,6 +1,6 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 
-const bucketRoot=(Deno.env.get("DROPBOX_PARTNER_ROOT")||"/AfriFlow").replace(/\/+$/,"");
+const bucketRoot=(Deno.env.get("DROPBOX_PARTNER_ROOT")||Deno.env.get("DROPBOX_ROOT")||"/AfriFlow").replace(/\/+$/,"");
 const allowedOrigins=new Set(["https://afriflow.pages.dev","https://atayi-jo.github.io"]);
 const maxBytes=25*1024*1024, maxChunk=2*1024*1024;
 const mimeExt:Record<string,string>={"image/jpeg":"jpg","image/png":"png","image/webp":"webp","video/mp4":"mp4","video/webm":"webm"};
