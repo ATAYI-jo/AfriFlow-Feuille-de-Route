@@ -891,3 +891,47 @@ body.af-market-mode #market-view{display:block}
 @media(max-width:760px){
   #market-view .af-partner-landing .af-partner-welcome-title{gap:8px}
 }
+
+
+/* Partenaire : même verre pastel et centrage que « Bienvenue » côté invité. */
+#market-view .af-partner-landing .af-partner-welcome{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  text-align:center;
+  min-height:clamp(340px,31vw,480px);
+  padding:clamp(20px,3vw,36px);
+  background:linear-gradient(135deg,rgba(255,255,255,.48),rgba(239,255,246,.20))!important;
+  border:1px solid rgba(255,255,255,.68)!important;
+  -webkit-backdrop-filter:blur(28px) saturate(155%);
+  backdrop-filter:blur(28px) saturate(155%);
+}
+#market-view .af-partner-landing .af-partner-welcome-title{
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+  align-items:center;
+  gap:10px;
+  width:100%;
+  margin:0!important;
+  line-height:1.2;
+  text-align:center;
+}
+#market-view .af-partner-landing .af-partner-welcome-title .af-partner-welcome-word{
+  display:block;
+  min-height:1.2em;
+  font-size:clamp(1.55rem,2.25vw,2.2rem);
+  font-weight:850;
+  color:#153b29!important;
+  -webkit-text-fill-color:#153b29!important;
+}
+#market-view .af-partner-landing .af-partner-welcome-title .af-partner-welcome-name{
+  display:block;
+  font-size:clamp(1.4rem,2vw,2rem);
+  font-weight:750;
+  color:#153b29!important;
+  -webkit-text-fill-color:#153b29!important;
+}
+@media(max-width:760px){
+  #market-view .af-partner-landing .af-partner-welcome{min-height:240px}
+}
