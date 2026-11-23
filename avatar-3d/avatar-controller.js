@@ -62,4 +62,5 @@ window.addEventListener("message", event => {
 });
 window.addEventListener("beforeunload", () => synth?.cancel());
 switchMode(true);
-// Sans un vrai GLB, aucun avatar 3D approximatif n'est affiché.
+// Charger automatiquement le vrai GLB, avec repli sur le portrait si le chargement échoue.
+open3D();
