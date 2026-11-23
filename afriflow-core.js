@@ -69,27 +69,65 @@ function recordUserAction(text){
 
 /* ---------- Authentification (comptes Supabase Auth, droits contrôlés côté serveur) ---------- */
 var AUTH_MODE = "login", AUTH_STEP = 1;
-var TURNSTILE_SITE_KEY = "0x4AAAAAAGGdSaQPHSavzxha", turnstileWidgetId = null, turnstileToken = "", captchaAttempts = 0, captchaUnavailable = false, captchaTimer = null;
+var TURNSTILE_SITE_KEY = "0x4AAAAAAGGdSaQPHSavzxha", turnstileWidgetId = null, turnstileToken = "", captchaAttempts = 0, captchaUnavailable = false, captchaTimer = null, captchaGeneration = 0, captchaFailures = 0;
+function cleanupCaptcha(){
+  if(captchaTimer){clearTimeout(captchaTimer);captchaTimer=null;}
+  captchaGeneration++;
+  if(window.turnstile && turnstileWidgetId!==null){
+    try{window.turnstile.remove(turnstileWidgetId);}catch(e){console.warn("Turnstile cleanup failed",e);}
+  }
+  turnstileWidgetId=null;
+  turnstileToken="";
+}
 function captchaNotice(){
-  var host=$("authCaptcha"); if(!host)return;
-  host.innerHTML='<div class="auth-captcha-notice">La vérification Cloudflare est momentanément inaccessible.<button type="button" id="authCaptchaRetry">Réessayer</button></div>';
-  var retry=$("authCaptchaRetry"); if(retry)retry.onclick=function(){captchaUnavailable=false;captchaAttempts=0;turnstileWidgetId=null;mountCaptcha();};
+  var host=$("authCaptcha");if(!host)return;
+  host.innerHTML='<div class="auth-captcha-notice" role="alert">La vérification Cloudflare est momentanément inaccessible.<button type="button" id="authCaptchaRetry">Réessayer</button></div>';
+  var retry=$("authCaptchaRetry");
+  if(retry)retry.onclick=function(){captchaFailures=0;captchaUnavailable=false;captchaAttempts=0;cleanupCaptcha();mountCaptcha();};
 }
 function mountCaptcha(){
-  var host=$("authCaptcha"); if(!host)return;
+  var host=$("authCaptcha");if(!host)return;
   if(captchaTimer){clearTimeout(captchaTimer);captchaTimer=null;}
+  if(turnstileWidgetId!==null)return;
   if(!window.turnstile){
-    captchaAttempts+=1;
-    if(captchaAttempts>=20){captchaUnavailable=true;captchaNotice();return;}
-    captchaTimer=setTimeout(mountCaptcha,250); return;
+    captchaAttempts++;
+    if(captchaAttempts>=40){captchaUnavailable=true;captchaNotice();return;}
+    captchaTimer=setTimeout(mountCaptcha,250);return;
   }
-  captchaAttempts=0; captchaUnavailable=false;
-  if(turnstileWidgetId===null){
-    host.innerHTML="";
-    turnstileWidgetId=window.turnstile.render(host,{sitekey:TURNSTILE_SITE_KEY,theme:"light",callback:function(token){turnstileToken=token;$("authError").textContent="";},"expired-callback":function(){turnstileToken="";},"error-callback":function(){turnstileToken="";captchaUnavailable=true;turnstileWidgetId=null;captchaNotice();}});
+  captchaAttempts=0;captchaUnavailable=false;
+  host.innerHTML="";
+  var generation=++captchaGeneration;
+  try{
+    turnstileWidgetId=window.turnstile.render(host,{
+      sitekey:TURNSTILE_SITE_KEY,theme:"light",
+      callback:function(token){if(generation!==captchaGeneration)return;turnstileToken=token;captchaFailures=0;captchaUnavailable=false;var error=$("authError");if(error)error.textContent="";},
+      "expired-callback":function(){if(generation===captchaGeneration)turnstileToken="";},
+      "error-callback":function(code){
+        if(generation!==captchaGeneration)return;
+        console.warn("Turnstile validation error",code);
+        turnstileToken="";
+        captchaFailures++;
+        captchaTimer=setTimeout(function(){
+          if(generation!==captchaGeneration)return;
+          cleanupCaptcha();
+          if(captchaFailures<=2){captchaTimer=setTimeout(mountCaptcha,captchaFailures*1000);}
+          else{captchaUnavailable=true;captchaNotice();}
+        },0);
+      }
+    });
+    if(turnstileWidgetId===undefined)throw new Error("Turnstile did not return a widget ID");
+  }catch(e){
+    console.warn("Turnstile initialization error",e);
+    cleanupCaptcha();captchaUnavailable=true;captchaNotice();
   }
 }
-function resetCaptcha(){turnstileToken="";if(window.turnstile&&turnstileWidgetId!==null)window.turnstile.reset(turnstileWidgetId);}
+function resetCaptcha(){
+  turnstileToken="";
+  if(window.turnstile&&turnstileWidgetId!==null){
+    try{window.turnstile.reset(turnstileWidgetId);}
+    catch(e){console.warn("Turnstile reset error",e);cleanupCaptcha();mountCaptcha();}
+  }
+}
 function captchaProblem(){return turnstileToken?"":captchaUnavailable?"La vérification Cloudflare est indisponible. Désactivez temporairement le VPN ou le bloqueur de contenu, puis réessayez.":"Validez la vérification de sécurité avant de continuer.";}
 function authFinalStep(){ return AUTH_MODE === "register" ? 4 : 3; }
 function authStepFocus(id){ setTimeout(function(){ var input=$(id); if(input) input.focus(); },0); }
