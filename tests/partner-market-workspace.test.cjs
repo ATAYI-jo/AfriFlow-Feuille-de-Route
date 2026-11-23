@@ -24,3 +24,19 @@ test("Market assignment writes require administrator identity",()=>{
  assert.match(sql,/assigned_by=\(select auth\.uid\(\)\)/);
  assert.doesNotMatch(sql,/grant .* to anon/i);
 });
+
+
+test("Partners is a compact read-only market overview, without duplicate approval panels",()=>{
+ const partnerPage=work.slice(work.indexOf("async function renPartners()"),work.indexOf("async function renAdmin()"));
+ const marketView=market.slice(market.indexOf("async function loadPartnerManagement("),market.indexOf("async function loadPartnerAssignmentsAdmin("));
+ assert.match(partnerPage,/Situation commerciale par marché/);
+ assert.doesNotMatch(partnerPage,/id="partnersAccess"|id="partnersTerms"|id="partnersDisputes"/);
+ assert.match(marketView,/var groups=new Map\(\)/);
+ assert.match(marketView,/af-market-kpis/);
+ assert.match(marketView,/af-market-summary-details/);
+ assert.match(marketView,/data-partner-mark-seen/);
+ assert.doesNotMatch(marketView,/data-market-assignment|admin_set_order_status|admin_set_report_status/);
+ assert.match(work,/renderMarketAssignmentsAdmin\("adMarketAssignments"\)/);
+ assert.match(market,/renderMarketAssignmentsAdmin: loadPartnerAssignmentsAdmin/);
+ assert.match(css,/\.af-market-summary/);
+});
