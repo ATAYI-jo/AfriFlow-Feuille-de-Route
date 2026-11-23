@@ -1075,3 +1075,77 @@ body.af-market-mode #market-view{display:block}
 @media(max-width:760px){
  #market-view .af-partner-welcome-logo svg{width:96px;height:96px}
 }
+
+
+/* Partner earnings: layered glass, brand logo and restrained dashboard motion. */
+#market-view .af-partner-landing .af-partner-wallet{
+  position:relative;
+  display:flex;
+  flex-direction:column;
+  overflow:hidden;
+  background:linear-gradient(125deg,rgba(13,76,49,.86),rgba(29,119,74,.66))!important;
+  -webkit-backdrop-filter:blur(26px) saturate(145%);
+  backdrop-filter:blur(26px) saturate(145%);
+}
+#market-view .af-partner-landing .af-partner-wallet::after{
+  content:"";position:absolute;z-index:0;pointer-events:none;
+  top:-80%;left:-80%;width:52%;height:260%;
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,.11),transparent);
+  transform:rotate(26deg) translateX(-130%);
+  animation:af-partner-wallet-glint 11s ease-in-out infinite;
+}
+#market-view .af-partner-wallet>*{position:relative;z-index:1}
+#market-view .af-partner-wallet-top{margin-bottom:clamp(16px,3vw,32px);align-items:center}
+#market-view .af-partner-company-logo{
+  width:clamp(54px,6.5vw,84px);height:clamp(54px,6.5vw,84px);
+  object-fit:contain;flex:none;filter:drop-shadow(0 5px 12px rgba(3,35,19,.15));
+  animation:af-partner-logo-enter .9s cubic-bezier(.2,.8,.25,1) both,af-partner-logo-float 5s ease-in-out 1s infinite;
+}
+#market-view .af-partner-market-tag{
+  animation:af-partner-market-enter .8s ease-out .15s both;
+  background:rgba(255,255,255,.15);
+  -webkit-backdrop-filter:blur(16px);backdrop-filter:blur(16px);
+}
+#market-view .af-partner-wallet-body{
+  display:flex;flex-direction:column;gap:clamp(10px,1.7vw,20px);min-width:0;
+}
+#market-view .af-partner-wallet-body h2{margin:0;font-size:clamp(1.12rem,2vw,1.75rem);line-height:1.25}
+#market-view .af-partner-wallet-value{
+  min-height:1.25em;
+  font-size:clamp(2.05rem,4.4vw,4.2rem);
+  font-weight:900;line-height:1.15;
+  font-variant-numeric:tabular-nums;
+  animation:af-partner-value-enter 1s cubic-bezier(.2,.8,.25,1) both;
+}
+#market-view .af-partner-wallet-value .af-partner-money-line{color:#fff}
+#market-view .af-partner-wallet-body>p{margin:0;color:rgba(255,255,255,.86)}
+#market-view .af-partner-wallet-pending{
+  margin-top:clamp(14px,3vw,28px);padding-top:clamp(14px,2vw,22px);
+  align-items:center;
+  animation:af-partner-value-enter .85s ease-out .25s both;
+}
+#market-view .af-partner-wallet-pending small{
+  display:block;font-size:.75rem;line-height:1.5;margin-top:5px;
+  color:rgba(255,255,255,.78);font-weight:400;
+}
+#market-view .af-partner-wallet-pending strong{
+  text-align:right;font-size:clamp(1rem,1.6vw,1.3rem);
+  font-variant-numeric:tabular-nums;
+}
+#market-view .af-partner-wallet-pending .af-partner-money-line{color:#fff}
+@keyframes af-partner-logo-enter{from{opacity:0;transform:scale(.78) translateY(13px)}to{opacity:1;transform:scale(1) translateY(0)}}
+@keyframes af-partner-logo-float{0%,100%{translate:0 0}50%{translate:0 -6px}}
+@keyframes af-partner-market-enter{from{opacity:0;transform:translateX(15px)}to{opacity:1;transform:translateX(0)}}
+@keyframes af-partner-value-enter{from{opacity:0;transform:translateY(16px);filter:blur(3px)}to{opacity:1;transform:translateY(0);filter:blur(0)}}
+@keyframes af-partner-wallet-glint{0%,60%,100%{transform:rotate(26deg) translateX(-130%)}75%{transform:rotate(26deg) translateX(550%)}}
+@media(max-width:760px){
+  #market-view .af-partner-company-logo{width:60px;height:60px}
+  #market-view .af-partner-wallet-pending{align-items:flex-start}
+}
+@media(prefers-reduced-motion:reduce){
+  #market-view .af-partner-landing .af-partner-wallet::after,
+  #market-view .af-partner-company-logo,
+  #market-view .af-partner-market-tag,
+  #market-view .af-partner-wallet-value,
+  #market-view .af-partner-wallet-pending{animation:none!important;transition:none!important}
+}
