@@ -1547,3 +1547,27 @@ body.af-market-mode #market-view{display:block}
 @media(prefers-reduced-motion:reduce){
   #market-view .af-partner-scroll-cue .af-icon{animation:none!important}
 }
+
+
+/* Unified outline-style illustrations: no solid emoji-like badges. */
+#market-view .af-dispute-mark{
+  width:38px;
+  height:38px;
+  border:0;
+  border-radius:0;
+  background:transparent;
+  color:#7d482e;
+  box-shadow:none;
+}
+#market-view .af-dispute-mark .af-icon{
+  width:31px;
+  height:31px;
+  stroke-width:1.85;
+  fill:none;
+}
+#market-view .af-dispute-evidence-link .af-icon,
+#market-view .af-side-news-heading .af-icon,
+#market-view .af-side-news-bell .af-icon{
+  stroke-width:1.8;
+  fill:none;
+}
