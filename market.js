@@ -453,15 +453,49 @@
     if (!complete) complete = [profile.first_name,profile.last_name].filter(Boolean).join(" ").trim();
     return complete || "Partenaire";
   }
-  function partnerBalanceByCurrency(reports, status) {
-    var sums = {};
-    reports.filter(function(r){return status.indexOf(r.status)>-1;}).forEach(function(r){
-      var currency=String(r.currency || "XOF").toUpperCase();
+  // The commercial market determines the display currency, not the partner's nationality.
+  // Never convert settled or pending earnings without a verified exchange rate.
+  function partnerMarketCurrency(code, reports) {
+    var table = {
+      XOF:"BJ BF CI GW ML NE SN TG".split(" "), XAF:"CM CF CG GA GQ TD".split(" "),
+      EUR:"AD AT BE CY DE EE ES FI FR GR HR IE IT LT LU LV MC ME MT NL PT SI SK SM VA".split(" "),
+      USD:"EC FM MH PA PW SV TL US ZW".split(" "), GBP:["GB"], CAD:["CA"],
+      GHS:["GH"], NGN:["NG"], GMD:["GM"], GNF:["GN"], SLL:["SL"], LRD:["LR"],
+      DZD:["DZ"], MAD:["MA"], TND:["TN"], LYD:["LY"], EGP:["EG"], SDG:["SD"],
+      ETB:["ET"], ERN:["ER"], DJF:["DJ"], SOS:["SO"], KES:["KE"], UGX:["UG"], TZS:["TZ"],
+      RWF:["RW"], BIF:["BI"], CDF:["CD"], AOA:["AO"], ZMW:["ZM"], MWK:["MW"], MZN:["MZ"],
+      ZAR:["ZA"], NAD:["NA"], BWP:["BW"], SZL:["SZ"], LSL:["LS"], MGA:["MG"], MUR:["MU"],
+      SCR:["SC"], CVE:["CV"], STN:["ST"], KMF:["KM"], SSP:["SS"], MRU:["MR"], KWD:["KW"],
+      AED:["AE"], CNY:["CN"], JPY:["JP"], INR:["IN"], BRL:["BR"], CHF:["CH"], AUD:["AU"],
+      NZD:["NZ"], TRY:["TR"], RUB:["RU"], KRW:["KR"], SAR:["SA"], QAR:["QA"]
+    };
+    var iso=String(code||"").toUpperCase();
+    var currency=Object.keys(table).filter(function(key){return table[key].indexOf(iso)>-1;})[0];
+    if(currency)return currency;
+    var fromSales = Array.from(new Set((reports||[]).map(function(r){return String(r.currency||"").toUpperCase();}).filter(function(value){return /^[A-Z]{3}$/.test(value);})));
+    return fromSales.length===1 ? fromSales[0] : null;
+  }
+  function partnerEarningsHtml(reports, statuses, marketCurrency) {
+    var totals=Object.create(null);
+    reports.filter(function(r){return statuses.indexOf(r.status)>-1;}).forEach(function(r){
+      var currency=String(r.currency||marketCurrency||"").toUpperCase();
       var amount=Number(r.partner_net_amount);
-      if(Number.isFinite(amount) && amount>=0) sums[currency]=(sums[currency]||0)+amount;
+      if(!/^[A-Z]{3}$/.test(currency)||!Number.isFinite(amount)||amount<0)return;
+      totals[currency]=(totals[currency]||0)+amount;
     });
-    var currencies=Object.keys(sums).sort();
-    return currencies.length ? currencies.map(function(currency){return '<span class="af-partner-money-line">'+esc(partnerMoney(sums[currency],currency))+'</span>';}).join("") : '<span class="af-partner-money-line">—</span>';
+    var currencies=Object.keys(totals).sort(function(a,b){return (a===marketCurrency?-1:0)-(b===marketCurrency?-1:0)||a.localeCompare(b);});
+    if(!currencies.length){
+      return marketCurrency ? '<span class="af-partner-money-line">'+esc(partnerFormatEarnings(0,marketCurrency))+'</span>'
+        : '<span class="af-partner-money-line">Devise du marché non renseignée</span>';
+    }
+    return currencies.map(function(currency){
+      return '<span class="af-partner-money-line">'+esc(partnerFormatEarnings(totals[currency],currency))+'</span>';
+    }).join("");
+  }
+  function partnerFormatEarnings(amount, currency){
+    var n=Number(amount)||0,decimals=["XOF","XAF","GNF","DJF","KMF","RWF","UGX","JPY","KRW"].indexOf(currency)>-1?0:2;
+    var digits=new Intl.NumberFormat("fr-FR",{minimumFractionDigits:0,maximumFractionDigits:decimals}).format(n);
+    return digits+" "+(currency==="XOF"||currency==="XAF"?"FCFA":currency);
   }
   function assignedPartnerMarket() {
     var market = state.partner && state.partner.market;
@@ -471,13 +505,19 @@
     };
   }
   function partnerLandingHeader() {
-    var data = state.partner, reports = data && data.enabled && Array.isArray(data.reports) ? data.reports : [];
-    var ready = Boolean(data && data.enabled), validated = partnerBalanceByCurrency(reports,["validated"]);
-    var pending = partnerBalanceByCurrency(reports,["pending_review"]), market = assignedPartnerMarket();
+    var data=state.partner,reports=data&&data.enabled&&Array.isArray(data.reports)?data.reports:[];
+    var market=assignedPartnerMarket(), currency=partnerMarketCurrency(market.code,reports);
+    var ready=Boolean(data&&data.enabled), owed=partnerEarningsHtml(reports,["validated"],currency);
+    var pending=partnerEarningsHtml(reports,["pending_review"],currency);
     return '<section class="af-partner-landing" aria-label="Tableau de bord partenaire">'
-      + '<div class="af-partner-wallet"><div class="af-partner-wallet-top"><span class="af-partner-eyebrow">VOS GAINS SUR VENTES</span><span class="af-partner-market-tag">'+esc(market.name)+'</span></div><h2>Part partenaire validée</h2><div class="af-partner-wallet-value">'+(ready?validated:'<span class="af-partner-money-line">En cours de chargement</span>')+'</div>'
-      + '<p>Ventes validées et non encore marquées comme réglées. Montant à confirmer avant tout retrait.</p>'
-      + '<div class="af-partner-wallet-pending"><span>En attente de validation</span><strong>'+(ready?pending:'—')+'</strong></div></div>'
+      + '<div class="af-partner-wallet" aria-label="Solde commercial du partenaire">'
+      + '<div class="af-partner-wallet-top"><img class="af-partner-company-logo" src="logo.png" alt="AfriFloW" loading="lazy"><span class="af-partner-market-tag" aria-label="Marché attribué">'+esc(market.name)+'</span></div>'
+      + '<div class="af-partner-wallet-body"><span class="af-partner-eyebrow">VOS GAINS SUR VENTES</span>'
+      + '<h2>Reste à verser par AfriFloW</h2>'
+      + '<div class="af-partner-wallet-value" data-af-partner-amount>'+(ready?owed:'<span class="af-partner-money-line">Chargement des ventes…</span>')+'</div>'
+      + '<p>Part partenaire des ventes validées et non encore réglées.</p>'
+      + '<div class="af-partner-wallet-pending"><span>En attente de validation<small>Ventes déclarées, non encore approuvées</small></span><strong>'+(ready?pending:'—')+'</strong></div>'
+      + '</div></div>'
       + '<div class="af-partner-welcome" aria-label="Accueil du partenaire"><div class="af-partner-identity"><strong class="af-partner-full-name">'+esc(partnerDisplayName())+'</strong></div>'
       + '<h1 class="af-partner-welcome-title" aria-label="Bienvenue"><span class="af-welcome-animated af-partner-welcome-word" lang="fr" aria-hidden="true">Bienvenue</span></h1>'
       + '<div class="af-partner-welcome-logo" id="afPartnerCountryLogo"><img src="logo.png" alt="Logo officiel AfriFloW" loading="lazy"></div></div>'
