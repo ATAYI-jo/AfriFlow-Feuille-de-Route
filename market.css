@@ -1464,3 +1464,29 @@ body.af-market-mode #market-view{display:block}
 @media(prefers-reduced-motion:reduce){
   #market-view .af-partner-scroll-cue{transition:none}
 }
+
+
+/* Country map: slightly larger across all markets, never stretched or clipped. */
+#market-view .af-partner-welcome-logo{
+  min-height:clamp(185px,19vw,248px);
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  overflow:visible;
+}
+#market-view .af-partner-welcome-logo svg{
+  width:clamp(194px,21vw,252px);
+  height:clamp(194px,21vw,252px);
+  max-width:100%;
+  aspect-ratio:1/1;
+  flex-shrink:1;
+  overflow:visible;
+}
+@media(max-width:760px){
+  #market-view .af-partner-welcome-logo{min-height:197px}
+  #market-view .af-partner-welcome-logo svg{
+    width:205px;
+    height:205px;
+    max-width:100%;
+  }
+}
