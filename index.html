@@ -1844,7 +1844,22 @@ var prev=window.onRole;window.onRole=function(){if(prev)prev();setTimeout(pull,1
   <script>
 (function(){
 "use strict";
-var MAP={"📎":"clip","📧":"mail","🕒":"clock","⏰":"bell","👉":"arrow-right","📁":"folder","📄":"file","☁":"cloud","⬇":"download","🔊":"volume","🖼":"image","🔗":"link","✔":"check","✖":"close"};
+// Unified outline illustrations across the site (no decorative emoji glyphs).
+var MAP={
+ "📎":"clip","📧":"mail","✉":"mail","📨":"mail","🕒":"clock","⏰":"bell","👉":"arrow-right",
+ "📁":"folder","📂":"folder","🗂":"folder","📄":"file","📃":"file","📋":"list","📑":"file",
+ "☁":"cloud","⬇":"download","⬆":"arrow-right","🔊":"volume","🔇":"volume-off",
+ "🖼":"image","📷":"image","📸":"image","📹":"video","🎬":"video","🔗":"link",
+ "✔":"check","✅":"check","☑":"check","✖":"close","❌":"close",
+ "🏠":"home","🏡":"home","🛍":"box","🛒":"box","📦":"box","💰":"money","💵":"money",
+ "🧭":"compass","🌍":"globe","🌎":"globe","🌏":"globe","📢":"bell","🔔":"bell",
+ "📰":"file","🗞":"file","📊":"table","📈":"table","📉":"table",
+ "⚠":"flag","🚨":"flag","❗":"flag","❕":"flag","ℹ":"file","💬":"chat",
+ "🔐":"lock","🔒":"lock","🔓":"unlock","👤":"user","👥":"user",
+ "📅":"calendar","🗓":"calendar","🚚":"truck","🚢":"ship","♻":"refresh",
+ "🗑":"trash","🖊":"edit","✏":"edit","🔍":"eye","💡":"bell","⭐":"check",
+ "🎁":"box","🎉":"check","❤️":"check","♥":"check"
+};
 var RE=new RegExp("("+Object.keys(MAP).join("|")+")\\uFE0F?|(?:\\uD83C[\\uDDE6-\\uDDFF]){2}","g");
 var HAS=new RegExp(RE.source);
 function skip(n){var p=n.parentNode;if(!p)return true;if(/^(SCRIPT|STYLE|TEXTAREA|TITLE)$/.test(p.nodeName))return true;return !!(p.closest&&p.closest("svg"))}
