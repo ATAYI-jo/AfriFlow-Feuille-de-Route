@@ -71,10 +71,12 @@ Deno.serve(async (req: Request) => {
       if (!isApprovedPartner) return reply(req, { error: "Votre espace partenaire attend une approbation d’AfriFloW." }, 403);
       const { data: terms } = await service.from("afriflow_partner_terms").select("commission_rate,is_enabled").eq("partner_user_id", user.id).maybeSingle();
       if (!terms?.is_enabled) return reply(req, { error: "Votre partenariat attend encore l’activation d’AfriFloW." }, 403);
-      const orderId = text(body.orderId, 36), quantity = positiveInteger(body.quantity), price = money(body.unitSalePrice), note = text(body.note, 1200);
-      if (!uuid(orderId) || !quantity || price === null) return reply(req, { error: "Déclaration de vente invalide" }, 400);
-      const { data: order } = await service.from("afriflow_partner_orders").select("id,product_id,quantity_requested,currency,status,product:afriflow_market_products(name)").eq("id", orderId).eq("partner_user_id", user.id).maybeSingle();
+      const orderId = text(body.orderId, 36), quantity = positiveInteger(body.quantity), note = text(body.note, 1200);
+      if (!uuid(orderId) || !quantity) return reply(req, { error: "Déclaration de vente invalide" }, 400);
+      const { data: order } = await service.from("afriflow_partner_orders").select("id,product_id,quantity_requested,unit_price,currency,status,product:afriflow_market_products(name)").eq("id", orderId).eq("partner_user_id", user.id).maybeSingle();
       if (!order || !["approved", "supplied"].includes(order.status)) return reply(req, { error: "Cette allocation n’est pas encore prête à la vente." }, 409);
+      const price = money(order.unit_price);
+      if (price === null) return reply(req, { error: "Prix d’allocation indisponible. Contactez AfriFloW." }, 409);
       const { data: previous, error: previousError } = await service.from("afriflow_partner_sales_reports").select("quantity_sold").eq("order_id", order.id).in("status", ["pending_review", "validated", "settled"]);
       if (previousError) throw new Error("Impossible de contrôler les quantités déclarées");
       const alreadySold = (previous || []).reduce((sum, row) => sum + Number(row.quantity_sold || 0), 0);
