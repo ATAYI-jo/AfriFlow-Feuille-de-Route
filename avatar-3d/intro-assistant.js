@@ -10,6 +10,7 @@ export function installIntroAssistant(video, container) {
   container.appendChild(panel);
   let renderer, mixer, model, observer, raf = 0, timer = 0, disposed = false;
   let current, prior = '', started = false, lastFrame = 0, lastTime = 0;
+  let baseX = 0, walking = false, walkSince = 0;
   let camera, scene, clock;
   const actions = new Map();
   const cleanupEvents = [];
@@ -42,10 +43,13 @@ export function installIntroAssistant(video, container) {
     if (disposed || video.ended || !actions.size) return;
     const eligible = [...actions.keys()].filter(name => name !== prior);
     if (!eligible.length) return;
-    const key = eligible[Math.floor(Math.random() * eligible.length)];
+    // Make the first welcome unmistakable, then rotate through varied gestures.
+    const key = prior ? eligible[Math.floor(Math.random() * eligible.length)] : 'salut';
     prior = key;
     window.dispatchEvent(new CustomEvent('afriflow:intro-avatar-gesture', { detail: { name: key } }));
     const next = actions.get(key);
+    walking = key === 'marcher';
+    if (walking) walkSince = performance.now();
     next.reset();
     next.setLoop(THREE.LoopOnce, 1);
     next.clampWhenFinished = true;
@@ -58,10 +62,14 @@ export function installIntroAssistant(video, container) {
     if (disposed || video.ended) return;
     raf = requestAnimationFrame(render);
     if (document.hidden) { lastTime = t; return; }
-    const delta = Math.min((t - (lastTime || t)) / 1000, .05);
+    const delta = Math.max(0, Math.min((t - (lastTime || t)) / 1000, .05));
     lastTime = t;
     if (mixer) mixer.update(delta);
-    if (model) model.rotation.y = Math.sin(t * .00072) * .045;
+    if (model) {
+      model.rotation.y = Math.sin(t * .00072) * .045;
+      const travel = walking ? Math.sin(Math.min(Math.max((t - walkSince) / 2300, 0), 1) * Math.PI) * .42 : 0;
+      model.position.x = baseX - travel;
+    }
     if (t - lastFrame < (mobile() ? 1000 / 24 : 1000 / 30)) return;
     lastFrame = t;
     renderer.render(scene, camera);
@@ -128,9 +136,12 @@ export function installIntroAssistant(video, container) {
       const scale = 2.8 / Math.max(size.y, .001);
       model.scale.multiplyScalar(scale);
       model.position.set(-center.x * scale, -bounds.min.y * scale, -center.z * scale);
+      baseX = model.position.x;
       camera.position.set(0, 1.42, 7.2);
       camera.lookAt(0, 1.35, 0);
       mixer = new THREE.AnimationMixer(model);
+      const nativeWalk = gltf.animations.find(clip => /walk/i.test(clip.name));
+      if (nativeWalk) actions.set('marcher', mixer.clipAction(nativeWalk));
       const bones = new Map();
       model.traverse(object => { if (object.isBone) bones.set(object.name, object); });
       const Z = [0,0,0], A = [0,0,.95], B = [0,0,-.95], C = [0,0,1.5], D = [0,0,-1.5];
