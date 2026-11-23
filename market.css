@@ -1490,3 +1490,60 @@ body.af-market-mode #market-view{display:block}
     max-width:100%;
   }
 }
+
+
+/* Final partner polish: readable free-standing logo, full-width note, motion and icons. */
+#market-view .af-partner-wallet-top::before{content:none!important;display:none!important}
+#market-view .af-partner-wallet-top .af-partner-company-logo{
+  width:clamp(93px,10vw,122px);
+  height:clamp(93px,10vw,122px);
+  padding:0!important;
+  border:0!important;
+  border-radius:0!important;
+  background:transparent!important;
+  box-shadow:none!important;
+  -webkit-backdrop-filter:none!important;
+  backdrop-filter:none!important;
+  object-fit:contain;
+  filter:drop-shadow(0 2px 2px rgba(255,255,255,.5)) drop-shadow(0 7px 10px rgba(0,30,14,.38));
+}
+#market-view .af-partner-portal>.af-partner-note{
+  display:block;
+  width:100%;
+  max-width:none;
+  grid-column:1/-1;
+  box-sizing:border-box;
+  margin:4px 0 0;
+  padding:clamp(20px,3vw,32px);
+  border-radius:20px;
+  border:1px solid rgba(255,255,255,.7);
+  background:linear-gradient(120deg,rgba(255,240,201,.88),rgba(252,247,226,.8));
+  box-shadow:0 12px 32px rgba(48,66,31,.12);
+  -webkit-backdrop-filter:blur(18px);
+  backdrop-filter:blur(18px);
+  color:#443a22;
+  font-size:clamp(.95rem,1.12vw,1.07rem);
+  line-height:1.75;
+  overflow-wrap:anywhere;
+}
+#market-view .af-partner-scroll-cue .af-icon{
+  animation:af-partner-scroll-nudge 1.7s ease-in-out infinite;
+  transform-origin:center;
+}
+#market-view .af-partner-scroll-cue{transition:transform .22s ease,box-shadow .22s ease}
+#market-view .af-dispute-mark .af-icon{width:24px;height:24px;stroke-width:2.5}
+#market-view .af-dispute-evidence-link{display:inline-flex;gap:8px;align-items:center;text-align:left}
+#market-view .af-dispute-evidence-link .af-icon{width:19px;height:19px;flex:none}
+#market-view .af-side-news-heading .af-icon,
+#market-view .af-side-news-bell .af-icon{width:19px;height:19px;vertical-align:middle}
+@keyframes af-partner-scroll-nudge{
+  0%,100%{transform:translateY(-3px);opacity:.82}
+  50%{transform:translateY(4px);opacity:1}
+}
+@media(max-width:760px){
+  #market-view .af-partner-wallet-top .af-partner-company-logo{width:91px;height:91px}
+  #market-view .af-partner-portal>.af-partner-note{padding:20px}
+}
+@media(prefers-reduced-motion:reduce){
+  #market-view .af-partner-scroll-cue .af-icon{animation:none!important}
+}
