@@ -39,11 +39,12 @@ export function installIntroAssistant(video, container) {
     }, 250);
   }
   function playGesture() {
-    if (disposed || video.ended || video.paused || !actions.size) return;
+    if (disposed || video.ended || !actions.size) return;
     const eligible = [...actions.keys()].filter(name => name !== prior);
     if (!eligible.length) return;
     const key = eligible[Math.floor(Math.random() * eligible.length)];
     prior = key;
+    window.dispatchEvent(new CustomEvent('afriflow:intro-avatar-gesture', { detail: { name: key } }));
     const next = actions.get(key);
     next.reset();
     next.setLoop(THREE.LoopOnce, 1);
@@ -51,15 +52,16 @@ export function installIntroAssistant(video, container) {
     if (current) current.fadeOut(.35);
     next.fadeIn(.35).play();
     current = next;
-    timer = setTimeout(playGesture, (next.getClip().duration + .4 + Math.random() * .65) * 1000);
+    timer = setTimeout(playGesture, (next.getClip().duration + .22 + Math.random() * .4) * 1000);
   }
   function render(t) {
     if (disposed || video.ended) return;
     raf = requestAnimationFrame(render);
-    if (document.hidden || video.paused) { lastTime = t; return; }
+    if (document.hidden) { lastTime = t; return; }
     const delta = Math.min((t - (lastTime || t)) / 1000, .05);
     lastTime = t;
     if (mixer) mixer.update(delta);
+    if (model) model.rotation.y = Math.sin(t * .00072) * .045;
     if (t - lastFrame < (mobile() ? 1000 / 24 : 1000 / 30)) return;
     lastFrame = t;
     renderer.render(scene, camera);
@@ -91,15 +93,34 @@ export function installIntroAssistant(video, container) {
       renderer.setPixelRatio(Math.min(devicePixelRatio || 1, mobile() ? 1.25 : 1.75));
       renderer.outputColorSpace = THREE.SRGBColorSpace;
       renderer.toneMapping = THREE.ACESFilmicToneMapping;
+      renderer.toneMappingExposure = 1.32;
       panel.appendChild(renderer.domElement);
-      const hemi = new THREE.HemisphereLight(0xffffff, 0x777777, 2.2);
-      scene.add(hemi);
-      const key = new THREE.DirectionalLight(0xffffff, 2);
-      key.position.set(2, 4, 5);
+      scene.add(new THREE.HemisphereLight(0xffffff, 0xd2dbd5, 2.5));
+      const key = new THREE.DirectionalLight(0xffffff, 3.0);
+      key.position.set(-2, 3.8, 4.5);
       scene.add(key);
+      const fill = new THREE.DirectionalLight(0xf2f7ff, 1.65);
+      fill.position.set(3, 2, 2.6);
+      scene.add(fill);
+      const rim = new THREE.DirectionalLight(0xffffff, .75);
+      rim.position.set(0, 3, -3);
+      scene.add(rim);
       const gltf = await new GLTFLoader().loadAsync('/avatar-3d/models/afriflow-assistante.glb');
       if (disposed || video.ended) return stop();
       model = gltf.scene;
+      // The original atlas is preserved; remove problematic metallic, roughness and normal maps.
+      model.traverse(node => {
+        if (!node.isMesh) return;
+        for (const mat of [node.material].flat()) {
+          if (!mat || !mat.isMeshStandardMaterial) continue;
+          mat.metalnessMap = null;
+          mat.roughnessMap = null;
+          mat.normalMap = null;
+          mat.metalness = 0;
+          mat.roughness = .82;
+          mat.needsUpdate = true;
+        }
+      });
       scene.add(model);
       const bounds = new THREE.Box3().setFromObject(model);
       const center = bounds.getCenter(new THREE.Vector3());
@@ -165,6 +186,7 @@ export function installIntroAssistant(video, container) {
       lastTime = performance.now();
       raf = requestAnimationFrame(render);
       playGesture();
+      window.dispatchEvent(new CustomEvent('afriflow:intro-avatar-ready', { detail: { gestures: [...actions.keys()] } }));
     } catch (error) {
       console.warn('[AfriFloW] Intro 3D unavailable:', error);
       stop();
