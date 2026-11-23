@@ -1273,3 +1273,29 @@ body.af-market-mode #market-view{display:block}
     width:70px;height:70px;padding:0;border-radius:0;
   }
 }
+
+
+/* Grand contour géographique du marché : Togo bien visible sans l'étirer. */
+#market-view .af-partner-welcome-logo{
+  min-height:clamp(188px,20vw,260px);
+  width:100%;
+  flex-shrink:0;
+}
+#market-view .af-partner-welcome-logo svg{
+  width:clamp(200px,22vw,265px);
+  height:clamp(200px,22vw,265px);
+  max-width:100%;
+  max-height:none;
+  object-fit:contain;
+  display:block;
+}
+@media(max-width:760px){
+  #market-view .af-partner-welcome-logo{
+    min-height:190px;
+  }
+  #market-view .af-partner-welcome-logo svg{
+    width:200px;
+    height:200px;
+    max-width:100%;
+  }
+}
