@@ -447,12 +447,18 @@
       };
     });
   }
-  function partnerFirstName() {
-    var full = String(window.USER_NAME || "").trim();
-    if (!full && window.afriMarketSession) full = String(window.afriMarketSession.display_name || window.afriMarketSession.first_name || "").trim();
-    if (!full && window.loggedUserEmail) full = String(window.loggedUserEmail).split("@")[0];
-    var first = full.split(/\s+/).filter(Boolean)[0] || "Partenaire";
-    return first.charAt(0).toLocaleUpperCase("fr") + first.slice(1);
+  function partnerIdentity() {
+    // Never fabricate a missing surname; profile data overrides the display name.
+    var profile = window.afriMarketSession || {};
+    var surname = String(profile.last_name || "").trim();
+    var given = String(profile.first_name || "").trim();
+    var full = String(window.USER_NAME || profile.display_name || "").trim();
+    if (!surname && !given && full) {
+      var parts = full.split(/\s+/).filter(Boolean);
+      if (parts.length > 1) { surname = parts.shift(); given = parts.join(" "); }
+      else given = full;
+    }
+    return { surname:surname || "Non renseigné", given:given || "Non renseigné" };
   }
   function partnerBalanceByCurrency(reports, status) {
     var sums = {};
@@ -472,7 +478,9 @@
       + '<div class="af-partner-wallet"><span class="af-partner-eyebrow">VOS GAINS SUR VENTES</span><h2>Part partenaire validée</h2><div class="af-partner-wallet-value">'+(ready?validated:'<span class="af-partner-money-line">En cours de chargement</span>')+'</div>'
       + '<p>Ventes validées et non encore marquées comme réglées. Montant à confirmer avant tout retrait.</p>'
       + '<div class="af-partner-wallet-pending"><span>En attente de validation</span><strong>'+(ready?pending:'—')+'</strong></div></div>'
-      + '<div class="af-partner-welcome"><h1 class="af-partner-welcome-title" aria-label="Bienvenue, '+esc(partnerFirstName())+'"><span class="af-welcome-animated af-partner-welcome-word" lang="fr" aria-hidden="true">Bienvenue</span><span class="af-partner-welcome-name" aria-hidden="true">'+esc(partnerFirstName())+'</span></h1></div>'
+      + '<div class="af-partner-welcome" aria-label="Accueil du partenaire"><div class="af-partner-identity"><div><small>Nom</small><strong>'+esc(partnerIdentity().surname)+'</strong></div><div><small>Prénom</small><strong>'+esc(partnerIdentity().given)+'</strong></div><div class="af-partner-market"><small>Marché</small><strong>Togolais</strong></div></div>'
+      + '<h1 class="af-partner-welcome-title" aria-label="Bienvenue"><span class="af-welcome-animated af-partner-welcome-word" lang="fr" aria-hidden="true">Bienvenue</span></h1>'
+      + '<div class="af-partner-welcome-logo"><img src="logo.png" alt="Logo AfriFloW" loading="lazy"></div></div>'
       + '</section>';
   }
   function partnerLandingProducts() {
