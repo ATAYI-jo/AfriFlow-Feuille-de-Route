@@ -773,11 +773,36 @@
   function openCart() {
     if (!state.cart.length) return notice("Votre panier est vide pour le moment.");
     var currency = currentCurrency();
-    var html = '<button type="button" class="af-modal-x" aria-label="Fermer">×</button><div class="af-cart"><h3>Mon panier <span>' + cartCount() + ' article' + (cartCount() > 1 ? "s" : "") + '</span></h3><p>Préparez votre demande : AfriFloW confirmera les prix, stocks et délais avant tout paiement.</p><div class="af-cart-list">' + state.cart.map(function (row) { return '<article><div><b>' + esc(row.name) + '</b><small>' + esc(formatPrice(row.price, row.currency)) + ' / unité</small></div><div class="af-cart-qty"><button type="button" data-cart-minus="' + esc(row.id) + '">−</button><b>' + esc(row.quantity) + '</b><button type="button" data-cart-plus="' + esc(row.id) + '">+</button></div><button type="button" class="af-cart-remove" data-cart-remove="' + esc(row.id) + '">Retirer</button></article>'; }).join("") + '</div><div class="af-cart-total"><span>Total estimatif</span><b>' + esc(formatPrice(cartTotal(), currency)) + '</b><small>Conversion indicative : le devis final reste le montant de référence.</small></div><div class="af-actions"><button type="button" class="af-market-primary" id="afCartQuote">Demander un devis groupé</button><button type="button" class="af-market-secondary" id="afCartClose">Continuer mes achats</button></div></div>';
+  // Guest checkout: present transparent, non-transactional preparatory flow until the
+  // merchant is approved and a server-side FedaPay payment session is deployed.
+  function openGuestCheckout() {
+    if (!state.cart.length) return notice("Votre panier est vide.");
+    var html = '<button type="button" class="af-modal-x" aria-label="Fermer">×</button>' +
+      '<div class="af-cart af-guest-checkout"><h3>Commander sans compte</h3>' +
+      '<p>Préparez votre commande en tant qu’invité. Aucun compte AfriFloW n’est requis.</p>' +
+      '<div class="af-guest-step"><strong>1. Livraison</strong>' +
+      '<label for="afGuestCountry">Pays de livraison</label><select id="afGuestCountry">' +
+      ['Burkina Faso','Togo','Bénin','Côte d’Ivoire','Ghana','Sénégal','France','Belgique','Allemagne','Canada','Autre pays'].map(function(country){return '<option>'+esc(country)+'</option>';}).join('') +
+      '</select><p>Les frais et délais de livraison seront confirmés avant tout encaissement.</p></div>' +
+      '<div class="af-guest-step"><strong>2. Moyen de paiement souhaité</strong>' +
+      '<label><input type="radio" name="afGuestPay" value="card" checked> Carte bancaire (Visa / Mastercard)</label>' +
+      '<label><input type="radio" name="afGuestPay" value="mobile"> Mobile Money (selon le pays)</label></div>' +
+      '<div class="af-guest-step"><strong>3. Récapitulatif</strong>' +
+      '<p>' + esc(cartCount()) + ' article(s) · Total produits estimatif : <b>' + esc(formatPrice(cartTotal(),currentCurrency())) + '</b></p>' +
+      '<p>Prix, disponibilité, taxes, conversion et livraison à vérifier côté serveur avant tout paiement.</p></div>' +
+      '<div class="af-guest-pending" role="status"><strong>Paiement invité en préparation</strong>' +
+      '<p>Le compte marchand AfriFloW est en cours de validation chez FedaPay. Le paiement réel et la confirmation de commande ne sont pas encore disponibles.</p></div>' +
+      '<div class="af-actions"><button type="button" class="af-market-secondary" id="afGuestBack">Retour au panier</button></div></div>';
+    var m=modal(html);
+    m.querySelector(".af-modal-x").onclick=closeModal;
+    m.querySelector("#afGuestBack").onclick=function(){closeModal();openCart();};
+  }
+    var html = '<button type="button" class="af-modal-x" aria-label="Fermer">×</button><div class="af-cart"><h3>Mon panier <span>' + cartCount() + ' article' + (cartCount() > 1 ? "s" : "") + '</span></h3><p>Préparez votre demande : AfriFloW confirmera les prix, stocks et délais avant tout paiement.</p><div class="af-cart-list">' + state.cart.map(function (row) { return '<article><div><b>' + esc(row.name) + '</b><small>' + esc(formatPrice(row.price, row.currency)) + ' / unité</small></div><div class="af-cart-qty"><button type="button" data-cart-minus="' + esc(row.id) + '">−</button><b>' + esc(row.quantity) + '</b><button type="button" data-cart-plus="' + esc(row.id) + '">+</button></div><button type="button" class="af-cart-remove" data-cart-remove="' + esc(row.id) + '">Retirer</button></article>'; }).join("") + '</div><div class="af-cart-total"><span>Total estimatif</span><b>' + esc(formatPrice(cartTotal(), currency)) + '</b><small>Conversion indicative : le devis final reste le montant de référence.</small></div><div class="af-actions"><button type="button" class="af-market-primary" id="afCartGuest">Commander sans compte</button><button type="button" class="af-market-primary" id="afCartQuote">Demander un devis groupé</button><button type="button" class="af-market-secondary" id="afCartClose">Continuer mes achats</button></div></div>';
     var m = modal(html); m.querySelector(".af-modal-x").onclick = closeModal; m.querySelector("#afCartClose").onclick = closeModal;
     m.querySelectorAll("[data-cart-plus]").forEach(function (button) { button.onclick = function () { var row = state.cart.filter(function (x) { return x.id === button.dataset.cartPlus; })[0]; if (row) { row.quantity += 1; persistShop(); closeModal(); openCart(); } }; });
     m.querySelectorAll("[data-cart-minus]").forEach(function (button) { button.onclick = function () { var row = state.cart.filter(function (x) { return x.id === button.dataset.cartMinus; })[0]; if (row) { row.quantity -= 1; if (row.quantity < 1) state.cart = state.cart.filter(function (x) { return x.id !== row.id; }); persistShop(); closeModal(); if (state.cart.length) openCart(); else render(); } }; });
     m.querySelectorAll("[data-cart-remove]").forEach(function (button) { button.onclick = function () { state.cart = state.cart.filter(function (x) { return x.id !== button.dataset.cartRemove; }); persistShop(); closeModal(); if (state.cart.length) openCart(); else render(); }; });
+    m.querySelector("#afCartGuest").onclick = openGuestCheckout;
     m.querySelector("#afCartQuote").onclick = async function () {
       if (state.context.kind === "public") { closeModal(); openAuth("login"); return; }
       var send = this; send.disabled = true;
