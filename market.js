@@ -508,7 +508,7 @@
     var data=state.partner,reports=data&&data.enabled&&Array.isArray(data.reports)?data.reports:[];
     var market=assignedPartnerMarket(), currency=partnerMarketCurrency(market.code,reports);
     var ready=Boolean(data&&data.enabled), toValidate=partnerEarningsHtml(reports,["pending_review"],currency);
-    var received=partnerEarningsHtml(reports,["settled"],currency);
+    var validated=partnerEarningsHtml(reports,["validated"],currency);
     return '<section class="af-partner-landing" aria-label="Tableau de bord partenaire">'
       + '<div class="af-partner-wallet" aria-label="Solde commercial du partenaire">'
       + '<div class="af-partner-wallet-top"><img class="af-partner-company-logo" src="logo.png" alt="AfriFloW" loading="lazy"><span class="af-partner-market-tag" aria-label="Marché attribué">'+esc(market.name)+'</span></div>'
@@ -516,7 +516,7 @@
       + '<h2>Vos gains sur ventes</h2>'
       + '<div class="af-partner-wallet-value" data-af-partner-amount>'+(ready?toValidate:'<span class="af-partner-money-line">Chargement des ventes…</span>')+'</div>'
       + '<p>Part partenaire des ventes déclarées, en attente de validation par AfriFloW.</p>'
-      + '<div class="af-partner-wallet-pending"><span>Reçu<small>Montants des ventes marquées comme réglées</small></span><strong>'+(ready?received:'—')+'</strong></div>'
+      + '<div class="af-partner-wallet-pending"><span>Validé<small>Part partenaire des ventes validées par AfriFloW, non encore réglées</small></span><strong>'+(ready?validated:'—')+'</strong></div>'
       + '</div></div>'
       + '<div class="af-partner-welcome" aria-label="Accueil du partenaire"><div class="af-partner-identity"><strong class="af-partner-full-name">'+esc(partnerDisplayName())+'</strong></div>'
       + '<h1 class="af-partner-welcome-title" aria-label="Bienvenue"><span class="af-welcome-animated af-partner-welcome-word" lang="fr" aria-hidden="true">Bienvenue</span></h1>'
