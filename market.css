@@ -789,7 +789,7 @@ body.af-market-mode #market-view{display:block}
 @media(max-width:760px){.af-partner-landing{grid-template-columns:1fr;margin-top:4px}.af-partner-welcome,.af-partner-wallet{padding:24px}.af-partner-welcome h1{margin:14px 0;font-size:2rem}}
 
 
-/* En-tête partenaire : verre translucide lisible, solde à gauche, accueil à droite. */
+/* En-tête partenaire : gains VERT à gauche et bienvenue BLANC à droite ; glassmorphism. */
 .af-partner-landing{
   grid-template-columns:minmax(0,1.16fr) minmax(0,1fr);
   align-items:stretch;
@@ -799,27 +799,33 @@ body.af-market-mode #market-view{display:block}
   position:relative;
   isolation:isolate;
   overflow:hidden;
-  border:1px solid rgba(255,255,255,.58);
-  background:linear-gradient(135deg,rgba(255,255,255,.77),rgba(240,250,243,.49));
+  border:1px solid rgba(255,255,255,.55);
   -webkit-backdrop-filter:blur(22px) saturate(145%);
   backdrop-filter:blur(22px) saturate(145%);
-  box-shadow:0 18px 52px rgba(9,51,30,.18),inset 0 1px 0 rgba(255,255,255,.72);
-  color:#163c29;
+  box-shadow:0 18px 52px rgba(9,51,30,.18),inset 0 1px 0 rgba(255,255,255,.6);
 }
-.af-partner-landing .af-partner-welcome{
-  background:linear-gradient(128deg,rgba(17,78,49,.80),rgba(37,112,74,.62));
-  border-color:rgba(255,255,255,.42);
+.af-partner-landing .af-partner-wallet{
   color:#fff;
+  background:linear-gradient(128deg,rgba(17,78,49,.83),rgba(37,112,74,.66));
+  border-color:rgba(255,255,255,.42);
 }
-.af-partner-landing .af-partner-wallet .af-partner-eyebrow{color:#247047}
-.af-partner-landing .af-partner-wallet>p{color:#345c45}
-.af-partner-landing .af-partner-wallet-pending{border-color:rgba(26,89,51,.2)}
-.af-partner-landing .af-partner-welcome .af-partner-eyebrow{color:#ffdf9c}
+.af-partner-landing .af-partner-wallet .af-partner-eyebrow{color:#ffdf9c}
+.af-partner-landing .af-partner-wallet h2,
+.af-partner-landing .af-partner-wallet-value,
+.af-partner-landing .af-partner-wallet-pending{color:#fff}
+.af-partner-landing .af-partner-wallet>p{color:rgba(255,255,255,.91)}
+.af-partner-landing .af-partner-wallet-pending{border-color:rgba(255,255,255,.33)}
+.af-partner-landing .af-partner-welcome{
+  color:#163c29;
+  background:linear-gradient(135deg,rgba(255,255,255,.84),rgba(240,250,243,.62));
+  border-color:rgba(255,255,255,.7);
+}
+.af-partner-landing .af-partner-welcome .af-partner-eyebrow{color:#247047}
 .af-partner-landing .af-partner-welcome h1,
-.af-partner-landing .af-partner-welcome p{color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.12)}
+.af-partner-landing .af-partner-welcome p{color:#163c29;text-shadow:none}
 @supports not ((backdrop-filter:blur(2px)) or (-webkit-backdrop-filter:blur(2px))){
-  .af-partner-landing .af-partner-wallet{background:#eef6ee}
-  .af-partner-landing .af-partner-welcome{background:#216747}
+  .af-partner-landing .af-partner-wallet{background:#216747}
+  .af-partner-landing .af-partner-welcome{background:#eef6ee}
 }
 @media(max-width:760px){
   .af-partner-landing{grid-template-columns:minmax(0,1fr)}
