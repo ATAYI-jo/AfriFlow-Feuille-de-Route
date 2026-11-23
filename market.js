@@ -415,7 +415,7 @@
       +'<label>Nature du problème<select name="category" required><option value="qualite">Qualité du produit</option><option value="quantite">Quantité manquante</option><option value="livraison">Livraison ou transport</option><option value="emballage">Emballage endommagé</option><option value="tracabilite">Origine / lot / traçabilité</option><option value="autre">Autre</option></select></label>'
       +'<label>Référence du lot, si connue<input name="batch" maxlength="100" placeholder="Facultatif — code imprimé sur le sachet"></label>'
       +'<label>Expliquez précisément le problème<textarea name="description" required minlength="15" maxlength="3000" rows="4" placeholder="Produit, quantité, défaut constaté, date, conséquences…"></textarea></label>'
-      +'<label class="af-dispute-attachments">Photos ou vidéos du produit (facultatif)<input type="file" name="evidence" accept="image/jpeg,image/png,image/webp,video/mp4,video/webm" multiple><small>Jusqu’à 3 fichiers, 25 Mo maximum chacun. Les pièces sont stockées dans Dropbox en privé, accessibles uniquement au partenaire et à l’administration AfriFloW.</small></label>'
+      +'<label class="af-dispute-attachments">Photos ou vidéos du produit (facultatif)<input type="file" name="evidence" accept="image/jpeg,image/png,image/webp,video/mp4,video/webm" multiple><small>Jusqu’à 3 fichiers, 25 Mo maximum chacun. Les pièces sont conservées de manière sécurisée par AfriFloW. Seuls le partenaire concerné et l’administration autorisée peuvent y accéder.</small></label>'
       +'<p class="af-partner-form-status" id="afPartnerDisputeStatus" role="status" aria-live="polite"></p>'
       +'<button type="submit" class="af-market-primary"'+(orders.length?"":" disabled") +'>Envoyer la contestation</button></form>'
       +'<h3>Mes contestations ('+state.disputes.length+')</h3>'
@@ -426,7 +426,7 @@
 
   async function partnerDropboxCall(body){
     var r=await sb().functions.invoke("afriflow-partner-dropbox",{body:body});
-    if(r.error||!r.data||r.data.error)throw new Error(r.data&&r.data.error||r.error&&r.error.message||"Dropbox indisponible");
+    if(r.error||!r.data||r.data.error)throw new Error(r.data&&r.data.error||r.error&&r.error.message||"Service de fichiers AfriFloW temporairement indisponible");
     return r.data;
   }
   function partnerChunkBase64(bytes){
@@ -1512,17 +1512,17 @@
         if(result.error)throw result.error;
         var failures=[],archived=false;
         try{await partnerDropboxCall({action:"archive",disputeId:result.data.id});archived=true;}
-        catch(error){failures.push("Dossier Dropbox : "+error.message);}
+        catch(error){failures.push("Dossier AfriFloW : "+error.message);}
         if(archived)for(var i=0;i<files.length;i++){
           var file=files[i];
           try{
-            if(status)status.textContent="Transfert Dropbox : "+(i+1)+"/"+files.length+"…";
+            if(status)status.textContent="Transfert AfriFloW : "+(i+1)+"/"+files.length+"…";
             await partnerDropboxUpload(result.data.id,file,function(sent,total){
-              if(status)status.textContent="Transfert Dropbox "+(i+1)+"/"+files.length+" : "+Math.round(sent/total*100)+" %";
+              if(status)status.textContent="Transfert AfriFloW "+(i+1)+"/"+files.length+" : "+Math.round(sent/total*100)+" %";
             });
           }catch(error){failures.push(file.name+" : "+error.message);}
         }
-        var summary=failures.length?"Signalement enregistré dans AfriFloW, mais archive Dropbox incomplète : "+failures.join("; "):"Signalement archivé sur Dropbox"+(files.length?" avec "+files.length+" pièce(s) jointe(s).":".");
+        var summary=failures.length?"Signalement enregistré, mais certaines pièces ou informations n’ont pas pu être archivées : "+failures.join("; "):"Signalement enregistré auprès d’AfriFloW"+(files.length?" avec "+files.length+" pièce(s) jointe(s).":".");
         if(status)status.textContent=summary;
         notice(summary);
         await loadPartnerDisputes();
