@@ -867,84 +867,101 @@
         sb().from("afriflow_partner_markets").select("partner_user_id,market_name,country_code,updated_at"),
         sb().from("afriflow_partner_events").select("id,partner_user_id,source_type,created_at").order("created_at",{ascending:false}).limit(500),
         sb().from("afriflow_partner_event_reads").select("event_id,admin_user_id").limit(1000),
+        sb().from("afriflow_partner_disputes").select("id,partner_user_id,status,created_at").order("created_at",{ascending:false}).limit(500),
         sb().auth.getUser()
       ]);
       if(!host.isConnected)return;
-      var data=results[0]||{},marketsRes=results[1],eventsRes=results[2],readsRes=results[3],identity=results[4];
-      if(marketsRes.error)throw marketsRes.error;
-      if(eventsRes.error||readsRes.error)throw eventsRes.error||readsRes.error;
+      var data=results[0]||{},marketsRes=results[1],eventsRes=results[2],readsRes=results[3],disputesRes=results[4],identity=results[5];
+      var failure=[marketsRes,eventsRes,readsRes,disputesRes].find(function(r){return r.error;});
+      if(failure)throw failure.error;
       var adminId=identity.data&&identity.data.user&&identity.data.user.id;
-      var seenIds=new Set((readsRes.data||[]).filter(function(r){return r.admin_user_id===adminId;}).map(function(r){return r.event_id;}));
-      var events=(eventsRes.data||[]).filter(function(row){return !seenIds.has(row.id)});
-      var byUser={};events.forEach(function(event){(byUser[event.partner_user_id]||(byUser[event.partner_user_id]=[])).push(event)});
-      var labels={order:"Nouvelle demande",sale:"Vente déclarée",dispute:"Contestation"};
-      if(window.AfriPartnerUnreadUpdate)window.AfriPartnerUnreadUpdate(events.length);
-      var partners=data.partners||[],orders=data.orders||[],reports=data.reports||[],marketMap={};
-      (marketsRes.data||[]).forEach(function(x){marketMap[x.partner_user_id]={name:x.market_name,code:x.country_code||""}});
-      var categories=["Non renseigné"],marketNames={};
-      partners.forEach(function(p){var name=(marketMap[p.user_id]&&marketMap[p.user_id].name)||"Non renseigné";if(!marketNames[name]){marketNames[name]=true;if(name!=="Non renseigné")categories.push(name)}});
-      categories.sort(function(a,b){return a==="Non renseigné"?-1:b==="Non renseigné"?1:a.localeCompare(b,"fr")});
-      var byPartner=function(id,list){return list.filter(function(x){return x.partner_user_id===id})};
-      var statusOptions=function(current,values,labels){
-        return values.map(function(v){return '<option value="'+esc(v)+'"'+(current===v?" selected":"")+'>'+esc(labels[v])+'</option>'}).join("");
+      if(!adminId)throw new Error("Session administrateur indisponible.");
+      var seen=new Set((readsRes.data||[]).filter(function(row){return row.admin_user_id===adminId}).map(function(row){return row.event_id}));
+      var unread=(eventsRes.data||[]).filter(function(row){return !seen.has(row.id)});
+      if(window.AfriPartnerUnreadUpdate)window.AfriPartnerUnreadUpdate(unread.length);
+      var orders=data.orders||[],reports=data.reports||[],disputes=disputesRes.data||[],partners=data.partners||[],marketMap={};
+      (marketsRes.data||[]).forEach(function(m){marketMap[m.partner_user_id]={name:String(m.market_name||"").trim(),code:String(m.country_code||"").toUpperCase()};});
+      var groups=new Map();
+      partners.forEach(function(partner){
+        var market=marketMap[partner.user_id]||{},name=market.name||"Marché non attribué";
+        var key=(market.code||"XX")+"|"+name.toLocaleLowerCase("fr");
+        if(!groups.has(key))groups.set(key,{name:name,code:market.code||"",partners:[],orders:[],sales:[],disputes:[],events:[]});
+        groups.get(key).partners.push(partner);
+      });
+      var groupList=Array.from(groups.values()).sort(function(x,y){
+        if(x.name==="Marché non attribué")return 1;
+        if(y.name==="Marché non attribué")return -1;
+        return x.name.localeCompare(y.name,"fr");
+      });
+      var byPartner=function(id,rows){return rows.filter(function(x){return x.partner_user_id===id})};
+      var isOpenDispute=function(d){return !["resolved","closed","rejected"].includes(String(d.status||"").toLowerCase())};
+      var isPendingOrder=function(o){return o.status==="requested"};
+      var isPendingSale=function(s){return s.status==="pending_review"};
+      groupList.forEach(function(group){
+        group.partners.forEach(function(p){
+          group.orders.push.apply(group.orders,byPartner(p.user_id,orders));
+          group.sales.push.apply(group.sales,byPartner(p.user_id,reports));
+          group.disputes.push.apply(group.disputes,byPartner(p.user_id,disputes));
+          group.events.push.apply(group.events,byPartner(p.user_id,unread));
+        });
+      });
+      var counts={partners:partners.length,markets:groupList.filter(function(g){return !!g.code||g.name!=="Marché non attribué"}).length,
+        orders:orders.filter(isPendingOrder).length,sales:reports.filter(isPendingSale).length,
+        disputes:disputes.filter(isOpenDispute).length,alerts:unread.length};
+      var iconStats={partners:"user",markets:"globe",orders:"grid",sales:"bag",disputes:"alert",alerts:"bell"};
+      var summary=[["markets","Marchés"],["partners","Partenaires"],["orders","Demandes à examiner"],
+        ["sales","Ventes à contrôler"],["disputes","Contestations ouvertes"],["alerts","Notifications"]];
+      var notices={order:"Demande",sale:"Vente",dispute:"Contestation"};
+      host.innerHTML='<div class="af-market-overview">'
+        +'<div class="af-market-kpis">'+summary.map(function(info){return '<div class="af-market-kpi">'+icon(iconStats[info[0]])+'<span>'+esc(info[1])+'</span><strong>'+counts[info[0]]+'</strong></div>';}).join("")+'</div>'
+        +'<div class="af-market-overview-filter"><label for="afMarketStatusFilter">Afficher un marché</label><select id="afMarketStatusFilter"><option value="">Tous les marchés</option>'
+        +groupList.map(function(g,i){return '<option value="'+i+'">'+esc(g.name)+(g.code?' ('+esc(g.code)+')':'')+'</option>';}).join("")+'</select></div>'
+        +(groupList.length?groupList.map(function(group,index){
+          var ordersPending=group.orders.filter(isPendingOrder),salesPending=group.sales.filter(isPendingSale),
+              disputesOpen=group.disputes.filter(isOpenDispute),alerts=group.events.length;
+          return '<section class="af-market-summary'+(alerts?' af-market-summary-attention':'')+'" data-market-summary="'+index+'">'
+            +'<div class="af-market-summary-top"><div class="af-market-summary-country">'+icon("globe")+'<div><h4>'+esc(group.name)+'</h4>'
+            +'<small>'+(group.code?'Pays : '+esc(group.code):'Pays non renseigné')+' · '+group.partners.length+' partenaire(s)</small></div></div>'
+            +(alerts?'<span class="af-market-summary-alert">'+icon("bell")+' '+alerts+' nouvelle(s)</span>':'')+'</div>'
+            +'<div class="af-market-summary-stats"><span>'+icon("grid")+' '+ordersPending.length+' demande(s) en attente</span>'
+            +'<span>'+icon("bag")+' '+salesPending.length+' vente(s) à contrôler</span>'
+            +'<span>'+icon("alert")+' '+disputesOpen.length+' contestation(s) ouverte(s)</span></div>'
+            +'<details class="af-market-summary-details"'+(alerts?' open':'')+'><summary>Voir les partenaires et leurs activités</summary>'
+            +'<div class="af-market-summary-partners">'+group.partners.map(function(p){
+              var pOrders=byPartner(p.user_id,orders),pSales=byPartner(p.user_id,reports),
+                  pDisputes=byPartner(p.user_id,disputes),pUnread=byPartner(p.user_id,unread);
+              return '<article class="af-market-summary-partner'+(pUnread.length?' af-market-summary-partner-alert':'')+'"><div class="af-market-summary-partner-head"><div>'
+                +'<strong>'+esc(p.email||"Partenaire")+'</strong><small>'
+                +pOrders.filter(isPendingOrder).length+' demande(s) · '+pSales.filter(isPendingSale).length+' vente(s) à contrôler · '
+                +pDisputes.filter(isOpenDispute).length+' contestation(s) ouverte(s)</small></div>'
+                +(pUnread.length?'<span class="af-market-summary-unread">'+pUnread.length+' nouvelle(s)</span>':'')+'</div>'
+                +(pUnread.length?'<div class="af-market-summary-events">'+pUnread.map(function(event){
+                  return '<span>'+icon(event.source_type==="order"?"grid":event.source_type==="sale"?"bag":"alert")
+                    +esc(notices[event.source_type]||"Événement")+' · '+esc(new Date(event.created_at).toLocaleString("fr-FR"))+'</span>';
+                }).join("")+'</div><button type="button" class="af-market-secondary" data-partner-mark-seen="'+esc(p.user_id)+'">Marquer comme consultées</button>':'')
+                +'</article>';
+            }).join("")+'</div></details></section>';
+        }).join(""):'<p class="af-market-empty">Aucun marché ni partenaire enregistré.</p>')+'</div>';
+      var select=host.querySelector("#afMarketStatusFilter");
+      if(select)select.onchange=function(){
+        host.querySelectorAll("[data-market-summary]").forEach(function(card){
+          card.hidden=select.value!==""&&card.dataset.marketSummary!==select.value;
+        });
       };
-      var orderLabels={requested:"Demandée",approved:"Validée",supplied:"Prête à vendre",rejected:"Refusée",closed:"Clôturée"};
-      var saleLabels={pending_review:"À contrôler",validated:"Validée",settled:"Réglée",rejected:"Refusée"};
-      host.innerHTML='<div class="af-partner-market-tools"><label>Filtrer par marché<select id="afPartnerMarketFilter"><option value="">Tous les marchés</option>'+categories.map(function(n){return '<option value="'+esc(n)+'">'+esc(n)+'</option>'}).join("")+'</select></label><p>'+partners.length+' partenaire(s) · '+orders.length+' allocation(s) · '+reports.length+' vente(s) déclarée(s) · <strong>'+events.length+' notification(s) non lue(s)</strong></p></div>'
-        +(partners.length?partners.map(function(p){
-          var market=(marketMap[p.user_id]&&marketMap[p.user_id].name)||"Non renseigné",marketCode=(marketMap[p.user_id]&&marketMap[p.user_id].code)||"",pOrders=byPartner(p.user_id,orders),pSales=byPartner(p.user_id,reports),terms=p.terms||{},pending=byUser[p.user_id]||[];
-          return '<section class="af-partner-market-card'+(pending.length?' af-partner-market-attention':'')+'" data-market="'+esc(market)+'">'
-            +'<div class="af-partner-market-heading"><div><h4>'+esc(p.email||"Partenaire")+'</h4><small>Marché : '+esc(market)+' · '+(terms.is_enabled?"Conditions actives":"Conditions à configurer")+'</small></div><div class="af-partner-market-badges">'+(pending.length?'<strong class="af-partner-market-unread">'+pending.length+' nouvelle(s)</strong>':'')+'<span>'+pOrders.length+' allocation(s)</span><span>'+pSales.length+' déclaration(s)</span></div></div>'
-            +(pending.length?'<div class="af-partner-event-notice" role="status"><strong>Notifications du partenaire</strong><div>'+pending.map(function(ev){return '<span>'+icon(ev.source_type==="dispute"?"alert":ev.source_type==="sale"?"bag":"grid")+' '+esc(labels[ev.source_type])+' · '+esc(new Date(ev.created_at).toLocaleString("fr-FR"))+'</span>';}).join("")+'</div><button type="button" class="af-market-secondary" data-partner-mark-seen="'+esc(p.user_id)+'">Marquer comme consultées</button></div>':'')
-            +'<form data-market-assignment="'+esc(p.user_id)+'" class="af-market-assign"><label>Marché commercial (pays ou zone de vente)<input name="market" required minlength="2" maxlength="80" value="'+esc(market==="Non renseigné"?"":market)+'" placeholder="Ex. Marché togolais"></label><label>Code pays du marché (ISO)<select name="country_code">'+(window.AfriCountries?window.AfriCountries.options(marketCode):'<option value="">Non renseigné</option>')+'</select></label><button type="submit" class="af-market-secondary">Enregistrer le marché</button></form>'
-            +'<details><summary>Allocations et demandes ('+pOrders.length+')</summary>'
-              +(pOrders.length?pOrders.map(function(o){var product=Array.isArray(o.product)?o.product[0]:o.product;return '<form class="af-partner-market-row" data-market-order="'+esc(o.id)+'"><div><b>'+esc(product&&product.name||"Produit")+'</b><small>'+esc(o.quantity_requested)+' unités · demande '+esc(new Date(o.created_at).toLocaleDateString("fr-FR"))+'</small></div><select aria-label="Statut de l’allocation" name="status">'+statusOptions(o.status,["requested","approved","supplied","rejected","closed"],orderLabels)+'</select><button type="submit" class="af-market-secondary">Mettre à jour</button></form>'}).join(""):'<p>Aucune allocation enregistrée.</p>')
-            +'</details><details><summary>Ventes déclarées ('+pSales.length+')</summary>'
-              +(pSales.length?pSales.map(function(r){var product=Array.isArray(r.product)?r.product[0]:r.product;return '<form class="af-partner-market-row" data-market-sale="'+esc(r.id)+'"><div><b>'+esc(product&&product.name||"Produit")+'</b><small>'+esc(r.quantity_sold)+' unités · CA '+esc(partnerMoney(r.gross_amount,r.currency))+' · '+esc(new Date(r.created_at).toLocaleDateString("fr-FR"))+'</small></div><select aria-label="Statut de la vente" name="status">'+statusOptions(r.status,["pending_review","validated","settled","rejected"],saleLabels)+'</select><button type="submit" class="af-market-secondary">Mettre à jour</button></form>'}).join(""):'<p>Aucune vente déclarée.</p>')
-            +'</details></section>';
-        }).join(""):'<p>Aucun partenaire enregistré pour le moment.</p>');
       host.querySelectorAll("[data-partner-mark-seen]").forEach(function(button){
         button.onclick=async function(){
-          if(!adminId)return notice("Connexion administrateur requise.");
           button.disabled=true;
-          var current=byUser[button.dataset.partnerMarkSeen]||[];
-          if(!current.length)return;
-          var rows=current.map(function(ev){return {event_id:ev.id,admin_user_id:adminId};});
-          var saved=await sb().from("afriflow_partner_event_reads").upsert(rows,{onConflict:"event_id,admin_user_id"});
-          if(saved.error){button.disabled=false;notice("Notification non actualisée : "+saved.error.message);return}
+          var relevant=unread.filter(function(event){return event.partner_user_id===button.dataset.partnerMarkSeen});
+          var entries=relevant.map(function(event){return {event_id:event.id,admin_user_id:adminId}});
+          if(!entries.length)return;
+          var saved=await sb().from("afriflow_partner_event_reads").upsert(entries,{onConflict:"event_id,admin_user_id"});
+          if(saved.error){button.disabled=false;notice("Impossible de marquer les notifications : "+saved.error.message);return;}
           loadPartnerManagement(targetId);
         };
       });
-      var filter=host.querySelector("#afPartnerMarketFilter");
-      if(filter)filter.onchange=function(){var chosen=filter.value;host.querySelectorAll("[data-market]").forEach(function(card){card.hidden=!!chosen&&card.dataset.market!==chosen})};
-      host.querySelectorAll("form[data-market-assignment]").forEach(function(form){
-        form.onsubmit=async function(e){
-          e.preventDefault();var market=form.querySelector('[name="market"]').value.trim(),button=form.querySelector("button");
-          if(market.length<2||market.length>80){notice("Indiquez un marché de 2 à 80 caractères.");return}
-          button.disabled=true;
-          var auth=await sb().auth.getUser(),user=auth.data&&auth.data.user;
-          if(!user){notice("Session administrateur introuvable.");button.disabled=false;return}
-          var r=await sb().from("afriflow_partner_markets").upsert({
-            partner_user_id:form.dataset.marketAssignment,market_name:market,country_code:form.querySelector('[name="country_code"]').value||null,
-            assigned_by:user.id,updated_at:new Date().toISOString()
-          },{onConflict:"partner_user_id"});
-          if(r.error){notice(r.error.message);button.disabled=false;return}
-          notice("Marché attribué.");loadPartnerManagement(targetId);
-        };
-      });
-      function bindStatus(selector,key,action){
-        host.querySelectorAll(selector).forEach(function(form){
-          form.onsubmit=async function(e){
-            e.preventDefault();var b=form.querySelector("button"),status=form.querySelector('[name="status"]').value;
-            b.disabled=true;
-            try{await partnerCall(action,{[key]:form.getAttribute(selector==="form[data-market-order]"?"data-market-order":"data-market-sale"),status:status});notice("Statut mis à jour.");loadPartnerManagement(targetId)}
-            catch(err){notice(err.message||"Mise à jour impossible");b.disabled=false}
-          };
-        });
-      }
-      bindStatus("form[data-market-order]","orderId","admin_set_order_status");
-      bindStatus("form[data-market-sale]","reportId","admin_set_report_status");
-    }catch(error){if(host.isConnected)host.innerHTML='<p class="af-market-error">Suivi des partenaires indisponible : '+esc(error.message||error)+'</p>'}
+    }catch(error){
+      if(host.isConnected)host.innerHTML='<p class="af-market-error">Situation des marchés indisponible : '+esc(error.message||error)+'</p>';
+    }
   }
   async function loadPartnerAdmin() {
     var box = el("afPartnerAdmin"); if (!box || !isAdmin() || !sb()) return;
