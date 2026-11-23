@@ -50,16 +50,41 @@ export async function initAvatar(viewport, url = "./models/afriflow-assistante.g
   }
   renderer.setPixelRatio(Math.min(devicePixelRatio || 1, 2));
   renderer.outputColorSpace = THREE.SRGBColorSpace;
+  renderer.toneMapping = THREE.ACESFilmicToneMapping;
+  renderer.toneMappingExposure = 1.32;
   viewport.appendChild(renderer.domElement);
   scene = new THREE.Scene();
-  scene.add(new THREE.HemisphereLight(0xffffff, 0x82644b, 2.1));
-  const light = new THREE.DirectionalLight(0xffffff, 2.2);
-  light.position.set(2, 4, 3); scene.add(light);
+  // Lumière neutre de studio : révéler les détails du visage sans dominante orange.
+  scene.add(new THREE.HemisphereLight(0xffffff, 0xd2dbd5, 2.5));
+  const keyLight = new THREE.DirectionalLight(0xffffff, 3.0);
+  keyLight.position.set(-2, 3.8, 4.5); scene.add(keyLight);
+  const fillLight = new THREE.DirectionalLight(0xf2f7ff, 1.65);
+  fillLight.position.set(3, 2.0, 2.6); scene.add(fillLight);
+  const rimLight = new THREE.DirectionalLight(0xffffff, .75);
+  rimLight.position.set(0, 3, -3); scene.add(rimLight);
   camera = new THREE.PerspectiveCamera(35, 1, .01, 100);
   let gltf;
   try {
     gltf = await new GLTFLoader().parseAsync(bytes, url.substring(0, url.lastIndexOf("/") + 1));
     model = gltf.scene; scene.add(model);
+    // L'atlas fourni mélange peau, cheveux et vêtements dans un seul matériau.
+    // Sa texture metallic/roughness contient une rugosité presque nulle sur la peau :
+    // la désactiver pour éviter des reflets noirs et artificiels, sans altérer les couleurs originales.
+    model.traverse(node => {
+      if (!node.isMesh) return;
+      const materials = Array.isArray(node.material) ? node.material : [node.material];
+      materials.forEach(mat => {
+        if (!mat || !mat.isMeshStandardMaterial) return;
+        mat.metalnessMap = null;
+        mat.roughnessMap = null;
+        mat.metalness = 0;
+        mat.roughness = .82;
+        // La texture de normales du GLB est essentiellement monochrome :
+        // privilégier les normales géométriques plutôt qu'un relief incorrect.
+        mat.normalMap = null;
+        mat.needsUpdate = true;
+      });
+    });
     // Centrer et cadrer le modèle, indépendamment de ses unités et de sa hauteur.
     const bounds = new THREE.Box3().setFromObject(model);
     if (bounds.isEmpty()) throw new Error("Le modèle ne contient aucun maillage visible.");
