@@ -27,3 +27,16 @@ test('Dispute database enforces ownership, admin-only review and audit',()=>{
  assert.match(sql,/af_dispute_audit/);
  assert.doesNotMatch(sql,/grant all on public\.afriflow_partner_disputes to anon/i);
 });
+
+test('Partner evidence is uploaded to Dropbox with an authenticated edge function, not written to Supabase Storage',()=>{
+ const handler=read('supabase/functions/afriflow-partner-dropbox/index.ts');
+ assert.match(market,/partnerDropboxUpload\(/);
+ assert.match(market,/functions\.invoke\("afriflow-partner-dropbox"/);
+ assert.doesNotMatch(market,/storage\.from\("afriflow-partner-evidence"\)\.upload\(/);
+ assert.match(handler,/service\.auth\.getUser\(jwt\)/);
+ assert.match(handler,/service\.from\("afriflow_partner_disputes"\)/);
+ assert.match(handler,/api\(t,"files\/get_temporary_link"/);
+ assert.match(handler,/afriflow_partner_dropbox_files/);
+ assert.match(handler,/Dossier_Signalement\.json/);
+ assert.match(handler,/upload_session\/finish/);
+});
