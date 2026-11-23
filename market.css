@@ -762,3 +762,28 @@ body.af-market-mode #market-view{display:block}
 .af-guest-checkout .af-guest-step p{font-size:.82rem;margin:0;line-height:1.45}
 .af-guest-checkout .af-guest-pending{border-left:4px solid #bd8323;padding:12px;background:#fff7e9;border-radius:9px;color:#513613}
 .af-guest-checkout .af-guest-pending p{margin:7px 0 0;font-size:.84rem;line-height:1.45}
+
+
+/* Partenaire : tableau de bord personnel avant le catalogue (autres rôles inchangés). */
+.af-partner-landing{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:18px;margin:10px auto 24px;max-width:1320px}
+.af-partner-welcome,.af-partner-wallet{border-radius:24px;padding:clamp(24px,4vw,46px);min-width:0;box-shadow:0 18px 42px rgba(19,61,38,.16)}
+.af-partner-welcome{color:#fff;background:linear-gradient(125deg,#124f33,#287d4c 72%,#3f9560)}
+.af-partner-eyebrow{font-size:.74rem;font-weight:850;letter-spacing:.11em;text-transform:uppercase}
+.af-partner-welcome .af-partner-eyebrow{color:#ffe0a0}
+.af-partner-welcome h1{font-size:clamp(2rem,4vw,3.4rem);line-height:1.08;margin:22px 0}
+.af-partner-welcome p{font-size:1rem;line-height:1.6;max-width:38ch;opacity:.94}
+.af-partner-wallet{background:linear-gradient(135deg,#fcfdf8,#e5f1e7);border:1px solid #c6ddcb;color:#173d29}
+.af-partner-wallet .af-partner-eyebrow{color:#347950}
+.af-partner-wallet h2{font-size:clamp(1.1rem,2vw,1.55rem);margin:18px 0 8px}
+.af-partner-wallet-value{font-weight:850;font-size:clamp(1.8rem,3.2vw,3rem);line-height:1.15;overflow-wrap:anywhere}
+.af-partner-money-line{display:block}
+.af-partner-wallet>p{font-size:.9rem;line-height:1.45;color:#426651;margin:12px 0 18px}
+.af-partner-wallet-pending{border-top:1px solid #c6ddcb;padding-top:14px;display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.af-partner-wallet-pending strong{font-size:1.08rem}
+.af-partner-catalog{max-width:1320px;width:100%;margin:0 auto 28px}
+.af-partner-catalog .af-market-section-head{margin-top:8px}
+.af-partner-portal-intro{display:flex;align-items:center;justify-content:space-between;gap:10px 22px;flex-wrap:wrap}
+.af-partner-portal-intro h2{margin:0;color:#1f5d3a}
+.af-partner-portal-intro p{margin:0;flex:1 1 250px;color:var(--muted)}
+.af-partner-portal-intro span{font-weight:750;color:#1f5d3a}
+@media(max-width:760px){.af-partner-landing{grid-template-columns:1fr;margin-top:4px}.af-partner-welcome,.af-partner-wallet{padding:24px}.af-partner-welcome h1{margin:14px 0;font-size:2rem}}
