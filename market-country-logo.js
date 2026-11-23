@@ -15,12 +15,31 @@
       if (Array.isArray(pt) && Number.isFinite(pt[0]) && Number.isFinite(pt[1])) coords.push(pt);
     }); }); });
     if (!coords.length) throw Error("Pays sans coordonnées");
-    var xs=coords.map(function(p){return p[0];}),ys=coords.map(function(p){return p[1];});
+    // Center every country inside the same square while preserving its proportions.
+    // Countries crossing the antimeridian need a continuous longitude interval.
+    var longitudes=coords.map(function(p){return ((p[0]%360)+360)%360;}).sort(function(a,b){return a-b;});
+    var largestGap=-1,cut=0;
+    for(var i=0;i<longitudes.length;i++){
+      var next=i===longitudes.length-1?longitudes[0]+360:longitudes[i+1];
+      if(next-longitudes[i]>largestGap){largestGap=next-longitudes[i];cut=next%360;}
+    }
+    function longitude(lon){
+      var x=((lon%360)+360)%360;
+      return x<cut?x+360:x;
+    }
+    var xs=coords.map(function(p){return longitude(p[0]);}),ys=coords.map(function(p){return p[1];});
     var minX=Math.min.apply(null,xs),maxX=Math.max.apply(null,xs),minY=Math.min.apply(null,ys),maxY=Math.max.apply(null,ys);
-    var scale=Math.min(120/Math.max(.001,maxX-minX),186/Math.max(.001,maxY-minY));
-    var dx=120-(maxX-minX)*scale/2,dy=113-(maxY-minY)*scale/2;
+    var width=Math.max(.001,maxX-minX),height=Math.max(.001,maxY-minY);
+    // Adapt longitude visually to latitude, especially for northern and island nations.
+    var latitude=(minY+maxY)/2;
+    var cosLat=Math.max(.24,Math.cos(latitude*Math.PI/180));
+    var visualWidth=width*cosLat;
+    var scale=Math.min(204/Math.max(.001,visualWidth),206/height);
+    var centerX=(minX+maxX)/2,centerY=(minY+maxY)/2;
     var path=polygons.map(function(poly){return poly.map(function(ring){return ring.map(function(pt,i){
-      return (i?"L":"M")+(dx+(pt[0]-minX)*scale).toFixed(2)+" "+(220-dy-(pt[1]-minY)*scale).toFixed(2);
+      var x=120+(longitude(pt[0])-centerX)*cosLat*scale;
+      var y=120-(pt[1]-centerY)*scale;
+      return (i?"L":"M")+x.toFixed(2)+" "+y.toFixed(2);
     }).join(" ")+"Z";}).join(" ");}).join(" ");
     var svgns="http://www.w3.org/2000/svg",svg=document.createElementNS(svgns,"svg");
     svg.setAttribute("viewBox","0 0 240 240");svg.setAttribute("role","img");svg.setAttribute("focusable","false");
