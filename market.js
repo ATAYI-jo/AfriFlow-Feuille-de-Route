@@ -547,7 +547,7 @@
     return '<section class="af-partner-portal"><div class="af-partner-portal-intro"><h2>Votre activité commerciale</h2><p>Préparez les allocations, déclarez vos ventes et consultez vos résultats.</p><span>Part AfriFloW : ' + esc(Number(terms.commission_rate || 0).toLocaleString("fr-FR")) + ' %</span></div>'
       + '<div class="af-partner-kpis"><article><small>Chiffre d’affaires déclaré</small><b>' + esc(grossText) + '</b><span>Toutes ventes hors refus</span></article><article><small>À reverser à AfriFloW</small><b>' + esc(dueText) + '</b><span>Selon votre taux personnalisé</span></article><article><small>Déclarations à contrôler</small><b>' + pending.length + '</b><span>AfriFloW est déjà alerté</span></article></div>'
       + '<section class="af-partner-card af-sale-simulator" aria-label="Simulateur de vente"><div class="af-sale-sim-header"><h2>Simuler une vente</h2><span class="af-sim-badge">Simulation · Aucun enregistrement</span></div><p>Testez librement un scénario commercial. Les ventes simulées ne modifient ni les stocks, ni le chiffre d’affaires déclaré, ni les commissions dues. Aucune alerte n’est envoyée.</p>'
-      +'<form id="afPartnerSimulator"><label>Produit<select required name="productId"><option value="">Choisir un produit</option>'+simulatorOpts+'</select></label><label>Quantité prévue<input name="quantity" type="number" min="1" max="1000000" step="1" required placeholder="Ex. 50"></label><label>Prix de vente unitaire<input name="price" type="number" min="0" step="0.01" required placeholder="Prix dans la devise du produit"></label><div id="afSimulationOutput" class="af-sim-output" role="status" aria-live="polite">Sélectionnez un produit et indiquez la quantité et le prix pour obtenir une simulation.</div><button type="submit" class="af-market-secondary">Calculer la simulation</button></form>'
+      +'<form id="afPartnerSimulator"><label>Produit<select required name="productId"><option value="">Choisir un produit</option>'+simulatorOpts+'</select></label><label>Quantité prévue<input name="quantity" type="number" min="1" max="1000000" step="1" required placeholder="Ex. 50"></label><div class="af-sim-catalog-price"><span>Prix catalogue unitaire</span><strong id="afSimulationCatalogPrice">Sélectionnez un produit</strong><small>Prix officiel récupéré automatiquement, non modifiable dans cette simulation.</small></div><div id="afSimulationOutput" class="af-sim-output" role="status" aria-live="polite">Sélectionnez un produit et indiquez la quantité pour obtenir une simulation.</div><button type="submit" class="af-market-secondary">Calculer la simulation</button></form>'
       +'<small>Les prévisions sont indicatives, hors éventuels frais, taxes, remises ou retours. Pour enregistrer une véritable vente, utilisez la déclaration ci-dessous après validation de votre allocation.</small></section>'
       + '<div class="af-partner-grid"><form class="af-partner-card" id="afPartnerOrder"><h2>Préparer une commande</h2><p>Choisissez un produit et la quantité souhaitée. AfriFloW confirme ensuite votre allocation.</p><label>Produit<select required name="productId"><option value="">Sélectionner un produit</option>' + productOpts + '</select></label><label>Quantité demandée<input required name="quantity" type="number" min="1" step="1" placeholder="Ex. 100"></label><label>Message facultatif<textarea name="note" maxlength="1200" placeholder="Lieu de vente, délai souhaité…"></textarea></label><button class="af-market-primary">Envoyer la demande</button></form>'
       + '<form class="af-partner-card af-partner-report" id="afPartnerSale"><h2>Déclarer une vente réelle</h2><p>Cette action enregistre une vente et déclenche une alerte à AfriFloW. Une allocation validée est obligatoire.</p><label>Allocation validée<select required name="orderId"><option value="">Sélectionner une allocation</option>' + orderOpts + '</select></label>'+(sellable.length?"":'<p class="af-sale-not-ready">Aucune allocation validée. Vos demandes doivent être approuvées par AfriFloW avant une déclaration réelle. Le simulateur ci-dessus reste accessible.</p>')+'<div class="af-partner-duo"><label>Quantité vendue<input required name="quantity" type="number" min="1" step="1"></label><label>Prix unitaire de vente<input required name="unitSalePrice" type="number" min="0" step="0.01"></label></div><label>Note facultative<textarea name="note" maxlength="1200" placeholder="Canal de vente, précision…"></textarea></label><div id="afPartnerCalc" class="af-partner-calc">Le montant net partenaire et la part AfriFloW seront calculés automatiquement.</div><button class="af-market-primary"' + (sellable.length ? "" : " disabled") + '>Déclarer et alerter</button></form></div>'
@@ -569,10 +569,15 @@
     if(!form||!out||!data)return;
     var products=data.products||[],productId=form.querySelector('[name="productId"]').value;
     var product=products.filter(function(p){return p.id===productId})[0];
-    var rawQty=form.querySelector('[name="quantity"]').value,rawPrice=form.querySelector('[name="price"]').value;
-    var qty=Number(rawQty),price=Number(rawPrice),rate=Number(data.terms&&data.terms.commission_rate);
-    if(!product||rawQty===""||rawPrice===""||!Number.isSafeInteger(qty)||qty<1||qty>1000000||!Number.isFinite(price)||price<0||!Number.isFinite(rate)||rate<0||rate>100){
-      out.textContent="Indiquez un produit, une quantité entière positive et un prix unitaire valide.";
+    var rawQty=form.querySelector('[name="quantity"]').value;
+    var qty=Number(rawQty),price=product&&product.price!=null?Number(product.price):NaN;
+    var rate=Number(data.terms&&data.terms.commission_rate);
+    var priceBox=el("afSimulationCatalogPrice");
+    if(priceBox) priceBox.textContent=product&&Number.isFinite(price)&&price>=0
+      ? partnerFormatEarnings(price,String(product.currency||"XOF").toUpperCase())
+      : "Prix indisponible";
+    if(!product||rawQty===""||!Number.isSafeInteger(qty)||qty<1||qty>1000000||!Number.isFinite(price)||price<0||!Number.isFinite(rate)||rate<0||rate>100){
+      out.textContent="Sélectionnez un produit avec un prix catalogue valide et indiquez une quantité entière positive.";
       return;
     }
     var round=function(n){return Math.round((n+Number.EPSILON)*100)/100};
@@ -1325,12 +1330,7 @@
     var simulator=el("afPartnerSimulator");
     if(simulator){
       var productInput=simulator.querySelector('[name="productId"]');
-      productInput.onchange=function(){
-        var product=(state.partner&&state.partner.products||[]).filter(function(p){return p.id===productInput.value})[0];
-        var price=simulator.querySelector('[name="price"]');
-        price.value=product&&product.price!=null?String(product.price):"";
-        runPartnerSaleSimulation();
-      };
+      productInput.onchange=runPartnerSaleSimulation;
       simulator.querySelectorAll("input").forEach(function(input){input.oninput=runPartnerSaleSimulation});
       simulator.onsubmit=function(event){event.preventDefault();runPartnerSaleSimulation()};
     }
