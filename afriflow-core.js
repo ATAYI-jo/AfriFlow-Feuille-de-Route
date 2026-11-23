@@ -1138,6 +1138,7 @@ function initIntro(){
   }
   function finish(){
     if(done) return; done = true; clearTimeout(fs); stopGestures();
+    window.dispatchEvent(new Event("afriflow:intro-finish"));
     try { sessionStorage.setItem(INTRO_KEY, "1"); } catch(e){}
     box.classList.add("out"); v.pause(); if(bg)bg.pause(); document.documentElement.classList.add("af-intro-finished");
     setTimeout(function(){ box.style.display = "none"; }, 700);

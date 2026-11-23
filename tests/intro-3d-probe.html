@@ -1,0 +1,5 @@
+<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8">
+<style>body{background:linear-gradient(130deg,#edf7ef,#cce9d4);margin:0}#intro{position:relative;width:100vw;height:100vh}.af-intro-avatar{position:absolute;right:5%;bottom:3%;width:360px;height:560px;pointer-events:none;opacity:0;transition:opacity .25s}.af-intro-avatar.visible{opacity:1}.af-intro-avatar canvas{width:100%;height:100%}</style>
+<script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.164.1/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.164.1/examples/jsm/"}}</script></head><body><div id="intro"><video id="introVideo" muted playsinline></video></div>
+<script>const probeVideo=document.getElementById('introVideo');Object.defineProperty(probeVideo,'ended',{configurable:true,value:false});Object.defineProperty(probeVideo,'paused',{configurable:true,value:false});</script>
+<script type="module">import {installIntroAssistant} from '../avatar-3d/intro-assistant.js';window.__probeLoaded=true;window.__assistant=installIntroAssistant(document.getElementById('introVideo'),document.getElementById('intro'));</script></body></html>
