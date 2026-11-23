@@ -181,6 +181,7 @@ async function refreshPartnerUnread(){
     window.AfriPartnerUnreadUpdate((r[0].data||[]).filter(function(x){return !seen.has(x.id)}).length);
   }catch(e){}
 }
+setTimeout(refreshPartnerUnread,3500);
 setInterval(function(){if(!document.hidden)refreshPartnerUnread()},30000);
 document.addEventListener("visibilitychange",function(){if(!document.hidden)refreshPartnerUnread()});
 function buildNav(){
