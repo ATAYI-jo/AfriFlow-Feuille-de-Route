@@ -24,12 +24,18 @@
     }).join(" ")+"Z";}).join(" ");}).join(" ");
     var svgns="http://www.w3.org/2000/svg",svg=document.createElementNS(svgns,"svg");
     svg.setAttribute("viewBox","0 0 240 240");svg.setAttribute("role","img");svg.setAttribute("focusable","false");
-    var defs=document.createElementNS(svgns,"defs");defs.innerHTML='<linearGradient id="af-market-country-green" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#37a84b"/><stop offset=".55" stop-color="#177a32"/><stop offset="1" stop-color="#084d25"/></linearGradient><linearGradient id="af-market-country-swoosh" x1="0" y1="0" x2="1" y2="0"><stop stop-color="#ff9e24"/><stop offset=".5" stop-color="#ffce54"/><stop offset="1" stop-color="#41a83c"/></linearGradient>';
-    svg.appendChild(defs);
-    var country=document.createElementNS(svgns,"path");country.setAttribute("d",path);country.setAttribute("fill","url(#af-market-country-green)");country.setAttribute("stroke","#fff5da");country.setAttribute("stroke-width","1.7");country.setAttribute("stroke-linejoin","round");svg.appendChild(country);
-    var ribbon=document.createElementNS(svgns,"path");ribbon.setAttribute("d","M20 150 C49 202 156 174 208 111");ribbon.setAttribute("fill","none");ribbon.setAttribute("stroke","#e8770e");ribbon.setAttribute("stroke-width","9");ribbon.setAttribute("stroke-linecap","round");svg.appendChild(ribbon);
-    var upper=document.createElementNS(svgns,"path");upper.setAttribute("d","M21 145 C51 191 160 163 207 103");upper.setAttribute("fill","none");upper.setAttribute("stroke","url(#af-market-country-swoosh)");upper.setAttribute("stroke-width","9");upper.setAttribute("stroke-linecap","round");svg.appendChild(upper);
-    var arrow=document.createElementNS(svgns,"path");arrow.setAttribute("d","M188 100 L227 81 L217 124 L207 109 Z");arrow.setAttribute("fill","#229d3b");svg.appendChild(arrow);
+    // A market is identified by its national outline, without a company arrow.
+    // Keep the transparent center so the existing glass background remains visible.
+    var country=document.createElementNS(svgns,"path");
+    country.setAttribute("d",path);
+    country.setAttribute("fill","none");
+    country.setAttribute("stroke","#783719");
+    country.setAttribute("stroke-width","8");
+    country.setAttribute("stroke-linejoin","miter");
+    country.setAttribute("stroke-linecap","square");
+    country.setAttribute("stroke-miterlimit","2");
+    country.setAttribute("vector-effect","non-scaling-stroke");
+    svg.appendChild(country);
     return svg;
   }
   function mount(host, code, label) {
@@ -41,7 +47,7 @@
     host.setAttribute("aria-label","Emblème AfriFloW du marché "+(label || iso2));
     function show(feature){
       if (!host.isConnected || host.dataset.countryCode!==iso2) return;
-      try { var svg=createSvg(feature);svg.setAttribute("aria-label","Silhouette du pays "+(label||iso2)+" avec flèche AfriFloW");host.replaceChildren(svg); }
+      try { var svg=createSvg(feature);svg.setAttribute("aria-label","Contour du pays pour "+(label||iso2));host.replaceChildren(svg); }
       catch (error) { console.warn("Silhouette indisponible",error); }
     }
     if (cache[seq]) { show(cache[seq]);return; }
