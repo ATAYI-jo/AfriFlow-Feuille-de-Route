@@ -1571,3 +1571,25 @@ body.af-market-mode #market-view{display:block}
   stroke-width:1.8;
   fill:none;
 }
+
+
+/* Admin partner notifications are confined to each affected partner card. */
+#market-view .af-partner-market-attention{
+  border:2px solid rgba(218,134,58,.87)!important;
+  background:linear-gradient(140deg,rgba(255,244,222,.96),rgba(247,252,240,.90))!important;
+  box-shadow:0 10px 32px rgba(174,98,32,.18),inset 0 0 0 1px rgba(255,255,255,.7);
+}
+#market-view .af-partner-market-unread{
+  display:inline-flex;align-items:center;padding:6px 11px;
+  border-radius:99px;background:#a95428;color:white;
+  font-size:.82rem;white-space:nowrap;
+}
+#market-view .af-partner-event-notice{
+  margin:12px 0 18px;padding:16px;border-radius:15px;
+  border:1px solid rgba(171,113,53,.35);
+  background:rgba(255,247,225,.86);color:#5c4027;
+}
+#market-view .af-partner-event-notice>div{display:grid;gap:8px;margin:10px 0}
+#market-view .af-partner-event-notice span{display:flex;align-items:center;gap:8px}
+#market-view .af-partner-event-notice .af-icon{width:19px;height:19px;flex:none;stroke-width:1.8}
+#market-view .af-partner-event-notice button{min-height:40px}
