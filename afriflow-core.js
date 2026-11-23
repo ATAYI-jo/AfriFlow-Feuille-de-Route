@@ -188,7 +188,7 @@ async function requestPasswordReset(){
   button.disabled=true; err.textContent="";
   try{
     var captchaError=captchaProblem();if(captchaError){err.textContent=captchaError;return;}
-    var result=await SB().auth.resetPasswordForEmail(email,{redirectTo:location.origin+location.pathname,captchaToken:turnstileToken});
+    var result=await SB().auth.resetPasswordForEmail(email,{redirectTo:'https://afriflow.pages.dev/',captchaToken:turnstileToken});
     if(result.error)throw result.error;
     err.style.color="#1f5d3a";err.textContent="Si cette adresse possède un compte, un lien sécurisé de réinitialisation vient d’être envoyé.";
   }catch(e){err.style.color="";err.textContent="Impossible d’envoyer le lien pour le moment. Réessayez dans quelques minutes.";}
