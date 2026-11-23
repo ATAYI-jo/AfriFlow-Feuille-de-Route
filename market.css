@@ -1149,3 +1149,15 @@ body.af-market-mode #market-view{display:block}
   #market-view .af-partner-wallet-value,
   #market-view .af-partner-wallet-pending{animation:none!important;transition:none!important}
 }
+
+
+/* Simulator: the official catalog price is informative, never editable. */
+#market-view .af-sim-catalog-price{
+  display:flex;flex-direction:column;justify-content:center;gap:6px;
+  min-width:0;padding:14px 17px;border-radius:14px;
+  background:rgba(255,255,255,.63);border:1px solid rgba(36,104,67,.25);
+  -webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);
+}
+#market-view .af-sim-catalog-price>span{font-weight:750;color:#1d4e32;font-size:.91rem}
+#market-view .af-sim-catalog-price>strong{font-size:clamp(1.2rem,2vw,1.6rem);font-weight:850;color:#173c29;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+#market-view .af-sim-catalog-price>small{font-size:.76rem;line-height:1.45;color:#506a5c}
