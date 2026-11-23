@@ -846,3 +846,48 @@ body.af-market-mode #market-view{display:block}
 @media(prefers-reduced-motion:reduce){
   .af-partner-welcome .af-partner-welcome-word{transition:none;animation:none}
 }
+
+
+/* Accueil partenaire minimal : mot animé NOIR au-dessus du prénom NOIR, sans autre texte. */
+#market-view .af-partner-landing .af-partner-welcome{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  text-align:center;
+}
+#market-view .af-partner-landing .af-partner-welcome-title{
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  gap:12px;
+  width:100%;
+  min-width:0;
+  margin:0;
+  color:#171717!important;
+  text-shadow:none!important;
+  line-height:1.12;
+}
+#market-view .af-partner-landing .af-partner-welcome-title .af-partner-welcome-word,
+#market-view .af-partner-landing .af-partner-welcome-title .af-partner-welcome-name{
+  display:block;
+  max-width:100%;
+  font-size:clamp(1.8rem,3.4vw,3.5rem);
+  font-weight:850;
+  color:#171717!important;
+  -webkit-text-fill-color:#171717!important;
+  background:none!important;
+  -webkit-background-clip:initial!important;
+  background-clip:initial!important;
+  text-shadow:none!important;
+  overflow-wrap:anywhere;
+}
+#market-view .af-partner-landing .af-partner-welcome-title .af-partner-welcome-word{
+  min-height:1.2em;
+}
+#market-view .af-partner-landing .af-partner-welcome-title .af-partner-welcome-name{
+  font-size:clamp(2rem,4vw,4rem);
+}
+@media(max-width:760px){
+  #market-view .af-partner-landing .af-partner-welcome-title{gap:8px}
+}
