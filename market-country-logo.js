@@ -30,7 +30,7 @@
     country.setAttribute("d",path);
     country.setAttribute("fill","none");
     country.setAttribute("stroke","#152f24");
-    country.setAttribute("stroke-width","2.5");
+    country.setAttribute("stroke-width","3.2");
     country.setAttribute("stroke-linejoin","round");
     country.setAttribute("stroke-linecap","square");
     country.setAttribute("stroke-miterlimit","2");
