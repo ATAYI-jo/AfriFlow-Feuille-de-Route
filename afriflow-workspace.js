@@ -164,10 +164,29 @@ setInterval(function(){
   marketplaceStep=(marketplaceStep+1)%marketplaceCycle.length;
   renderMarketplaceLabel();
 },3000);
+var AF_PARTNER_UNREAD=0;
+window.AfriPartnerUnreadUpdate=function(count){
+  AF_PARTNER_UNREAD=Math.max(0,Number(count)||0);
+  buildNav();
+};
+async function refreshPartnerUnread(){
+  if(!isAdmin()||!window.__sb)return;
+  try{
+    var r=await Promise.all([
+      window.__sb.from("afriflow_partner_events").select("id").order("created_at",{ascending:false}).limit(500),
+      window.__sb.from("afriflow_partner_event_reads").select("event_id").limit(1000)
+    ]);
+    if(r[0].error||r[1].error)return;
+    var seen=new Set((r[1].data||[]).map(function(x){return x.event_id}));
+    window.AfriPartnerUnreadUpdate((r[0].data||[]).filter(function(x){return !seen.has(x.id)}).length);
+  }catch(e){}
+}
+setInterval(function(){if(!document.hidden)refreshPartnerUnread()},30000);
+document.addEventListener("visibilitychange",function(){if(!document.hidden)refreshPartnerUnread()});
 function buildNav(){
   var base=BASE.slice(); base.push({id:"messages",n:"Messagerie"}); if(isAdmin()){base.push({id:"partners",n:"Partenaires"});base.push({id:"admin",n:"Administration"})}
   var nb=base.length,h=""; base.concat(X.nav).forEach(function(it,i){
-    var badge=(it.id==="admin"&&AF_PEND)?' ('+AF_PEND+')':''; if(it.id==="messages"&&window.MSG_UNREAD)badge=' ('+window.MSG_UNREAD+')';
+    var badge=(it.id==="admin"&&AF_PEND)?' ('+AF_PEND+')':''; if(it.id==="messages"&&window.MSG_UNREAD)badge=' ('+window.MSG_UNREAD+')';if(it.id==="partners"&&isAdmin()&&AF_PARTNER_UNREAD)badge=' ('+AF_PARTNER_UNREAD+')';
     h+='<div class="nvr'+(it.id==="home"?' nvr-home':'')+'"><button type="button" class="nv'+(it.id===cur?' on':'')+'" data-id="'+esc(it.id)+'">'+esc(it.n)+badge+'</button>'+(i>=nb&&isAdmin()?'<button type="button" class="nx" data-del="'+esc(it.id)+'" aria-label="Supprimer '+esc(it.n)+'">✕</button>':'')+'</div>';
   });
   $("navList").innerHTML=h;
@@ -757,6 +776,7 @@ async function renPartners(){
 
   }else{$("partnersBoard").textContent="Module Marketplace indisponible."}
   $("partnersRefresh").onclick=renPartners;
+  refreshPartnerUnread();
 }
 async function renAdmin(){
   var h=$("viewHost");
