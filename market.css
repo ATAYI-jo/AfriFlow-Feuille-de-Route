@@ -1060,3 +1060,18 @@ body.af-market-mode #market-view{display:block}
     font-size:clamp(.94rem,1.2vw,1.25rem);
   }
 }
+
+
+/* Market-specific badge and geographic logo: company branding remains global. */
+#market-view .af-partner-welcome-logo svg{
+  width:clamp(78px,9vw,116px);
+  height:clamp(78px,9vw,116px);
+  max-width:100%;
+  display:block;
+  overflow:visible;
+  filter:drop-shadow(0 5px 10px rgba(15,78,38,.16));
+}
+#market-view .af-partner-market-tag{max-width:100%;overflow-wrap:anywhere;white-space:normal}
+@media(max-width:760px){
+ #market-view .af-partner-welcome-logo svg{width:96px;height:96px}
+}
