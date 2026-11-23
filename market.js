@@ -463,17 +463,24 @@
     var currencies=Object.keys(sums).sort();
     return currencies.length ? currencies.map(function(currency){return '<span class="af-partner-money-line">'+esc(partnerMoney(sums[currency],currency))+'</span>';}).join("") : '<span class="af-partner-money-line">—</span>';
   }
+  function assignedPartnerMarket() {
+    var market = state.partner && state.partner.market;
+    return {
+      name: market && typeof market.market_name==="string" && market.market_name.trim() ? market.market_name.trim() : (state.partner ? "Marché non attribué" : "Chargement du marché…"),
+      code: market && /^[A-Z]{2}$/.test(String(market.country_code||"").toUpperCase()) ? String(market.country_code).toUpperCase() : ""
+    };
+  }
   function partnerLandingHeader() {
     var data = state.partner, reports = data && data.enabled && Array.isArray(data.reports) ? data.reports : [];
     var ready = Boolean(data && data.enabled), validated = partnerBalanceByCurrency(reports,["validated"]);
-    var pending = partnerBalanceByCurrency(reports,["pending_review"]);
+    var pending = partnerBalanceByCurrency(reports,["pending_review"]), market = assignedPartnerMarket();
     return '<section class="af-partner-landing" aria-label="Tableau de bord partenaire">'
-      + '<div class="af-partner-wallet"><div class="af-partner-wallet-top"><span class="af-partner-eyebrow">VOS GAINS SUR VENTES</span><span class="af-partner-market-tag">Marché togolais</span></div><h2>Part partenaire validée</h2><div class="af-partner-wallet-value">'+(ready?validated:'<span class="af-partner-money-line">En cours de chargement</span>')+'</div>'
+      + '<div class="af-partner-wallet"><div class="af-partner-wallet-top"><span class="af-partner-eyebrow">VOS GAINS SUR VENTES</span><span class="af-partner-market-tag">'+esc(market.name)+'</span></div><h2>Part partenaire validée</h2><div class="af-partner-wallet-value">'+(ready?validated:'<span class="af-partner-money-line">En cours de chargement</span>')+'</div>'
       + '<p>Ventes validées et non encore marquées comme réglées. Montant à confirmer avant tout retrait.</p>'
       + '<div class="af-partner-wallet-pending"><span>En attente de validation</span><strong>'+(ready?pending:'—')+'</strong></div></div>'
       + '<div class="af-partner-welcome" aria-label="Accueil du partenaire"><div class="af-partner-identity"><strong class="af-partner-full-name">'+esc(partnerDisplayName())+'</strong></div>'
       + '<h1 class="af-partner-welcome-title" aria-label="Bienvenue"><span class="af-welcome-animated af-partner-welcome-word" lang="fr" aria-hidden="true">Bienvenue</span></h1>'
-      + '<div class="af-partner-welcome-logo"><img src="logo.png" alt="Logo AfriFloW" loading="lazy"></div></div>'
+      + '<div class="af-partner-welcome-logo" id="afPartnerCountryLogo"><img src="logo.png" alt="Logo officiel AfriFloW" loading="lazy"></div></div>'
       + '</section>';
   }
   function partnerLandingProducts() {
@@ -1218,7 +1225,12 @@
       : mode === "shareholder_pending"
       ? '<section class="af-ali">' + catsHtml() + heroHtml() + sideHtml() + scrollCueHtml() + '</section>' + shareholderWaitContent() + announcementsHtml()
       : catalogContent()) + "</main>";
-    bind(); startHero(); startWelcomeAnimation(); startAfricaGallery();
+    bind();
+    if (mode === "partner_approved" && window.AfriMarketCountryLogo) {
+      var market = assignedPartnerMarket();
+      window.AfriMarketCountryLogo.mount(el("afPartnerCountryLogo"),market.code,market.name);
+    }
+    startHero(); startWelcomeAnimation(); startAfricaGallery();
   }
   function startHero() {
     var hero = el("afHero"); if (!hero) return;
