@@ -763,19 +763,11 @@ function drawOnline(){
 async function renPartners(){
   if(!isAdmin()){show("home");return}
   var host=$("viewHost");
-  host.innerHTML='<div class="toolbar"><b>Partenaires · Suivi des marchés</b><div class="toolbar-actions"><button type="button" id="partnersRefresh">Actualiser</button></div></div>'
-    +'<section class="mt-box"><h3>Partenaires par marché commercial</h3><p>Attribuez un marché à chaque partenaire et suivez ses allocations, déclarations de ventes et contestations. Les marchés non attribués restent explicitement non renseignés.</p><div id="partnersBoard">Chargement des partenaires…</div></section>'
-    +'<section class="mt-box" style="margin-top:18px"><h3>Demandes de partenariat et accès</h3><div id="partnersAccess">Chargement des demandes…</div></section>'
-    +'<section class="mt-box" style="margin-top:18px"><h3>Conditions commerciales</h3><div id="partnersTerms">Chargement des conditions…</div></section>'
-    +'<section class="mt-box" style="margin-top:18px"><h3>Contestations</h3><div id="partnersDisputes">Chargement des contestations…</div></section>'
-    ;
-  if(window.AfriMarket){
-    if(window.AfriMarket.renderPartnerManagement)window.AfriMarket.renderPartnerManagement("partnersBoard");
-    if(window.AfriMarket.renderAccessAdmin)window.AfriMarket.renderAccessAdmin("partnersAccess");
-    if(window.AfriMarket.renderPartnerTermsAdmin)window.AfriMarket.renderPartnerTermsAdmin("partnersTerms");
-    if(window.AfriMarket.renderDisputesAdmin)window.AfriMarket.renderDisputesAdmin("partnersDisputes");
-
-  }else{$("partnersBoard").textContent="Module Marketplace indisponible."}
+  host.innerHTML='<div class="toolbar"><b>Partenaires · Situation des marchés</b><div class="toolbar-actions"><button type="button" id="partnersRefresh">Actualiser</button></div></div>'
+    +'<section class="mt-box af-partners-overview"><h3>Situation commerciale par marché</h3><p>Suivez les partenaires, leurs commandes, leurs ventes et les signalements. Les affectations, validations et conditions commerciales restent dans Administration.</p><div id="partnersBoard">Chargement de la situation des marchés…</div></section>';
+  if(window.AfriMarket&&window.AfriMarket.renderPartnerManagement){
+    window.AfriMarket.renderPartnerManagement("partnersBoard");
+  }else{$("partnersBoard").textContent="Module de suivi indisponible."}
   $("partnersRefresh").onclick=renPartners;
   refreshPartnerUnread();
 }
