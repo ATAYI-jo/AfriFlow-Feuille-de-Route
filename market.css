@@ -830,3 +830,19 @@ body.af-market-mode #market-view{display:block}
 @media(max-width:760px){
   .af-partner-landing{grid-template-columns:minmax(0,1fr)}
 }
+
+
+/* Le mot d'accueil partenaire reprend l'animation multilingue des invités. */
+.af-partner-welcome .af-partner-welcome-word{
+  display:inline-block;
+  min-height:1em;
+  unicode-bidi:isolate;
+  vertical-align:baseline;
+}
+.af-partner-welcome .af-partner-welcome-name{
+  display:inline;
+  unicode-bidi:isolate;
+}
+@media(prefers-reduced-motion:reduce){
+  .af-partner-welcome .af-partner-welcome-word{transition:none;animation:none}
+}
