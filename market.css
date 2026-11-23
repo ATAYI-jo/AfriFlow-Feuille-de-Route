@@ -1008,3 +1008,55 @@ body.af-market-mode #market-view{display:block}
   #market-view .af-partner-landing .af-partner-welcome{min-height:330px;gap:12px}
   #market-view .af-partner-identity{gap:8px}
 }
+
+
+/* Espace partenaire : nom complet non séparé, marché dans le bloc des gains. */
+#market-view .af-partner-identity{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  width:100%;
+  min-width:0;
+}
+#market-view .af-partner-identity .af-partner-full-name{
+  display:block;
+  width:100%;
+  max-width:100%;
+  font-size:clamp(1rem,1.45vw,1.35rem);
+  line-height:1.35;
+  font-weight:800;
+  color:#152f24;
+  text-align:center;
+  white-space:normal;
+  overflow-wrap:normal;
+  word-break:normal;
+  text-wrap:balance;
+}
+#market-view .af-partner-wallet-top{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:10px;
+  flex-wrap:wrap;
+  margin-bottom:14px;
+}
+#market-view .af-partner-market-tag{
+  display:inline-flex;
+  align-items:center;
+  padding:7px 13px;
+  border:1px solid rgba(255,255,255,.55);
+  border-radius:999px;
+  background:rgba(255,255,255,.18);
+  -webkit-backdrop-filter:blur(12px);
+  backdrop-filter:blur(12px);
+  color:#fff;
+  font-size:.81rem;
+  font-weight:800;
+  letter-spacing:.02em;
+}
+@media(min-width:1100px){
+  #market-view .af-partner-identity .af-partner-full-name{
+    white-space:nowrap;
+    font-size:clamp(.94rem,1.2vw,1.25rem);
+  }
+}
