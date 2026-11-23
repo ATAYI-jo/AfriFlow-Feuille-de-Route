@@ -963,6 +963,47 @@
       if(host.isConnected)host.innerHTML='<p class="af-market-error">Situation des marchés indisponible : '+esc(error.message||error)+'</p>';
     }
   }
+  async function loadPartnerAssignmentsAdmin(targetId){
+    var host=el(targetId);
+    if(!host||!isAdmin()||!sb())return;
+    try{
+      var results=await Promise.all([
+        partnerCall("admin_dashboard"),
+        sb().from("afriflow_partner_markets").select("partner_user_id,market_name,country_code")
+      ]);
+      if(!host.isConnected)return;
+      var data=results[0]||{},m=results[1];
+      if(m.error)throw m.error;
+      var assigned={};
+      (m.data||[]).forEach(function(row){assigned[row.partner_user_id]=row;});
+      var people=data.partners||[];
+      host.innerHTML='<p>Réservez les modifications d’affectation à Administration. Elles ne figurent plus dans le tableau de suivi.</p>'
+        +(people.length?people.map(function(p){
+          var record=assigned[p.user_id]||{};
+          return '<form class="af-admin-market-assignment" data-market-assignment="'+esc(p.user_id)+'">'
+            +'<strong>'+esc(p.email||"Partenaire")+'</strong>'
+            +'<label>Marché commercial<input name="market" required minlength="2" maxlength="80" value="'+esc(record.market_name||"")+'" placeholder="Ex. Marché togolais"></label>'
+            +'<label>Pays du marché<select name="country_code">'+(window.AfriCountries?window.AfriCountries.options(record.country_code||""):'<option value="">Non renseigné</option>')+'</select></label>'
+            +'<button type="submit" class="af-market-secondary">Enregistrer</button></form>';
+        }).join(""):'<p>Aucun partenaire enregistré.</p>');
+      host.querySelectorAll("form[data-market-assignment]").forEach(function(form){
+        form.onsubmit=async function(event){
+          event.preventDefault();
+          var button=form.querySelector('button[type="submit"]'),market=form.querySelector('[name="market"]').value.trim();
+          if(market.length<2||market.length>80)return notice("Le marché doit contenir entre 2 et 80 caractères.");
+          var current=await sb().auth.getUser(),user=current.data&&current.data.user;
+          if(!user)return notice("Session administrateur indisponible.");
+          button.disabled=true;
+          var row={partner_user_id:form.dataset.marketAssignment,market_name:market,
+            country_code:form.querySelector('[name="country_code"]').value||null,
+            assigned_by:user.id,updated_at:new Date().toISOString()};
+          var r=await sb().from("afriflow_partner_markets").upsert(row,{onConflict:"partner_user_id"});
+          if(r.error){button.disabled=false;notice("Affectation impossible : "+r.error.message);return;}
+          notice("Marché attribué.");loadPartnerAssignmentsAdmin(targetId);
+        };
+      });
+    }catch(error){if(host.isConnected)host.innerHTML='<p class="af-market-error">Affectations indisponibles : '+esc(error.message||error)+'</p>';}
+  }
   async function loadPartnerAdmin() {
     var box = el("afPartnerAdmin"); if (!box || !isAdmin() || !sb()) return;
     try {
@@ -1700,7 +1741,7 @@
     } catch (error) { list.innerHTML = '<p class="af-market-error">Gestion du catalogue indisponible : ' + esc(error.message || error) + "</p>"; }
   }
 
-  window.AfriMarket = { open: open, openPublic: openPublic, closeToWorkspace: closeToWorkspace, openAuth: openAuth, closeAuth: closeAuth, shouldUseMarket: shouldUseMarket, renderAccessAdmin: loadAccessAdmin, renderPartnerTermsAdmin: loadPartnerTermsAdmin, renderDisputesAdmin: loadAdminDisputes, renderPartnerManagement: loadPartnerManagement, renderCertificatesAdmin: loadCertificateAdmin };
+  window.AfriMarket = { open: open, openPublic: openPublic, closeToWorkspace: closeToWorkspace, openAuth: openAuth, closeAuth: closeAuth, shouldUseMarket: shouldUseMarket, renderAccessAdmin: loadAccessAdmin, renderPartnerTermsAdmin: loadPartnerTermsAdmin, renderDisputesAdmin: loadAdminDisputes, renderPartnerManagement: loadPartnerManagement, renderMarketAssignmentsAdmin: loadPartnerAssignmentsAdmin, renderCertificatesAdmin: loadCertificateAdmin };
   window.afriMarketInitial = function () {
     if (window.afriMarketSession) {
       if (shouldUseMarket(window.afriMarketSession)) open({ kind: "authenticated", market: window.afriMarketSession });
