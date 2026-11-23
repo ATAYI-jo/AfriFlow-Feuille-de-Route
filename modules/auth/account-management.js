@@ -180,7 +180,7 @@ AFRI.register=async function(email,name,pwd,intent,captchaToken){
     if(!SB())return {ok:false,error:"Service de comptes indisponible."};
     intent=/^(client|shareholder|partner)$/.test(intent||"")?intent:"client";
     try{sessionStorage.setItem("afriflow_market_intent",intent)}catch(e){}
-    var r=await SB().auth.signUp({email:email,password:pwd,options:{data:{full_name:name},emailRedirectTo:location.origin+location.pathname,captchaToken:captchaToken}});
+    var r=await SB().auth.signUp({email:email,password:pwd,options:{data:{full_name:name},emailRedirectTo:'https://afriflow.pages.dev/',captchaToken:captchaToken}});
     if(r.error){
       if(/already registered/i.test(r.error.message||""))return {ok:false,error:"Cet email est déjà inscrit. Connectez-vous."};
       return {ok:false,error:r.error.message};
@@ -345,7 +345,7 @@ function oauthFriendlyError(message) {
   if(raw.indexOf("access_blocked")>-1||raw.indexOf("not configured")>-1||raw.indexOf("client")>-1) return "Connexion Google non finalisée côté administrateur. Vérifiez l’identifiant et le secret Google dans Supabase.";
   return "Connexion Google refusée. Réessayez, ou contactez AfriFloW si le problème persiste.";
 }
-function oauthRedirect() { return location.origin + location.pathname; }
+function oauthRedirect() { return 'https://afriflow.pages.dev/'; }
 async function loginOAuth(provider) {
   if (!SB()) { oauthError('Service de connexion indisponible. Rechargez la page.'); return; }
   if (oauthBusy) return;
