@@ -63,7 +63,7 @@ Deno.serve(async (req: Request) => {
       if (product.minimum_order_quantity && quantity < product.minimum_order_quantity) return reply(req, { error: `Quantité minimale : ${product.minimum_order_quantity} unités.` }, 400);
       const saved = await service.from("afriflow_partner_orders").insert({ partner_user_id: user.id, product_id: product.id, quantity_requested: quantity, unit_price: product.price, currency: product.currency, note }).select("id").single();
       if (saved.error) throw new Error("Impossible d’enregistrer la demande produit");
-      await notifyAdmins(service, `Partenaire · demande de ${quantity} unités`, `Partenaire : ${user.email}\nProduit : ${product.name}\nQuantité demandée : ${quantity}\nNote : ${note || "Aucune"}`, false);
+      // La notification est créée automatiquement par le déclencheur af_partner_order_event.
       return reply(req, { ok: true, message: "Demande envoyée à AfriFloW. Elle apparaîtra dans votre suivi dès validation." });
     }
 
@@ -87,7 +87,7 @@ Deno.serve(async (req: Request) => {
       const saved = await service.from("afriflow_partner_sales_reports").insert({ partner_user_id: user.id, order_id: order.id, product_id: order.product_id, quantity_sold: quantity, unit_sale_price: price, gross_amount: gross, commission_rate: terms.commission_rate, afriflow_amount: afriflowAmount, partner_net_amount: partnerNet, currency: order.currency, note }).select("id").single();
       if (saved.error) throw new Error("Impossible d’enregistrer la vente");
       const productName = Array.isArray(order.product) ? order.product[0]?.name : order.product?.name;
-      await notifyAdmins(service, `Urgent · vente partenaire déclarée`, `Partenaire : ${user.email}\nProduit : ${productName || "Produit"}\nVendu : ${quantity} unité(s)\nChiffre d’affaires : ${gross} ${order.currency}\nPart AfriFloW (${terms.commission_rate} %) : ${afriflowAmount} ${order.currency}\nNet partenaire : ${partnerNet} ${order.currency}\nNote : ${note || "Aucune"}`, true);
+      // La notification est créée automatiquement par le déclencheur af_partner_sale_event.
       return reply(req, { ok: true, calculation: { gross, afriflowAmount, partnerNet, commissionRate: Number(terms.commission_rate), currency: order.currency }, message: "Vente déclarée. AfriFloW a reçu l’alerte urgente." });
     }
 
