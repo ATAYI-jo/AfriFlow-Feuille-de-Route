@@ -28,7 +28,7 @@
     modal.setAttribute('aria-labelledby','af-first-use-heading');
     modal.innerHTML=
       '<div class="af-first-use-card">'+
-      '<img src="./logo.png" alt="AfriFlow" class="af-first-use-logo">'+
+      '<img src="./logo.svg" alt="AfriFlow" class="af-first-use-logo">'+
       '<h2 id="af-first-use-heading">Bienvenue sur AfriFlow</h2>'+
       '<p>Avant votre première utilisation sur cet appareil ou dans cette application, prenez connaissance des règles de la plateforme et choisissez vos préférences.</p>'+
       '<div class="af-first-use-terms" tabindex="0" aria-label="Conditions d’utilisation">'+

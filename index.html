@@ -30,6 +30,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>AfriFlow – Accueil</title>
 <link rel="icon" type="image/png" sizes="192x192" href="./icons/icon-192-v2.png">
+<link rel="icon" type="image/svg+xml" href="./logo.svg">
 <link rel="stylesheet" href="./market.css?v=20261124-panier-messagerie">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="AfriFlow">
@@ -210,7 +211,7 @@ window.ic=function(n,s){return '<svg class="ic"'+(s?' style="width:'+s+';height:
 <div id="auth-screen" class="off" role="dialog" aria-modal="true" aria-labelledby="authTitle">
   <div class="auth-box">
     <button type="button" class="auth-close" id="authClose" aria-label="Fermer">×</button>
-    <img src="logo.png" alt="AfriFlow" onerror="this.onerror=null;this.src='https://placehold.co/72x72/1f5d3a/ffffff?text=A'">
+    <img src="logo.svg" alt="AfriFlow" onerror="this.onerror=null;this.src='https://placehold.co/72x72/1f5d3a/ffffff?text=A'">
     <h2 id="authTitle">Accès AfriFlow</h2>
     <div class="auth-tabs"><button type="button" id="tabLogin" class="on">Se connecter</button><button type="button" id="tabReg">S'inscrire</button></div>
     <p id="authProgress" class="auth-progress" aria-live="polite"></p>
@@ -255,7 +256,7 @@ window.ic=function(n,s){return '<svg class="ic"'+(s?' style="width:'+s+';height:
   </div>
 
   <div class="brand">
-    <img class="logo-img" src="logo.png" alt="Logo AfriFlow" onerror="this.onerror=null;this.src='https://placehold.co/78x78/ffffff/1f5d3a?text=A'">
+    <img class="logo-img" src="logo.svg" alt="Logo AfriFlow" onerror="this.onerror=null;this.src='https://placehold.co/78x78/ffffff/1f5d3a?text=A'">
     <div>
       <h1>Afri<span>FloW</span> · Journal de Bord & Feuille de Route</h1>
       <p class="sub">Cliquez sur un cadran pour consulter les articles détaillés au format journal.</p>
@@ -291,7 +292,7 @@ window.ic=function(n,s){return '<svg class="ic"'+(s?' style="width:'+s+';height:
 
   <div class="road-container" id="roadContainer">
     <div id="sky" aria-hidden="true"><div id="stars"></div><div id="sun"></div><div id="moon"></div><div class="cloud" style="top:5%;--d:75s"></div><div class="cloud" style="top:13%;--d:100s;--dl:-40s"></div><svg id="mts" viewBox="0 0 1920 80" preserveAspectRatio="none"></svg></div><div id="scenery"></div><svg class="road-svg" id="roadSvg" aria-hidden="true"></svg>
-    <div id="car-marker" aria-hidden="true"><img src="logo.png" alt="" onerror="this.onerror=null;this.src='https://placehold.co/34x34/1f5d3a/ffffff?text=A'"></div>
+    <div id="car-marker" aria-hidden="true"><img src="logo.svg" alt="" onerror="this.onerror=null;this.src='https://placehold.co/34x34/1f5d3a/ffffff?text=A'"></div>
 
     <div class="road-node-special">
       <div class="start-pill" id="startBtn" role="button" tabindex="0">
@@ -1071,7 +1072,7 @@ document.getElementById("hd-file").addEventListener("change",function(){
 <script>
 (function(){
 var FB="https://placehold.co/28x28/1f5d3a/ffffff?text=A";
-function logo(){var i=document.createElement("img");i.className="ai-logo";i.src="logo.png";i.alt="";i.onerror=function(){this.onerror=null;this.src=FB};return i}
+function logo(){var i=document.createElement("img");i.className="ai-logo";i.src="logo.svg";i.alt="";i.onerror=function(){this.onerror=null;this.src=FB};return i}
 function tag(){document.querySelectorAll("#aiLog>div").forEach(function(d){var s=d.firstElementChild;d.classList.toggle("ai-me",!!(s&&/^Vous/.test(s.textContent)))})}
 function setup(){
   var b=document.getElementById("aiBtn"),box=document.getElementById("aiBox"),log=document.getElementById("aiLog");
