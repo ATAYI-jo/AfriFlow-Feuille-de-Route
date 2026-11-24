@@ -88,3 +88,14 @@ body.af-market-mode #afIntroAdminPreviewBtn,body:has(#profilePanel[aria-hidden="
  body #market-view .af-market-nav button{padding:10px 9px!important;font-size:.74rem!important;min-height:44px}
  body #market-view .af-market-main{padding-bottom:calc(100px + env(safe-area-inset-bottom,0px))}
 }
+
+/* The core body already reserves the safe area; transfer it to the sticky
+   header only while Marketplace is open to avoid double spacing. */
+body.af-market-mode{padding-top:0!important}
+#profilePanel :is(.profile-top,.profile-main,.profile-card,.member-list-card,.member-detail-card){background:var(--af-ui-panel)!important;color:var(--af-ui-ink)!important;border-color:var(--af-ui-edge)!important}
+#profilePanel :is(.profile-note,small){color:var(--af-ui-muted)!important}
+#profilePanel :is(input:not([type=checkbox]):not([type=radio]),select,textarea){background:var(--af-ui-sub)!important;color:var(--af-ui-ink)!important;border-color:var(--af-ui-edge)!important}
+#profilePanel.member-hub-mode .profile-main>.profile-card{background:transparent!important}
+#viewHost :is(.toolbar,.journal-article,.dcard,.map-panel,.fdr-card){background:color-mix(in srgb,var(--af-ui-panel) 94%,transparent)!important;color:var(--af-ui-ink)!important;border-color:var(--af-ui-edge)!important}
+#viewHost :is(.toolbar,.journal-article,.dcard,.map-panel,.fdr-card) :is(small,label){color:var(--af-ui-muted)!important}
+@media(prefers-reduced-transparency:reduce){#viewHost :is(.toolbar,.journal-article,.dcard,.map-panel,.fdr-card){background:var(--af-ui-panel)!important}}
