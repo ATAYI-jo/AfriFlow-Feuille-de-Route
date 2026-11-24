@@ -780,6 +780,7 @@
          var actions=u.legacy?'<option value="classify_client">Classer Client</option><option value="classify_partner">Classer Partenaire (en attente)</option><option value="classify_shareholder">Classer Actionnaire (en attente)</option>':
            (u.access_mode==="partner_waiting"||u.access_mode==="shareholder_pending"?'<option value="approve">Approuver</option><option value="reject">Refuser / maintenir en attente</option>':
            (u.access_mode==="partner_approved"||u.access_mode==="shareholder_approved"?'<option value="revoke">Révoquer l’accès</option>':""));
+         if(["client","partner_waiting","partner_approved"].includes(u.access_mode))actions+='<option value="promote_shareholder">Passer en Actionnaire</option>';
          return '<form class="af-access-user" data-access-user="'+esc(u.user_id)+'" data-search="'+esc(((u.email||"")+" "+(u.name||"")).toLowerCase())+'">'
            +'<div><strong>'+esc(u.email||u.user_id)+'</strong><small>'+esc(u.name||"")+' · '+esc(labels[u.access_mode]||u.access_mode)+'</small></div>'
            +(actions?'<select name="decision" aria-label="Décision pour '+esc(u.email||"ce compte")+'">'+actions+'</select><input name="reason" maxlength="500" placeholder="Motif (recommandé)" aria-label="Motif de décision"><button type="submit" class="af-market-secondary">Appliquer</button>':'<span class="af-partner-enabled">Aucune action nécessaire</span>')
@@ -800,7 +801,7 @@
           // Two deliberate clicks, without unsupported window.confirm() in the app.
           if(form.dataset.confirming!==signature){
             form.dataset.confirming=signature;
-            button.textContent="Confirmer la décision";
+            button.textContent=decision==="promote_shareholder"?"Confirmer le passage en Actionnaire":"Confirmer la décision";
             button.setAttribute("aria-label","Confirmer "+decision+" pour "+(form.querySelector("strong").textContent||"ce compte"));
             return;
           }
