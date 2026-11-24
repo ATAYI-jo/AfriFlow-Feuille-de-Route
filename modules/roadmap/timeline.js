@@ -55,6 +55,8 @@ function $(i){return document.getElementById(i)}
 function SB(){return window.__sb} function TB(){return window.__TABLE||"afriflow_state"}
 function me(){return String(window.loggedUserEmail||"").toLowerCase()}
 function isAdmin(){return window.USER_ROLE==="admin"}
+function canEmit(){return isAdmin()||!!(window.afriMarketSession&&window.afriMarketSession.access_mode==="shareholder_approved")}
+function canManage(it){return isAdmin()||(canEmit()&&!!it.owner&&it.author===me())}
 function esc(s){return String(s==null?"":s).replace(/[&<>"']/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]})}
 function toast(m){(window.toast||alert)(m)}
 function today(){var d=new Date();d.setHours(0,0,0,0);return d}
@@ -75,56 +77,13 @@ async function loadDl(){
   if(r.error)throw r.error;
   return (r.data&&r.data.value&&Array.isArray(r.data.value.items))?r.data.value.items:[];
 }
-async function saveDl(items){
-  var r=await SB().from(TB()).upsert({key:KEY,value:{at:Date.now(),by:me(),items:items},updated_at:new Date().toISOString()});
+async function deadlineAction(action,payload){
+  var r=await SB().rpc("af_deadline_action",{p_action:action,p_payload:payload||{}});
   if(r.error)throw r.error;
-  cache=items;
+  return r.data;
 }
-
-/* ---------- Envoi de l'alerte à tous les inscrits (Messagerie) ---------- */
-function bodyText(it,l){
-  return "Bonjour,\n\nRappel important : « "+it.title+" » doit être clôturé dans "+(l>1?l+" jours":l===1?"1 jour":"les meilleurs délais")+", au plus tard le "+fr(it.due)+".\n"
-   +(it.note?"\n"+it.note+"\n":"")
-   +"\nMerci de finaliser vos actions avant cette date. Le détail est dans la section « Feuille de route » : "+location.origin+location.pathname+"\n\n— Administration AfriFloW";
-}
-async function recipientDirectory(){
-  var members=await window.AFRI.listUsers(), account=me(), registered=new Map();
-  members.forEach(function(u){
-    var email=String(u&&u.email||"").trim().toLowerCase();
-    if(email&&email!==account)registered.set(email,{email:email,name:String(u.name||"").trim()||email});
-  });
-  return Array.from(registered.values()).sort(function(a,b){
-    return a.name.localeCompare(b.name,"fr")||a.email.localeCompare(b.email);
-  });
-}
-async function recipients(){
-  return (await recipientDirectory()).map(function(member){return member.email});
-}
-async function reminderRecipients(it){
-  var all=await recipients();
-  if(!it.targeted)return all;
-  var r=await SB().from(TB()).select("value").eq("key","sent:"+me()+":"+it.dispatch).maybeSingle();
-  if(r.error)throw r.error;
-  var saved=r.data&&r.data.value;
-  if(!saved||!Array.isArray(saved.group))throw new Error("Seul le compte qui a envoyé l’alerte peut relancer cette sélection.");
-  return all.filter(function(email){return saved.group.includes(email)});
-}
-async function notify(it,rec){
-  var l=daysLeft(it.due),ts=Date.now(),k=ts+":"+Math.random().toString(36).slice(2,6),now=new Date().toISOString();
-  var subject="⏰ « "+it.title+" » doit être clôturé "+when(l);
-  var base={from:me(),fromName:window.USER_NAME||"Administration AfriFloW",subject:subject,body:bodyText(it,l),ts:ts,read:false};
-  var sent=it.targeted?{to:rec.join(", "),group:rec,read:true}:{to:"Tous les inscrits ("+rec.length+")",read:true};
-  var rows=[{key:"sent:"+me()+":"+k,value:Object.assign({},base,sent),updated_at:now}];
-  rec.forEach(function(t){rows.push({key:"msg:"+t+":"+k,value:Object.assign({},base,{to:t}),updated_at:now})});
-  var batchSize=it.targeted?rows.length:100;
-  for(var i=0;i<rows.length;i+=batchSize){
-    var r=await SB().from(TB()).insert(rows.slice(i,i+batchSize));
-    if(r.error)throw r.error;
-  }
-  it.notified=ts;it.notifiedCount=rec.length;
-  if(it.targeted)it.dispatch=k;
-  if(typeof window.recordUserAction==="function")window.recordUserAction("Alerte d'échéance envoyée à "+rec.length+" inscrits : "+it.title);
-}
+async function recipientDirectory(){return await deadlineAction("directory")||[]}
+async function recipients(){return (await recipientDirectory()).map(function(member){return member.email})}
 
 /* ---------- Bandeau de compte à rebours (tous les utilisateurs) ---------- */
 function drawBanner(items){
@@ -184,9 +143,9 @@ function drawList(){
   var L=cache.slice().sort(function(a,b){return a.due<b.due?-1:1});
   host.innerHTML=L.length?L.map(function(i){
     var l=daysLeft(i.due);
-    return '<div class="fdr-row'+(i.done?' done':'')+'" style="--c:'+(i.done?'var(--done)':colorFor(l))+'"><div><b>'+esc(i.title)+'</b><br><small>'+(i.start?'Du '+fr(i.start)+' au '+fr(i.due):'Clôture le '+fr(i.due))+(i.notified?' · alerte envoyée à '+i.notifiedCount+' inscrit(s) le '+new Date(i.notified).toLocaleDateString("fr-FR"):'')+(i.note?' · '+esc(i.note):'')+'</small></div>'
+    return '<div class="fdr-row'+(i.done?' done':'')+'" style="--c:'+(i.done?'var(--done)':colorFor(l))+'"><div><b>'+esc(i.title)+'</b><br><small>'+(i.start?'Du '+fr(i.start)+' au '+fr(i.due):'Clôture le '+fr(i.due))+(i.notified?' · alerte envoyée à '+i.notifiedCount+' inscrit(s) le '+new Date(i.notified).toLocaleDateString("fr-FR"):'')+(i.author?' · Émise par '+esc(i.author):'')+(i.note?' · '+esc(i.note):'')+'</small></div>'
      +'<div class="fdr-act"><span class="when">'+(i.done?'Clôturé':when(l))+'</span>'
-     +(isAdmin()?'<button type="button" data-a="resend" data-id="'+esc(i.id)+'">Relancer</button><button type="button" data-a="done" data-id="'+esc(i.id)+'">'+(i.done?'Rouvrir':'Marquer clôturé')+'</button><button type="button" class="danger" data-a="del" data-id="'+esc(i.id)+'">Supprimer</button>':'')+'</div></div>';
+     +(canManage(i)?'<button type="button" data-a="resend" data-id="'+esc(i.id)+'">Relancer</button><button type="button" data-a="done" data-id="'+esc(i.id)+'">'+(i.done?'Rouvrir':'Marquer clôturé')+'</button><button type="button" class="danger" data-a="del" data-id="'+esc(i.id)+'">Supprimer</button>':'')+'</div></div>';
   }).join(""):'<p style="color:var(--muted);margin-top:12px">Aucune échéance en cours.</p>';
   /* résumé affiché sur la barre fermée */
   var act=L.filter(function(i){return !i.done}),col=act.length?colorFor(daysLeft(act[0].due)):"var(--todo)";
@@ -198,10 +157,10 @@ function drawList(){
 
 /* ---------- Page « Feuille de route » ---------- */
 function deadlineForm(){
-  return isAdmin()?'<p style="margin:6px 0 4px"><b>Nouvelle échéance</b><br><small>Choisissez tout le monde ou des personnes précises : elles reçoivent l’alerte dans leur Messagerie.</small></p>'
+  return canEmit()?'<p style="margin:6px 0 4px"><b>Nouvelle échéance</b><br><small>Choisissez tous les membres ayant accès à la messagerie ou des personnes précises.</small></p>'
     +'<div class="fdr-form"><label>Élément à clôturer<input id="fdrT" maxlength="120" placeholder="Ex. Base prospects consolidée" autocomplete="off"></label>'
     +'<label>Date de début<input type="date" id="fdrS" value="'+addDays(0)+'"></label><label>Date de clôture<input type="date" id="fdrD" value="'+addDays(15)+'"></label>'
-    +'<label class="full">Destinataires<select id="fdrTarget"><option value="all">Tout le monde</option><option value="selected">Personnes précises</option></select></label>'
+    +'<label class="full">Destinataires<select id="fdrTarget"><option value="all">Tous les membres</option><option value="selected">Personnes précises</option></select></label>'
     +'<div class="full fdr-picker" id="fdrPeople" hidden><label for="fdrSearch">Rechercher un membre</label>'
     +'<input type="search" id="fdrSearch" autocomplete="off" placeholder="Nom ou adresse e-mail" aria-controls="fdrMembers" disabled>'
     +'<p id="fdrSelected" role="status">0 membre sélectionné</p><div id="fdrMembers" role="group" aria-label="Membres AfriFloW"></div></div>'
@@ -265,6 +224,7 @@ function render(){
 
   /* Échéances et alertes */
   var form=deadlineForm();
+  if(form)openSet.dl=true;
   var urgent=cache.some(function(i){return !i.done&&daysLeft(i.due)<=7});
   h+='<h3>Échéances et alertes</h3>'+bar("dl","Échéances et alertes","…","…","var(--todo)",form+'<div id="fdrDl"></div>',{open:urgent,metaId:"fdrDlMeta",tagId:"fdrDlTag"});
 
@@ -310,7 +270,7 @@ async function onClick(e){
   }
   var b=e.target.closest("button");if(!b)return;
   if(b.dataset.fdr==="dis"){sset("fdr_dis_"+b.dataset.id,"1");drawBanner(cache);return}
-  if(!isAdmin())return;
+  if(!canEmit())return;
   try{
     if(b.id==="fdrGo"){
       var title=$("fdrT").value.trim(),start=$("fdrS").value,due=$("fdrD").value,note=$("fdrN").value.trim(),err=$("fdrErr");
@@ -322,25 +282,27 @@ async function onClick(e){
       if(targeted&&!requested.length){err.textContent="Sélectionnez au moins un membre dans la liste.";return}
       err.textContent="";b.disabled=true;
       var account=me(),all=await recipients();
-      if(!b.isConnected||account!==me()||!isAdmin())return;
+      if(!b.isConnected||account!==me()||!canEmit())return;
       var rec=targeted?requested.filter(function(email){return all.includes(email)}):all;
       if(targeted&&rec.length!==requested.length){err.textContent="Un compte sélectionné n’est plus disponible. Rouvrez la page pour actualiser la liste.";b.disabled=false;return}
       if(!rec.length){err.textContent="Aucun autre compte inscrit pour le moment.";b.disabled=false;return}
       if(!confirm("Envoyer l'alerte « "+title+" » (clôture "+when(daysLeft(due))+") à "+(targeted?rec.length+" membre(s) sélectionné(s)":"tous les inscrits ("+rec.length+")")+" ?")){b.disabled=false;return}
-      var it={id:uid(),title:title,start:start,due:due,note:note,created:Date.now(),targeted:targeted};
-      await notify(it,rec);
-      await saveDl(cache.concat([it]));
-      toast("Alerte envoyée à "+rec.length+" inscrit(s).");
+      var result=await deadlineAction("create",{title:title,start:start,due:due,note:note,targeted:targeted,recipients:rec});
+      cache=result.items;
+      toast("Alerte envoyée à "+result.count+" membre(s).");
       if(b.isConnected){if(active)renderDeadlinePage();else render()}
       return;
     }
-    var id=b.dataset.id,a=b.dataset.a,it2=cache.filter(function(x){return x.id===id})[0];if(!it2)return;
-    if(a==="resend"){
-      var r2=await reminderRecipients(it2);
-      if(!r2.length){toast("Aucun destinataire inscrit pour cette relance.");return}
-      if(r2.length&&confirm("Relancer « "+it2.title+" » auprès de "+r2.length+" inscrit(s) ?")){await notify(it2,r2);await saveDl(cache.slice());toast("Relance envoyée.");drawList()}
-    }else if(a==="done"){it2.done=!it2.done;await saveDl(cache.slice());drawBanner(cache);drawList()}
-    else if(a==="del"&&confirm("Supprimer cette échéance ? Les messages déjà envoyés restent dans les boîtes de réception.")){await saveDl(cache.filter(function(x){return x.id!==id}));drawBanner(cache);drawList()}
+    var id=b.dataset.id,a=b.dataset.a,it2=cache.filter(function(x){return x.id===id})[0];if(!it2||!canManage(it2))return;
+    if(!["resend","done","del"].includes(a))return;
+    if(a==="resend"&&!confirm("Relancer les destinataires de « "+it2.title+" » ?"))return;
+    if(a==="del"&&!confirm("Supprimer cette échéance ? Les messages déjà envoyés restent dans les boîtes de réception."))return;
+    b.disabled=true;
+    try{
+      var result2=await deadlineAction(a,{id:id});cache=result2.items;
+      if(a==="resend")toast("Relance envoyée à "+result2.count+" membre(s).");
+      drawBanner(cache);drawList();
+    }finally{b.disabled=false;}
   }catch(x){
     toast("Action impossible : "+(x&&x.message||x));
     var g=$("fdrGo");if(g)g.disabled=false;
@@ -350,6 +312,7 @@ async function onClick(e){
 /* ---------- Ouverture de la page + entrée de menu ---------- */
 function renderDeadlinePage(){
   var form=deadlineForm();
+  if(form)openSet.dl=true;
   var urgent=cache.some(function(i){return !i.done&&daysLeft(i.due)<=7});
   $("viewHost").innerHTML='<div class="fdr" data-fdr-view="'+(deadlineOnly?"deadlines":"marketing")+'"><div class="fdr-hero"><h2>Échéances et alertes</h2><p>Suivez les actions à venir et les rappels AfriFloW.</p></div>'+bar("dl","Échéances et alertes","…","…","var(--todo)",form+'<div id="fdrDl"></div>',{open:urgent,metaId:"fdrDlMeta",tagId:"fdrDlTag"})+'</div>';
   $("viewHost").onclick=onClick;
