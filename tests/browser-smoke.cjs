@@ -244,3 +244,45 @@ test('Partner removal requires confirmation in Administration and refreshes the 
     assert.deepEqual(await page.evaluate(() => window.removalCalls), ['00000000-0000-4000-8000-000000000002']);
   } finally { await browser.close(); }
 });
+
+test('Administrators can confirm shareholder promotion for a client or partner', async () => {
+  const browser = await chromium.launch({headless:true});
+  try {
+    const page = await browser.newPage({viewport:{width:375,height:812}});
+    await page.setContent('<div id="adMarketAccess"></div>');
+    await page.evaluate(() => {
+      const users = [
+        {user_id:'client',email:'client@example.test',access_mode:'client'},
+        {user_id:'partner',email:'partner@example.test',access_mode:'partner_approved'},
+        {user_id:'pending',email:'pending@example.test',access_mode:'shareholder_pending'}
+      ];
+      window.USER_ROLE = 'admin';
+      window.toast = () => {};
+      window.decisions = [];
+      window.__sb = {functions:{invoke:async (_fn,{body}) => {
+        if (body.action === 'list') return {data:{users}};
+        if (body.action === 'decide') {
+          window.decisions.push(body);
+          users.find(user=>user.user_id===body.userId).access_mode = 'shareholder_approved';
+        }
+        return {data:{}};
+      }}};
+    });
+    await page.addScriptTag({path:path.join(root, 'market.js')});
+    await page.evaluate(() => AfriMarket.renderAccessAdmin('adMarketAccess'));
+    assert.equal(await page.locator('[data-access-user="pending"] option[value="promote_shareholder"]').count(), 0);
+    for (const [index,role] of ['client','partner'].entries()) {
+      const row = page.locator('[data-access-user="'+role+'"]');
+      await row.locator('select').selectOption('promote_shareholder');
+      await row.getByRole('button',{name:'Appliquer',exact:true}).click();
+      assert.equal(await page.evaluate(() => window.decisions.length), index);
+      const summary=await row.getByRole('status').innerText();
+      assert.match(summary, new RegExp(role+'@example\\.test aura accès'));
+      assert.equal(summary.includes('circuits de paiement'), role==='partner');
+      await row.getByRole('button',{name:/Confirmer le passage en actionnaire/}).click();
+      await row.getByText(/Actionnaire approuvé/).waitFor();
+      assert.equal(await row.locator('option[value="promote_shareholder"]').count(),0);
+    }
+    assert.deepEqual(await page.evaluate(() => window.decisions.map(d=>[d.userId,d.decision])),[['client','promote_shareholder'],['partner','promote_shareholder']]);
+  } finally { await browser.close(); }
+});

@@ -18,7 +18,7 @@ function reply(req:Request,obj:unknown,status=200){
 }
 function str(value:unknown,max=500){return String(value??"").trim().slice(0,max);}
 function uuid(value:string){return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);}
-const decisions=new Set(["classify_client","classify_partner","classify_shareholder","approve","reject","revoke"]);
+const decisions=new Set(["classify_client","classify_partner","classify_shareholder","approve","reject","revoke","promote_shareholder"]);
 
 Deno.serve(async(req:Request)=>{
   if(req.method==="OPTIONS")return new Response("ok",{headers:headers(req)});
@@ -67,7 +67,7 @@ Deno.serve(async(req:Request)=>{
         p_actor:user.id,p_target:userId,p_action:decision,p_reason:reason
       });
       if(done.error)return reply(req,{error:done.error.message||"Décision refusée"},409);
-      return reply(req,{ok:true,message:"Décision appliquée et enregistrée.",access_mode:done.data});
+      return reply(req,{ok:true,message:decision==="promote_shareholder"?"Compte passé en actionnaire.":"Décision appliquée et enregistrée.",access_mode:done.data});
     }
     return reply(req,{error:"Action inconnue"},400);
   }catch(error){
