@@ -762,6 +762,7 @@
       var data=await accessCall("list");
       if(!host.isConnected)return;
       var users=data.users||[], history=data.history||[];
+      var byId=new Map(users.map(function(u){return [u.user_id,u.email]}));
       var pendingPartners=users.filter(function(u){return u.access_mode==="partner_waiting"});
       var sortedUsers=users.slice().sort(function(a,b){
         return Number(b.access_mode==="partner_waiting")-Number(a.access_mode==="partner_waiting");
@@ -780,13 +781,17 @@
          var actions=u.legacy?'<option value="classify_client">Classer Client</option><option value="classify_partner">Classer Partenaire (en attente)</option><option value="classify_shareholder">Classer Actionnaire (en attente)</option>':
            (u.access_mode==="partner_waiting"||u.access_mode==="shareholder_pending"?'<option value="approve">Approuver</option><option value="reject">Refuser / maintenir en attente</option>':
            (u.access_mode==="partner_approved"||u.access_mode==="shareholder_approved"?'<option value="revoke">Révoquer l’accès</option>':""));
-         return '<form class="af-access-user" data-access-user="'+esc(u.user_id)+'" data-search="'+esc(((u.email||"")+" "+(u.name||"")).toLowerCase())+'">'
+         var canPromote=["client","partner_waiting","partner_approved"].includes(u.access_mode)
+           && u.email && u.email.toLowerCase()!==String(window.loggedUserEmail||"").toLowerCase();
+         if(canPromote)actions+='<option value="promote_shareholder">Passer en actionnaire</option>';
+         return '<form class="af-access-user" data-access-user="'+esc(u.user_id)+'" data-access-mode="'+esc(u.access_mode)+'" data-search="'+esc(((u.email||"")+" "+(u.name||"")).toLowerCase())+'">'
            +'<div><strong>'+esc(u.email||u.user_id)+'</strong><small>'+esc(u.name||"")+' · '+esc(labels[u.access_mode]||u.access_mode)+'</small></div>'
            +(actions?'<select name="decision" aria-label="Décision pour '+esc(u.email||"ce compte")+'">'+actions+'</select><input name="reason" maxlength="500" placeholder="Motif (recommandé)" aria-label="Motif de décision"><button type="submit" class="af-market-secondary">Appliquer</button>':'<span class="af-partner-enabled">Aucune action nécessaire</span>')
+           +(canPromote?'<p role="status" data-promotion-summary hidden style="grid-column:1/-1;margin:0"></p>':'')
            +'</form>';
        }).join(""):'<p>Aucun utilisateur enregistré.</p>')+'</div>'
        +'<h4>Historique des décisions</h4><div class="af-access-history">'
-       +(history.length?history.map(function(h){return '<p><time>'+esc(new Date(h.created_at).toLocaleString("fr-FR"))+'</time> · '+esc(h.action)+' · '+esc(h.previous_access||"—")+' → '+esc(h.new_access)+' · '+esc(h.reason||"Sans motif")+'</p>';}).join(""):'<p>Aucune décision enregistrée.</p>')
+       +(history.length?history.map(function(h){return '<p><time>'+esc(new Date(h.created_at).toLocaleString("fr-FR"))+'</time> · '+esc(h.action==="promote_shareholder"?"Passage en actionnaire":h.action)+' · '+esc(byId.get(h.target_user_id)||"Compte")+' · '+esc(labels[h.previous_access]||h.previous_access||"—")+' → '+esc(labels[h.new_access]||h.new_access)+' · '+esc(h.reason||"Sans motif")+'</p>';}).join(""):'<p>Aucune décision enregistrée.</p>')
        +'</div>';
       var search=host.querySelector("#afAccessSearch");
       if(search)search.oninput=function(){var value=search.value.trim().toLowerCase();host.querySelectorAll("[data-access-user]").forEach(function(row){row.hidden=!!value&&!row.dataset.search.includes(value);});};
@@ -794,14 +799,22 @@
         form.onsubmit=async function(event){
           event.preventDefault();
           var fields=new FormData(form), decision=String(fields.get("decision")||"");
-          if(!decision)return;
+          if(!decision||!isAdmin())return;
           var button=form.querySelector('button[type="submit"]'),reason=String(fields.get("reason")||"");
-          var signature=decision+"|"+reason;
+          if(button.disabled)return;
+          var signature=decision+"|"+reason,promotion=decision==="promote_shareholder";
           // Two deliberate clicks, without unsupported window.confirm() in the app.
           if(form.dataset.confirming!==signature){
             form.dataset.confirming=signature;
-            button.textContent="Confirmer la décision";
-            button.setAttribute("aria-label","Confirmer "+decision+" pour "+(form.querySelector("strong").textContent||"ce compte"));
+            var account=form.querySelector("strong").textContent||"ce compte";
+            button.textContent=promotion?"Confirmer le passage":"Confirmer la décision";
+            button.setAttribute("aria-label",(promotion?"Confirmer le passage en actionnaire":"Confirmer la décision")+" pour "+account);
+            if(promotion){
+              var summary=form.querySelector("[data-promotion-summary]");
+              summary.textContent=account+" aura accès à l’espace actionnaire à sa prochaine connexion."
+                +(form.dataset.accessMode.startsWith("partner_")?" Son accès partenaire et ses circuits de paiement à la livraison seront désactivés.":"");
+              summary.hidden=false;
+            }
             return;
           }
           button.disabled=true;
@@ -809,12 +822,25 @@
             var result=await accessCall("decide",{
               userId:form.dataset.accessUser,decision:decision,reason:reason
             });
-            notice(result.message||"Décision enregistrée");loadAccessAdmin(targetId);if(!targetId)loadPartnerAdmin();
+            notice(result.message||"Décision enregistrée");
+            if(!host.isConnected)return;
+            loadAccessAdmin(targetId);
+            if(!targetId)loadPartnerAdmin();
+            if(promotion&&form.dataset.accessMode.startsWith("partner_")){
+              loadPartnerTermsAdmin("adPartnerTerms");
+              loadPartnerAssignmentsAdmin("adMarketAssignments");
+              if(window.AfriCOD&&el("afCODAdmin"))window.AfriCOD.mount(el("afCODAdmin"),true);
+            }
           }catch(error){notice(error.message||"Décision impossible");button.disabled=false;}
         };
       });
       host.querySelectorAll("form[data-access-user]").forEach(function(form){
-        form.onchange=function(){form.dataset.confirming="";var b=form.querySelector('button[type="submit"]');if(b){b.textContent="Appliquer";b.removeAttribute("aria-label")}};
+        form.onchange=function(){
+          form.dataset.confirming="";
+          var b=form.querySelector('button[type="submit"]'),summary=form.querySelector("[data-promotion-summary]");
+          if(b){b.textContent="Appliquer";b.removeAttribute("aria-label")}
+          if(summary)summary.hidden=true;
+        };
         var reason=form.querySelector('[name="reason"]');
         if(reason)reason.oninput=form.onchange;
       });
