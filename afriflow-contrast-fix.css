@@ -21,7 +21,7 @@
   background: color-mix(in srgb, var(--green) 17%, transparent) !important;
   color: var(--ink) !important;
 }
-#side #addNav {
+#side :is(#addNav,#fdrFooter) {
   color: #ffffff !important;
   -webkit-text-fill-color: #ffffff !important;
   background: #175d3b !important;

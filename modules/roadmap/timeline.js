@@ -49,7 +49,7 @@ var RISKS=[
 ];
 
 /* ---------- Utilitaires ---------- */
-var KEY="pub:deadlines", active=false, cache=[], openSet={};
+var KEY="pub:deadlines", active=false, deadlineOnly=false, cache=[], openSet={};
 var MOIS=["janv.","févr.","mars","avr.","mai","juin","juil.","août","sept.","oct.","nov.","déc."];
 function $(i){return document.getElementById(i)}
 function SB(){return window.__sb} function TB(){return window.__TABLE||"afriflow_state"}
@@ -137,7 +137,7 @@ function drawBanner(items){
   var act=items.filter(function(i){return !i.done&&!sget("fdr_dis_"+i.id)}).sort(function(a,b){return a.due<b.due?-1:1});
   host.innerHTML=act.map(function(i){
     var l=daysLeft(i.due);
-    return '<div class="fdr-ban" style="--c:'+colorFor(l)+'" role="status"><span>⏰ <b>'+esc(i.title)+'</b> doit être clôturé '+when(l)+' (le '+fr(i.due)+')</span><span class="fdr-act"><button type="button" data-fdr="open">Voir la feuille de route</button><button type="button" data-fdr="dis" data-id="'+esc(i.id)+'" aria-label="Masquer">✕</button></span></div>';
+    return '<div class="fdr-ban" style="--c:'+colorFor(l)+'" role="status"><span>⏰ <b>'+esc(i.title)+'</b> doit être clôturé '+when(l)+' (le '+fr(i.due)+')</span><span class="fdr-act"><button type="button" data-fdr="open">Voir les échéances</button><button type="button" data-fdr="dis" data-id="'+esc(i.id)+'" aria-label="Masquer">✕</button></span></div>';
   }).join("");
 }
 async function refreshBanner(){
@@ -146,7 +146,7 @@ async function refreshBanner(){
 }
 document.addEventListener("click",function(e){
   var b=e.target.closest("[data-fdr]");if(!b||!b.closest("#fdrBanner"))return;
-  if(b.dataset.fdr==="open")openPage();
+  if(b.dataset.fdr==="open")openPage(true);
   else if(b.dataset.fdr==="dis"){sset("fdr_dis_"+b.dataset.id,"1");drawBanner(cache)}
 });
 
@@ -351,29 +351,39 @@ async function onClick(e){
 function renderDeadlinePage(){
   var form=deadlineForm();
   var urgent=cache.some(function(i){return !i.done&&daysLeft(i.due)<=7});
-  $("viewHost").innerHTML='<div class="fdr"><div class="fdr-hero"><h2>Échéances et alertes</h2><p>Suivez les actions à venir et les rappels AfriFloW.</p></div>'+bar("dl","Échéances et alertes","…","…","var(--todo)",form+'<div id="fdrDl"></div>',{open:urgent,metaId:"fdrDlMeta",tagId:"fdrDlTag"})+'</div>';
+  $("viewHost").innerHTML='<div class="fdr" data-fdr-view="'+(deadlineOnly?"deadlines":"marketing")+'"><div class="fdr-hero"><h2>Échéances et alertes</h2><p>Suivez les actions à venir et les rappels AfriFloW.</p></div>'+bar("dl","Échéances et alertes","…","…","var(--todo)",form+'<div id="fdrDl"></div>',{open:urgent,metaId:"fdrDlMeta",tagId:"fdrDlTag"})+'</div>';
   $("viewHost").onclick=onClick;
   setupRecipientPicker();
   drawBanner(cache);drawList();tick();
 }
-async function openPage(){
+function openPage(onlyDeadlines){
   var home=document.querySelector('#navList .nv[data-id="home"]');
   if(home)home.click();            /* laisse le site nettoyer la vue précédente */
   active=true;
+  deadlineOnly=onlyDeadlines;
+  if(deadlineOnly)openSet.dl=true;
   $("view-home").style.display="none";$("viewHost").style.display="";
   var sc=$("scrim");if(sc&&sc.classList.contains("on"))sc.click();
   renderDeadlinePage();window.scrollTo(0,0);markNav();
-  if(window.AFRI)window.AFRI.page("Échéances et alertes");
+  if(window.AFRI)window.AFRI.page(deadlineOnly?"Échéances et alertes":"Marketing");
   refreshBanner();
 }
+window.AfriOpenDeadlines=function(){
+  if(me())openPage(true);
+};
 function markNav(){
-  var nl=$("navList");if(!nl)return;
-  nl.querySelectorAll(".nv").forEach(function(b){b.classList.toggle("on",active?b.hasAttribute("data-fdr-nav"):b.classList.contains("on"))});
+  var footer=$("fdrFooter");
+  if(footer){
+    if(active&&deadlineOnly)footer.setAttribute("aria-current","page");
+    else footer.removeAttribute("aria-current");
+  }
+  var nl=$("navList");if(!nl||!active)return;
+  nl.querySelectorAll(".nv").forEach(function(b){b.classList.toggle("on",!deadlineOnly&&b.hasAttribute("data-fdr-nav"))});
 }
 function inject(){
   var nl=$("navList");if(!nl||nl.querySelector("[data-fdr-nav]")||!nl.firstElementChild)return;
   var row=document.createElement("div");row.className="nvr";
-  row.innerHTML='<button type="button" class="nv" data-fdr-nav="1">Échéances et alertes</button>';
+  row.innerHTML='<button type="button" class="nv" data-fdr-nav="1">Marketing</button>';
   /* Marketplace reste premier, puis Accueil ; les alertes suivent dans le menu. */
   var homeRow=nl.querySelector('.nv[data-id="home"]');
   (homeRow?homeRow.parentNode:nl.firstElementChild).after(row);
@@ -384,7 +394,8 @@ if(nl0){
   new MutationObserver(inject).observe(nl0,{childList:true});
   nl0.addEventListener("click",function(e){
     var b=e.target.closest("button");if(!b)return;
-    if(b.hasAttribute("data-fdr-nav"))openPage();else if(!b.hasAttribute("data-fdr-ren"))active=false;
+    if(b.hasAttribute("data-fdr-nav"))openPage(false);
+    else if(!b.hasAttribute("data-fdr-ren")&&b.dataset.id!=="messages"){active=false;markNav()}
   });
   inject();
 }
