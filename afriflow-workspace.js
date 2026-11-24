@@ -791,6 +791,7 @@ function selectAdminSection(id){
  adminSection=id;
  root.querySelectorAll("[data-admin-panel]").forEach(function(p){p.hidden=p.dataset.adminPanel!==id;});
  root.querySelectorAll("[data-admin-section]").forEach(function(b){b.setAttribute("aria-pressed",String(b.dataset.adminSection===id));});
+ var picker=$("afAdminPicker");if(picker)picker.value=id;
  var heading=$("afAdminCurrent");if(heading)heading.textContent=adminSections.find(function(x){return x[0]===id;})[1];
  if(id==="orders"){var cod=$("afCODAdmin"),details=cod&&cod.querySelector("details");if(details)details.open=true;}
 }
@@ -808,9 +809,10 @@ async function renAdmin(){
    disputes:'<section class="mt-box"><div id="adDisputes" class="af-partner-admin"><p>Chargement des contestations…</p></div></section>',
    meetings:'<div id="adOn" class="mt-box"></div>'
   };
-  h.innerHTML='<div id="afAdminDashboard"><div class="toolbar af-admin-toolbar"><div><b>Administration</b><small>Gestion de la plateforme</small></div><div class="toolbar-actions"><button type="button" id="adRef">Actualiser</button></div></div><nav class="af-admin-nav" aria-label="Rubriques d’administration">'+adminSections.map(function(a){return '<button type="button" data-admin-section="'+a[0]+'" aria-controls="afAdminPanel-'+a[0]+'" aria-pressed="false">'+adminIcon(a)+'<span>'+a[1]+'</span></button>';}).join("")+'</nav><h2 class="af-admin-current" id="afAdminCurrent" aria-live="polite"></h2>'+adminSections.map(function(a){return '<div id="afAdminPanel-'+a[0]+'" data-admin-panel="'+a[0]+'" hidden>'+panels[a[0]]+'</div>';}).join("")+'</div>';
+  h.innerHTML='<div id="afAdminDashboard"><div class="toolbar af-admin-toolbar"><div><b>Administration</b><small>Gestion de la plateforme</small></div><div class="toolbar-actions"><button type="button" id="adRef">Actualiser</button></div></div><nav class="af-admin-nav" aria-label="Rubriques d’administration">'+adminSections.map(function(a){return '<button type="button" data-admin-section="'+a[0]+'" aria-controls="afAdminPanel-'+a[0]+'" aria-pressed="false">'+adminIcon(a)+'<span>'+a[1]+'</span></button>';}).join("")+'</nav><label class="af-admin-picker">Rubrique<select id="afAdminPicker">'+adminSections.map(function(a){return '<option value="'+a[0]+'">'+a[1]+'</option>';}).join("")+'</select></label><h2 class="af-admin-current" id="afAdminCurrent" aria-live="polite"></h2>'+adminSections.map(function(a){return '<div id="afAdminPanel-'+a[0]+'" data-admin-panel="'+a[0]+'" hidden>'+panels[a[0]]+'</div>';}).join("")+'</div>';
   var dashboard=$("afAdminDashboard");
   dashboard.addEventListener("click",function(e){var b=e.target.closest("[data-admin-section],[data-admin-jump]");if(!b)return;selectAdminSection(b.dataset.adminSection||b.dataset.adminJump);if(b.dataset.adminJump){var nav=dashboard.querySelector('[data-admin-section="'+adminSection+'"]');if(nav)nav.focus({preventScroll:true});dashboard.scrollIntoView({block:"start",behavior:"auto"});}});
+  $("afAdminPicker").onchange=function(){selectAdminSection(this.value);};
   selectAdminSection(adminSection);
   if(window.AfriMarket&&window.AfriMarket.renderAccessAdmin){
     window.AfriMarket.renderAccessAdmin("adMarketAccess");
@@ -832,7 +834,8 @@ async function renAdmin(){
   $("adBody").innerHTML='<details class="af-admin-details" open><summary>Demandes de modification ('+P.length+')</summary>'+(P.length?'<div class="dgrid">'+P.map(function(r){return '<div class="dcard"><b>'+esc(r.name||r.email)+'</b><small>'+esc(r.email)+' · '+fdt(r.at)+'</small><small>Souhaite modifier : <b>'+esc(r.docPath?String(r.docPath).split("/").pop():(r.pages||[]).map(pn).join(", "))+'</b></small>'+(r.msg?'<small>« '+esc(r.msg)+' »</small>':'')+'<div class="dact"><button type="button" class="p" data-ok="'+esc(r.email)+'">Accepter</button><button type="button" data-no="'+esc(r.email)+'">Refuser</button></div></div>'}).join("")+'</div>':'<p style="color:var(--muted)">Aucune demande en attente.</p>')
   +'</details><details class="af-admin-details"'+(P.length?'':' open')+'><summary>Comptes inscrits ('+U.length+')</summary>'+(U.length?'<div class="xlw"><table class="t"><thead><tr><th>Nom</th><th>Email</th><th>Droits de modification</th><th>Inscrit le</th><th></th></tr></thead><tbody>'+U.map(function(u){return '<tr><td>'+esc(u.name)+'</td><td>'+esc(u.email)+'</td><td>'+esc(gtxt(u.grants))+'</td><td>'+fdt(u.created)+'</td><td><button type="button" data-dg="'+esc(u.email)+'">Droits</button> <button type="button" class="danger" data-du="'+esc(u.email)+'">Supprimer</button></td></tr>'}).join("")+'</tbody></table></div>':'<p style="color:var(--muted)">Aucun compte pour le moment.</p>')+'</details>';
   h.onclick=function(e){
-    var b=e.target.closest("button");if(!b)return;var d=b.dataset;
+    if(!current()||!isAdmin())return;
+    var b=e.target.closest("button");if(!b||!b.closest("#adBody"))return;var d=b.dataset;
     if(d.ok||d.no)AFRI.resolve(d.ok||d.no,!!d.ok).then(function(){toast(d.ok?"Droits accordés":"Demande refusée");AFRI.pollReq();renAdmin()}).catch(function(x){toast(x.message)});
     else if(d.dg)grantsDialog(d.dg);
     else if(d.du&&confirm("Supprimer le compte "+d.du+" ? La personne devra s'inscrire à nouveau."))AFRI.deleteUser(d.du).then(renAdmin).catch(function(x){toast(x.message)});
