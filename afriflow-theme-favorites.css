@@ -1,0 +1,101 @@
+
+
+/* Contrast contract: pair opaque, theme-specific surfaces and text.
+   The decorative landscape remains unchanged outside these components. */
+:root{--af-ui-panel:#ffffff;--af-ui-sub:#f2f5f3;--af-ui-ink:#1d2a22;--af-ui-muted:#526258;--af-ui-edge:#cbd5ce;--af-ui-accent:#185b37;--af-ui-error:#a82435;--af-ui-favorite:#a92445}
+:root[data-theme="dark"]{--af-ui-panel:#1e2421;--af-ui-sub:#292f2b;--af-ui-ink:#f1f5f2;--af-ui-muted:#b9c7bd;--af-ui-edge:#46534a;--af-ui-accent:#86d6a5;--af-ui-error:#ff9aa9;--af-ui-favorite:#ff7795}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]){--af-ui-panel:#1e2421;--af-ui-sub:#292f2b;--af-ui-ink:#f1f5f2;--af-ui-muted:#b9c7bd;--af-ui-edge:#46534a;--af-ui-accent:#86d6a5;--af-ui-error:#ff9aa9;--af-ui-favorite:#ff7795}}
+/* Mail, including header, tabs, message previews, detail and compose. */
+body #msgBox.msg-box{--ink:var(--af-ui-ink);--muted:var(--af-ui-muted);--card:var(--af-ui-panel);--line:var(--af-ui-edge);--green:var(--af-ui-accent);background:var(--af-ui-panel)!important;color:var(--af-ui-ink)!important;border-color:var(--af-ui-edge)!important;z-index:2200!important;gap:10px;overflow:auto;overscroll-behavior:contain}
+body #msgBox .toolbar{background:var(--af-ui-panel)!important;color:var(--af-ui-ink)!important;border-color:var(--af-ui-edge)!important;box-shadow:none!important;flex-wrap:wrap;gap:10px}
+body #msgBox :is(.dcard,.journal-article){background:var(--af-ui-sub)!important;color:var(--af-ui-ink)!important;border:1px solid var(--af-ui-edge)!important;box-shadow:none!important;overflow-wrap:anywhere}
+body #msgBox :is(.dcard b,.toolbar b,.journal-article label){color:var(--af-ui-ink)!important}
+body #msgBox :is(small,.dcard small){color:var(--af-ui-muted)!important}
+body #msgBox :is(button,input:not([type=checkbox]),textarea,select){background:var(--af-ui-sub)!important;color:var(--af-ui-ink)!important;border:1px solid var(--af-ui-edge)!important;box-shadow:none!important;min-width:0}
+body #msgBox :is(button.p,.auth-tabs button.on){background:#21633f!important;color:#fff!important;border-color:#21633f!important}
+body #msgBox button.danger,body #msgBox #mErr{color:var(--af-ui-error)!important}
+body #msgBox :is(input,textarea)::placeholder{color:var(--af-ui-muted)!important;opacity:1}
+body #msgBox .dgrid{min-height:0;overflow:visible;gap:8px}
+body #msgBox .dcard{padding:12px!important;gap:6px;margin:0}
+body #msgBox .auth-tabs{flex-shrink:0;width:100%;margin:0!important;gap:6px}
+body:has(#msgBox) :is(#aiBtn,#memberHub,#afIntroAdminPreviewBtn){visibility:hidden!important}
+/* Main commercial and administrative surfaces. */
+#market-view :is(.af-market-admin,.af-market-admin-card,.af-market-admin-row,.af-market-status,.af-market-empty,.af-market-wait,.af-ali-cats,.af-ali-side,.af-feature,.af-partner-card),
+#viewHost :is(.mt-box,.mt-m,.af-market-summary,.af-market-summary-partner){
+ background:var(--af-ui-panel)!important;color:var(--af-ui-ink)!important;border-color:var(--af-ui-edge)!important;
+}
+#market-view :is(.af-market-admin,.af-market-admin-card,.af-feature,.af-ali-cats,.af-ali-side) :is(h1,h2,h3,h4,label,summary),
+#viewHost :is(.mt-box,.mt-m) :is(h3,h4,label,summary){color:var(--af-ui-ink)!important}
+#market-view :is(.af-market-admin,.af-feature,.af-ali-side,.af-ali-cats) :is(small,p,.af-feature-meta,.af-product-assurance,.af-old-price),
+#viewHost :is(.mt-box,.mt-m) :is(small,.mt-grid label){color:var(--af-ui-muted)!important}
+#market-view :is(.af-market-admin,.af-market-admin-card) :is(input:not([type=checkbox]):not([type=radio]),textarea,select),
+#viewHost :is(.mt-box,.mt-m,.fm) :is(input:not([type=checkbox]):not([type=radio]),textarea,select),
+.af-modal :is(input:not([type=checkbox]):not([type=radio]),textarea,select){
+ background:var(--af-ui-sub)!important;color:var(--af-ui-ink)!important;border:1px solid var(--af-ui-edge)!important;
+}
+#market-view .af-market-admin-card :is(input,textarea)::placeholder,
+#viewHost .mt-box :is(input,textarea)::placeholder,.af-modal :is(input,textarea)::placeholder{color:var(--af-ui-muted)!important;opacity:1}
+#market-view .af-market-admin-card input[type=file]{max-width:100%;overflow:hidden}
+#market-view .af-market-primary,.af-modal .af-market-primary{background:#21633f!important;color:#fff!important;-webkit-text-fill-color:currentColor!important;border-color:#21633f!important;text-shadow:none!important}
+#market-view .af-market-secondary,.af-modal .af-market-secondary{background:var(--af-ui-panel)!important;color:var(--af-ui-accent)!important;border:1px solid var(--af-ui-edge)!important}
+#market-view .af-slide-text .af-market-primary,#market-view .af-showcase-cta{background:#fff3d9!important;color:#173b29!important;-webkit-text-fill-color:currentColor!important;border:1px solid #fff3d9!important;text-shadow:none!important}
+#market-view .af-slide-text .af-ghost{background:#173b29!important;color:#fff!important;border-color:#fff!important}
+#market-view .af-hero-pencil,#market-view .af-scroll-cue,#market-view .af-partner-scroll-cue{background:var(--af-ui-panel)!important;color:var(--af-ui-accent)!important;border-color:var(--af-ui-edge)!important;-webkit-text-fill-color:currentColor!important}
+#market-view .af-dot{background:#c6d6cb!important;box-shadow:none!important}
+#market-view .af-dot.on{background:#ffc35c!important}
+#market-view .af-showcase-card:not(.af-showcase-main){background:var(--af-ui-panel)!important;color:var(--af-ui-ink)!important}
+#market-view .af-showcase-card:not(.af-showcase-main) :is(h3,p){color:var(--af-ui-ink)!important}
+#market-view .af-showcase-text-link{color:var(--af-ui-accent)!important;background:transparent!important}
+#market-view .af-showcase-main :is(h3,p,.af-showcase-eyebrow){color:#fff!important}
+#market-view .af-welcome-guest h2{color:var(--af-ui-ink)!important}
+#market-view :is(.af-product,.af-feature) .af-product-price{color:var(--af-ui-ink)!important}
+#market-view :is(.af-product-cat,.af-announcement-label){color:var(--af-ui-accent)!important}
+#market-view .af-feature.is-out-of-stock .af-feature-body{opacity:1!important}
+/* Sticky header paints behind the system status bar; no content can scroll into it. */
+body #market-view .af-market-top{top:0!important;padding-top:env(safe-area-inset-top,0px);background:var(--af-ui-panel)!important;color:var(--af-ui-ink)!important;z-index:110!important;box-shadow:0 5px 16px rgba(0,0,0,.12)}
+body #market-view .af-market-nav{background:#185b3d!important;color:#fff!important}
+#market-view .af-market-nav button[data-market-favorites]{background:#fff3d9!important;color:#78263f!important;font-weight:850!important;border-radius:0!important}
+#market-view .af-market-nav button[data-market-favorites][aria-pressed="true"]{background:#ffdae5!important;color:#84203b!important}
+#market-view .af-market-nav button[data-market-favorites] span{display:inline!important}
+#market-view .af-market-nav button[data-market-favorites][aria-pressed="true"] .af-icon{fill:currentColor}
+/* Favorites: clear independent state, including on unavailable products. */
+body #market-view .af-favorite{position:absolute!important;top:8px!important;right:8px!important;left:auto!important;z-index:5!important;display:grid!important;place-items:center;width:44px!important;height:44px!important;min-width:44px;min-height:44px;padding:0!important;border:1px solid var(--af-ui-edge)!important;border-radius:50%!important;background:var(--af-ui-panel)!important;color:var(--af-ui-favorite)!important;-webkit-text-fill-color:currentColor!important;opacity:1!important;filter:none!important;box-shadow:0 2px 8px rgba(0,0,0,.18)!important;cursor:pointer;touch-action:manipulation;transform:none!important}
+body #market-view .af-favorite .af-icon{width:23px;height:23px;stroke:currentColor;stroke-width:2;fill:none;transform-origin:center}
+body #market-view .af-favorite.on .af-icon{fill:currentColor}
+body #market-view .af-favorite.on{border:2px solid currentColor!important}
+body #market-view .af-product-media>.af-promo{max-width:calc(100% - 66px)!important}
+body #market-view .af-favorite:focus-visible{outline:3px solid #d98a1b!important;outline-offset:3px}
+@keyframes afFavoriteAdd{0%{transform:scale(.85)}40%{transform:scale(1.3)}70%{transform:scale(.94)}100%{transform:scale(1)}}
+@keyframes afFavoriteRemove{0%{transform:scale(1.15)}50%{transform:scale(.73)}100%{transform:scale(1)}}
+@media(prefers-reduced-motion:no-preference){
+ body #market-view .af-favorite.af-fav-add .af-icon{animation:afFavoriteAdd 280ms ease-out both}
+ body #market-view .af-favorite.af-fav-remove .af-icon{animation:afFavoriteRemove 240ms ease-out both}
+}
+@media(prefers-reduced-motion:reduce){body #market-view .af-favorite .af-icon{animation:none!important}}
+/* Don't let floating developer tools cover the commercial interface or dialogs. */
+body.af-market-mode #afIntroAdminPreviewBtn,body:has(#profilePanel[aria-hidden="false"]) :is(#aiBtn,#memberHub,#afIntroAdminPreviewBtn){visibility:hidden!important}
+@media(max-width:700px){
+ body #msgBox.msg-box{width:calc(100vw - 20px);height:min(78dvh,680px);padding:10px!important;max-height:calc(100dvh - 24px - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px))}
+ body #msgBox .toolbar{position:static;top:auto;margin:0!important;padding:4px 0 8px!important}
+ body #msgBox .toolbar-actions{width:100%;gap:6px;flex-wrap:wrap}
+ body #msgBox button{font-size:.8rem!important;padding:8px 10px!important;min-height:44px}
+ body #msgBox .dcard b{font-size:.92rem;line-height:1.35}
+ body #msgBox .dcard small{font-size:.78rem;line-height:1.45}
+ #market-view .af-market-admin-grid{grid-template-columns:minmax(0,1fr)!important;gap:10px}
+ #market-view .af-market-admin,#market-view .af-market-admin-card{padding:12px!important;min-width:0}
+ #market-view .af-market-admin-card :is(input,select,textarea){font-size:16px!important;min-height:44px}
+ body #market-view .af-market-nav button[data-market-favorites]{order:-1}
+ body #market-view .af-market-nav button{padding:10px 9px!important;font-size:.74rem!important;min-height:44px}
+ body #market-view .af-market-main{padding-bottom:calc(100px + env(safe-area-inset-bottom,0px))}
+}
+
+/* The core body already reserves the safe area; transfer it to the sticky
+   header only while Marketplace is open to avoid double spacing. */
+body.af-market-mode{padding-top:0!important}
+#profilePanel :is(.profile-top,.profile-main,.profile-card,.member-list-card,.member-detail-card){background:var(--af-ui-panel)!important;color:var(--af-ui-ink)!important;border-color:var(--af-ui-edge)!important}
+#profilePanel :is(.profile-note,small){color:var(--af-ui-muted)!important}
+#profilePanel :is(input:not([type=checkbox]):not([type=radio]),select,textarea){background:var(--af-ui-sub)!important;color:var(--af-ui-ink)!important;border-color:var(--af-ui-edge)!important}
+#profilePanel.member-hub-mode .profile-main>.profile-card{background:transparent!important}
+#viewHost :is(.toolbar,.journal-article,.dcard,.map-panel,.fdr-card){background:color-mix(in srgb,var(--af-ui-panel) 94%,transparent)!important;color:var(--af-ui-ink)!important;border-color:var(--af-ui-edge)!important}
+#viewHost :is(.toolbar,.journal-article,.dcard,.map-panel,.fdr-card) :is(small,label){color:var(--af-ui-muted)!important}
+@media(prefers-reduced-transparency:reduce){#viewHost :is(.toolbar,.journal-article,.dcard,.map-panel,.fdr-card){background:var(--af-ui-panel)!important}}
