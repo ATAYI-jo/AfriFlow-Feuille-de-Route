@@ -47,7 +47,7 @@
     ring = element('div',{id:'af-meet-call',role:'alertdialog','aria-modal':'true','aria-labelledby':'af-meet-title',hidden:''},document.body);
     var panel=element('div',{id:'af-meet-panel'},ring);
     element('div',{id:'af-meet-incoming',text:'Appel entrant'},panel);
-    element('img',{src:'./logo.svg',alt:'AfriFlow'},panel);
+    element('img',{src:'./logo.svg?v=2',alt:'AfriFlow'},panel);
     element('h2',{id:'af-meet-title',text:'Appel Teams entrant'},panel);
     element('p',{id:'af-meet-source',text:'AfriFlow · via Teams'},panel);
     element('p',{id:'af-meet-info'},panel);

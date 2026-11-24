@@ -608,6 +608,7 @@ function bgApply(o){
   s.setProperty("--bg", o.c);
   s.setProperty("--card", dark ? "#1e1e1e" : "#ffffff"); s.setProperty("--ink", dark ? "#eef2ec" : "#1d2a22");
   s.setProperty("--muted", dark ? "#9aa89f" : "#66726a"); s.setProperty("--line", dark ? "#333333" : "#e2ded7");
+  L.style.backgroundSize = o.i && /(?:^|\/)logo\.(?:svg|png)(?:[?#]|$)/i.test(o.i) ? "cover, min(76vw, 480px) auto" : "cover";
   if(o.i){
     var a = (o.v == null ? 35 : o.v) / 100, c = "rgba(" + rgb.join(",") + "," + a + ")";
     L.style.backgroundImage = "linear-gradient(" + c + "," + c + "),url(\"" + o.i + "\")";
@@ -1204,7 +1205,7 @@ function initIntro(){
   if(p && p.catch) p.catch(function(){
     /* son refusé par le navigateur : lecture muette, le son s'active au 1er geste ou via le petit bouton */
     v.muted = true; paint();
-    v.play().catch(function(){ /* Conserver l’introduction visible en cas de lecture bloquée. */ });
+    v.play().catch(function(){ /* If playback is unavailable, avoid trapping the user on the intro. */ setTimeout(finish,2500); });
   });
 }
 /* ---------- Démarrage : on charge AVANT toute écriture ---------- */
