@@ -205,7 +205,7 @@ function show(id,options){
   rememberView(id);
   $("view-home").style.display=id==="home"?"":"none";
   $("viewHost").style.display=id==="home"?"none":"";
-  if(id==="admin")renAdmin();else if(id==="partners")renPartners();else if(id==="messages"){if(window.renMsg)window.renMsg()}
+  if(id==="admin"){adminSection="overview";renAdmin();}else if(id==="partners")renPartners();else if(id==="messages"){if(window.renMsg)window.renMsg()}
   else if(id!=="home"){
     var run=function(){ if(id==="treasury")renTre(); else renEd(id) };
     if(cep(id))run(); else viewPub(id,function(p){ W.tvAt=p.at; if(id==="treasury")W.tv=p.tre; else W.pv=p; run() });
@@ -761,6 +761,7 @@ function pn(id){return id==="all"?"Tout":(BASE.concat(X.nav).filter(function(x){
 function gtxt(g){g=g||[];return g.length?(g.indexOf("all")>-1?"Tout (modification complète)":g.map(pn).join(", ")):"Lecture seule"}
 function drawOnline(){
   var el=$("adOn");if(!el)return;var L=window.AFRI?AFRI.onlineList():[];
+  adminCount("afAdminOnline",L.length);
   el.innerHTML='<h3>En ligne maintenant ('+L.length+')</h3>'+(L.length?'<div class="xlw"><table class="t"><thead><tr><th>Nom</th><th>Email</th><th>Rôle</th><th>Page consultée</th><th>Connecté depuis</th></tr></thead><tbody>'+L.map(function(u){return '<tr><td>'+esc(u.name||"—")+'</td><td>'+esc(u.email)+(u.email===loggedUserEmail?' (vous)':'')+'</td><td>'+(u.role==="admin"?"Administrateur":u.role==="editor"?"Éditeur":"Lecteur")+'</td><td>'+esc(u.page||"")+'</td><td>'+new Date(u.since).toLocaleTimeString("fr-FR",{hour:"2-digit",minute:"2-digit"})+'</td></tr>'}).join("")+'</tbody></table></div>':'<p style="color:var(--muted)">Connexion au canal en temps réel en cours…</p>');
 }
 async function renPartners(){
@@ -774,13 +775,45 @@ async function renPartners(){
   $("partnersRefresh").onclick=renPartners;
   refreshPartnerUnread();
 }
+var adminSection="overview",adminGeneration=0;
+var adminSections=[
+ ["overview","Vue d’ensemble","Accéder rapidement aux tâches administratives.","<rect x='3' y='3' width='7' height='7' rx='1'/><rect x='14' y='3' width='7' height='7' rx='1'/><rect x='3' y='14' width='7' height='7' rx='1'/><rect x='14' y='14' width='7' height='7' rx='1'/>"],
+ ["access","Accès et validations","Demandes de partenariat, rôles et historique.","<path d='M12 22s8-4 8-11V5l-8-3-8 3v6c0 7 8 11 8 11z'/><path d='m9 12 2 2 4-4'/>"],
+ ["accounts","Comptes et droits","Comptes inscrits et demandes de modification.","<path d='M16 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2'/><circle cx='10' cy='7' r='4'/><path d='M20 8v6m-3-3h6'/>"],
+ ["partners","Gestion des partenaires","Conditions commerciales et affectations de marchés.","<circle cx='12' cy='12' r='9'/><path d='M3 12h18M12 3a15 15 0 0 1 0 18 15 15 0 0 1 0-18z'/>"],
+ ["orders","Commandes et paiements","Vendeurs autorisés et paiement à la livraison.","<rect x='3' y='5' width='18' height='14' rx='2'/><path d='M3 10h18m-14 5h4'/>"],
+ ["disputes","Contestations","Réponses, décisions et pièces justificatives.","<path d='M12 3 2 21h20L12 3zM12 9v4m0 4h.01'/>"],
+ ["meetings","Réunions et présence","Configuration Teams, censeurs et membres en ligne.","<rect x='3' y='5' width='13' height='14' rx='2'/><path d='m16 10 5-3v10l-5-3'/>"]
+];
+function adminIcon(item){return '<svg class="af-admin-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'+item[3]+'</svg>'}
+function selectAdminSection(id){
+ var root=$("afAdminDashboard");if(!root||!adminSections.some(function(x){return x[0]===id;}))return;
+ adminSection=id;
+ root.querySelectorAll("[data-admin-panel]").forEach(function(p){p.hidden=p.dataset.adminPanel!==id;});
+ root.querySelectorAll("[data-admin-section]").forEach(function(b){b.setAttribute("aria-pressed",String(b.dataset.adminSection===id));});
+ var picker=$("afAdminPicker");if(picker)picker.value=id;
+ var heading=$("afAdminCurrent");if(heading)heading.textContent=adminSections.find(function(x){return x[0]===id;})[1];
+ if(id==="orders"){var cod=$("afCODAdmin"),details=cod&&cod.querySelector("details");if(details)details.open=true;}
+}
+function adminCount(id,n){var el=$(id);if(el)el.textContent=String(n);}
 async function renAdmin(){
-  var h=$("viewHost");
-  h.innerHTML='<div class="toolbar"><b>Administration</b><div class="toolbar-actions"><button type="button" id="adRef">Actualiser</button></div></div>'
-    +'<section class="mt-box" aria-label="Validation des partenaires" style="margin-bottom:22px"><h3>Demandes de partenariat et accès Marketplace</h3><p>Approuvez les partenaires en attente et consultez l’historique des décisions, sans quitter Administration.</p><div id="adMarketAccess" class="af-partner-admin"><p>Chargement des demandes partenaires…</p></div><div id="adPartnerTerms" class="af-partner-admin" style="margin-top:24px"><p>Chargement des conditions commerciales…</p></div><div id="adDisputes" class="af-partner-admin" style="margin-top:24px"><p>Chargement des contestations…</p></div></section>'
-    +'<details class="mt-box af-admin-market-settings" style="margin-bottom:22px"><summary>Affectation des marchés commerciaux</summary><div id="adMarketAssignments" class="af-partner-admin">Chargement des affectations…</div></details>'
-    +'<section class="mt-box" id="afCODAdmin" style="margin-bottom:22px"></section>'
-    +'<div id="adOn"></div><div id="adBody"><p style="color:var(--muted)">Chargement des comptes…</p></div>';
+  if(!isAdmin()||cur!=="admin")return;
+  var h=$("viewHost"),generation=++adminGeneration;
+  function current(){return generation===adminGeneration&&cur==="admin"&&!!$("afAdminDashboard");}
+  var panels={
+   overview:'<section class="mt-box af-admin-overview"><h3>Centre de pilotage</h3><p>Choisissez une rubrique pour gérer uniquement les éléments qui vous concernent.</p><div class="af-admin-metrics"><button type="button" data-admin-jump="accounts"><span>Demandes de modification</span><strong id="afAdminPending">—</strong></button><button type="button" data-admin-jump="accounts"><span>Comptes inscrits</span><strong id="afAdminAccounts">—</strong></button><button type="button" data-admin-jump="meetings"><span>Membres en ligne</span><strong id="afAdminOnline">—</strong></button></div></section><div class="af-admin-quick">'+adminSections.slice(1).map(function(a){return '<button type="button" class="af-admin-shortcut" data-admin-jump="'+a[0]+'">'+adminIcon(a)+'<span><b>'+a[1]+'</b><small>'+a[2]+'</small></span><span aria-hidden="true" class="af-admin-chevron">›</span></button>';}).join("")+'</div>',
+   access:'<section class="mt-box"><div id="adMarketAccess" class="af-partner-admin"><p>Chargement des demandes partenaires…</p></div></section>',
+   accounts:'<section class="mt-box" id="adBody"><p role="status">Chargement des comptes…</p></section>',
+   partners:'<section class="mt-box"><div id="adPartnerTerms" class="af-partner-admin"><p>Chargement des conditions commerciales…</p></div></section><section class="mt-box af-admin-market-settings"><h3>Affectation des marchés commerciaux</h3><div id="adMarketAssignments" class="af-partner-admin">Chargement des affectations…</div></section>',
+   orders:'<section class="mt-box" id="afCODAdmin"><p>Module de commandes non disponible.</p></section>',
+   disputes:'<section class="mt-box"><div id="adDisputes" class="af-partner-admin"><p>Chargement des contestations…</p></div></section>',
+   meetings:'<div id="adOn" class="mt-box"></div>'
+  };
+  h.innerHTML='<div id="afAdminDashboard"><div class="toolbar af-admin-toolbar"><div><b>Administration</b><small>Gestion de la plateforme</small></div><div class="toolbar-actions"><button type="button" id="adRef">Actualiser</button></div></div><nav class="af-admin-nav" aria-label="Rubriques d’administration">'+adminSections.map(function(a){return '<button type="button" data-admin-section="'+a[0]+'" aria-controls="afAdminPanel-'+a[0]+'" aria-pressed="false">'+adminIcon(a)+'<span>'+a[1]+'</span></button>';}).join("")+'</nav><label class="af-admin-picker">Rubrique<select id="afAdminPicker">'+adminSections.map(function(a){return '<option value="'+a[0]+'">'+a[1]+'</option>';}).join("")+'</select></label><h2 class="af-admin-current" id="afAdminCurrent" aria-live="polite"></h2>'+adminSections.map(function(a){return '<div id="afAdminPanel-'+a[0]+'" data-admin-panel="'+a[0]+'" hidden>'+panels[a[0]]+'</div>';}).join("")+'</div>';
+  var dashboard=$("afAdminDashboard");
+  dashboard.addEventListener("click",function(e){var b=e.target.closest("[data-admin-section],[data-admin-jump]");if(!b)return;selectAdminSection(b.dataset.adminSection||b.dataset.adminJump);if(b.dataset.adminJump){var nav=dashboard.querySelector('[data-admin-section="'+adminSection+'"]');var focusTarget=nav&&nav.offsetParent!==null?nav:$("afAdminPicker");if(focusTarget)focusTarget.focus({preventScroll:true});dashboard.scrollIntoView({block:"start",behavior:"auto"});}});
+  $("afAdminPicker").onchange=function(){selectAdminSection(this.value);};
+  selectAdminSection(adminSection);
   if(window.AfriMarket&&window.AfriMarket.renderAccessAdmin){
     window.AfriMarket.renderAccessAdmin("adMarketAccess");
     if(window.AfriMarket.renderPartnerTermsAdmin)window.AfriMarket.renderPartnerTermsAdmin("adPartnerTerms");
@@ -789,16 +822,20 @@ async function renAdmin(){
   }else{
     $("adMarketAccess").textContent="Module Marketplace non disponible.";
     $("adPartnerTerms").textContent="Module Marketplace non disponible.";
+    $("adDisputes").textContent="Module Marketplace non disponible.";
+    $("adMarketAssignments").textContent="Module Marketplace non disponible.";
   }
-  if(isAdmin()&&window.AfriCOD)window.AfriCOD.mount($("afCODAdmin"),true);
+  if(isAdmin()&&window.AfriCOD){window.AfriCOD.mount($("afCODAdmin"),true);if(adminSection==="orders")selectAdminSection("orders");}
   drawOnline(); $("adRef").onclick=renAdmin; if(window.AFRI)AFRI.onPresence=function(){if(cur==="admin")drawOnline()};
   var U,R;
-  try{U=await AFRI.listUsers();R=await AFRI.listRequests()}catch(e){if(cur==="admin")$("adBody").innerHTML='<p style="color:#c0392b">Lecture impossible : '+esc(e.message||e)+'</p>';return}
-  if(cur!=="admin")return; W.U=U; var P=R.filter(function(r){return r.status==="pending"});
-  $("adBody").innerHTML='<h3>Demandes de modification ('+P.length+')</h3>'+(P.length?'<div class="dgrid">'+P.map(function(r){return '<div class="dcard"><b>'+esc(r.name||r.email)+'</b><small>'+esc(r.email)+' · '+fdt(r.at)+'</small><small>Souhaite modifier : <b>'+esc(r.docPath?String(r.docPath).split("/").pop():(r.pages||[]).map(pn).join(", "))+'</b></small>'+(r.msg?'<small>« '+esc(r.msg)+' »</small>':'')+'<div class="dact"><button type="button" class="p" data-ok="'+esc(r.email)+'">Accepter</button><button type="button" data-no="'+esc(r.email)+'">Refuser</button></div></div>'}).join("")+'</div>':'<p style="color:var(--muted)">Aucune demande en attente.</p>')
-  +'<h3>Comptes inscrits ('+U.length+')</h3>'+(U.length?'<div class="xlw"><table class="t"><thead><tr><th>Nom</th><th>Email</th><th>Droits de modification</th><th>Inscrit le</th><th></th></tr></thead><tbody>'+U.map(function(u){return '<tr><td>'+esc(u.name)+'</td><td>'+esc(u.email)+'</td><td>'+esc(gtxt(u.grants))+'</td><td>'+fdt(u.created)+'</td><td><button type="button" data-dg="'+esc(u.email)+'">Droits</button> <button type="button" class="danger" data-du="'+esc(u.email)+'">Supprimer</button></td></tr>'}).join("")+'</tbody></table></div>':'<p style="color:var(--muted)">Aucun compte pour le moment.</p>');
+  try{U=await AFRI.listUsers();R=await AFRI.listRequests()}catch(e){if(current())$("adBody").innerHTML='<p style="color:#c0392b">Lecture impossible : '+esc(e.message||e)+'</p>';return}
+  if(!current())return; W.U=U; var P=R.filter(function(r){return r.status==="pending"});
+  adminCount("afAdminPending",P.length);adminCount("afAdminAccounts",U.length);
+  $("adBody").innerHTML='<details class="af-admin-details" open><summary>Demandes de modification ('+P.length+')</summary>'+(P.length?'<div class="dgrid">'+P.map(function(r){return '<div class="dcard"><b>'+esc(r.name||r.email)+'</b><small>'+esc(r.email)+' · '+fdt(r.at)+'</small><small>Souhaite modifier : <b>'+esc(r.docPath?String(r.docPath).split("/").pop():(r.pages||[]).map(pn).join(", "))+'</b></small>'+(r.msg?'<small>« '+esc(r.msg)+' »</small>':'')+'<div class="dact"><button type="button" class="p" data-ok="'+esc(r.email)+'">Accepter</button><button type="button" data-no="'+esc(r.email)+'">Refuser</button></div></div>'}).join("")+'</div>':'<p style="color:var(--muted)">Aucune demande en attente.</p>')
+  +'</details><details class="af-admin-details"'+(P.length?'':' open')+'><summary>Comptes inscrits ('+U.length+')</summary>'+(U.length?'<div class="xlw"><table class="t"><thead><tr><th>Nom</th><th>Email</th><th>Droits de modification</th><th>Inscrit le</th><th></th></tr></thead><tbody>'+U.map(function(u){return '<tr><td>'+esc(u.name)+'</td><td>'+esc(u.email)+'</td><td>'+esc(gtxt(u.grants))+'</td><td>'+fdt(u.created)+'</td><td><button type="button" data-dg="'+esc(u.email)+'">Droits</button> <button type="button" class="danger" data-du="'+esc(u.email)+'">Supprimer</button></td></tr>'}).join("")+'</tbody></table></div>':'<p style="color:var(--muted)">Aucun compte pour le moment.</p>')+'</details>';
   h.onclick=function(e){
-    var b=e.target.closest("button");if(!b)return;var d=b.dataset;
+    if(!current()||!isAdmin())return;
+    var b=e.target.closest("button");if(!b||!b.closest("#adBody"))return;var d=b.dataset;
     if(d.ok||d.no)AFRI.resolve(d.ok||d.no,!!d.ok).then(function(){toast(d.ok?"Droits accordés":"Demande refusée");AFRI.pollReq();renAdmin()}).catch(function(x){toast(x.message)});
     else if(d.dg)grantsDialog(d.dg);
     else if(d.du&&confirm("Supprimer le compte "+d.du+" ? La personne devra s'inscrire à nouveau."))AFRI.deleteUser(d.du).then(renAdmin).catch(function(x){toast(x.message)});

@@ -1,0 +1,70 @@
+/* Administration only — retain the existing frosted glass identity. */
+#afAdminDashboard{min-width:0;scroll-margin-top:calc(12px + env(safe-area-inset-top,0px));--admin-edge:var(--af-glass-border,var(--line));--admin-ink:var(--af-glass-ink,var(--ink));--admin-muted:var(--af-glass-muted,var(--muted));--admin-accent:var(--af-glass-accent,var(--green))}
+#afAdminDashboard [data-admin-panel][hidden]{display:none!important}
+#afAdminDashboard .af-admin-toolbar{margin:0 0 14px;padding:16px 20px;gap:12px;flex-wrap:wrap}
+#afAdminDashboard .af-admin-toolbar b{font-size:1.15rem}
+#afAdminDashboard .af-admin-toolbar small{display:block;color:var(--admin-muted);font-size:.8rem}
+#afAdminDashboard .af-admin-nav{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,160px),1fr));gap:7px;margin:0 0 18px}
+#afAdminDashboard :is(.af-admin-nav button,.af-admin-shortcut,.af-admin-metrics button,.af-admin-picker){
+ background:var(--af-glass-base,var(--card));
+ background:color-mix(in srgb,var(--af-glass-base,var(--card)) var(--af-glass-opacity,76%),transparent)!important;
+ -webkit-backdrop-filter:blur(var(--af-glass-blur,20px));backdrop-filter:blur(var(--af-glass-blur,20px));
+ border:1px solid var(--admin-edge)!important;color:var(--admin-ink)!important;
+ border-radius:14px;box-shadow:var(--af-glass-shadow);min-width:0
+}
+#afAdminDashboard .af-admin-nav button{display:flex;align-items:center;gap:8px;text-align:left;font-size:.79rem;line-height:1.3;padding:10px;min-height:48px;white-space:normal}
+#afAdminDashboard .af-admin-nav button[aria-pressed=true]{background:#21633f!important;color:#fff!important;border-color:#21633f!important;box-shadow:none}
+#afAdminDashboard .af-admin-icon{width:22px;height:22px;flex:none;color:inherit}
+#afAdminDashboard .af-admin-current{font-size:1.2rem;color:var(--ink);margin:12px 0 14px;overflow-wrap:anywhere}
+#afAdminDashboard .af-admin-picker{display:none}
+#afAdminDashboard .af-admin-overview h3{margin-bottom:4px}
+#afAdminDashboard .af-admin-overview p{margin:0 0 16px;color:var(--admin-muted);font-size:.9rem}
+#afAdminDashboard .af-admin-metrics{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+#afAdminDashboard .af-admin-metrics button{display:flex;align-items:center;justify-content:space-between;gap:8px;text-align:left;padding:12px;min-height:65px;box-shadow:none;line-height:1.35;background:color-mix(in srgb,var(--af-glass-base,var(--card)) 24%,transparent)!important}
+#afAdminDashboard .af-admin-metrics button span{font-size:.83rem;overflow-wrap:anywhere}
+#afAdminDashboard .af-admin-metrics strong{font-size:1.4rem;color:var(--admin-accent);font-variant-numeric:tabular-nums}
+#afAdminDashboard .af-admin-quick{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+#afAdminDashboard .af-admin-shortcut{display:flex;align-items:center;gap:13px;text-align:left;padding:16px;min-height:82px;white-space:normal}
+#afAdminDashboard .af-admin-shortcut>span:not(.af-admin-chevron){flex:1;min-width:0}
+#afAdminDashboard .af-admin-shortcut b{display:block;font-size:.93rem;line-height:1.35;color:var(--admin-accent)}
+#afAdminDashboard .af-admin-shortcut small{display:block;margin-top:4px;font-size:.78rem;font-weight:400;line-height:1.4;color:var(--admin-muted)}
+#afAdminDashboard .af-admin-chevron{font-size:1.4rem;color:var(--admin-accent)}
+#afAdminDashboard [data-admin-panel] .mt-box,#afAdminDashboard [data-admin-panel] .mt-adm{min-width:0;margin:0 0 14px;overflow-wrap:anywhere}
+#afAdminDashboard .af-admin-details{padding:10px 0;border-bottom:1px solid var(--admin-edge)}
+#afAdminDashboard .af-admin-details:last-child{border-bottom:0}
+#afAdminDashboard .af-admin-details>summary{font-weight:700;color:var(--admin-accent);cursor:pointer;padding:10px 0;min-height:44px;box-sizing:border-box}
+#afAdminDashboard .af-admin-details[open]>summary{margin-bottom:8px}
+#afAdminDashboard :is(#adBody,#adOn) .xlw{max-width:100%;overflow-x:auto}
+#afAdminDashboard :is(#adMarketAccess,#adPartnerTerms,#adDisputes,#adMarketAssignments,#afCODAdmin) :is(input,select,textarea){min-width:0;max-width:100%;box-sizing:border-box}
+#afAdminDashboard :is(#adMarketAccess,#adPartnerTerms,#adDisputes,#adMarketAssignments) :is(.af-partner-admin-row,.af-admin-market-assignment,.af-dispute-admin){min-width:0;overflow-wrap:anywhere}
+@media(hover:hover) and (pointer:fine){#afAdminDashboard .af-admin-shortcut:hover{box-shadow:0 8px 20px rgba(0,0,0,.16);transform:translateY(-2px)}}
+@media(prefers-reduced-motion:reduce){#afAdminDashboard .af-admin-shortcut{transition:none!important;transform:none!important}}
+@media(max-width:700px){
+ #afAdminDashboard .af-admin-nav{display:none}
+ #afAdminDashboard .af-admin-picker{display:grid;gap:5px;padding:10px 12px;font-size:.8rem;font-weight:700}
+ #afAdminDashboard .af-admin-picker select{width:100%;min-height:44px;font-size:16px;color:var(--admin-ink);background:var(--af-ui-sub,var(--card));border:1px solid var(--line);border-radius:10px;padding:8px}
+ #afAdminDashboard .af-admin-toolbar{padding:12px 14px}
+ #afAdminDashboard .af-admin-toolbar button{min-height:44px;font-size:.82rem;padding:8px 12px}
+ #afAdminDashboard .af-admin-current{font-size:1.08rem;margin:12px 0 10px}
+ #afAdminDashboard [data-admin-panel] .mt-box,#afAdminDashboard [data-admin-panel] .mt-adm{padding:14px!important;border-radius:17px}
+ #afAdminDashboard .af-admin-metrics{grid-template-columns:minmax(0,1fr);gap:7px}
+ #afAdminDashboard .af-admin-metrics button{min-height:44px;padding:9px 11px}
+ #afAdminDashboard .af-admin-quick{grid-template-columns:minmax(0,1fr);gap:8px}
+ #afAdminDashboard .af-admin-shortcut{padding:12px;min-height:68px}
+ #afAdminDashboard :is(#adBody,#adOn) .xlw{max-height:none;background:transparent;border:0}
+ #afAdminDashboard :is(#adBody,#adOn) table.t{min-width:0;width:100%;display:block}
+ #afAdminDashboard :is(#adBody,#adOn) table.t thead{position:absolute;width:1px;height:1px;padding:0;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+ #afAdminDashboard :is(#adBody,#adOn) table.t tbody{display:grid;gap:8px}
+ #afAdminDashboard :is(#adBody,#adOn) table.t tr{display:grid;gap:5px;padding:10px;border:1px solid var(--admin-edge);border-radius:12px;background:color-mix(in srgb,var(--af-glass-base,var(--card)) 24%,transparent)}
+ #afAdminDashboard :is(#adBody,#adOn) table.t td{display:grid;grid-template-columns:minmax(80px,36%) minmax(0,1fr);gap:8px;padding:4px 0;border:0;font-size:.8rem;overflow-wrap:anywhere}
+ #afAdminDashboard :is(#adBody,#adOn) table.t td::before{font-size:.72rem;font-weight:700;color:var(--admin-muted)}
+ #afAdminDashboard :is(#adBody,#adOn) table.t td:nth-child(1)::before{content:"Nom"}
+ #afAdminDashboard :is(#adBody,#adOn) table.t td:nth-child(2)::before{content:"E-mail"}
+ #afAdminDashboard #adBody table.t td:nth-child(3)::before{content:"Droits"}
+ #afAdminDashboard #adBody table.t td:nth-child(4)::before{content:"Inscription"}
+ #afAdminDashboard #adBody table.t td:nth-child(5){display:flex;flex-wrap:wrap;gap:6px}
+ #afAdminDashboard #adBody table.t td:nth-child(5) button{min-height:44px;flex:1;padding:8px;font-size:.8rem}
+ #afAdminDashboard #adOn table.t td:nth-child(3)::before{content:"Rôle"}
+ #afAdminDashboard #adOn table.t td:nth-child(4)::before{content:"Page"}
+ #afAdminDashboard #adOn table.t td:nth-child(5)::before{content:"Depuis"}
+}
