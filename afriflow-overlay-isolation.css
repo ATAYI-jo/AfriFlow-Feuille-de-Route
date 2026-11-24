@@ -82,3 +82,22 @@ body.af-mail-open #afMailLayer #msgBox.msg-box { overflow: hidden; }
   body.af-mail-open #afMailLayer #msgBox.msg-box { overflow-y: auto; }
   #msgBox #msgList, #msgBox .journal-article { overflow: visible; flex: none; }
 }
+
+#msgBox .mail-group h3 {
+  margin: 0 0 8px;
+  font: 700 1rem/1.35 var(--font-family, system-ui);
+  color: var(--af-glass-ink);
+}
+#msgBox .mail-group + .mail-group { margin-top: 20px; }
+#msgBox #msgList .mail-urgent { border-inline-start: 4px solid #bd3541 !important; }
+#msgBox .mail-urgent-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 6px;
+  color: #861d29;
+  background: #ffe2e5;
+  font: 700 .78rem/1.5 system-ui;
+  vertical-align: middle;
+}
+#msgBox .mail-unread { font-size: .78rem; font-weight: 600; color: var(--af-glass-muted); }
+#msgBox #msgList .dcard > span + b { margin-top: 5px; }
