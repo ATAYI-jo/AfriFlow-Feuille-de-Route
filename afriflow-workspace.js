@@ -779,6 +779,7 @@ async function renAdmin(){
   h.innerHTML='<div class="toolbar"><b>Administration</b><div class="toolbar-actions"><button type="button" id="adRef">Actualiser</button></div></div>'
     +'<section class="mt-box" aria-label="Validation des partenaires" style="margin-bottom:22px"><h3>Demandes de partenariat et accès Marketplace</h3><p>Approuvez les partenaires en attente et consultez l’historique des décisions, sans quitter Administration.</p><div id="adMarketAccess" class="af-partner-admin"><p>Chargement des demandes partenaires…</p></div><div id="adPartnerTerms" class="af-partner-admin" style="margin-top:24px"><p>Chargement des conditions commerciales…</p></div><div id="adDisputes" class="af-partner-admin" style="margin-top:24px"><p>Chargement des contestations…</p></div></section>'
     +'<details class="mt-box af-admin-market-settings" style="margin-bottom:22px"><summary>Affectation des marchés commerciaux</summary><div id="adMarketAssignments" class="af-partner-admin">Chargement des affectations…</div></details>'
+    +'<section class="mt-box" id="afCODAdmin" style="margin-bottom:22px"></section>'
     +'<div id="adOn"></div><div id="adBody"><p style="color:var(--muted)">Chargement des comptes…</p></div>';
   if(window.AfriMarket&&window.AfriMarket.renderAccessAdmin){
     window.AfriMarket.renderAccessAdmin("adMarketAccess");
@@ -789,6 +790,7 @@ async function renAdmin(){
     $("adMarketAccess").textContent="Module Marketplace non disponible.";
     $("adPartnerTerms").textContent="Module Marketplace non disponible.";
   }
+  if(isAdmin()&&window.AfriCOD)window.AfriCOD.mount($("afCODAdmin"),true);
   drawOnline(); $("adRef").onclick=renAdmin; if(window.AFRI)AFRI.onPresence=function(){if(cur==="admin")drawOnline()};
   var U,R;
   try{U=await AFRI.listUsers();R=await AFRI.listRequests()}catch(e){if(cur==="admin")$("adBody").innerHTML='<p style="color:#c0392b">Lecture impossible : '+esc(e.message||e)+'</p>';return}
