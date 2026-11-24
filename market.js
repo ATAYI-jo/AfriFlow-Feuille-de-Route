@@ -1135,7 +1135,7 @@
     notice(selected?"Ajouté à vos favoris.":"Retiré de vos favoris.");
     if(state.favoriteOnly&&!selected){
       var reduced=window.matchMedia&&window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-      setTimeout(function(){if(state.favoriteOnly&&state.favorites.indexOf(product.id)<0){var restore=document.activeElement&&document.activeElement.dataset.favorite===String(product.id);render();if(restore){var nav=document.querySelector("[data-market-favorites]");if(nav)nav.focus({preventScroll:true});}}},reduced?0:280);
+      setTimeout(function(){if(state.favoriteOnly&&state.favorites.indexOf(product.id)<0){var restore=document.activeElement&&document.activeElement.dataset.favorite===String(product.id);render();if(restore){var nav=document.querySelector("[data-market-favorites]");if(nav)nav.focus({preventScroll:true});}}},reduced?0:420);
     }
   }
   function openCart() {
