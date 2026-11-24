@@ -1,0 +1,36 @@
+/* Separate the mail dialog from the current workspace without resetting its scroll. */
+body.af-mail-open #afMailLayer{
+ position:fixed;inset:0;z-index:2200;display:grid;place-items:center;
+ box-sizing:border-box;padding:calc(12px + env(safe-area-inset-top,0px)) max(10px,env(safe-area-inset-right,0px)) calc(12px + env(safe-area-inset-bottom,0px)) max(10px,env(safe-area-inset-left,0px));
+ background:color-mix(in srgb,var(--af-glass-base,var(--bg)) 14%,transparent);
+ overscroll-behavior:contain;overflow:hidden;isolation:isolate;
+}
+body.af-mail-open #afMailLayer #msgBox.msg-box{
+ position:relative!important;inset:auto!important;transform:none!important;
+ z-index:auto!important;box-sizing:border-box;width:min(680px,100%)!important;
+ height:min(76dvh,700px)!important;max-height:100%!important;min-height:0;
+ margin:0!important;overflow:auto;overscroll-behavior:contain;
+ -webkit-overflow-scrolling:touch;
+}
+body.af-mail-open #afMailLayer #msgBox .toolbar{position:static!important;margin:0!important;flex-shrink:0}
+body.af-mail-open :is(#view-home,#viewHost,#market-view,#side,#scrim,#menuBtn,#aiBox,#profilePanel){visibility:hidden!important;pointer-events:none!important}
+body.af-mail-open :is(#aiBox,#profilePanel){display:none!important}
+body.af-mail-open :is(#view-home,#viewHost,#market-view) *{visibility:hidden!important}
+html:has(body.af-mail-open),body.af-mail-open{overflow:hidden!important;overscroll-behavior:none}
+body.af-mail-open #mPreview{position:fixed!important;inset:0!important;z-index:2300!important;overflow:auto;overscroll-behavior:contain}
+body.af-mail-open #xm.on{z-index:2400!important}
+body.af-mail-open #customizer-modal.on{z-index:2400!important}
+/* Modal controls must not compete with always-on launchers. Keep the landscape
+   and existing glass styling, and leave nested previews above their parent. */
+body:has(#afMailLayer,#xm.on,#customizer-modal.on,#afModal,#mPreview,#profilePanel.open,#auth-screen:not(.off),#afPwaHelp:not([hidden]),#aiBox[style*="display: flex"]) :is(#menuBtn,#memberHub,#aiBtn,#afIntroAdminPreviewBtn){
+ visibility:hidden!important;pointer-events:none!important
+}
+body:has(#afModal,#xm.on,#customizer-modal.on,#mPreview,#afPwaHelp:not([hidden])) :is(#side,#scrim){visibility:hidden!important;pointer-events:none!important}
+html:has(#afModal,#xm.on,#customizer-modal.on,#mPreview,#afPwaHelp:not([hidden]),#profilePanel.open,#auth-screen:not(.off)){overscroll-behavior:none}
+body:has(#afModal,#xm.on,#customizer-modal.on,#mPreview,#afPwaHelp:not([hidden])){overflow:hidden!important;overscroll-behavior:none}
+@media(max-width:700px){
+ body.af-mail-open #afMailLayer #msgBox.msg-box{height:min(82dvh,700px)!important;padding:10px!important;border-radius:20px}
+ body.af-mail-open #afMailLayer #msgBox .toolbar-actions{display:flex;flex-wrap:wrap;gap:6px}
+ body:has(#profilePanel.open,#aiBox[style*="display: flex"]) :is(#view-home,#viewHost,#market-view){visibility:hidden!important;pointer-events:none!important}
+ body:has(#profilePanel.open,#aiBox[style*="display: flex"]) :is(#view-home,#viewHost,#market-view) *{visibility:hidden!important}
+}
