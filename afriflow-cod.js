@@ -50,25 +50,51 @@ async function checkout(host,cart,login){
  }catch(e){status.textContent=e.message;submit.disabled=false;}};
 
 }
-async function orderList(host){
- host.replaceChildren();const {orders}=await call("list");
- if(!orders.length){node("p","Aucune commande enregistrée.",host);return;}
- for(const o of orders){const card=node("article",null,host);card.className="mt-box";card.style.marginTop="10px";
- node("strong",statuses[o.status]||o.status,card);node("p",o.id+" · "+(countryName(o.country_code))+" · "+o.seller_name,card);
- node("p",o.customer_name+" · "+o.phone+" · "+o.address,card);
- for(const item of o.items||[])node("p",item.quantity+" × "+item.name+" — "+money(item.unit_price,o.currency),card);
- node("p","Total à régler : "+money(o.total,o.currency),card);
- if(o.status==="cash_received")node("p","Commission contractuelle indicative sur les produits : "+money(Math.round(Number(o.subtotal)*Number(o.commission_rate)/100),o.currency)+" — reversement non confirmé.",card);
- async function change(status,cashConfirmed=false){await call("transition",{id:o.id,status,cashConfirmed});await orderList(host);}
- if(o.canFulfill&&o.status==="requested")button(card,"Accepter après contrôle du stock",()=>change("accepted"));
- if(o.canFulfill&&o.status==="accepted")button(card,"Confirmer la livraison",()=>change("delivered"));
- if(o.canFulfill&&o.status==="delivered")button(card,"Confirmer l’encaissement réel",async()=>{if(window.confirm("Confirmez uniquement si le vendeur a effectivement reçu "+money(o.total,o.currency)+". Continuer ?"))await change("cash_received",true);});
- if(o.canCancel)button(card,"Annuler la demande",()=>change("cancelled"));
+function orderLine(parent,label,value){const line=node("div",null,parent);line.className="af-cod-line";node("span",label,line);node("strong",value,line);return line;}
+function orderReference(id){return String(id||"").slice(0,8).toUpperCase();}
+const orderStages=[["requested","Demande"],["accepted","Acceptée"],["delivered","Livrée"],["cash_received","Encaissement"]];
+function orderCard(o,host,refresh){
+ const card=node("article",null,host);card.className="af-cod-card";
+ const head=node("header",null,card);head.className="af-cod-head";
+ const title=node("div",null,head);node("h4","Commande #"+orderReference(o.id),title);
+ const date=new Date(o.created_at);node("small",Number.isFinite(date.getTime())?date.toLocaleDateString("fr-FR",{day:"numeric",month:"short",year:"numeric"}):"Commande enregistrée",title);
+ const status=node("span",statuses[o.status]||"Statut inconnu",head);status.className="af-cod-status";status.dataset.status=o.status;
+ if(o.status!=="cancelled"){
+  const current=orderStages.findIndex(x=>x[0]===o.status);
+  if(current>=0){const steps=node("ol",null,card);steps.className="af-cod-steps";steps.setAttribute("aria-label","Progression de la commande");
+   orderStages.forEach((stage,index)=>{const li=node("li",null,steps);if(index<=current)li.classList.add("done");if(index===current)li.setAttribute("aria-current","step");node("span",index<current?"✓":String(index+1),li).className="af-cod-step-dot";node("span",stage[1],li);});}
  }
+ const seller=node("div",null,card);seller.className="af-cod-seller";node("small","Marché de livraison",seller);node("strong",countryName(o.country_code),seller);node("small","Vendeur : "+(o.seller_name||"Non renseigné"),seller);
+ const items=node("div",null,card);items.className="af-cod-items";node("h5","Articles",items);
+ for(const item of o.items||[]){
+  const row=node("div",null,items);row.className="af-cod-item";
+  const info=node("div",null,row);node("strong",item.name,info);node("small",item.quantity+" × "+money(item.unit_price,o.currency),info);
+  node("strong",money(Number(item.quantity)*Number(item.unit_price),o.currency),row);
+ }
+ const amounts=node("div",null,card);amounts.className="af-cod-amounts";
+ orderLine(amounts,"Sous-total",money(o.subtotal,o.currency));orderLine(amounts,"Livraison",money(o.delivery_fee,o.currency));
+ const total=orderLine(amounts,o.status==="cancelled"?"Total initial":o.status==="cash_received"?"Total de la commande":"Total à régler",money(o.total,o.currency));total.classList.add("af-cod-total");
+ const note=node("p",o.status==="cancelled"?"Demande annulée.":o.status==="cash_received"?"Encaissement déclaré par le vendeur.":"Paiement à la livraison · aucun paiement en ligne.",card);note.className="af-cod-note";
+ const details=node("details",null,card);details.className="af-cod-details";node("summary","Coordonnées de livraison et référence",details);
+ orderLine(details,"Destinataire",o.customer_name||"Non renseigné");orderLine(details,"Téléphone",o.phone||"Non renseigné");orderLine(details,"Adresse",o.address||"Non renseignée");orderLine(details,"Référence complète",o.id);
+ if(o.status==="cash_received"){const commission=node("p","Commission contractuelle indicative sur les produits : "+money(Math.round(Number(o.subtotal)*Number(o.commission_rate)/100),o.currency)+" — reversement non confirmé.",card);commission.className="af-cod-note";}
+ const actions=node("div",null,card);actions.className="af-cod-actions";
+ async function change(status,cashConfirmed=false){await call("transition",{id:o.id,status,cashConfirmed});await refresh();}
+ if(o.canFulfill&&o.status==="requested")button(actions,"Accepter après contrôle du stock",()=>change("accepted")).classList.add("af-cod-primary");
+ if(o.canFulfill&&o.status==="accepted")button(actions,"Confirmer la livraison",()=>change("delivered")).classList.add("af-cod-primary");
+ if(o.canFulfill&&o.status==="delivered")button(actions,"Confirmer l’encaissement réel",async()=>{if(window.confirm("Confirmez uniquement si le vendeur a effectivement reçu "+money(o.total,o.currency)+". Continuer ?"))await change("cash_received",true);}).classList.add("af-cod-primary");
+ if(o.canCancel)button(actions,"Annuler la demande",async()=>{if(window.confirm("Annuler cette demande de commande ?"))await change("cancelled");}).classList.add("af-cod-cancel");
+ if(!actions.children.length)actions.remove();
+ return card;
+}
+async function orderList(host){
+ const {orders}=await call("list");if(!host.isConnected)return;host.replaceChildren();
+ if(!orders.length){node("p","Aucune commande enregistrée.",host).className="af-cod-empty";return;}
+ for(const o of orders)orderCard(o,host,()=>orderList(host));
 }
 function mount(host,admin=false){
  if(!host)return;host.replaceChildren();
- const details=node("details",null,host);node("summary","Commandes · paiement à la livraison",details);const content=node("div",null,details);
+ const details=node("details",null,host);details.className="af-cod-section";node("summary",admin?"Commandes · paiement à la livraison":"Mes commandes",details);const content=node("div",null,details);content.className="af-cod-content";
  details.ontoggle=async()=>{if(!details.open||content.dataset.loaded)return;content.dataset.loaded="1";try{
  if(admin){
  const {candidates,routes}=await call("admin_config");
@@ -91,7 +117,7 @@ function mount(host,admin=false){
  for(const r of routes.filter(x=>x.enabled)){node("p",countryName(r.country_code)+" — "+r.seller_name+" · "+money(r.delivery_fee,r.currency),content);button(content,"Désactiver "+countryName(r.country_code),async()=>{await call("configure",{country:r.country_code,enabled:false});mount(host,true);});}
 
  }
- const list=node("div",null,content);button(content,"Actualiser les commandes",()=>orderList(list));await orderList(list);
+ const bar=node("div",null,content);bar.className="af-cod-list-bar";node("h4",admin?"Commandes enregistrées":"Suivi des commandes",bar);const list=node("div",null,content);list.className="af-cod-list";button(bar,"Actualiser",()=>orderList(list)).classList.add("af-cod-refresh");await orderList(list);
  }catch(e){node("p",e.message,content);delete content.dataset.loaded;}};
 }
 window.AfriCOD={checkout,mount};
