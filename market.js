@@ -293,15 +293,34 @@
   }
 
   /* ---------- Fenêtres ---------- */
+  var modalReturnFocus=null;
   function modal(html) {
-    closeModal();
+    var previous=el("afModal");
+    if(!previous)modalReturnFocus=document.activeElement;
+    else previous.remove();
     var m = document.createElement("div"); m.className = "af-modal"; m.id = "afModal";
-    m.innerHTML = '<div class="af-modal-box" role="dialog" aria-modal="true">' + html + "</div>";
+    m.innerHTML = '<div class="af-modal-box" role="dialog" aria-modal="true" tabindex="-1">' + html + "</div>";
+    var box=m.querySelector(".af-modal-box"),heading=box.querySelector("h2,h3,h4");
+    if(heading){heading.id="afModalTitle";box.setAttribute("aria-labelledby",heading.id);}else box.setAttribute("aria-label","Fenêtre AfriFloW");
     m.addEventListener("click", function (e) { if (e.target === m) closeModal(); });
-    document.body.appendChild(m); return m;
+    document.body.appendChild(m);
+    document.body.classList.add("af-market-dialog-open");
+    requestAnimationFrame(function(){if(!m.isConnected||m.contains(document.activeElement))return;(m.querySelector(".af-modal-x")||box).focus({preventScroll:true});});
+    return m;
   }
-  function closeModal() { var m = el("afModal"); if (m) m.remove(); }
-  document.addEventListener("keydown", function (e) { if (e.key === "Escape") closeModal(); });
+  function closeModal() {
+    var m=el("afModal");if(!m)return;m.remove();document.body.classList.remove("af-market-dialog-open");
+    if(modalReturnFocus&&modalReturnFocus.isConnected)modalReturnFocus.focus({preventScroll:true});modalReturnFocus=null;
+  }
+  document.addEventListener("keydown", function(e){
+    var m=el("afModal");if(!m)return;
+    if(e.key==="Escape"){e.preventDefault();closeModal();return;}
+    if(e.key!=="Tab")return;
+    var nodes=Array.from(m.querySelectorAll('button:not([disabled]),a[href],input:not([disabled]),select:not([disabled]),textarea:not([disabled]),[tabindex="0"]')).filter(function(n){return n.getClientRects().length>0;});
+    if(!nodes.length){e.preventDefault();m.querySelector(".af-modal-box").focus();return;}
+    var first=nodes[0],last=nodes[nodes.length-1],active=document.activeElement;
+    if(!m.contains(active)||e.shiftKey&&active===first||!e.shiftKey&&active===last){e.preventDefault();(e.shiftKey?last:first).focus();}
+  });
 
   function announcementSources(p) {
     var raw = p && p.news_sources;

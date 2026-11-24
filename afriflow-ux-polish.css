@@ -1,0 +1,50 @@
+/* AfriFloW — shared interaction polish, deliberately scoped to existing components. */
+:root{--af-focus:#c77819;--af-ease:cubic-bezier(.2,.7,.25,1);--af-fast:160ms;--af-dialog-bg:var(--card,#fff);--af-dialog-ink:var(--ink,#173a28)}
+#viewHost :is(button,a,input,select,textarea,summary):focus-visible,
+#market-view :is(button,a,input,select,textarea,summary):focus-visible,
+.af-modal :is(button,a,input,select,textarea,summary):focus-visible{
+ outline:3px solid var(--af-focus)!important;outline-offset:3px;
+}
+body.af-market-dialog-open{overflow:hidden}
+body .af-modal .af-modal-box{background:var(--af-dialog-bg)!important;color:var(--af-dialog-ink)!important;max-width:100%;max-height:calc(100dvh - 32px);overflow-y:auto;overscroll-behavior:contain;scrollbar-gutter:stable}
+body .af-modal .af-modal-x{
+ display:grid!important;place-items:center!important;position:absolute;top:12px;right:12px;
+ width:40px!important;height:40px!important;min-width:40px;min-height:40px;
+ padding:0!important;line-height:1!important;font-size:26px!important;font-weight:600!important;
+ background:#e6efe8!important;color:#194b32!important;-webkit-text-fill-color:#194b32!important;
+ border:1px solid #c3d5c8!important;border-radius:50%!important;opacity:1!important;
+ box-shadow:none!important;cursor:pointer;
+}
+body .af-modal .af-modal-x:hover{background:#d5e7da!important}
+.af-modal-box>h2,.af-modal-box>h3,.af-modal-box>h4,
+.af-modal-box>div>h3{padding-inline-end:44px;overflow-wrap:anywhere}
+#viewHost .af-market-kpi:disabled,.af-modal button:disabled,#viewHost #afCODAdmin button:disabled{cursor:not-allowed;opacity:.6}
+#viewHost .af-market-summary,#viewHost .af-market-summary-partner,.af-modal .af-market-summary-partner{overflow-wrap:anywhere}
+#viewHost #afCODAdmin form label,#afCODCheckout form label{min-width:0;overflow-wrap:anywhere}
+#viewHost #afCODAdmin :is(input:not([type=checkbox]),select),#afCODCheckout :is(input,select){max-width:100%;min-width:0;min-height:44px;font:inherit}
+#viewHost #afCODAdmin select,#afCODCheckout select{overflow:hidden;text-overflow:ellipsis}
+#viewHost .af-market-summary-stats button{min-height:38px;white-space:normal;text-align:left}
+#viewHost .af-market-kpi,#market-view .af-product,#market-view .af-market-primary,#market-view .af-market-secondary,#viewHost .af-market-summary-stats button,.af-modal .af-modal-x{
+ transition:transform var(--af-fast) var(--af-ease),box-shadow var(--af-fast) var(--af-ease),background-color var(--af-fast) var(--af-ease),border-color var(--af-fast) var(--af-ease)
+}
+@media(hover:hover) and (pointer:fine){
+ #viewHost .af-market-kpi:hover:not(:disabled),#market-view .af-product:hover{transform:translateY(-2px);box-shadow:0 9px 24px rgba(22,65,42,.12)}
+ #viewHost .af-market-summary-stats button:hover{transform:translateY(-1px)}
+}
+@media(prefers-reduced-motion:no-preference){
+ @keyframes afDialogEnter{from{opacity:0;transform:translateY(8px) scale(.99)}to{opacity:1;transform:translateY(0) scale(1)}}
+ @keyframes afDetailsEnter{from{opacity:0;transform:translateY(-3px)}to{opacity:1;transform:translateY(0)}}
+ .af-modal .af-modal-box{animation:afDialogEnter 190ms var(--af-ease) both}
+ #viewHost .af-market-summary-details[open]>.af-market-summary-partners,#viewHost #afCODAdmin details[open]>div{animation:afDetailsEnter 180ms var(--af-ease) both}
+}
+@media(prefers-reduced-motion:reduce){
+ #market-view *,#viewHost *, .af-modal *{scroll-behavior:auto!important;animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}
+ #viewHost .af-market-kpi:hover,#market-view .af-product:hover{transform:none!important}
+}
+@media(max-width:600px){
+ body .af-modal{padding:8px}
+ body .af-modal .af-modal-box{max-height:calc(100dvh - 16px);scrollbar-gutter:auto}
+ #viewHost #afCODAdmin form,#afCODCheckout form{grid-template-columns:minmax(0,1fr)!important}
+ #viewHost .af-market-summary-stats button{max-width:100%;min-height:44px}
+ #viewHost .af-market-kpi{min-height:52px}
+}
