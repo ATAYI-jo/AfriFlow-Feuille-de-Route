@@ -52,7 +52,19 @@ async function checkout(host,cart,login){
 }
 function orderLine(parent,label,value){const line=node("div",null,parent);line.className="af-cod-line";node("span",label,line);node("strong",value,line);return line;}
 function orderReference(id){return String(id||"").slice(0,8).toUpperCase();}
-const orderStages=[["requested","Demande"],["accepted","Acceptée"],["delivered","Livrée"],["cash_received","Encaissement"]];
+const orderStages=[["requested","Demandée"],["accepted","Acceptée"],["delivered","Livrée"],["cash_received","Encaissée"]];
+const orderIconPaths={
+ requested:[["rect",{x:5,y:3,width:14,height:19,rx:2}],["path",{d:"M9 8h6M9 12h6M9 16h4"}]],
+ accepted:[["path",{d:"m3 7 9-5 9 5v11l-9 5-9-5zM3 7l9 5 9-5M12 12v11M8 5l9 5"}]],
+ delivered:[["path",{d:"M2 5h13v12H2zM15 9h4l3 4v4h-7"}],["circle",{cx:6,cy:18,r:2}],["circle",{cx:18,cy:18,r:2}]],
+ cash_received:[["rect",{x:2,y:5,width:20,height:14,rx:2}],["circle",{cx:12,cy:12,r:3}],["path",{d:"M5 9v6M19 9v6"}]]
+};
+function orderStageIcon(stage,parent){
+ const ns="http://www.w3.org/2000/svg",svg=document.createElementNS(ns,"svg");
+ for(const [k,v] of Object.entries({viewBox:"0 0 24 24",fill:"none",stroke:"currentColor","stroke-width":"1.7","stroke-linecap":"round","stroke-linejoin":"round","aria-hidden":"true",focusable:"false"}))svg.setAttribute(k,v);
+ for(const [tag,attrs] of orderIconPaths[stage]){const shape=document.createElementNS(ns,tag);for(const [k,v] of Object.entries(attrs))shape.setAttribute(k,String(v));svg.appendChild(shape);}
+ parent.appendChild(svg);
+}
 function orderCard(o,host,refresh){
  const card=node("article",null,host);card.className="af-cod-card";
  const head=node("header",null,card);head.className="af-cod-head";
@@ -62,7 +74,7 @@ function orderCard(o,host,refresh){
  if(o.status!=="cancelled"){
   const current=orderStages.findIndex(x=>x[0]===o.status);
   if(current>=0){const steps=node("ol",null,card);steps.className="af-cod-steps";steps.setAttribute("aria-label","Progression de la commande");
-   orderStages.forEach((stage,index)=>{const li=node("li",null,steps);if(index<=current)li.classList.add("done");if(index===current)li.setAttribute("aria-current","step");node("span",index<current?"✓":String(index+1),li).className="af-cod-step-dot";node("span",stage[1],li);});}
+   orderStages.forEach((stage,index)=>{const li=node("li",null,steps);if(index<=current)li.classList.add("done");if(index===current)li.setAttribute("aria-current","step");const dot=node("span",null,li);dot.className="af-cod-step-dot";orderStageIcon(stage[0],dot);node("span",stage[1],li);});}
  }
  const seller=node("div",null,card);seller.className="af-cod-seller";node("small","Marché de livraison",seller);node("strong",countryName(o.country_code),seller);node("small","Vendeur : "+(o.seller_name||"Non renseigné"),seller);
  const items=node("div",null,card);items.className="af-cod-items";node("h5","Articles",items);
