@@ -1715,3 +1715,34 @@ body.af-market-mode #market-view{display:block}
   #viewHost .af-admin-market-assignment{grid-template-columns:1fr}
   #viewHost .af-market-overview-filter select{width:100%;min-width:0}
 }
+
+#afModal .af-cart-list article > div:first-child {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+#afModal .af-cart-qty button {
+  display: inline-grid;
+  place-items: center;
+  box-sizing: border-box;
+  width: 44px;
+  height: 44px;
+  padding: 0 !important;
+  line-height: 1;
+}
+#afModal .af-cart-remove {
+  min-height: 44px;
+  padding: 6px 12px !important;
+}
+@media (max-width: 640px) {
+  #afModal .af-cart-list article {
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 8px;
+  }
+  #afModal .af-cart-list article > div:first-child { grid-column: 1 / -1; }
+  #afModal .af-cart-remove { grid-column: 2; justify-self: end; }
+  #afModal .af-cart .af-actions {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+  }
+  #afModal .af-cart .af-actions button { width: 100%; white-space: normal; }
+}

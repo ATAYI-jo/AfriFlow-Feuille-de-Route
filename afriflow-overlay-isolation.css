@@ -34,3 +34,37 @@ body:has(#afModal,#xm.on,#customizer-modal.on,#mPreview,#afPwaHelp:not([hidden])
  body:has(#profilePanel.open,#aiBox[style*="display: flex"]) :is(#view-home,#viewHost,#market-view){visibility:hidden!important;pointer-events:none!important}
  body:has(#profilePanel.open,#aiBox[style*="display: flex"]) :is(#view-home,#viewHost,#market-view) *{visibility:hidden!important}
 }
+
+body.af-mail-open #afMailLayer #msgBox.msg-box { overflow: hidden; }
+#msgBox .toolbar,
+#msgBox .mail-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+#msgBox .toolbar { justify-content: space-between; }
+#msgBox .toolbar b { min-width: 0; overflow-wrap: anywhere; }
+#msgBox .auth-tabs { flex: none; width: 100%; margin: 0; }
+#msgBox :is(#msgList,.journal-article) {
+  min-height: 0;
+  overflow: auto;
+  overscroll-behavior: contain;
+  overflow-wrap: anywhere;
+}
+#msgBox #msgList { align-content: start; }
+#msgBox #msgList .dcard {
+  width: 100%;
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+  text-align: start;
+  white-space: normal;
+  font: inherit;
+}
+#msgBox :is(.fm,input,textarea,.file-row) { min-width: 0; max-width: 100%; box-sizing: border-box; }
+#msgBox #mList .rq { overflow-wrap: anywhere; }
+@media (max-height: 480px) {
+  body.af-mail-open #afMailLayer #msgBox.msg-box { overflow-y: auto; }
+  #msgBox :is(#msgList,.journal-article) { overflow: visible; flex: none; }
+}

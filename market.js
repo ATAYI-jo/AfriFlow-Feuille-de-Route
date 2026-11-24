@@ -11,7 +11,10 @@
   function shopScope() { var email = state.context && state.context.kind === "authenticated" && window.loggedUserEmail; return email ? String(email).trim().toLowerCase().replace(/[^a-z0-9]/g, "_") : "visitor"; }
   function shopKey(name) { return "afriflow_market_" + name + "_v2_" + shopScope(); }
   function loadShop() { state.cart = loadStored(shopKey("cart"), []); state.favorites = loadStored(shopKey("favorites"), []); }
-  function persistShop() { try { localStorage.setItem(shopKey("cart"), JSON.stringify(state.cart)); localStorage.setItem(shopKey("favorites"), JSON.stringify(state.favorites)); } catch (error) {} }
+  function persistShop() {
+    var badge = document.querySelector("#afMarketCart b");
+    if (badge) badge.textContent = cartCount();
+    try { localStorage.setItem(shopKey("cart"), JSON.stringify(state.cart)); localStorage.setItem(shopKey("favorites"), JSON.stringify(state.favorites)); } catch (error) {} }
   loadShop();
   function esc(value) { return String(value == null ? "" : value).replace(/[&<>"']/g, function (char) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[char]; }); }
   function icon(name) {
@@ -117,6 +120,10 @@
   function clearHero() { if (state.heroTimer) { clearInterval(state.heroTimer); state.heroTimer = null; } }
   function open(context) {
     state.context = context || { kind: "public" }; state.favoriteOnly=false; state.category="";state.term="";clearCatalogFilters(); loadShop(); state.currency.code = preferredCurrency(); hideWorkspace(); render(); loadCurrencyRates();
+    if (window.AfriHasLinkedMessage && window.AfriHasLinkedMessage()) {
+      if (state.context.kind === "public") openAuth("login");
+      if (state.context.kind === "authenticated") window.AfriOpenLinkedMessage();
+    }
     if (roleMode(state.context.market) === "partner_approved") { loadPartnerPortal(); loadCatalog(); return; }
     if (roleMode(state.context.market) === "partner_waiting") { loadCatalog(); return; }
     loadHero(); loadCatalog();
@@ -1190,7 +1197,7 @@
     m.querySelector(".af-modal-x").onclick=closeModal;
     m.querySelector("#afGuestBack").onclick=function(){closeModal();openCart();};
   }
-    var html = '<button type="button" class="af-modal-x" aria-label="Fermer">×</button><div class="af-cart"><h3>Mon panier <span>' + cartCount() + ' article' + (cartCount() > 1 ? "s" : "") + '</span></h3><p>Préparez votre demande : AfriFloW confirmera les prix, stocks et délais avant tout paiement.</p><div class="af-cart-list">' + state.cart.map(function (row) { return '<article><div><b>' + esc(row.name) + '</b><small>' + esc(formatPrice(row.price, row.currency)) + ' / unité</small></div><div class="af-cart-qty"><button type="button" data-cart-minus="' + esc(row.id) + '">−</button><b>' + esc(row.quantity) + '</b><button type="button" data-cart-plus="' + esc(row.id) + '">+</button></div><button type="button" class="af-cart-remove" data-cart-remove="' + esc(row.id) + '">Retirer</button></article>'; }).join("") + '</div><div class="af-cart-total"><span>Total estimatif</span><b>' + esc(Number.isFinite(cartTotal())?formatPrice(cartTotal(), currency):"À confirmer") + '</b><small>Conversion indicative : le devis final reste le montant de référence.</small></div><div class="af-actions"><button type="button" class="af-market-primary" id="afCartCOD">Paiement à la livraison</button><button type="button" class="af-market-secondary" id="afCartGuest">Autres moyens de paiement</button><button type="button" class="af-market-primary" id="afCartQuote">Demander un devis groupé</button><button type="button" class="af-market-secondary" id="afCartClose">Continuer mes achats</button></div></div>';
+    var html = '<button type="button" class="af-modal-x" aria-label="Fermer">×</button><div class="af-cart"><h3>Mon panier <span>' + cartCount() + ' article' + (cartCount() > 1 ? "s" : "") + '</span></h3><p>Préparez votre demande : AfriFloW confirmera les prix, stocks et délais avant tout paiement.</p><div class="af-cart-list">' + state.cart.map(function (row) { return '<article><div><b>' + esc(row.name) + '</b><small>' + esc(formatPrice(row.price, row.currency)) + ' / unité</small></div><div class="af-cart-qty"><button type="button" aria-label="Diminuer la quantité" data-cart-minus="' + esc(row.id) + '">−</button><b>' + esc(row.quantity) + '</b><button type="button" aria-label="Augmenter la quantité" data-cart-plus="' + esc(row.id) + '">+</button></div><button type="button" class="af-cart-remove" data-cart-remove="' + esc(row.id) + '">Retirer</button></article>'; }).join("") + '</div><div class="af-cart-total"><span>Total estimatif</span><b>' + esc(Number.isFinite(cartTotal())?formatPrice(cartTotal(), currency):"À confirmer") + '</b><small>Conversion indicative : le devis final reste le montant de référence.</small></div><div class="af-actions"><button type="button" class="af-market-primary" id="afCartCOD">Paiement à la livraison</button><button type="button" class="af-market-secondary" id="afCartGuest">Autres moyens de paiement</button><button type="button" class="af-market-primary" id="afCartQuote">Demander un devis groupé</button><button type="button" class="af-market-secondary" id="afCartClose">Continuer mes achats</button></div></div>';
     var m = modal(html); m.querySelector(".af-modal-x").onclick = closeModal; m.querySelector("#afCartClose").onclick = closeModal;
     m.querySelectorAll("[data-cart-plus]").forEach(function (button) { button.onclick = function () { var row = state.cart.filter(function (x) { return x.id === button.dataset.cartPlus; })[0]; if (row) { row.quantity += 1; persistShop(); closeModal(); openCart(); } }; });
     m.querySelectorAll("[data-cart-minus]").forEach(function (button) { button.onclick = function () { var row = state.cart.filter(function (x) { return x.id === button.dataset.cartMinus; })[0]; if (row) { var product=productById(row.id),min=Math.max(1,Math.ceil(Number(product&&product.minimum_order_quantity)||1)); if(row.quantity<=min)return notice("Minimum : "+min+" unités. Utilisez Retirer pour supprimer le produit.");row.quantity=Math.max(min,row.quantity-1); persistShop(); closeModal(); if (state.cart.length) openCart(); else render(); } }; });
