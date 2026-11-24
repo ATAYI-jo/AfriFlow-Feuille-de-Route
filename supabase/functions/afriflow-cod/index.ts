@@ -1,7 +1,19 @@
 import { createClient } from "npm:@supabase/supabase-js@2.49.4";
 const origins=new Set(["https://afriflow.pages.dev","https://afriflow-africa.onrender.com","https://atayi-jo.github.io"]);
 const uuid=(s:unknown)=>typeof s==="string"&&/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(s);
-const countries=new Set(["BF","TG","BJ","CI","SN"]);
+const countries={has:(c:unknown)=>typeof c==="string"&&/^[A-Z]{2}$/.test(c)};
+const currencies=new Set(["XOF","XAF","EUR","USD","GBP","CAD","CHF","GHS","NGN","MAD","AUD","JPY","ZAR"]);
+const scale=(c:string)=>["XOF","XAF","JPY"].includes(c)?1:100;
+function unitPriceMinor(value:unknown,from:string,to:string){
+ const p=Number(value);if(value==null||!Number.isFinite(p)||p<=0)return NaN;
+ let amount=p;
+ if(from!==to){
+  if(["XOF","XAF"].includes(from)&&to==="EUR")amount=p/655.957;
+  else if(from==="EUR"&&["XOF","XAF"].includes(to))amount=p*655.957;
+  else return NaN;
+ }
+ return Math.round(amount*scale(to));
+}
 Deno.serve(async(req)=>{
  const origin=req.headers.get("origin")||"";
  const headers={"Content-Type":"application/json","Cache-Control":"no-store","Vary":"Origin","Access-Control-Allow-Origin":origins.has(origin)?origin:"","Access-Control-Allow-Headers":"authorization, apikey, content-type, x-client-info","Access-Control-Allow-Methods":"POST, OPTIONS"};
@@ -24,18 +36,18 @@ Deno.serve(async(req)=>{
   return m.data?.country_code===code&&t.data?.is_enabled?t.data:null;
  }
  if(body.action==="routes"){
-  const r=await db.from("afriflow_cod_routes").select("country_code,seller_user_id,seller_name,delivery_fee").eq("enabled",true);
+  const r=await db.from("afriflow_cod_routes").select("country_code,seller_user_id,seller_name,delivery_fee,currency").eq("enabled",true);
   if(r.error)throw r.error;
-  const routes=[];for(const x of r.data||[])if(await eligible(x.seller_user_id,x.country_code))routes.push({country_code:x.country_code,seller_name:x.seller_name,delivery_fee:x.delivery_fee});
+  const routes=[];for(const x of r.data||[])if(await eligible(x.seller_user_id,x.country_code))routes.push({country_code:x.country_code,seller_name:x.seller_name,delivery_fee:x.delivery_fee,currency:x.currency});
   return out({routes});
  }
  if(body.action==="configure"){
   if(!admin)return out({error:"Administration requise."},403);
   if(!countries.has(country))return out({error:"Marché invalide."},400);
   if(body.enabled===false){const r=await db.from("afriflow_cod_routes").update({enabled:false}).eq("country_code",country);if(r.error)throw r.error;return out({ok:true});}
-  const name=String(body.sellerName||"").trim(),fee=Number(body.deliveryFee);
-  if(body.registrationVerified!==true||!uuid(body.sellerId)||name.length<2||name.length>150||!Number.isSafeInteger(fee)||fee<0||fee>1000000||!await eligible(body.sellerId,country))return out({error:"Vendeur enregistré et partenaire actif affecté à ce marché requis."},400);
-  const r=await db.from("afriflow_cod_routes").upsert({country_code:country,seller_user_id:body.sellerId,seller_name:name,delivery_fee:fee,enabled:true,verified_at:new Date().toISOString()});
+  const name=String(body.sellerName||"").trim(),fee=Number(body.deliveryFee),currency=String(body.currency||"");
+  if(!currencies.has(currency)||body.registrationVerified!==true||!uuid(body.sellerId)||name.length<2||name.length>150||!Number.isSafeInteger(fee)||fee<0||fee>1000000||!await eligible(body.sellerId,country))return out({error:"Vendeur enregistré et partenaire actif affecté à ce marché requis."},400);
+  const r=await db.from("afriflow_cod_routes").upsert({country_code:country,seller_user_id:body.sellerId,seller_name:name,delivery_fee:fee,currency,enabled:true,verified_at:new Date().toISOString()});
   if(r.error)throw r.error;return out({ok:true});
  }
  if(body.action==="admin_config"){
@@ -43,15 +55,14 @@ Deno.serve(async(req)=>{
   const [m,t,r]=await Promise.all([db.from("afriflow_partner_markets").select("partner_user_id,country_code,market_name"),db.from("afriflow_partner_terms").select("partner_user_id").eq("is_enabled",true),db.from("afriflow_cod_routes").select("*")]);
   if(m.error||t.error||r.error)throw Error("Configuration indisponible.");
   const enabled=new Set((t.data||[]).map(x=>x.partner_user_id));
-  const candidates=[];for(const x of m.data||[]){if(!enabled.has(x.partner_user_id)||!countries.has(x.country_code))continue;const u=await db.auth.admin.getUserById(x.partner_user_id);candidates.push({...x,email:u.data.user?.email||""});}
+  const candidates=[];for(const x of m.data||[]){const u=await db.auth.admin.getUserById(x.partner_user_id);candidates.push({...x,email:u.data.user?.email||"",eligible:enabled.has(x.partner_user_id)&&countries.has(x.country_code),reason:!countries.has(x.country_code)?"Marché non attribué":!enabled.has(x.partner_user_id)?"Conditions commerciales inactives":"Documents et autorisation à vérifier"});}
   return out({candidates,routes:r.data||[]});
  }
- if(body.action==="create"){
-  if(!uuid(body.requestId)||!countries.has(country)||!Array.isArray(body.items)||body.items.length<1||body.items.length>30)return out({error:"Commande invalide."},400);
-  const old=await db.from("afriflow_cod_orders").select("*").eq("buyer_user_id",user.id).eq("request_id",body.requestId).maybeSingle();
-  if(old.error)throw old.error;if(old.data)return out({order:old.data});
+ if(body.action==="create"||body.action==="quote"){
+  if((body.action==="create"&&!uuid(body.requestId))||!countries.has(country)||!Array.isArray(body.items)||body.items.length<1||body.items.length>30)return out({error:"Commande invalide."},400);
+  if(body.action==="create"){const old=await db.from("afriflow_cod_orders").select("*").eq("buyer_user_id",user.id).eq("request_id",body.requestId).maybeSingle();if(old.error)throw old.error;if(old.data)return out({order:old.data});}
   const name=String(body.name||"").trim(),phone=String(body.phone||"").trim(),address=String(body.address||"").trim();
-  if(name.length<2||name.length>120||!/^\+?[0-9 ()-]{7,25}$/.test(phone)||address.length<5||address.length>400)return out({error:"Coordonnées de livraison invalides."},400);
+  if(body.action==="create"&&(name.length<2||name.length>120||!/^\+?[0-9 ()-]{7,25}$/.test(phone)||address.length<5||address.length>400))return out({error:"Coordonnées de livraison invalides."},400);
   const route=await db.from("afriflow_cod_routes").select("*").eq("country_code",country).eq("enabled",true).maybeSingle();
   if(route.error)throw route.error;
   const seller=route.data;if(!seller)return out({error:"Paiement à la livraison non ouvert sur ce marché."},409);
@@ -61,10 +72,12 @@ Deno.serve(async(req)=>{
   const products=await db.from("afriflow_market_products").select("id,name,price,currency,is_active,is_in_stock,minimum_order_quantity,listing_type,audience").in("id",Array.from(quantities.keys()));
   if(products.error)throw products.error;
   const items=[];let subtotal=0;
-  for(const [id,q] of quantities){const p=products.data?.find(x=>x.id===id);const price=Number(p?.price);if(!p||!p.is_active||!p.is_in_stock||p.listing_type!=="product"||p.audience!=="public"||p.currency!=="XOF"||!Number.isSafeInteger(price)||price<=0||q<(p.minimum_order_quantity||1))return out({error:"Produit, prix ou quantité indisponible."},409);subtotal+=price*q;items.push({id,name:p.name,quantity:q,unit_price:price});}
+  for(const [id,q] of quantities){const p=products.data?.find(x=>x.id===id);const price=unitPriceMinor(p?.price,p?.currency||"",seller.currency);if(!p||!p.is_active||!p.is_in_stock||p.listing_type!=="product"||p.audience!=="public"||!Number.isSafeInteger(price)||price<=0||q<(p.minimum_order_quantity||1))return out({error:"Produit, quantité ou tarif dans cette devise indisponible."},409);subtotal+=price*q;items.push({id,name:p.name,quantity:q,unit_price:price});}
   const total=subtotal+Number(seller.delivery_fee);
-  if(!Number.isSafeInteger(total)||total>100000000||body.expectedTotal!==total||body.expectedSeller!==seller.seller_name)return out({error:"Le montant ou le vendeur a changé. Actualisez le panier avant de confirmer."},409);
-  const result=await db.from("afriflow_cod_orders").insert({buyer_user_id:user.id,request_id:body.requestId,seller_user_id:seller.seller_user_id,seller_name:seller.seller_name,country_code:country,customer_name:name,phone,address,items,subtotal,delivery_fee:seller.delivery_fee,commission_rate:terms.commission_rate}).select("*").single();
+  if(!Number.isSafeInteger(total)||total>100000000)return out({error:"Montant hors limites."},409);
+  if(body.action==="quote")return out({quote:{subtotal,delivery_fee:seller.delivery_fee,total,currency:seller.currency,seller_name:seller.seller_name}});
+  if(body.expectedCurrency!==seller.currency||body.expectedTotal!==total||body.expectedSeller!==seller.seller_name)return out({error:"Le montant, la devise ou le vendeur a changé. Actualisez le panier avant de confirmer."},409);
+  const result=await db.from("afriflow_cod_orders").insert({buyer_user_id:user.id,request_id:body.requestId,seller_user_id:seller.seller_user_id,seller_name:seller.seller_name,country_code:country,customer_name:name,phone,address,items,subtotal,delivery_fee:seller.delivery_fee,currency:seller.currency,commission_rate:terms.commission_rate}).select("*").single();
   if(result.error?.code==="23505"){const repeat=await db.from("afriflow_cod_orders").select("*").eq("buyer_user_id",user.id).eq("request_id",body.requestId).single();if(repeat.error)throw repeat.error;return out({order:repeat.data});}
   if(result.error)throw result.error;return out({order:result.data});
  }
