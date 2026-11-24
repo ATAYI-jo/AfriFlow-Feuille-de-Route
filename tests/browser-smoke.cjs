@@ -110,3 +110,30 @@ test('Anonymous page boots and locally hosted JavaScript loads', { timeout: 9000
     await new Promise(resolve => server.close(resolve));
   }
 });
+
+test('Inbox cards contain their subject, sender and preview while scrolling', async () => {
+  const browser = await chromium.launch({headless:true});
+  try {
+    const page = await browser.newPage();
+    const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
+    // Keep the production stylesheet cascade and test with synthetic messages offline.
+    const styles = [...html.matchAll(/<style\b[^>]*>([\s\S]*?)<\/style>|<link\b[^>]*rel="stylesheet"[^>]*href="\.\/([^"?]+)[^"]*"[^>]*>/gi)]
+      .map(match => match[1] ?? fs.readFileSync(path.join(root, match[2]), 'utf8')).join('\n');
+    const card = '<button class="dcard"><b>Non lu · Urgent · nouveau devis pour Mangue Séchée – Sachet 50 g</b><small>De : Portail partenaire · 24/11/2026 11:45</small><small>Le vendeur a accepté votre demande de livraison. Consultez le détail dans la messagerie.</small></button>';
+    await page.setContent('<style>'+styles+'</style><body class="af-mail-open"><div id="afMailLayer"><section id="msgBox" class="msg-box"><div class="toolbar">Messagerie</div><div class="auth-tabs">Réception</div><div id="msgList" class="dgrid">'+card.repeat(18)+'</div></section></div></body>');
+    for (const width of [320,375,430,1024]) {
+      await page.setViewportSize({width,height:812});
+      const result = await page.locator('#msgList').evaluate(list => {
+        list.scrollTop = list.scrollHeight;
+        const cards = [...list.children];
+        return {
+          scrolled: list.scrollTop > 0,
+          contained: cards.every(card => [...card.children].every(child =>
+            child.getBoundingClientRect().bottom <= card.getBoundingClientRect().bottom + 1)),
+          finalVisible: cards.at(-1).getBoundingClientRect().bottom <= list.getBoundingClientRect().bottom + 1
+        };
+      });
+      assert.deepEqual(result, {scrolled:true, contained:true, finalVisible:true}, 'Inbox layout at '+width+'px');
+    }
+  } finally { await browser.close(); }
+});
