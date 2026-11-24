@@ -52,19 +52,33 @@ body.af-mail-open #afMailLayer #msgBox.msg-box { overflow: hidden; }
   overscroll-behavior: contain;
   overflow-wrap: anywhere;
 }
-#msgBox #msgList { align-content: start; }
+#msgBox #msgList {
+  display: block;
+  flex: 1 1 auto;
+  overflow-y: auto;
+  min-height: 0;
+}
 #msgBox #msgList .dcard {
   width: 100%;
   min-width: 0;
-  display: grid;
-  gap: 4px;
+  display: block;
+  box-sizing: border-box;
+  height: auto;
+  max-height: none;
   text-align: start;
   white-space: normal;
   font: inherit;
 }
+#msgBox #msgList .dcard + .dcard { margin-top: 8px; }
+#msgBox #msgList .dcard > :is(b,small) {
+  display: block;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+#msgBox #msgList .dcard > small { margin-top: 4px; }
 #msgBox :is(.fm,input,textarea,.file-row) { min-width: 0; max-width: 100%; box-sizing: border-box; }
 #msgBox #mList .rq { overflow-wrap: anywhere; }
 @media (max-height: 480px) {
   body.af-mail-open #afMailLayer #msgBox.msg-box { overflow-y: auto; }
-  #msgBox :is(#msgList,.journal-article) { overflow: visible; flex: none; }
+  #msgBox #msgList, #msgBox .journal-article { overflow: visible; flex: none; }
 }
