@@ -99,7 +99,8 @@ function mountCaptcha(){
   var generation=++captchaGeneration;
   try{
     turnstileWidgetId=window.turnstile.render(host,{
-      sitekey:TURNSTILE_SITE_KEY,theme:"light",
+      sitekey:TURNSTILE_SITE_KEY,theme:document.documentElement.dataset.theme==="dark"?"dark":document.documentElement.dataset.theme==="light"?"light":"auto",
+      size:host.clientWidth>0&&host.clientWidth<300?"compact":window.innerWidth<=350?"compact":"normal",
       callback:function(token){if(generation!==captchaGeneration)return;turnstileToken=token;captchaFailures=0;captchaUnavailable=false;var error=$("authError");if(error)error.textContent="";},
       "expired-callback":function(){if(generation===captchaGeneration)turnstileToken="";},
       "error-callback":function(code){
@@ -146,12 +147,13 @@ function renderAuthStep(){
   $("authBtn").style.display=passwordStep ? "" : "none";
   $("authNext").style.display=passwordStep ? "none" : "";
   $("authBack").style.display=step > 1 ? "" : "none";
-  $("authProgress").style.display=""; $("authProgress").textContent="Étape "+step+" sur "+finalStep;
-  if(roleStep) $("authHint").textContent=register?"Choisissez votre profil AfriFloW. Les demandes Partenaire et Actionnaire nécessitent une approbation.":"Connectez-vous avec Google ou continuez par e-mail. Si vous n’avez pas de profil, vous le choisirez après la connexion.";
+  $("authProgress").style.display=""; $("authProgress").textContent="Étape "+step+" / "+finalStep;
+  $("authNext").textContent=roleStep?"Continuer par e-mail":"Continuer";
+  if(roleStep) $("authHint").textContent=register?"Choisissez votre profil. Les accès Partenaire et Actionnaire sont soumis à validation.":"Choisissez votre mode de connexion.";
   else if(nameStep) $("authHint").textContent="Comment devons-nous vous appeler ?";
   else if(emailStep) $("authHint").textContent=register?"Quelle est votre adresse e-mail ?":"Entrez votre adresse e-mail ou votre identifiant personnel AfriFloW.";
-  else $("authHint").textContent=register ? "Créez un mot de passe personnel d’au moins 8 caractères." : "Entrez votre mot de passe pour continuer.";
-  if(roleStep) authStepFocus(register?"authMarketRole":"authNext"); else if(nameStep) authStepFocus("authName"); else if(emailStep) authStepFocus("authEmailInput"); else authStepFocus("authPasswordInput");
+  else $("authHint").textContent=register ? "Créez un mot de passe de 12 caractères minimum, avec majuscule, minuscule, chiffre et symbole." : "Entrez votre mot de passe pour continuer.";
+  if(roleStep){ /* Do not autofocus the bottom action on opening: it scrolls short mobile screens. */ if(register) authStepFocus("authMarketRole"); } else if(nameStep) authStepFocus("authName"); else if(emailStep) authStepFocus("authEmailInput"); else authStepFocus("authPasswordInput");
 }
 function nextAuthStep(){
   var register=AUTH_MODE === "register", err=$("authError"); err.textContent="";
@@ -162,6 +164,7 @@ function nextAuthStep(){
 }
 function setAuthMode(m){
   AUTH_MODE = m; AUTH_STEP = 1; var reg = m === "register";
+  $("authTitle").textContent=reg?"Créer un compte":"Bienvenue sur AfriFloW";
   $("authRecoveryFields").style.display = "none"; $("tabLogin").parentNode.style.display = ""; $("authNext").parentNode.style.display="";
   $("authBtn").textContent = reg ? "S'inscrire" : "Se connecter";
   $("tabLogin").classList.toggle("on", !reg); $("tabReg").classList.toggle("on", reg);
@@ -195,7 +198,7 @@ async function requestPasswordReset(){
   finally{button.disabled=false;}
 }
 function showPasswordRecovery(){
-  AUTH_MODE="recovery"; $("authTitle").textContent="Choisissez un nouveau mot de passe"; $("authHint").textContent="Utilisez un mot de passe d’au moins 8 caractères.";
+  AUTH_MODE="recovery"; $("authTitle").textContent="Choisissez un nouveau mot de passe"; $("authHint").textContent="12 caractères minimum, avec majuscule, minuscule, chiffre et symbole.";
   $("tabLogin").parentNode.style.display="none"; document.querySelectorAll("#auth-screen .oauth,.or,#authName,#authMarketRole,#authMarketRoleLabel,#authPasswordRow,#authPassword2Row,#authForgot").forEach(function(el){el.style.display="none";});
   $("authEmailInput").style.display="none"; $("authBtn").style.display="none"; $("authRecoveryFields").style.display=""; $("authProgress").style.display="none"; $("authNext").parentNode.style.display="none"; $("authError").textContent="";
   $("auth-screen").classList.remove("off"); setTimeout(function(){$("authNewPassword").focus();},0);
