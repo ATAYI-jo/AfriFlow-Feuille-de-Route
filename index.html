@@ -1,6 +1,17 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
+  <script id="af-canonical-host">
+    // Legacy links from emails and bookmarks must use the official authentication origin.
+    if (location.hostname === "atayi-jo.github.io") {
+      var afPath = location.pathname.replace(/^\/AfriFlow-Feuille-de-Route(?=\/|$)/i, "") || "/";
+      var afTarget = new URL("https://afriflow.pages.dev/");
+      afTarget.pathname = afPath;
+      afTarget.search = location.search;
+      afTarget.hash = location.hash;
+      location.replace(afTarget.href);
+    }
+  </script>
   <script>document.documentElement.classList.add("af-role-checking");</script>
   <style id="af-role-guard">
     /* Avoid flashing shareholder-only content before validated routing. */
