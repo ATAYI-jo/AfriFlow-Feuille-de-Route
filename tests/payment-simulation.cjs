@@ -1,0 +1,18 @@
+const assert=require("node:assert/strict");
+const {createLedger}=require("../afriflow-payment-simulation.js");
+const l=createLedger();
+assert.equal(l.create("TEST-1",1000).status,"pending");
+assert.equal(l.create("TEST-1",1000).amount,1000);
+assert.equal(l.list().length,1);
+assert.throws(()=>l.create("TEST-1",2000));
+assert.throws(()=>l.create("TEST-2",-5));
+assert.throws(()=>l.create("TEST-2",0.5));
+assert.throws(()=>l.settle("TEST-1","paid"));
+assert.equal(l.settle("TEST-1","simulated_success").status,"simulated_success");
+assert.equal(l.settle("TEST-1","simulated_success").status,"simulated_success");
+assert.throws(()=>l.settle("TEST-1","simulated_failure"));
+assert.equal(l.create("TEST-2",500).mode,"simulation");
+assert.equal(l.settle("TEST-2","simulated_failure").status,"simulated_failure");
+assert.throws(()=>l.settle("missing","simulated_success"));
+const rows=l.list();rows[0].amount=1;assert.equal(l.list()[0].amount,1000);
+console.log("Payment simulation tests passed");
