@@ -153,7 +153,7 @@ function renderAuthStep(){
   else if(nameStep) $("authHint").textContent="Comment devons-nous vous appeler ?";
   else if(emailStep) $("authHint").textContent=register?"Quelle est votre adresse e-mail ?":"Entrez votre adresse e-mail ou votre identifiant personnel AfriFloW.";
   else $("authHint").textContent=register ? "Créez un mot de passe de 12 caractères minimum, avec majuscule, minuscule, chiffre et symbole." : "Entrez votre mot de passe pour continuer.";
-  if(roleStep) authStepFocus(register?"authMarketRole":"authNext"); else if(nameStep) authStepFocus("authName"); else if(emailStep) authStepFocus("authEmailInput"); else authStepFocus("authPasswordInput");
+  if(roleStep){ /* Do not autofocus the bottom action on opening: it scrolls short mobile screens. */ if(register) authStepFocus("authMarketRole"); } else if(nameStep) authStepFocus("authName"); else if(emailStep) authStepFocus("authEmailInput"); else authStepFocus("authPasswordInput");
 }
 function nextAuthStep(){
   var register=AUTH_MODE === "register", err=$("authError"); err.textContent="";
