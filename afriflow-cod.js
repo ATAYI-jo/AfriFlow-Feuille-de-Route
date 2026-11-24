@@ -1,12 +1,17 @@
 /* AfriFloW — commandes avec paiement à la livraison. */
 (function(){
 "use strict";
-const labels={BF:"Burkina Faso",TG:"Togo",BJ:"Bénin",CI:"Côte d’Ivoire",SN:"Sénégal"};
+const labels={BF:"Burkina Faso",TG:"Togo",BJ:"Bénin",CI:"Côte d’Ivoire",SN:"Sénégal",FR:"France"};
+const currencies=["XOF","XAF","EUR","USD","GBP","CAD","CHF","GHS","NGN","MAD","AUD","JPY","ZAR"];
+const scale=c=>["XOF","XAF","JPY"].includes(c)?1:100;
+const countryName=c=>{if(!c)return "Non attribué";try{return labels[c]||new Intl.DisplayNames(["fr"],{type:"region"}).of(c)||c;}catch(e){return labels[c]||c;}};
+function defaultCurrency(c){const map={FR:"EUR",BE:"EUR",DE:"EUR",IT:"EUR",ES:"EUR",PT:"EUR",NL:"EUR",LU:"EUR",IE:"EUR",AT:"EUR",FI:"EUR",GR:"EUR",BF:"XOF",TG:"XOF",BJ:"XOF",CI:"XOF",SN:"XOF",ML:"XOF",NE:"XOF",GW:"XOF",CM:"XAF",GA:"XAF",TD:"XAF",CG:"XAF",CF:"XAF",GQ:"XAF",US:"USD",GB:"GBP",CA:"CAD",CH:"CHF",GH:"GHS",NG:"NGN",MA:"MAD",AU:"AUD",JP:"JPY",ZA:"ZAR"};return map[c]||"";}
+function layout(form){form.style.cssText="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,240px),1fr));gap:16px;align-items:end;margin:16px 0";}
 const statuses={requested:"Demandée — non confirmée",accepted:"Acceptée — à livrer",delivered:"Livrée — règlement non confirmé",cash_received:"Encaissement déclaré par le vendeur",cancelled:"Annulée"};
-const money=n=>Number(n).toLocaleString("fr-FR")+" FCFA";
+const money=(n,c="XOF")=>new Intl.NumberFormat("fr-FR",{style:"currency",currency:c,maximumFractionDigits:scale(c)===1?0:2}).format(Number(n)/scale(c));
 function node(tag,txt,parent){const x=document.createElement(tag);if(txt!=null)x.textContent=txt;if(parent)parent.appendChild(x);return x;}
 function button(parent,label,fn){const b=node("button",label,parent);b.type="button";b.className="af-market-secondary";b.onclick=async()=>{b.disabled=true;try{await fn();}catch(e){node("p",e.message||"Opération indisponible.",parent);}finally{b.disabled=false;}};return b;}
-function field(parent,label,type){const l=node("label",label,parent);const i=node("input",null,l);i.type=type||"text";i.required=true;return i;}
+function field(parent,label,type){const l=node("label",label,parent);l.style.cssText="display:grid;gap:6px;min-width:0";const i=node("input",null,l);i.style.cssText="width:100%;box-sizing:border-box";i.type=type||"text";i.required=true;return i;}
 async function call(action,body={}){
  const client=window.__sb;if(!client)throw Error("Service indisponible.");
  const {data:{session}}=await client.auth.getSession();if(!session)throw Error("Connectez-vous pour passer ou consulter une commande.");
@@ -22,38 +27,42 @@ async function checkout(host,cart,login){
  if(!session){node("p","Une connexion est nécessaire pour sécuriser et suivre votre commande.",host);button(host,"Se connecter",login);return;}
  const data=await call("routes");
  if(!data.routes.length){node("p","Aucun vendeur autorisé n’est encore configuré. Utilisez la demande de devis en attendant.",host);return;}
- const form=node("form",null,host),select=node("select",null,node("label","Marché de livraison",form));
- for(const r of data.routes){const opt=node("option",labels[r.country_code]||r.country_code,select);opt.value=r.country_code;}
+ const form=node("form",null,host);layout(form);const select=node("select",null,node("label","Marché de livraison",form));select.style.cssText="display:block;width:100%;margin-top:6px";
+ for(const r of data.routes){const opt=node("option",countryName(r.country_code),select);opt.value=r.country_code;}
  const seller=node("p",null,form),totalLine=node("p",null,form);
  const name=field(form,"Nom complet");name.maxLength=120;
  const phone=field(form,"Téléphone","tel");phone.maxLength=25;
  const address=field(form,"Adresse complète et ville");address.maxLength=400;
  const status=node("p",null,form);status.setAttribute("role","status");
  const submit=node("button","Envoyer la demande de commande",form);submit.type="submit";submit.className="af-market-primary";
- const valid=cart.length&&cart.every(x=>x.currency==="XOF"&&x.price!=null&&Number.isSafeInteger(Number(x.price))&&Number(x.price)>0&&Number.isSafeInteger(x.quantity)&&x.quantity>0);
- const subtotal=valid?cart.reduce((a,x)=>a+Number(x.price)*x.quantity,0):0;
- const ref=crypto.randomUUID();
- function update(){const route=data.routes.find(r=>r.country_code===select.value);seller.textContent="Vendeur : "+route.seller_name;totalLine.textContent=valid?"Produits : "+money(subtotal)+" · Livraison : "+money(route.delivery_fee)+" · Total : "+money(subtotal+Number(route.delivery_fee)):"Le panier doit contenir des produits tarifés en FCFA.";submit.disabled=!valid;}
- select.onchange=update;update();
- form.onsubmit=async e=>{e.preventDefault();if(!valid)return;submit.disabled=true;try{
- const route=data.routes.find(r=>r.country_code===select.value);
- const result=await call("create",{country:select.value,requestId:ref,name:name.value,phone:phone.value,address:address.value,items:cart.map(x=>({id:x.id,quantity:x.quantity})),expectedTotal:subtotal+Number(route.delivery_fee),expectedSeller:route.seller_name});
- host.replaceChildren();node("h3","Demande enregistrée",host);node("p","Référence : "+result.order.id,host);node("p","Total : "+money(result.order.total)+" · En attente de confirmation du vendeur. Aucun paiement reçu.",host);
+ let quote=null,sequence=0;const ref=crypto.randomUUID();
+ const items=cart.map(x=>({id:x.id,quantity:x.quantity}));
+ async function update(){
+ const n=++sequence;quote=null;submit.disabled=true;
+ const route=data.routes.find(r=>r.country_code===select.value);seller.textContent="Vendeur : "+route.seller_name;totalLine.textContent="Calcul du prix par le serveur…";status.textContent="";
+ try{const result=await call("quote",{country:select.value,items});if(n!==sequence)return;quote=result.quote;totalLine.textContent="Produits : "+money(quote.subtotal,quote.currency)+" · Livraison : "+money(quote.delivery_fee,quote.currency)+" · Total : "+money(quote.total,quote.currency);submit.disabled=false;}
+ catch(e){if(n!==sequence)return;totalLine.textContent="Tarif indisponible";status.textContent=e.message;}
+ }
+ select.onchange=update;await update();
+ form.onsubmit=async e=>{e.preventDefault();if(!quote)return;submit.disabled=true;const accepted=quote;
+ try{const result=await call("create",{country:select.value,requestId:ref,name:name.value,phone:phone.value,address:address.value,items,expectedTotal:accepted.total,expectedCurrency:accepted.currency,expectedSeller:accepted.seller_name});
+ host.replaceChildren();node("h3","Demande enregistrée",host);node("p","Référence : "+result.order.id,host);node("p","Total : "+money(result.order.total,result.order.currency)+" · En attente de confirmation du vendeur. Aucun paiement reçu.",host);
  }catch(e){status.textContent=e.message;submit.disabled=false;}};
+
 }
 async function orderList(host){
  host.replaceChildren();const {orders}=await call("list");
  if(!orders.length){node("p","Aucune commande enregistrée.",host);return;}
  for(const o of orders){const card=node("article",null,host);card.className="mt-box";card.style.marginTop="10px";
- node("strong",statuses[o.status]||o.status,card);node("p",o.id+" · "+(labels[o.country_code]||o.country_code)+" · "+o.seller_name,card);
+ node("strong",statuses[o.status]||o.status,card);node("p",o.id+" · "+(countryName(o.country_code))+" · "+o.seller_name,card);
  node("p",o.customer_name+" · "+o.phone+" · "+o.address,card);
- for(const item of o.items||[])node("p",item.quantity+" × "+item.name+" — "+money(item.unit_price),card);
- node("p","Total à régler : "+money(o.total),card);
- if(o.status==="cash_received")node("p","Commission contractuelle indicative sur les produits : "+money(Math.round(Number(o.subtotal)*Number(o.commission_rate)/100))+" — reversement non confirmé.",card);
+ for(const item of o.items||[])node("p",item.quantity+" × "+item.name+" — "+money(item.unit_price,o.currency),card);
+ node("p","Total à régler : "+money(o.total,o.currency),card);
+ if(o.status==="cash_received")node("p","Commission contractuelle indicative sur les produits : "+money(Math.round(Number(o.subtotal)*Number(o.commission_rate)/100),o.currency)+" — reversement non confirmé.",card);
  async function change(status,cashConfirmed=false){await call("transition",{id:o.id,status,cashConfirmed});await orderList(host);}
  if(o.canFulfill&&o.status==="requested")button(card,"Accepter après contrôle du stock",()=>change("accepted"));
  if(o.canFulfill&&o.status==="accepted")button(card,"Confirmer la livraison",()=>change("delivered"));
- if(o.canFulfill&&o.status==="delivered")button(card,"Confirmer l’encaissement réel",async()=>{if(window.confirm("Confirmez uniquement si le vendeur a effectivement reçu "+money(o.total)+". Continuer ?"))await change("cash_received",true);});
+ if(o.canFulfill&&o.status==="delivered")button(card,"Confirmer l’encaissement réel",async()=>{if(window.confirm("Confirmez uniquement si le vendeur a effectivement reçu "+money(o.total,o.currency)+". Continuer ?"))await change("cash_received",true);});
  if(o.canCancel)button(card,"Annuler la demande",()=>change("cancelled"));
  }
 }
@@ -64,14 +73,23 @@ function mount(host,admin=false){
  if(admin){
  const {candidates,routes}=await call("admin_config");
  node("p","Activez exclusivement un vendeur régulièrement enregistré, autorisé à vendre et encaisser sur le marché concerné. AfriFloW est créée au Burkina Faso.",content);
- const form=node("form",null,content);const select=node("select",null,node("label","Partenaire actif",form));
- for(const c of candidates){const opt=node("option",(labels[c.country_code]||c.country_code)+" — "+(c.email||c.partner_user_id),select);opt.value=c.partner_user_id;}
- const name=field(form,"Nom légal du vendeur");const fee=field(form,"Frais de livraison (FCFA)","number");fee.min="0";fee.max="1000000";fee.step="1";fee.value="0";
- const check=node("input",null,node("label","Documents et autorisation du vendeur vérifiés ",form));check.type="checkbox";check.required=true;
- const save=node("button","Activer ce marché",form);save.type="submit";save.disabled=!candidates.length;
- if(!candidates.length)node("p","Aucun partenaire éligible sur les marchés disponibles.",form);
- form.onsubmit=async e=>{e.preventDefault();save.disabled=true;try{const c=candidates.find(x=>x.partner_user_id===select.value);await call("configure",{country:c.country_code,sellerId:c.partner_user_id,sellerName:name.value,deliveryFee:Number(fee.value),registrationVerified:check.checked});node("p","Marché configuré. Actualisez pour consulter son statut.",form);}catch(e){node("p",e.message,form);}finally{save.disabled=false;}};
- for(const r of routes.filter(x=>x.enabled)){node("p",(labels[r.country_code]||r.country_code)+" — "+r.seller_name,content);button(content,"Désactiver "+(labels[r.country_code]||r.country_code),async()=>{await call("configure",{country:r.country_code,enabled:false});mount(host,true);});}
+ const form=node("form",null,content);layout(form);
+ const selectLabel=node("label","Partenaire commercial",form);selectLabel.style.cssText="display:grid;gap:6px";const select=node("select",null,selectLabel);select.style.width="100%";
+ const first=node("option","Sélectionner un partenaire",select);first.value="";
+ for(const c of candidates){const opt=node("option",countryName(c.country_code)+" — "+(c.email||c.partner_user_id)+(c.eligible?"":" — "+c.reason),select);opt.value=c.partner_user_id;opt.disabled=!c.eligible;}
+ const name=field(form,"Nom légal du vendeur");
+ const currencyLabel=node("label","Devise du règlement",form);currencyLabel.style.cssText="display:grid;gap:6px";const currency=node("select",null,currencyLabel);currency.style.width="100%";currency.required=true;node("option","Sélectionner une devise",currency).value="";
+ for(const cur of currencies)node("option",cur,currency).value=cur;
+ const fee=field(form,"Frais de livraison (dans la devise choisie)","number");fee.min="0";fee.max="1000000";fee.step="0.01";fee.value="0";
+ const checkLabel=node("label",null,form);checkLabel.style.cssText="display:flex;align-items:center;gap:8px;grid-column:1/-1";const check=node("input",null,checkLabel);check.type="checkbox";check.required=true;check.style.width="auto";node("span","Documents et autorisation de vente et d’encaissement vérifiés",checkLabel);
+ const save=node("button","Activer ce marché",form);save.type="submit";save.disabled=true;save.className="af-market-primary";const status=node("p",null,form);status.setAttribute("role","status");status.style.gridColumn="1/-1";
+ function refresh(){const c=candidates.find(x=>x.partner_user_id===select.value&&x.eligible);const existing=c&&routes.find(r=>r.country_code===c.country_code&&r.seller_user_id===c.partner_user_id);name.value=existing?.seller_name||"";currency.value=existing?.currency||defaultCurrency(c?.country_code);fee.value=existing?String(Number(existing.delivery_fee)/scale(existing.currency||"XOF")):"0";check.checked=false;save.disabled=!c;status.textContent=c?"Marché : "+countryName(c.country_code)+" · vérification administrative requise.":"Sélectionnez un partenaire éligible.";fee.step=scale(currency.value)===1?"1":"0.01";}
+ select.onchange=refresh;currency.onchange=()=>{fee.step=scale(currency.value)===1?"1":"0.01";};refresh();
+ if(!candidates.some(c=>c.eligible))node("p","Aucun partenaire actif affecté à un marché.",content);
+ const unavailable=candidates.filter(c=>!c.eligible);if(unavailable.length){const d=node("details",null,content);node("summary","Partenaires non éligibles ("+unavailable.length+")",d);for(const c of unavailable)node("p",(c.email||c.partner_user_id)+" — "+c.reason,d);}
+ form.onsubmit=async e=>{e.preventDefault();save.disabled=true;try{const c=candidates.find(x=>x.partner_user_id===select.value&&x.eligible);if(!c)throw Error("Sélectionnez un partenaire éligible.");const amount=Number(fee.value)*scale(currency.value);if(!Number.isFinite(amount)||Math.abs(amount-Math.round(amount))>0.000001)throw Error("Frais incompatibles avec la devise.");await call("configure",{country:c.country_code,sellerId:c.partner_user_id,sellerName:name.value,deliveryFee:Math.round(amount),currency:currency.value,registrationVerified:check.checked});status.textContent="Marché configuré.";check.checked=false;}catch(e){status.textContent=e.message;}finally{save.disabled=false;}};
+ for(const r of routes.filter(x=>x.enabled)){node("p",countryName(r.country_code)+" — "+r.seller_name+" · "+money(r.delivery_fee,r.currency),content);button(content,"Désactiver "+countryName(r.country_code),async()=>{await call("configure",{country:r.country_code,enabled:false});mount(host,true);});}
+
  }
  const list=node("div",null,content);button(content,"Actualiser les commandes",()=>orderList(list));await orderList(list);
  }catch(e){node("p",e.message,content);delete content.dataset.loaded;}};
