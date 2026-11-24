@@ -56,3 +56,25 @@ body :is(#afCODList,#afCODAdmin) .af-cod-cancel{background:transparent!important
 @keyframes afCodStepPulse{0%,100%{transform:scale(1);opacity:.7}50%{transform:scale(1.12);opacity:.35}}
 @media(prefers-reduced-motion:no-preference){.af-cod-steps li[aria-current="step"] .af-cod-step-dot::after{animation:afCodStepPulse 1.3s ease-in-out 3}}
 @media(max-width:340px){.af-cod-step-dot{width:30px;height:30px}.af-cod-step-dot svg{width:17px;height:17px}.af-cod-steps li:not(:last-child)::after{top:14px;left:calc(50% + 18px);width:calc(100% - 36px)}}
+
+/* Order confirmation and actionable partner notifications. */
+.af-cod-receipt{display:grid;gap:12px;text-align:center;padding:18px 10px;color:var(--af-glass-ink,var(--ink));outline:none}
+.af-cod-receipt h3{margin:0;line-height:1.35;color:var(--af-glass-accent,var(--green))}
+.af-cod-receipt p{margin:0;font-size:.9rem;line-height:1.5}
+.af-cod-receipt-icon{display:grid;place-items:center;margin:auto;width:62px;height:62px;border-radius:50%;color:#fff;background:#21633f;box-shadow:0 6px 20px #21633f30}
+.af-cod-receipt-icon svg{width:34px;height:34px}
+.af-cod-receipt-ref{font-weight:700;letter-spacing:.02em}
+.af-cod-receipt .af-cod-total{text-align:left;align-items:center}
+.af-cod-receipt button{min-height:44px}
+.af-cod-pending-heading{font-size:.9rem;color:var(--af-glass-accent,var(--green));margin:6px 0 0}
+#market-view #afCODOrders .af-cod-count[hidden],#market-view .af-cod-alert[hidden]{display:none!important}
+#market-view #afCODOrders .af-cod-count{display:inline-flex;align-items:center;justify-content:center;min-width:23px;min-height:23px;padding:2px 5px;background:#a82435!important;color:#fff!important;border-radius:50%;font-size:.74rem;box-sizing:border-box}
+#market-view .af-cod-alert{display:flex;align-items:center;gap:12px;margin:0 0 14px;padding:12px 14px;border-radius:14px;border:1px solid var(--af-glass-border,var(--line));background:color-mix(in srgb,var(--af-glass-base,var(--card)) var(--af-glass-opacity,76%),transparent);color:var(--af-glass-ink,var(--ink));backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);box-shadow:var(--af-glass-shadow)}
+#market-view .af-cod-alert>.af-icon{width:25px;height:25px;flex:none;color:var(--af-glass-accent,var(--green))}
+#market-view .af-cod-alert>div{flex:1;min-width:0}
+#market-view .af-cod-alert b{font-size:.94rem}
+#market-view .af-cod-alert p{font-size:.82rem;line-height:1.4;margin:4px 0 0;color:var(--af-glass-muted,var(--muted))}
+#market-view .af-cod-alert button{min-height:44px;font-size:.8rem;padding:8px 12px;flex-shrink:0}
+@media(max-width:340px){#market-view .af-cod-alert{flex-wrap:wrap}#market-view .af-cod-alert button{width:100%}}
+@keyframes afCodReceiptIn{from{opacity:0;transform:scale(.9)}to{opacity:1;transform:scale(1)}}
+@media(prefers-reduced-motion:no-preference){.af-cod-receipt-icon{animation:afCodReceiptIn 300ms ease-out both}}

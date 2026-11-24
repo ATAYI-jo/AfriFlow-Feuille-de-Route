@@ -30,6 +30,50 @@ Deno.serve(async(req)=>{
  if(adminResult.error)throw adminResult.error;
  const admin=!!adminResult.data;
  const country=String(body.country||"").toUpperCase();
+ // Notify only the verified parties of a successfully saved order event.
+ // The existing push dispatcher consumes unread msg: rows.
+ async function orderAlerts(o:any,event:string){
+  try{
+   const parties=await Promise.all([db.auth.admin.getUserById(o.buyer_user_id),db.auth.admin.getUserById(o.seller_user_id)]);
+   const buyer=parties[0].data.user, seller=parties[1].data.user;
+   const ref=String(o.id).slice(0,8).toUpperCase();
+   const amount=new Intl.NumberFormat("fr-FR",{style:"currency",currency:o.currency}).format(Number(o.total)/scale(o.currency));
+   const site="https://afriflow.pages.dev/";
+   const descriptions:Record<string,string>={accepted:"Le vendeur a accepté votre commande.",delivered:"Le vendeur a déclaré la livraison. Le règlement reste à confirmer.",cash_received:"Le vendeur a déclaré avoir reçu le règlement.",cancelled:"La demande de commande a été annulée."};
+   const recipients:{email:string;subject:string;message:string;urgent:boolean}[]=[];
+   if(event==="requested"){
+    if(buyer?.email&&buyer.email_confirmed_at)recipients.push({email:buyer.email.toLowerCase(),subject:"Commande #"+ref+" · demande enregistrée",message:"Votre demande de commande est enregistrée. Total : "+amount+". Elle attend la confirmation du vendeur. Aucun paiement en ligne.",urgent:false});
+    if(seller?.email&&seller.email_confirmed_at)recipients.push({email:seller.email.toLowerCase(),subject:"Urgent · nouvelle commande #"+ref+" à valider",message:"Une commande de "+amount+" vous a été attribuée. Ouvrez votre portail partenaire, rubrique Commandes, pour vérifier le stock et accepter la demande.",urgent:true});
+   }else if(descriptions[event]){
+    if(buyer?.email&&buyer.email_confirmed_at)recipients.push({email:buyer.email.toLowerCase(),subject:"Commande #"+ref+" · "+({accepted:"acceptée",delivered:"livraison déclarée",cash_received:"encaissement déclaré",cancelled:"annulée"} as Record<string,string>)[event],message:descriptions[event],urgent:false});
+    if(event==="cancelled"&&seller?.email&&seller.email_confirmed_at)recipients.push({email:seller.email.toLowerCase(),subject:"Commande #"+ref+" · annulée",message:"Cette demande a été annulée. Ne préparez pas cette commande.",urgent:false});
+   }
+   const grouped=new Map<string,typeof recipients[number]>();
+   for(const entry of recipients){const prior=grouped.get(entry.email);if(!prior||entry.urgent)grouped.set(entry.email,entry);}
+   let internal=0,emails=0;
+   for(const entry of grouped.values()){
+    const now=new Date(),key="msg:"+entry.email+":cod-"+o.id+"-"+event;
+    const row={key,value:{from:user.email!.toLowerCase(),fromName:"AfriFloW · Commandes",to:entry.email,subject:entry.subject,body:entry.message+"\\n\\nConsultez le suivi : "+site,ts:now.getTime(),read:false,urgent:entry.urgent,orderId:o.id},updated_at:now.toISOString()};
+    const saved=await db.from("afriflow_state").upsert(row,{onConflict:"key",ignoreDuplicates:true}).select("key");
+    if(saved.error){console.error("cod notification write failed",saved.error.code);continue;}
+    if(!saved.data?.length)continue;
+    internal++;
+    // Email remains opt-in at deployment, never expose provider credentials.
+    const apiKey=Deno.env.get("AFRIFLOW_ORDER_EMAIL_API_KEY"),sender=Deno.env.get("AFRIFLOW_ORDER_EMAIL_FROM");
+    if(apiKey&&sender&&Deno.env.get("AFRIFLOW_ORDER_EMAIL_ENABLED")==="true"){
+     try{
+      const response=await fetch("https://api.resend.com/emails",{method:"POST",headers:{"Authorization":"Bearer "+apiKey,"Content-Type":"application/json","Idempotency-Key":key},body:JSON.stringify({from:sender,to:[entry.email],subject:entry.subject,text:entry.message+"\\n\\n"+site}),signal:AbortSignal.timeout(5000)});
+      if(response.ok)emails++;else console.error("cod email provider status",response.status);
+     }catch(_e){console.error("cod email delivery request failed");}
+    }
+   }
+   return {internal,emails};
+  }catch(_e){console.error("cod notification failed");return {internal:0,emails:0};}
+ }
+ if(body.action==="pending_count"){
+  const r=await db.from("afriflow_cod_orders").select("id",{count:"exact",head:true}).eq("seller_user_id",user.id).eq("status","requested");
+  if(r.error)throw r.error;return out({count:r.count||0});
+ }
  async function eligible(seller:string,code:string){
   const [m,t]=await Promise.all([db.from("afriflow_partner_markets").select("country_code").eq("partner_user_id",seller).maybeSingle(),db.from("afriflow_partner_terms").select("is_enabled,commission_rate").eq("partner_user_id",seller).maybeSingle()]);
   if(m.error||t.error)throw Error("Vérification du vendeur indisponible.");
@@ -79,7 +123,7 @@ Deno.serve(async(req)=>{
   if(body.expectedCurrency!==seller.currency||body.expectedTotal!==total||body.expectedSeller!==seller.seller_name)return out({error:"Le montant, la devise ou le vendeur a changé. Actualisez le panier avant de confirmer."},409);
   const result=await db.from("afriflow_cod_orders").insert({buyer_user_id:user.id,request_id:body.requestId,seller_user_id:seller.seller_user_id,seller_name:seller.seller_name,country_code:country,customer_name:name,phone,address,items,subtotal,delivery_fee:seller.delivery_fee,currency:seller.currency,commission_rate:terms.commission_rate}).select("*").single();
   if(result.error?.code==="23505"){const repeat=await db.from("afriflow_cod_orders").select("*").eq("buyer_user_id",user.id).eq("request_id",body.requestId).single();if(repeat.error)throw repeat.error;return out({order:repeat.data});}
-  if(result.error)throw result.error;return out({order:result.data});
+  if(result.error)throw result.error;const alerts=await orderAlerts(result.data,"requested");return out({order:result.data,alerts});
  }
  if(body.action==="list"){
   let q=db.from("afriflow_cod_orders").select("*").order("created_at",{ascending:false}).limit(100);
@@ -97,7 +141,7 @@ Deno.serve(async(req)=>{
   const update:Record<string,unknown>={status:next};update[next+"_at"]=new Date().toISOString();
   const done=await db.from("afriflow_cod_orders").update(update).eq("id",o.id).eq("status",o.status).select("*").maybeSingle();
   if(done.error)throw done.error;if(!done.data)return out({error:"Statut modifié entre-temps."},409);
-  return out({order:done.data});
+  const alerts=await orderAlerts(done.data,next);return out({order:done.data,alerts});
  }
  return out({error:"Action inconnue."},400);
  }catch(e){console.error("cod",e instanceof Error?e.message:"database error");return out({error:"Service de commande momentanément indisponible."},500);}
