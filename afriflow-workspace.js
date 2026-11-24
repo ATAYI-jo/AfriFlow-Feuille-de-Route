@@ -192,7 +192,8 @@ function buildNav(){
   });
   $("navList").innerHTML=h;
   renderMarketplaceLabel();
-  $("admBox").innerHTML=isAdmin()?'<button type="button" class="p" id="addNav">＋ Ajouter un élément</button>':'';
+  $("admBox").innerHTML=isAdmin()?'<button type="button" class="p" id="addNav">＋ Ajouter un élément</button>':
+    window.loggedUserEmail?'<button type="button" class="p" id="fdrFooter">Échéances et alertes</button>':'';
 }
 function openNav(){$("side").classList.add("on");$("scrim").classList.add("on");$("menuBtn").setAttribute("aria-expanded","true")}
 function closeNav(){$("side").classList.remove("on");$("scrim").classList.remove("on");$("menuBtn").setAttribute("aria-expanded","false")}
@@ -230,6 +231,7 @@ $("side").addEventListener("click",function(e){
   var b=e.target.closest("button"); if(!b)return;
   if(b.dataset.id) show(b.dataset.id);
   else if(b.dataset.del){ if(isAdmin()&&confirm("Supprimer cet élément du menu et son contenu ?")){ var id=b.dataset.del; X.nav=X.nav.filter(function(n){return n.id!==id}); delete X.pages[id]; save(); if(cur===id)show("home"); else buildNav(); } }
+  else if(b.id==="fdrFooter"&&!isAdmin()&&window.AfriOpenDeadlines)window.AfriOpenDeadlines();
   else if(b.id==="addNav"&&isAdmin()) ask("Nouvel élément du menu",[{id:"n",l:"Nom"}],function(v){ if(!v.n)return "Donnez un nom à l'élément."; X.nav.push({id:"p"+Date.now().toString(36),n:v.n,e:""}); save(); buildNav(); });
 });
 var _lo=window.logout; if(typeof _lo==="function") window.logout=function(m){window.AfriNav.clear();show("home");_lo(m)};

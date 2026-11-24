@@ -401,7 +401,7 @@ window.ic=function(n,s){return '<svg class="ic"'+(s?' style="width:'+s+';height:
 </style>
 
 <script src="./afriflow-payment-simulation.js?v=1"></script>
-<script src="./afriflow-workspace.js?v=20261124-overlays-v1"></script>
+<script src="./afriflow-workspace.js?v=20261124-deadline-footer"></script>
 
 <!-- Synchronisation cloud (Supabase) : table afriflow_state -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -802,7 +802,7 @@ if(window.loggedUserEmail)setTimeout(pull,1500);
 .fdr-ban b{color:var(--c,var(--amber))}
 </style>
 
-<script src="./modules/roadmap/timeline.js?v=20261124-deadline-recipients"></script>
+<script src="./modules/roadmap/timeline.js?v=20261124-deadline-footer"></script>
   
 <style>
 #afBg{--n:0;--aT:rgb(90,169,230);--aB:rgb(207,233,255);position:fixed;inset:0;z-index:-3;pointer-events:none;overflow:hidden}
@@ -1431,7 +1431,7 @@ async function marketing(){
 }
 
 new MutationObserver(function(){
-  if(vh.querySelector(".fdr"))marketing().catch(function(){});
+  if(vh.querySelector('.fdr[data-fdr-view="marketing"]'))marketing().catch(function(){});
   if($("csGo"))decorate().catch(function(){});
 }).observe(vh,{childList:true});
 })();
@@ -3021,7 +3021,7 @@ body.af-profile-open #afCloudSyncBadge{visibility:hidden!important}
 
 <!-- Installed PWA device subscription for system notifications -->
 <script src="./afriflow-push.js" defer></script>
-<link rel="stylesheet" href="./afriflow-contrast-fix.css">
+<link rel="stylesheet" href="./afriflow-contrast-fix.css?v=20261124-deadline-footer">
 
 <!-- First-use terms and optional notification consent -->
 <link rel="stylesheet" href="./afriflow-first-use.css">

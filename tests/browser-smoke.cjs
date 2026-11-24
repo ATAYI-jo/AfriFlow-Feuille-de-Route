@@ -104,6 +104,26 @@ test('Anonymous page boots and locally hosted JavaScript loads', { timeout: 9000
     const wordSources = await page.evaluate(() =>
       [...document.querySelectorAll('script[src*="/modules/documents/word-editor.js"]')].length);
     assert.equal(wordSources, 1, 'Word editor script should load only once');
+    // Simulate workspace roles after the public-market checks.
+    await page.evaluate(() => {
+      window.USER_ROLE = 'reader';
+      window.loggedUserEmail = 'member@example.test';
+      window.onPending(0);
+    });
+    const footer = page.locator('#admBox #fdrFooter');
+    assert.equal(await footer.textContent(), 'Échéances et alertes');
+    assert.equal(await page.locator('#addNav').count(), 0);
+    await footer.dispatchEvent('click');
+    assert.equal(await page.locator('[data-fdr-view="deadlines"] h2').textContent(), 'Échéances et alertes');
+    assert.equal(await page.locator('#b-dl > button').getAttribute('aria-expanded'), 'true');
+    assert.equal(await page.locator('#mkDoc, #fdrGo').count(), 0);
+    assert.equal(await footer.getAttribute('aria-current'), 'page');
+    await page.locator('#navList [data-fdr-nav]').dispatchEvent('click');
+    await page.locator('[data-fdr-view="marketing"] #mkDoc').waitFor({state:'attached'});
+    assert.equal(await footer.getAttribute('aria-current'), null);
+    await page.evaluate(() => { window.USER_ROLE = 'admin'; window.onPending(0); });
+    assert.equal(await page.locator('#admBox #addNav').count(), 1);
+    assert.equal(await footer.count(), 0);
     await page.close();
   } finally {
     if (browser) await browser.close();
