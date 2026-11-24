@@ -74,7 +74,11 @@ document.addEventListener("keydown",function(e){
 },true);
 function shell(){
   var h=msgHost();++mailEpoch;
-  h.innerHTML='<div class="toolbar"><b>Messagerie</b><div class="toolbar-actions">'+(isAdm()&&window.DBX?'<button type="button" id="mDbx">Dropbox : '+(DBX.ready()?"connecté":"à connecter")+'</button>':'')+'<button type="button" class="p" id="mNew">Nouveau message</button><button type="button" id="mClose" aria-label="Fermer la messagerie">Fermer</button></div></div><div class="auth-tabs" style="max-width:380px"><button type="button" id="mIn" class="'+(tab==="in"?"on":"")+'">Réception</button><button type="button" id="mOut" class="'+(tab==="out"?"on":"")+'">Envoyés</button></div><div class="dgrid" id="msgList"><p style="color:var(--muted)">Chargement…</p></div>';
+  h.innerHTML='<div class="toolbar"><b>Messagerie</b><button type="button" id="mClose" aria-label="Fermer la messagerie">Fermer</button></div>'
+    +'<div class="mail-actions"><button type="button" class="p" id="mNew">Nouveau message</button>'
+    +(isAdm()&&window.DBX?'<button type="button" id="mDbx">Dropbox '+(DBX.ready()?"connecté":"à connecter")+'</button>':'')+'</div>'
+    +'<div class="auth-tabs" role="group" aria-label="Dossier"><button type="button" id="mIn" aria-pressed="'+(tab==="in")+'" class="'+(tab==="in"?"on":"")+'">Réception</button><button type="button" id="mOut" aria-pressed="'+(tab==="out")+'" class="'+(tab==="out"?"on":"")+'">Envoyés</button></div>'
+    +'<div class="dgrid" id="msgList"><p>Chargement…</p></div>';
   h.onclick=function(e){
     var b=e.target.closest("button"),c=e.target.closest(".dcard");
     if(b&&b.id==="mClose")closeMessages();
@@ -89,7 +93,7 @@ async function fill(){
   try{L=await rows(selectedTab==="in"?"msg:":"sent:")}catch(e){if(box.isConnected&&request===fillEpoch)box.textContent="Lecture impossible : "+(e.message||e);return}
   if(!box.isConnected||box!==$("msgList")||request!==fillEpoch||selectedTab!==tab)return;W=L;
   box.innerHTML=L.length?L.map(function(x,i){var v=x.value,who=tab==="in"?(v.fromName||v.from):v.to;
-    return '<div class="dcard" data-i="'+i+'" style="cursor:pointer"><b>'+(tab==="in"&&!v.read?"Non lu · ":"")+esc(v.subject||"(sans objet)")+'</b><small>'+(tab==="in"?"De : ":"À : ")+esc(who)+' · '+fdt(v.ts)+'</small><small>'+(v.nf?"Pièce jointe · ":"")+esc(String(v.body||"").slice(0,90))+'</small></div>'}).join(""):'<p style="color:var(--muted)">Aucun message.</p>';
+    return '<button type="button" class="dcard" data-i="'+i+'" style="cursor:pointer"><b>'+(tab==="in"&&!v.read?"Non lu · ":"")+esc(v.subject||"(sans objet)")+'</b><small>'+(tab==="in"?"De : ":"À : ")+esc(who)+' · '+fdt(v.ts)+'</small><small>'+(v.nf?"Pièce jointe · ":"")+esc(String(v.body||"").slice(0,90))+'</small></button>'}).join(""):'<p style="color:var(--muted)">Aucun message.</p>';
 }
 window.renMsg=function(silent){if(!me()||!S())return;if(silent){if($("msgList"))fill();return;}var opened=!!$("msgBox");shell();if(!opened)$("msgBox").focus({preventScroll:true});fill()};
 
@@ -129,7 +133,7 @@ async function compose(to,subj){
   U=U.filter(function(u){return u.email&&u.email!==me()});
   if(to)sel[to]=1;
   h.innerHTML='<div class="toolbar"><b>Nouveau message</b><div class="toolbar-actions"><button type="button" id="mBack">← Annuler</button></div></div><div class="journal-article"><div class="fm">'
-  +'<label>Destinataires <span id="mCnt" style="font-weight:400"></span></label>'
+  +'<label for="mQ">Destinataires <span id="mCnt" style="font-weight:400"></span></label>'
   +'<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:6px"><input id="mQ" placeholder="Rechercher un nom ou un email…" style="flex:1;min-width:160px" autocomplete="off"><button type="button" id="mAll">Tout sélectionner</button><button type="button" id="mNone">Aucun</button></div>'
   +'<div id="mList" style="max-height:210px;overflow:auto;border:1px solid var(--line);border-radius:10px;padding:8px"></div>'
   +'<label for="mSubj">Objet</label><input id="mSubj" maxlength="120">'
@@ -140,7 +144,7 @@ async function compose(to,subj){
   function drawList(){
     var q=$("mQ").value.trim().toLowerCase();
     var L=U.filter(function(u){return !q||(String(u.name||"")+" "+u.email).toLowerCase().indexOf(q)>-1});
-    $("mList").innerHTML=L.length?L.map(function(u){return '<label class="rq"><input type="checkbox" value="'+esc(u.email)+'"'+(sel[u.email]?' checked':'')+'> '+esc(u.name||u.email)+' · '+esc(u.email)+'</label>'}).join(""):'<small style="color:var(--muted)">'+(U.length?"Aucun résultat.":"Aucun autre compte inscrit pour le moment.")+'</small>';
+    $("mList").innerHTML=L.length?L.map(function(u){return '<label class="rq"><input type="checkbox" value="'+esc(u.email)+'"'+(sel[u.email]?' checked':'')+'> '+esc(u.name||u.email)+(u.name&&u.name!==u.email?' · '+esc(u.email):'')+'</label>'}).join(""):'<small style="color:var(--muted)">'+(U.length?"Aucun résultat.":"Aucun autre compte inscrit pour le moment.")+'</small>';
     cnt();
   }
   function cnt(){var n=Object.keys(sel).length;$("mCnt").textContent=n?"· "+n+" sélectionné"+(n>1?"s":""):""}

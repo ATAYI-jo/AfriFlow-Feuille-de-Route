@@ -282,7 +282,7 @@ function renderDeadlinePage(){
     +'<div id="fdrErr" role="alert" style="color:#c0392b;min-height:1.2em;font-size:.88rem"></div>'
     +'<button type="button" class="p" id="fdrGo">Créer l\'échéance et alerter les inscrits</button>':'';
   var urgent=cache.some(function(i){return !i.done&&daysLeft(i.due)<=7});
-  $("viewHost").innerHTML='<div class="fdr"><div class="fdr-hero"><h2>Échéances et alertes</h2><p>Suivez les actions à venir et les rappels AfriFloW.</p></div><h3>Échéances et alertes</h3>'+bar("dl","Échéances et alertes","…","…","var(--todo)",form+'<div id="fdrDl"></div>',{open:urgent,metaId:"fdrDlMeta",tagId:"fdrDlTag"})+'</div>';
+  $("viewHost").innerHTML='<div class="fdr"><div class="fdr-hero"><h2>Échéances et alertes</h2><p>Suivez les actions à venir et les rappels AfriFloW.</p></div>'+bar("dl","Échéances et alertes","…","…","var(--todo)",form+'<div id="fdrDl"></div>',{open:urgent,metaId:"fdrDlMeta",tagId:"fdrDlTag"})+'</div>';
   $("viewHost").onclick=onClick;
   var target=$("fdrTarget"),people=$("fdrPeople");if(target&&people)target.onchange=function(){people.style.display=target.value==="selected"?"":"none";if(target.value==="selected")people.focus();};
   drawBanner(cache);drawList();tick();
