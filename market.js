@@ -451,7 +451,7 @@
   function disputeEvidenceHtml(disputeId,files){
     var items=(files||[]).filter(function(f){return f.dispute_id===disputeId});
     return items.length?'<div class="af-dispute-evidence-list"><strong>Pièces jointes</strong>'
-      +items.map(function(f){return '<button type="button" class="af-dispute-evidence-link" data-dispute-file="'+esc(f.object_path||"")+'" data-dropbox-file="'+esc(f.id||"")+'" data-dispute-id="'+esc(disputeId)+'">'+icon(f.content_type.startsWith("video/")?"video":"camera")+'<span>'+esc(f.file_name)+'</span>'+'</button>';}).join("")
+      +items.map(function(f){return '<button type="button" class="af-dispute-evidence-link" data-dispute-file="'+esc(f.object_path||"")+'" data-dropbox-file="'+esc(f.id||"")+'" data-dispute-id="'+esc(disputeId)+'">'+icon(String(f.content_type||"").startsWith("video/")?"video":"camera")+'<span>'+esc(f.file_name)+'</span>'+'</button>';}).join("")
       +'</div>':"";
   }
   function bindDisputeEvidenceLinks(root){
@@ -914,12 +914,12 @@
       var notices={order:"Demande",sale:"Vente",dispute:"Contestation"};
       function countryShape(code){
         if(!/^[A-Z]{2}$/.test(code))return icon("globe");
-        return '<img alt="" style="width:42px;height:42px;object-fit:contain;flex-shrink:0" src="https://raw.githubusercontent.com/djaiss/mapsicon/master/all/'+code.toLowerCase()+'/vector.svg" referrerpolicy="no-referrer">';
+        return '<span data-country-outline="'+code+'" style="display:inline-block;width:48px;height:48px;flex:0 0 48px;color:#20543c">'+icon("globe")+'</span>';
       }
       function detailButton(kind,index,label,ico){
         return '<button type="button" class="af-market-secondary" data-market-detail="'+kind+'" data-market-index="'+index+'" style="cursor:pointer;display:inline-flex;align-items:center;gap:7px">'+icon(ico)+esc(label)+'</button>';
       }
-      function openMarketDetail(kind,index){
+      async function openMarketDetail(kind,index){
         if(!isAdmin())return;
         var g=index===""?null:groupList[Number(index)];
         var rows={markets:groupList.filter(function(x){return x.name!=="Marché non attribué"}),partners:g?g.partners:partners,orders:(g?g.orders:orders).filter(isPendingOrder),sales:(g?g.sales:reports).filter(isPendingSale),disputes:(g?g.disputes:disputes).filter(isOpenDispute),alerts:g?g.events:unread}[kind]||[];
@@ -930,10 +930,26 @@
         var m=modal('<button type="button" class="af-modal-x" aria-label="Fermer">×</button><h3>'+esc(title)+(g?' · '+esc(g.name):'')+'</h3><div style="max-height:65vh;overflow:auto">'+(rows.length?rows.map(function(row){
           var product=Array.isArray(row.product)?row.product[0]:row.product;
           var body=kind==="markets"?line("Marché",row.name)+line("Pays",row.code)+line("Partenaires",row.partners.length):kind==="partners"?line("Partenaire",row.email)+line("Marché",(marketMap[row.user_id]||{}).name||"Non attribué"):line("Partenaire",person(row.partner_user_id))+line("Date",row.created_at?new Date(row.created_at).toLocaleString("fr-FR"):null)+line("Statut",labels[row.status]||row.status)+line("Produit",product&&product.name)+line("Quantité demandée",row.quantity_requested)+line("Chiffre d’affaires",row.gross_amount==null?null:partnerMoney(row.gross_amount,row.currency))+line("Catégorie",row.category?disputeType(row.category):null)+line("Description",row.description)+line("Allocation",row.order_id)+line("Lot",row.batch_reference)+line("Réponse AfriFloW",row.admin_response)+line("Événement",notices[row.source_type]||row.source_type);
-          return '<article class="af-market-summary-partner" style="margin:10px 0;padding:14px">'+body+'</article>';
+          return '<article class="af-market-summary-partner" style="margin:10px 0;padding:14px">'+body+(kind==="disputes"?'<div data-market-evidence="'+esc(row.id)+'" style="margin-top:14px;border-top:1px solid #c7d8cd;padding-top:10px"><strong>Pièces jointes</strong><p>Chargement…</p></div>':'')+'</article>';
         }).join(""):'<p>Aucun élément correspondant.</p>')+'</div>');
         m.querySelector(".af-modal-x").onclick=closeModal;
-        m.querySelector(".af-modal-x").focus();
+        var close=m.querySelector(".af-modal-x");close.style.setProperty("color","#20543c","important");close.style.setProperty("font-size","28px","important");close.focus();
+        if(kind==="disputes"&&rows.length){
+          try{
+            var ids=rows.map(function(row){return row.id});
+            var files=await Promise.all([
+              sb().from("afriflow_partner_dispute_files").select("dispute_id,object_path,file_name,content_type").in("dispute_id",ids),
+              sb().from("afriflow_partner_dropbox_files").select("id,dispute_id,dropbox_path,file_name,content_type").in("dispute_id",ids)
+            ]);
+            if(!m.isConnected)return;
+            var all=(files[0].data||[]).concat(files[1].data||[]);
+            m.querySelectorAll("[data-market-evidence]").forEach(function(section){
+              var attached=all.filter(function(f){return f.dispute_id===section.dataset.marketEvidence});
+              section.innerHTML=(attached.length?disputeEvidenceHtml(section.dataset.marketEvidence,attached):'<strong>Pièces jointes</strong>')+(files.some(function(f){return !!f.error})?'<p>Certaines pièces jointes sont indisponibles.</p>':attached.length?'':'<p>Aucune pièce jointe enregistrée.</p>');
+            });
+            bindDisputeEvidenceLinks(m);
+          }catch(error){m.querySelectorAll("[data-market-evidence]").forEach(function(section){section.textContent="Impossible de charger les pièces jointes.";});}
+        }
       }
       host.innerHTML='<div class="af-market-overview">'
         +'<div class="af-market-kpis">'+summary.map(function(info){return '<button type="button" data-market-detail="'+info[0]+'" data-market-index="" class="af-market-kpi" style="cursor:pointer;text-align:left">'+icon(iconStats[info[0]])+'<span>'+esc(info[1])+'</span><strong>'+counts[info[0]]+'</strong></button>';}).join("")+'</div>'
@@ -964,7 +980,28 @@
             }).join("")+'</div></details></section>';
         }).join(""):'<p class="af-market-empty">Aucun marché ni partenaire enregistré.</p>')+'</div>';
       host.querySelectorAll("[data-market-detail]").forEach(function(button){button.onclick=function(){openMarketDetail(button.dataset.marketDetail,button.dataset.marketIndex);};});
-      host.querySelectorAll(".af-market-summary-country img").forEach(function(img){img.onerror=function(){var span=document.createElement("span");span.innerHTML=icon("globe");img.replaceWith(span);};});
+      host.querySelectorAll("[data-country-outline]").forEach(async function(node){
+        try{
+          var code=node.dataset.countryOutline.toLowerCase();
+          var response=await fetch("https://raw.githubusercontent.com/djaiss/mapsicon/master/all/"+code+"/vector.svg",{credentials:"omit"});
+          if(!response.ok)throw Error("Contour indisponible");
+          var doc=new DOMParser().parseFromString(await response.text(),"image/svg+xml"),source=doc.documentElement;
+          if(source.localName!=="svg")return;
+          var ns="http://www.w3.org/2000/svg",svg=document.createElementNS(ns,"svg");
+          var vb=source.getAttribute("viewBox");if(!vb){var w=parseFloat(source.getAttribute("width")),h=parseFloat(source.getAttribute("height"));if(!(w>0&&h>0))return;vb="0 0 "+w+" "+h;}
+          svg.setAttribute("viewBox",vb);svg.setAttribute("width","48");svg.setAttribute("height","48");svg.setAttribute("aria-hidden","true");svg.setAttribute("fill","none");svg.setAttribute("stroke","currentColor");svg.setAttribute("stroke-linejoin","round");svg.setAttribute("stroke-linecap","round");svg.style.overflow="visible";
+          function copy(parent,target){
+            Array.from(parent.children).forEach(function(child){
+              var tag=child.localName;if(!["g","path","polygon","polyline","circle","ellipse","rect"].includes(tag))return;
+              var el=document.createElementNS(ns,tag);
+              ["d","points","transform","x","y","width","height","rx","ry","cx","cy","r"].forEach(function(attr){if(child.hasAttribute(attr))el.setAttribute(attr,child.getAttribute(attr));});
+              if(tag!=="g"){el.setAttribute("vector-effect","non-scaling-stroke");el.setAttribute("stroke-width","1.6");}
+              target.appendChild(el);if(tag==="g")copy(child,el);
+            });
+          }
+          copy(source,svg);if(svg.querySelector("path,polygon,polyline,circle,ellipse,rect")&&node.isConnected)node.replaceChildren(svg);
+        }catch(error){}
+      });
       var select=host.querySelector("#afMarketStatusFilter");
       if(select)select.onchange=function(){
         host.querySelectorAll("[data-market-summary]").forEach(function(card){
