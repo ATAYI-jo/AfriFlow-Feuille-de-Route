@@ -81,6 +81,9 @@ function frame(){
   var w=world(p),key=w.t+w.b+w.n.toFixed(2)+(home?"h":"o")+Math.round(p*100);
   if(key===lastKey)return;lastKey=key;
   var s=root.style;s.setProperty("--aT",w.t);s.setProperty("--aB",w.b);s.setProperty("--n",w.n.toFixed(3));
+  // Match the native page canvas to the bottom of the landscape during overscroll.
+  var ground=[63,138,69].map(function(v,i){return Math.round(mix(v,[10,16,48][i],w.n*.62))});
+  document.documentElement.style.setProperty("--af-scroll-ground","rgb("+ground.join(",")+")");
   root.dataset.home=home?"1":"0";
   var sx=(.06+.88*p)*W-23,sy=(.03+(1-Math.sin(Math.PI*p))*.2)*H;
   $("afSun").style.transform="translate("+sx.toFixed(0)+"px,"+sy.toFixed(0)+"px)";$("afSun").style.opacity=clamp(1-w.n*2.2,0,1);
