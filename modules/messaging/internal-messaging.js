@@ -2,7 +2,7 @@
 /* ===== Messagerie interne : envoi groupé, pièces jointes, archivage Dropbox ===== */
 (function(){
 var tab="in",unread=0,first=true,W=[],$=function(i){return document.getElementById(i)};
-var MAX_FILES=5,MAX_TOTAL=2.5*1024*1024;
+var MAX_FILES=5,MAX_TOTAL=2.5*1024*1024,mailReturnFocus=null,mailEpoch=0,fillEpoch=0;
 function T(){return window.__TABLE||"afriflow_state"} function S(){return window.__sb}
 function me(){return String(loggedUserEmail||"").toLowerCase()}
 function isAdm(){return window.USER_ROLE==="admin"}
@@ -22,7 +22,7 @@ async function previewAttachment(f){
   if(!previewable(f))throw new Error("Aperçu non disponible pour ce format.");
   closePreview();var p=document.createElement("section");p.id="mPreview";p.className="m-preview";p.setAttribute("role","dialog");p.setAttribute("aria-modal","true");
   p.innerHTML='<div class="m-preview-card"><div class="m-preview-head"><b>'+esc(f.n||"Pièce jointe")+'</b><button type="button" id="mPreviewClose" aria-label="Fermer l’aperçu">Fermer</button></div><div id="mPreviewBody" class="m-preview-body"></div><div class="m-preview-actions"><button type="button" class="p" id="mPreviewDl">Télécharger</button></div></div>';
-  document.body.appendChild(p);var body=document.getElementById("mPreviewBody"),type=String(f.t||"").toLowerCase();
+  p.tabIndex=-1;document.body.appendChild(p);p.focus({preventScroll:true});var body=document.getElementById("mPreviewBody"),type=String(f.t||"").toLowerCase();
   if(/^image\//.test(type)||/\.(png|jpe?g|gif|webp|svg)$/i.test(f.n||"")){var im=document.createElement("img");im.src=f.d;im.alt=f.n||"Aperçu de la pièce jointe";body.appendChild(im)}
   else if(type==="application/pdf"||/\.pdf$/i.test(f.n||"")){var fr=document.createElement("iframe");fr.src=f.d;fr.title=f.n||"Aperçu PDF";fr.setAttribute("sandbox","");body.appendChild(fr)}
   else {var pre=document.createElement("pre");pre.textContent=await dataBlob(f.d).text();body.appendChild(pre)}
@@ -44,10 +44,36 @@ async function poll(){
     if($("msgList"))window.renMsg(true);
   }catch(e){}
 }
-function msgHost(){var h=$("msgBox");if(!h){h=document.createElement("section");h.id="msgBox";h.className="msg-box";h.setAttribute("role","dialog");h.setAttribute("aria-modal","true");h.setAttribute("aria-label","Messagerie AfriFloW");document.body.appendChild(h)}return h}
-function closeMessages(){var h=$("msgBox");if(h)h.remove()}
+function msgHost(){
+  var h=$("msgBox");if(h)return h;
+  mailReturnFocus=document.activeElement;
+  var layer=document.createElement("div");layer.id="afMailLayer";
+  h=document.createElement("section");h.id="msgBox";h.className="msg-box";h.tabIndex=-1;
+  h.setAttribute("role","dialog");h.setAttribute("aria-modal","true");h.setAttribute("aria-label","Messagerie AfriFloW");
+  layer.appendChild(h);document.body.appendChild(layer);
+  document.body.classList.add("af-mail-open");
+  return h;
+}
+function closeMessages(restore){
+  ++mailEpoch;++fillEpoch;closePreview();
+  var layer=$("afMailLayer");if(layer)layer.remove();
+  else {var h=$("msgBox");if(h)h.remove();}
+  document.body.classList.remove("af-mail-open");
+  if(restore!==false){var target=mailReturnFocus;if(!target||!target.isConnected||!target.getClientRects().length)target=$("menuBtn");if(target&&target.getClientRects().length)target.focus({preventScroll:true});}
+  mailReturnFocus=null;
+}
+window.AfriCloseMessages=closeMessages;
+document.addEventListener("keydown",function(e){
+  var layer=$("afMailLayer");if(!layer||$("afModal")||$("xm")&&$("xm").classList.contains("on")||$("auth-screen")&&!$("auth-screen").classList.contains("off")||$("afPwaHelp")&&!$("afPwaHelp").hidden)return;
+  var dialog=$("mPreview")||$("msgBox");
+  if(e.key==="Escape"){e.preventDefault();e.stopImmediatePropagation();if($("mPreview")){closePreview();$("msgBox").focus({preventScroll:true});}else closeMessages();return;}
+  if(e.key!=="Tab")return;
+  var items=Array.from(dialog.querySelectorAll('button:not([disabled]),a[href],input:not([disabled]),select:not([disabled]),textarea:not([disabled]),[tabindex="0"]')).filter(function(n){return n.getClientRects().length;});
+  if(!items.length){e.preventDefault();dialog.focus();return;}
+  if(!dialog.contains(document.activeElement)||e.shiftKey&&document.activeElement===items[0]||!e.shiftKey&&document.activeElement===items[items.length-1]){e.preventDefault();(e.shiftKey?items[items.length-1]:items[0]).focus();}
+},true);
 function shell(){
-  var h=msgHost();
+  var h=msgHost();++mailEpoch;
   h.innerHTML='<div class="toolbar"><b>Messagerie</b><div class="toolbar-actions">'+(isAdm()&&window.DBX?'<button type="button" id="mDbx">Dropbox : '+(DBX.ready()?"connecté":"à connecter")+'</button>':'')+'<button type="button" class="p" id="mNew">Nouveau message</button><button type="button" id="mClose" aria-label="Fermer la messagerie">Fermer</button></div></div><div class="auth-tabs" style="max-width:380px"><button type="button" id="mIn" class="'+(tab==="in"?"on":"")+'">Réception</button><button type="button" id="mOut" class="'+(tab==="out"?"on":"")+'">Envoyés</button></div><div class="dgrid" id="msgList"><p style="color:var(--muted)">Chargement…</p></div>';
   h.onclick=function(e){
     var b=e.target.closest("button"),c=e.target.closest(".dcard");
@@ -59,18 +85,18 @@ function shell(){
   };
 }
 async function fill(){
-  var L;
-  try{L=await rows(tab==="in"?"msg:":"sent:")}catch(e){if($("msgList"))$("msgList").textContent="Lecture impossible : "+(e.message||e);return}
-  var box=$("msgList");if(!box)return;W=L;
+  var box=$("msgList"),request=++fillEpoch,selectedTab=tab,L;if(!box)return;
+  try{L=await rows(selectedTab==="in"?"msg:":"sent:")}catch(e){if(box.isConnected&&request===fillEpoch)box.textContent="Lecture impossible : "+(e.message||e);return}
+  if(!box.isConnected||box!==$("msgList")||request!==fillEpoch||selectedTab!==tab)return;W=L;
   box.innerHTML=L.length?L.map(function(x,i){var v=x.value,who=tab==="in"?(v.fromName||v.from):v.to;
     return '<div class="dcard" data-i="'+i+'" style="cursor:pointer"><b>'+(tab==="in"&&!v.read?"Non lu · ":"")+esc(v.subject||"(sans objet)")+'</b><small>'+(tab==="in"?"De : ":"À : ")+esc(who)+' · '+fdt(v.ts)+'</small><small>'+(v.nf?"Pièce jointe · ":"")+esc(String(v.body||"").slice(0,90))+'</small></div>'}).join(""):'<p style="color:var(--muted)">Aucun message.</p>';
 }
-window.renMsg=function(silent){if(!silent||!$("msgList"))shell();fill()};
+window.renMsg=function(silent){if(!me()||!S())return;if(silent){if($("msgList"))fill();return;}var opened=!!$("msgBox");shell();if(!opened)$("msgBox").focus({preventScroll:true});fill()};
 
 async function showAtt(v,x){
   var box=$("mAtt");if(!box||!v.att)return;
   var r=await S().from(T()).select("value").eq("key","att:"+v.att).maybeSingle();
-  box=$("mAtt");if(!box)return;
+  if(!box.isConnected||box!==$("mAtt"))return;
   var fs=(r.data&&r.data.value&&r.data.value.files)||[];
   if(r.error||!fs.length){box.innerHTML='<small style="color:var(--muted)">Pièces jointes indisponibles.</small>';return}
   box.innerHTML='<h4 style="margin:14px 0 6px;font-family:var(--font-family)">Pièces jointes ('+fs.length+')</h4>'+fs.map(function(f,i){return '<div class="file-row"><div><b>'+esc(f.n||"Fichier")+'</b><small style="color:var(--muted)"> · '+fsz(f.s)+'</small></div><div class="file-actions">'+(previewable(f)?'<button type="button" data-mpreview="'+i+'">Aperçu</button>':'')+'<button type="button" data-mdownload="'+i+'">Télécharger</button></div></div>'}).join("")+'<div id="mDbxNote" style="font-size:.85rem;color:var(--muted);margin-top:6px"></div>';
@@ -88,7 +114,7 @@ async function showAtt(v,x){
   }
 }
 function openMsg(i){
-  var x=W[i];if(!x)return;var v=x.value,h=msgHost();
+  var x=W[i];if(!x)return;var v=x.value,h=msgHost();++mailEpoch;
   var grp=v.group&&v.group.length>1?'<p style="color:var(--muted);margin:0 0 8px;font-size:.9rem">Envoyé à '+v.group.length+' personnes : '+esc(v.group.join(", "))+'</p>':'';
   h.innerHTML='<div class="toolbar"><b>'+esc(v.subject||"(sans objet)")+'</b><div class="toolbar-actions"><button type="button" id="mBack">← Retour</button>'+(tab==="in"?'<button type="button" class="p" id="mRep">Répondre</button>':'')+'</div></div><div class="journal-article" id="mRead"><p style="color:var(--muted);margin-top:0">'+(tab==="in"?"De : "+esc(v.fromName||v.from)+" ("+esc(v.from)+")":"À : "+esc(v.to))+' · '+fdt(v.ts)+'</p>'+grp+'<div style="white-space:pre-wrap;overflow-wrap:anywhere">'+esc(v.body)+'</div>'+(v.att?'<div id="mAtt"><small style="color:var(--muted)">Chargement des pièces jointes…</small></div>':'')+'</div>';
   $("mBack").onclick=function(){window.renMsg()};
@@ -97,8 +123,9 @@ function openMsg(i){
   if(v.att)showAtt(v,x).catch(function(){if($("mAtt"))$("mAtt").textContent="Pièces jointes indisponibles."});
 }
 async function compose(to,subj){
-  var h=msgHost(),U=[],F=[],sel={};
+  var h=msgHost(),U=[],F=[],sel={},epoch=++mailEpoch;
   try{U=await AFRI.listMembers()}catch(e){if(window.toast)toast("Annuaire indisponible : "+(e.message||e))}
+  if(!h.isConnected||epoch!==mailEpoch)return;
   U=U.filter(function(u){return u.email&&u.email!==me()});
   if(to)sel[to]=1;
   h.innerHTML='<div class="toolbar"><b>Nouveau message</b><div class="toolbar-actions"><button type="button" id="mBack">← Annuler</button></div></div><div class="journal-article"><div class="fm">'
@@ -157,8 +184,8 @@ async function compose(to,subj){
         try{for(var i=0;i<files.length;i++)await DBX.upload("Messagerie/Envoyés",files[i].n,dataBlob(files[i].d));if(window.toast)toast("Pièces jointes archivées dans Dropbox")}catch(e){if(window.toast)toast("Archivage Dropbox impossible : "+(e.message||e))}
       }
       if(window.toast)toast(rec.length>1?"Message envoyé à "+rec.length+" personnes":"Message envoyé");
-      tab="out";window.renMsg();
-    }catch(e){btn.disabled=false;$("mErr").textContent="Envoi impossible : "+(e.message||e)}
+      if(h.isConnected&&epoch===mailEpoch){tab="out";window.renMsg();}
+    }catch(e){btn.disabled=false;if(h.isConnected&&epoch===mailEpoch&&$("mErr"))$("mErr").textContent="Envoi impossible : "+(e.message||e)}
   };
 }
 var prev=window.onRole;

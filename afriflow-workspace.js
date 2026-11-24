@@ -199,13 +199,21 @@ function closeNav(){$("side").classList.remove("on");$("scrim").classList.remove
 function show(id,options){
   options=options||{};
   var preserving=!!options.restore;
+  // Messaging is a modal, not a workspace page. Keep the current page intact.
+  if(id==="messages"){
+    closeNav();
+    if(preserving&&previousView()&&previousView().id==="messages")rememberView(cur==="messages"?"home":cur);
+    if(window.renMsg)window.renMsg();
+    return;
+  }
+  if(window.AfriCloseMessages&&$("msgBox"))window.AfriCloseMessages(false);
   wkClean(); cur=id; sel=null; W.tv=null; W.pv=null; W.tvAt=0;
   if(id==="market"&&window.AfriMarket){rememberView("market");window.AfriMarket.open({kind:"workspace",market:{access_mode:"collaborator"}});buildNav();closeNav();return}
   if((id==="admin"||id==="partners")&&!isAdmin())cur=id="home";
   rememberView(id);
   $("view-home").style.display=id==="home"?"":"none";
   $("viewHost").style.display=id==="home"?"none":"";
-  if(id==="admin"){adminSection="overview";renAdmin();}else if(id==="partners")renPartners();else if(id==="messages"){if(window.renMsg)window.renMsg()}
+  if(id==="admin"){adminSection="overview";renAdmin();}else if(id==="partners")renPartners();
   else if(id!=="home"){
     var run=function(){ if(id==="treasury")renTre(); else renEd(id) };
     if(cep(id))run(); else viewPub(id,function(p){ W.tvAt=p.at; if(id==="treasury")W.tv=p.tre; else W.pv=p; run() });
