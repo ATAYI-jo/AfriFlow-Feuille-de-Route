@@ -248,3 +248,16 @@ body:has(#auth-screen:not(.off)) :is(#aiBtn,#memberHub,#afIntroAdminPreviewBtn){
 
 /* Respect the user's explicit choice to switch off the animated landscape. */
 body.af-off #auth-screen:not(.off){background:var(--bg)!important;-webkit-backdrop-filter:none;backdrop-filter:none}
+
+
+/* Keep native scroll boundaries from exposing an unpainted canvas.
+   The body remains transparent and isolated so the fixed landscape stays visible. */
+html{overscroll-behavior-y:none;background-color:var(--bg)}
+body{overscroll-behavior-y:none}
+html:has(body:not(.af-off)>#afBg){background-color:var(--af-scroll-ground,#3f8a45)}
+html[data-theme="dark"]:has(body:not(.af-off)>#afBg){background-color:color-mix(in srgb,var(--af-scroll-ground,#3f8a45) 72%,#000)}
+@media(prefers-color-scheme:dark){
+ html:not([data-theme="light"]):has(body:not(.af-off)>#afBg){background-color:color-mix(in srgb,var(--af-scroll-ground,#3f8a45) 72%,#000)}
+}
+/* Preserve the existing fixed viewport layer, including on installed iOS PWAs. */
+body:not(.af-off)>#afBg{inset:0;width:auto;height:auto}
