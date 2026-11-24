@@ -40,7 +40,7 @@ async function identifySender(db:any,value:Record<string,unknown>,id:string):Pro
   if(error||!profile?.user_id)return {name:"AfriFloW"};
   const {data:auth,error:authError}=await db.auth.admin.getUserById(profile.user_id);
   if(authError || !auth?.user?.email_confirmed_at || validEmail(auth.user.email)!==email)return {name:"AfriFloW"};
-  const name=line([profile.first_name,profile.last_name].filter(Boolean).join(" "),100)||email;
+  const name=line(profile.first_name,100).split(/\s+/u)[0] || "Membre";
   const {data:directory}=await db.from("afriflow_member_directory").select("avatar_kind,avatar_value").eq("user_id",profile.user_id).maybeSingle();
   return {name,address:email,photo:publicPhoto(directory?.avatar_kind,directory?.avatar_value)};
 }
