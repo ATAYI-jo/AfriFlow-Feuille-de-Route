@@ -867,7 +867,7 @@
         sb().from("afriflow_partner_markets").select("partner_user_id,market_name,country_code,updated_at"),
         sb().from("afriflow_partner_events").select("id,partner_user_id,source_type,created_at").order("created_at",{ascending:false}).limit(500),
         sb().from("afriflow_partner_event_reads").select("event_id,admin_user_id").limit(1000),
-        sb().from("afriflow_partner_disputes").select("id,partner_user_id,status,created_at").order("created_at",{ascending:false}).limit(500),
+        sb().from("afriflow_partner_disputes").select("id,partner_user_id,order_id,category,description,batch_reference,status,admin_response,created_at").order("created_at",{ascending:false}).limit(500),
         sb().auth.getUser()
       ]);
       if(!host.isConnected)return;
@@ -912,20 +912,41 @@
       var summary=[["markets","Marchés"],["partners","Partenaires"],["orders","Demandes à examiner"],
         ["sales","Ventes à contrôler"],["disputes","Contestations ouvertes"],["alerts","Notifications"]];
       var notices={order:"Demande",sale:"Vente",dispute:"Contestation"};
+      function countryShape(code){
+        if(!/^[A-Z]{2}$/.test(code))return icon("globe");
+        return '<img alt="" style="width:42px;height:42px;object-fit:contain;flex-shrink:0" src="https://raw.githubusercontent.com/djaiss/mapsicon/master/all/'+code.toLowerCase()+'/vector.svg" referrerpolicy="no-referrer">';
+      }
+      function detailButton(kind,index,label,ico){
+        return '<button type="button" class="af-market-secondary" data-market-detail="'+kind+'" data-market-index="'+index+'" style="cursor:pointer;display:inline-flex;align-items:center;gap:7px">'+icon(ico)+esc(label)+'</button>';
+      }
+      function openMarketDetail(kind,index){
+        if(!isAdmin())return;
+        var g=index===""?null:groupList[Number(index)];
+        var rows={markets:groupList.filter(function(x){return x.name!=="Marché non attribué"}),partners:g?g.partners:partners,orders:(g?g.orders:orders).filter(isPendingOrder),sales:(g?g.sales:reports).filter(isPendingSale),disputes:(g?g.disputes:disputes).filter(isOpenDispute),alerts:g?g.events:unread}[kind]||[];
+        var labels={requested:"À valider",approved:"Validée",supplied:"Prête à vendre",rejected:"Refusée",closed:"Clôturée",pending_review:"À contrôler",validated:"Validée",settled:"Réglée",open:"Ouverte",in_review:"En cours",resolved:"Résolue"};
+        function line(label,value){return value==null||value===""?"":'<p style="margin:6px 0;overflow-wrap:anywhere"><strong>'+esc(label)+' :</strong> '+esc(value)+'</p>';}
+        function person(id){return (partners.find(function(p){return p.user_id===id})||{}).email||id;}
+        var title=(summary.find(function(x){return x[0]===kind})||[])[1]||"Détails";
+        var m=modal('<button type="button" class="af-modal-x" aria-label="Fermer">×</button><h3>'+esc(title)+(g?' · '+esc(g.name):'')+'</h3><div style="max-height:65vh;overflow:auto">'+(rows.length?rows.map(function(row){
+          var product=Array.isArray(row.product)?row.product[0]:row.product;
+          var body=kind==="markets"?line("Marché",row.name)+line("Pays",row.code)+line("Partenaires",row.partners.length):kind==="partners"?line("Partenaire",row.email)+line("Marché",(marketMap[row.user_id]||{}).name||"Non attribué"):line("Partenaire",person(row.partner_user_id))+line("Date",row.created_at?new Date(row.created_at).toLocaleString("fr-FR"):null)+line("Statut",labels[row.status]||row.status)+line("Produit",product&&product.name)+line("Quantité demandée",row.quantity_requested)+line("Chiffre d’affaires",row.gross_amount==null?null:partnerMoney(row.gross_amount,row.currency))+line("Catégorie",row.category?disputeType(row.category):null)+line("Description",row.description)+line("Allocation",row.order_id)+line("Lot",row.batch_reference)+line("Réponse AfriFloW",row.admin_response)+line("Événement",notices[row.source_type]||row.source_type);
+          return '<article class="af-market-summary-partner" style="margin:10px 0;padding:14px">'+body+'</article>';
+        }).join(""):'<p>Aucun élément correspondant.</p>')+'</div>');
+        m.querySelector(".af-modal-x").onclick=closeModal;
+        m.querySelector(".af-modal-x").focus();
+      }
       host.innerHTML='<div class="af-market-overview">'
-        +'<div class="af-market-kpis">'+summary.map(function(info){return '<div class="af-market-kpi">'+icon(iconStats[info[0]])+'<span>'+esc(info[1])+'</span><strong>'+counts[info[0]]+'</strong></div>';}).join("")+'</div>'
+        +'<div class="af-market-kpis">'+summary.map(function(info){return '<button type="button" data-market-detail="'+info[0]+'" data-market-index="" class="af-market-kpi" style="cursor:pointer;text-align:left">'+icon(iconStats[info[0]])+'<span>'+esc(info[1])+'</span><strong>'+counts[info[0]]+'</strong></button>';}).join("")+'</div>'
         +'<div class="af-market-overview-filter"><label for="afMarketStatusFilter">Afficher un marché</label><select id="afMarketStatusFilter"><option value="">Tous les marchés</option>'
         +groupList.map(function(g,i){return '<option value="'+i+'">'+esc(g.name)+(g.code?' ('+esc(g.code)+')':'')+'</option>';}).join("")+'</select></div>'
         +(groupList.length?groupList.map(function(group,index){
           var ordersPending=group.orders.filter(isPendingOrder),salesPending=group.sales.filter(isPendingSale),
               disputesOpen=group.disputes.filter(isOpenDispute),alerts=group.events.length;
           return '<section class="af-market-summary'+(alerts?' af-market-summary-attention':'')+'" data-market-summary="'+index+'">'
-            +'<div class="af-market-summary-top"><div class="af-market-summary-country">'+icon("globe")+'<div><h4>'+esc(group.name)+'</h4>'
+            +'<div class="af-market-summary-top"><div class="af-market-summary-country">'+countryShape(group.code)+'<div><h4>'+esc(group.name)+'</h4>'
             +'<small>'+(group.code?'Pays : '+esc(group.code):'Pays non renseigné')+' · '+group.partners.length+' partenaire(s)</small></div></div>'
             +(alerts?'<span class="af-market-summary-alert">'+icon("bell")+' '+alerts+' nouvelle(s)</span>':'')+'</div>'
-            +'<div class="af-market-summary-stats"><span>'+icon("grid")+' '+ordersPending.length+' demande(s) en attente</span>'
-            +'<span>'+icon("bag")+' '+salesPending.length+' vente(s) à contrôler</span>'
-            +'<span>'+icon("alert")+' '+disputesOpen.length+' contestation(s) ouverte(s)</span></div>'
+            +'<div class="af-market-summary-stats">'+detailButton("orders",index,ordersPending.length+" demande(s) en attente","grid")+detailButton("sales",index,salesPending.length+" vente(s) à contrôler","bag")+detailButton("disputes",index,disputesOpen.length+" contestation(s) ouverte(s)","alert")+'</div>'
             +'<details class="af-market-summary-details"'+(alerts?' open':'')+'><summary>Voir les partenaires et leurs activités</summary>'
             +'<div class="af-market-summary-partners">'+group.partners.map(function(p){
               var pOrders=byPartner(p.user_id,orders),pSales=byPartner(p.user_id,reports),
@@ -942,6 +963,8 @@
                 +'</article>';
             }).join("")+'</div></details></section>';
         }).join(""):'<p class="af-market-empty">Aucun marché ni partenaire enregistré.</p>')+'</div>';
+      host.querySelectorAll("[data-market-detail]").forEach(function(button){button.onclick=function(){openMarketDetail(button.dataset.marketDetail,button.dataset.marketIndex);};});
+      host.querySelectorAll(".af-market-summary-country img").forEach(function(img){img.onerror=function(){var span=document.createElement("span");span.innerHTML=icon("globe");img.replaceWith(span);};});
       var select=host.querySelector("#afMarketStatusFilter");
       if(select)select.onchange=function(){
         host.querySelectorAll("[data-market-summary]").forEach(function(card){
