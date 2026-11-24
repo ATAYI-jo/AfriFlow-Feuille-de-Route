@@ -137,3 +137,50 @@ test('Inbox cards contain their subject, sender and preview while scrolling', as
     }
   } finally { await browser.close(); }
 });
+
+test('Deadline alerts reach only the members selected across search results', async () => {
+  const browser = await chromium.launch({headless:true});
+  try {
+    const page = await browser.newPage({viewport:{width:375,height:812}});
+    await page.setContent('<style>[hidden]{display:none}</style><nav id="navList"><div><button class="nv" data-id="home">Accueil</button></div></nav><div id="view-home"></div><div id="fdrBanner"></div><div id="viewHost"></div>');
+    await page.evaluate(() => {
+      Object.assign(window, {
+        USER_ROLE:'admin', loggedUserEmail:'admin@example.test', confirm:()=>true, toast:()=>{},
+        sent:[], records:{}, AFRI:{
+          page:()=>{}, listUsers:async()=>[
+            {name:'Élodie',email:'elodie@example.test'},
+            {name:'Samuel',email:'samuel@example.test'},
+            {name:'Joël',email:'joel@example.test'},
+            {name:'Admin',email:'admin@example.test'}
+          ]
+        },
+        __sb:{from:()=>({
+          select:()=>({eq:(_field,key)=>({maybeSingle:async()=>({data:window.records[key]||null})})}),
+          insert:async rows=>{for(const row of rows){window.records[row.key]=row;window.sent.push(row);}return {};},
+          upsert:async row=>{window.records[row.key]=row;return {};}
+        })}
+      });
+    });
+    await page.addScriptTag({path:path.join(root, 'modules/roadmap/timeline.js')});
+    await page.locator('[data-fdr-nav]').click();
+    await page.locator('#b-dl > button').click();
+    await page.locator('#fdrT').fill('Préparer le bilan');
+    await page.locator('#fdrTarget').selectOption('selected');
+    await page.locator('#fdrGo').click();
+    assert.match(await page.locator('#fdrErr').innerText(), /Sélectionnez/);
+    await page.locator('#fdrSearch').fill('elodie');
+    await page.getByRole('checkbox', {name:/Élodie/}).check();
+    await page.locator('#fdrSearch').fill('samuel');
+    await page.getByRole('checkbox', {name:/Samuel/}).check();
+    assert.match(await page.locator('#fdrSelected').innerText(), /^2 membres/);
+    await page.locator('#fdrGo').click();
+    await page.getByRole('button', {name:'Relancer',exact:true}).click();
+    await page.waitForFunction(() => window.sent.filter(r=>r.key.startsWith('msg:')).length >= 4);
+    const result = await page.evaluate(() => ({
+      recipients:window.sent.filter(r=>r.key.startsWith('msg:')).map(r=>r.value.to).sort(),
+      publicDeadline:JSON.stringify(window.records['pub:deadlines'])
+    }));
+    assert.deepEqual(result.recipients,['elodie@example.test','elodie@example.test','samuel@example.test','samuel@example.test']);
+    assert.doesNotMatch(result.publicDeadline,/elodie@example.test|samuel@example.test/);
+  } finally { await browser.close(); }
+});
