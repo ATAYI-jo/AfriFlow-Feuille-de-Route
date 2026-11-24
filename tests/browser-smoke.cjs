@@ -204,3 +204,43 @@ test('Deadline alerts reach only the members selected across search results', as
     assert.doesNotMatch(result.publicDeadline,/elodie@example.test|samuel@example.test/);
   } finally { await browser.close(); }
 });
+
+test('Partner removal requires confirmation in Administration and refreshes the list', async () => {
+  const browser = await chromium.launch({headless:true});
+  try {
+    const page = await browser.newPage({viewport:{width:375,height:812}});
+    await page.setContent('<div id="adPartnerTerms"></div>');
+    await page.evaluate(() => {
+      const partner = {user_id:'00000000-0000-4000-8000-000000000002', email:'partner@example.test'};
+      window.USER_ROLE = 'reader';
+      window.removalCalls = [];
+      window.toast = () => {};
+      window.__sb = {functions:{invoke:async (_fn,{body}) => {
+        if (body.action === 'admin_dashboard') {
+          return {data:{partners:window.removalCalls.length ? [] : [partner]}};
+        }
+        if (body.action === 'admin_remove_partner') {
+          window.removalCalls.push(body.partnerId);
+          return {data:{ok:true}};
+        }
+        return {data:{}};
+      }}};
+    });
+    await page.addScriptTag({path:path.join(root, 'market.js')});
+    await page.evaluate(() => AfriMarket.renderPartnerTermsAdmin('adPartnerTerms'));
+    const remove = page.getByRole('button',{name:'Supprimer le partenaire',exact:true});
+    assert.equal(await remove.count(), 0);
+    await page.evaluate(() => {
+      window.USER_ROLE = 'admin';
+      return AfriMarket.renderPartnerTermsAdmin('adPartnerTerms');
+    });
+    await remove.click();
+    assert.match(await page.getByRole('dialog').innerText(), /partner@example.test/);
+    await page.getByRole('button',{name:'Annuler',exact:true}).click();
+    assert.equal(await page.evaluate(() => window.removalCalls.length), 0);
+    await remove.click();
+    await page.getByRole('button',{name:'Confirmer la suppression',exact:true}).click();
+    await page.getByText('Aucun compte partenaire à configurer.').waitFor();
+    assert.deepEqual(await page.evaluate(() => window.removalCalls), ['00000000-0000-4000-8000-000000000002']);
+  } finally { await browser.close(); }
+});

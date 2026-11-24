@@ -824,9 +824,39 @@
   // Commercial conditions shown in both Administration and Marketplace.
   // Saving never approves a partner by itself; the administrator must still
   // explicitly approve the identity through afriflow-access-admin.
+  function confirmPartnerRemoval(partner, onRemoved) {
+    var dialog=modal('<button type="button" class="af-modal-x" aria-label="Fermer">×</button>'
+      +'<h3>Supprimer ce partenaire ?</h3><p style="overflow-wrap:anywhere"><strong>'+esc(partner.email||partner.user_id)+'</strong></p>'
+      +'<p>Son accès partenaire et ses circuits de paiement à la livraison seront désactivés. Son compte client et son historique seront conservés.</p>'
+      +'<div class="af-actions"><button type="button" class="af-market-secondary" data-cancel-removal>Annuler</button>'
+      +'<button type="button" class="af-market-danger" data-confirm-removal>Confirmer la suppression</button></div><p role="alert" data-removal-error></p>');
+    dialog.querySelector(".af-modal-x").onclick=closeModal;
+    var cancel=dialog.querySelector("[data-cancel-removal]"),confirm=dialog.querySelector("[data-confirm-removal]");
+    cancel.onclick=closeModal;
+    cancel.focus();
+    confirm.onclick=async function(){
+      if(confirm.disabled||!isAdmin())return;
+      confirm.disabled=true;
+      var errorBox=dialog.querySelector("[data-removal-error]");
+      errorBox.textContent="";
+      try{
+        var result=await partnerCall("admin_remove_partner",{partnerId:partner.user_id});
+        if(dialog.isConnected)closeModal();
+        notice(result.message||"Partenaire supprimé.");
+        onRemoved();
+      }catch(error){
+        if(dialog.isConnected){
+          errorBox.textContent=error.message||"Suppression impossible.";
+          confirm.disabled=false;
+          confirm.focus();
+        }else notice(error.message||"Suppression impossible.");
+      }
+    };
+  }
   async function loadPartnerTermsAdmin(targetId) {
     var host=el(targetId);
     if(!host||!isAdmin()||!sb())return;
+    var canRemove=targetId==="adPartnerTerms";
     try {
       var result=await partnerCall("admin_dashboard");
       if(!host.isConnected)return;
@@ -840,9 +870,23 @@
             +'<label>Part AfriFloW (%)<input required name="rate" type="number" min="0" max="100" step="0.01" value="'+esc(rate)+'"></label>'
             +'<label class="af-partner-enable"><input type="checkbox" name="enabled"'+(t.is_enabled?' checked':'')+'> Activer</label>'
             +'<label>Instructions de règlement<input name="notes" maxlength="1200" value="'+esc(t.payment_notes||"")+'"></label>'
-            +'<button type="submit" class="af-market-secondary">Enregistrer</button></form>';
+            +'<button type="submit" class="af-market-secondary">Enregistrer</button>'
+            +(canRemove?'<div style="grid-column:1/-1"><button type="button" class="af-market-danger" data-remove-partner>Supprimer le partenaire</button></div>':'')
+            +'</form>';
         }).join(""):'<p>Aucun compte partenaire à configurer.</p>');
       host.querySelectorAll("form[data-partner-terms]").forEach(function(form){
+        var remove=form.querySelector("[data-remove-partner]");
+        if(remove)remove.onclick=function(){
+          var target=partners.find(function(p){return p.user_id===form.dataset.partnerTerms});
+          if(!target||!isAdmin())return;
+          confirmPartnerRemoval(target,function(){
+            if(!host.isConnected)return;
+            loadPartnerTermsAdmin(targetId);
+            loadPartnerAssignmentsAdmin("adMarketAssignments");
+            loadAccessAdmin("adMarketAccess");
+            if(window.AfriCOD&&el("afCODAdmin"))window.AfriCOD.mount(el("afCODAdmin"),true);
+          });
+        };
         form.onsubmit=async function(ev){
           ev.preventDefault();
           var button=form.querySelector('button[type="submit"]'),fields=new FormData(form);

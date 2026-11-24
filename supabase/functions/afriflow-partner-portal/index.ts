@@ -175,6 +175,18 @@ Deno.serve(async (req: Request) => {
       return reply(req, { ok: true, partners: (profiles.data || []).map((partner) => ({ ...partner, email: emails[partner.user_id] || "Partenaire", terms: (terms.data || []).find((term) => term.partner_user_id === partner.user_id) || null })), shareholders: (shareholders.data || []).map((shareholder) => ({ ...shareholder, email: emails[shareholder.user_id] || "Actionnaire" })), orders: orders.data || [], reports: reports.data || [] });
     }
 
+    if (action === "admin_remove_partner") {
+      if (!isAdmin) return reply(req, { error: "Administration requise" }, 403);
+      const partnerId = String(body.partnerId || "").trim();
+      if (!uuid(partnerId)) return reply(req, { error: "Partenaire invalide" }, 400);
+      const removal = await service.rpc("af_remove_partner", { p_actor: user.id, p_target: partnerId });
+      if (removal.error) {
+        if (removal.error.code === "P0001") return reply(req, { error: removal.error.message }, 409);
+        throw new Error("Suppression du partenaire indisponible");
+      }
+      return reply(req, { ok: true, message: "Partenaire supprimé. Son compte reste accessible comme client." });
+    }
+
     if (action === "admin_save_partner") {
       if (!isAdmin) return reply(req, { error: "Administration requise" }, 403);
       const partnerId = text(body.partnerId, 36), rate = money(body.commissionRate), enabled = Boolean(body.enabled), paymentNotes = text(body.paymentNotes, 1200);
