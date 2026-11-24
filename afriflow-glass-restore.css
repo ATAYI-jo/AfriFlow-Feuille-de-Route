@@ -1,0 +1,79 @@
+/* Restore AfriFloW's original frosted-glass language without changing layout,
+   navigation, background animation, or commercial behavior. */
+:root{
+ --af-glass-opacity:70%;--af-glass-base:#fff;--af-glass-ink:#1d2a22;
+ --af-glass-muted:#34443a;--af-glass-accent:#15472b;
+ --af-glass-border:rgba(255,255,255,.72);--af-glass-blur:20px;
+ --af-glass-shadow:0 12px 40px rgba(24,48,36,.12),inset 0 1px 0 rgba(255,255,255,.55);
+}
+:root[data-theme="dark"]{
+ --af-glass-opacity:74%;--af-glass-base:#1e2421;--af-glass-ink:#f1f5f2;
+ --af-glass-muted:#d1ded5;--af-glass-accent:#b0efc5;
+ --af-glass-border:rgba(255,255,255,.18);
+ --af-glass-shadow:0 12px 40px rgba(0,0,0,.3),inset 0 1px 0 rgba(255,255,255,.09);
+}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]){
+ --af-glass-opacity:74%;--af-glass-base:#1e2421;--af-glass-ink:#f1f5f2;
+ --af-glass-muted:#d1ded5;--af-glass-accent:#b0efc5;
+ --af-glass-border:rgba(255,255,255,.18);
+ --af-glass-shadow:0 12px 40px rgba(0,0,0,.3),inset 0 1px 0 rgba(255,255,255,.09);
+}}
+@media(prefers-reduced-transparency:reduce){:root{--af-glass-opacity:100%!important;--af-glass-blur:0px!important}}
+@supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){:root{--af-glass-opacity:100%!important}}
+/* Exterior surfaces get a single frosted layer. Keep sticky market header,
+   image tiles, controls and favorites independent. */
+body #viewHost :is(.mt-box,.mt-adm,.mt-card,.mt-m,.af-partners-overview,.toolbar,.journal-article,.dcard,.map-panel,.fdr-card),
+body #msgBox.msg-box,
+body #profilePanel :is(.profile-top,.profile-main,.profile-card,.member-list-card,.member-detail-card),
+body #auth-screen .auth-box,
+body .af-modal .af-modal-box,
+body #market-view :is(.af-market-admin,.af-market-admin-card,.af-market-status,.af-market-empty,.af-market-wait,.af-ali-cats,.af-ali-side,.af-feature,.af-partner-card,.af-catalog-controls),
+body #market-view .af-showcase-card:not(.af-showcase-main),
+body #market-view .af-product,
+body #market-view #afMarketGrid .af-product:not(.af-announcement-card){
+ --ink:var(--af-glass-ink);--muted:var(--af-glass-muted);
+ --af-ui-ink:var(--af-glass-ink);--af-ui-muted:var(--af-glass-muted);--af-ui-accent:var(--af-glass-accent);
+ --af-text:var(--af-glass-ink);--af-secondary:var(--af-glass-muted);
+ background:var(--af-glass-base)!important;
+ background:color-mix(in srgb,var(--af-glass-base) var(--af-glass-opacity),transparent)!important;
+ color:var(--af-glass-ink)!important;
+ -webkit-backdrop-filter:blur(var(--af-glass-blur)) saturate(130%);
+ backdrop-filter:blur(var(--af-glass-blur)) saturate(130%);
+ border-color:var(--af-glass-border)!important;
+ box-shadow:var(--af-glass-shadow);
+}
+/* Inner sections use the parent's glass rather than stacking opaque panels. */
+body #viewHost .af-partners-overview :is(.af-market-kpi,.af-market-summary,.af-market-summary-partner),
+body #msgBox :is(.toolbar,.dcard,.journal-article),
+body #profilePanel .profile-main :is(.profile-card,.member-list-card,.member-detail-card),
+body #market-view .af-market-admin .af-market-admin-card,
+body #market-view .af-market-admin-row,
+body #market-view .af-product .af-product-body,
+body #market-view .af-feature .af-feature-body,
+body .af-modal .af-detail:not(.af-announcement-detail),
+body .af-modal .af-detail-order{
+ background:color-mix(in srgb,var(--af-glass-base) 24%,transparent)!important;
+ color:var(--af-glass-ink)!important;
+ border-color:var(--af-glass-border)!important;
+ box-shadow:none;
+ -webkit-backdrop-filter:none;backdrop-filter:none;
+}
+body #market-view .af-product .af-product-body,
+body #market-view .af-feature .af-feature-body,
+body .af-modal .af-detail:not(.af-announcement-detail){background:transparent!important}
+body #profilePanel.member-hub-mode .profile-main>.profile-card{background:transparent!important;box-shadow:none;-webkit-backdrop-filter:none;backdrop-filter:none}
+body #viewHost :is(.mt-box,.mt-adm,.mt-card,.mt-m) :is(h3,h4),
+body #market-view :is(.af-market-admin,.af-market-admin-card) :is(h2,h3,h4),
+body #msgBox .toolbar b,body .af-modal .af-modal-box>h3{color:var(--af-glass-accent)!important}
+body #viewHost :is(.mt-box,.mt-adm,.mt-card,.mt-m) label,
+body #msgBox small,body #auth-screen #authHint{color:var(--af-glass-muted)!important}
+body #auth-screen #authProgress{color:var(--af-glass-accent)!important}
+body #viewHost .af-partners-overview .af-market-summary-stats :is(button,span){
+ background:color-mix(in srgb,var(--af-glass-base) 30%,transparent)!important;color:var(--af-glass-ink)!important;
+}
+@media(prefers-reduced-transparency:reduce){
+ body #viewHost .af-partners-overview :is(.af-market-kpi,.af-market-summary,.af-market-summary-partner),
+ body #msgBox :is(.toolbar,.dcard,.journal-article),
+ body #market-view .af-market-admin .af-market-admin-card,
+ body #market-view .af-market-admin-row,body .af-modal .af-detail-order{background:var(--af-glass-base)!important}
+}
