@@ -127,3 +127,30 @@ body.af-market-dialog-open :is(#aiBtn,#memberHub,#afIntroAdminPreviewBtn){visibi
  #aiBox{right:8px!important;bottom:calc(64px + env(safe-area-inset-bottom,0px))!important;width:calc(100vw - 16px)!important;height:min(72dvh,620px)!important}
 }
 @media(max-width:340px){#market-view .af-market-grid,#market-view .af-market-grid[data-n]{grid-template-columns:minmax(0,1fr)}#viewHost .af-market-kpis{grid-template-columns:minmax(0,1fr)!important}}
+
+/* Theme switches must not interpolate a readable text color against the old surface. */
+#market-view .af-product,#viewHost .af-market-kpi,#viewHost .af-market-summary-stats button{
+ transition-property:transform,box-shadow!important;
+}
+#market-view .af-product-body{background:var(--card)!important;color:var(--ink)!important}
+#market-view .af-market-search button{min-height:36px}
+#market-view .af-market-search button svg{flex-shrink:0}
+#market-view .af-market-link,#market-view .af-market-cart{min-height:44px}
+#market-view .af-product .af-discount,.af-modal .af-discount{color:var(--ink)!important}
+#market-view .af-product .af-old-price,.af-modal .af-old-price{color:var(--muted)!important}
+#market-view .af-product .af-verified{color:var(--ink)!important}
+#aiBtn,#memberHub,#afIntroAdminPreviewBtn{transition-property:opacity,box-shadow!important;transform:none!important}
+body #afIntroAdminPreviewBtn{position:fixed!important;inset:auto 12px calc(160px + env(safe-area-inset-bottom,0px)) auto!important;max-width:calc(100vw - 24px)}
+body #aiBtn{position:fixed!important;inset:auto 12px calc(12px + env(safe-area-inset-bottom,0px)) auto!important}
+body #memberHub{position:fixed!important;inset:auto 12px calc(78px + env(safe-area-inset-bottom,0px)) auto!important}
+@media(max-width:700px){
+ body #afIntroAdminPreviewBtn{inset:auto 12px calc(124px + env(safe-area-inset-bottom,0px)) auto!important}
+ body #memberHub{inset:auto 12px calc(68px + env(safe-area-inset-bottom,0px)) auto!important}
+ #market-view .af-market-topline :is(.af-market-link,.af-market-cart),#market-view .af-currency select{min-height:44px!important}
+ #market-view .af-market-search button{min-width:44px}
+ #market-view .af-market-brand img{object-fit:contain}
+ #market-view .af-market-topline .af-partner-top-label{flex:1 1 100%;height:auto;min-height:0}
+}
+@media(max-width:700px) and (max-height:460px){
+ #afIntroAdminPreviewBtn{left:12px!important;right:auto!important;bottom:calc(12px + env(safe-area-inset-bottom,0px))!important}
+}
