@@ -46,3 +46,13 @@ body :is(#afCODList,#afCODAdmin) .af-cod-primary{background:#21633f!important;co
 body :is(#afCODList,#afCODAdmin) .af-cod-cancel{background:transparent!important;color:var(--af-ui-error,#a82435)!important;border:1px solid currentColor!important}
 @media(max-width:600px){.af-cod-card{padding:12px;gap:10px}.af-modal-box:has(#afCODList){padding:12px!important}.af-cod-head{gap:6px}.af-cod-status{font-size:.72rem}.af-cod-list-bar h4{font-size:.82rem}.af-cod-steps li{font-size:.62rem}.af-cod-details .af-cod-line{grid-template-columns:minmax(0,1fr) minmax(0,1.45fr)}}
 @media(prefers-reduced-transparency:reduce){.af-cod-card,.af-cod-amounts{background:var(--af-glass-base,var(--card))}}
+
+/* Order status pictograms, with a subtle active-step ring. */
+.af-cod-step-dot{width:34px;height:34px;position:relative;flex-shrink:0}
+.af-cod-step-dot svg{width:19px;height:19px;display:block}
+.af-cod-steps li:not(:last-child)::after{top:16px;left:calc(50% + 20px);width:calc(100% - 40px)}
+.af-cod-steps li.done:has(+li.done)::after{background:#21633f}
+.af-cod-steps li[aria-current="step"] .af-cod-step-dot::after{content:"";position:absolute;inset:-4px;border:1px solid var(--af-glass-accent,var(--green));border-radius:50%;pointer-events:none}
+@keyframes afCodStepPulse{0%,100%{transform:scale(1);opacity:.7}50%{transform:scale(1.12);opacity:.35}}
+@media(prefers-reduced-motion:no-preference){.af-cod-steps li[aria-current="step"] .af-cod-step-dot::after{animation:afCodStepPulse 1.3s ease-in-out 3}}
+@media(max-width:340px){.af-cod-step-dot{width:30px;height:30px}.af-cod-step-dot svg{width:17px;height:17px}.af-cod-steps li:not(:last-child)::after{top:14px;left:calc(50% + 18px);width:calc(100% - 36px)}}
