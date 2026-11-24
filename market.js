@@ -1434,7 +1434,7 @@
       + (state.context.kind === "public" ? '<button type="button" class="af-market-link" id="afMarketSignIn">' + icon("user") + '<span>Se connecter</span></button>' : "")
       + (state.context.kind === "authenticated" ? '<button type="button" class="af-market-link" id="afMarketAccount">' + icon("user") + '<span>Mon compte</span></button>' : "")
       + (!partner ? '<button type="button" class="af-market-cart" id="afMarketCart" aria-label="Ouvrir le panier">' + icon("bag") + '<span>Panier</span><b>' + cartCount() + '</b></button>' : '')
-      + (state.context.kind !== "public" ? '<button type="button" class="af-market-link" id="afCODOrders">'+icon("bag")+'<span>Commandes</span></button>' : "")
+      + (state.context.kind !== "public" ? '<button type="button" class="af-market-link" id="afCODOrders">'+icon("bag")+'<span>Commandes</span>'+(partner?'<b data-cod-count class="af-cod-count" hidden></b>':"")+'</button>' : "")
       + (state.context.kind === "authenticated" ? '<button type="button" class="af-market-link" id="afMarketSignOut">' + icon("logout") + '<span>Déconnexion</span></button>' : "")
       + '</div>' + (!partner ? '<nav class="af-market-nav" aria-label="Navigation Marketplace">' +
         '<button type="button" data-market-category="">' + icon("grid") + 'Tout le marché</button>' +
@@ -1564,6 +1564,22 @@
       frames[current].classList.add("is-active");
     }, 6500);
   }
+  var codAlertBusy=false;
+  async function refreshOrderAlerts(){
+    var panel=el("afPartnerOrderAlert"),orders=el("afCODOrders");
+    if(!panel||!orders||document.hidden||!document.body.classList.contains("af-market-mode")||!window.AfriCOD||codAlertBusy)return;
+    codAlertBusy=true;
+    try{
+      var count=await window.AfriCOD.pendingCount();
+      if(panel!==el("afPartnerOrderAlert")||orders!==el("afCODOrders"))return;
+      var badge=orders.querySelector("[data-cod-count]");if(badge){badge.hidden=!count;badge.textContent=String(count);orders.setAttribute("aria-label",count?"Commandes : "+count+" à valider":"Commandes");}
+      panel.hidden=!count;panel.querySelector("[data-cod-alert-text]").textContent=count===1?"Une nouvelle commande attend votre validation.":count+" commandes attendent votre validation.";
+    }catch(_error){if(panel===el("afPartnerOrderAlert")){panel.hidden=true;var badge=orders.querySelector("[data-cod-count]");if(badge)badge.hidden=true;orders.setAttribute("aria-label","Commandes");}}
+    finally{codAlertBusy=false;}
+  }
+  window.addEventListener("afri:cod-changed",refreshOrderAlerts);
+  document.addEventListener("visibilitychange",function(){if(!document.hidden)refreshOrderAlerts();});
+  setInterval(refreshOrderAlerts,30000);
   function render() {
     var root = el("market-view"); if (!root) return;
     clearHero();
@@ -1572,7 +1588,7 @@
     clearWelcomeAnimation();
     var mode = roleMode(state.context.market);
     root.innerHTML = top() + '<main class="af-market-main">' + (mode === "partner_approved"
-      ? '<div class="af-partner-top-section">'+partnerLandingHeader()+'<button type="button" class="af-partner-scroll-cue" data-partner-scroll="afProductsTop" aria-label="Défiler vers les produits">'+icon("down")+'<span>Défiler</span></button></div>'
+      ? '<section id="afPartnerOrderAlert" class="af-cod-alert" hidden aria-live="polite">'+icon("bag")+'<div><b>Commandes à valider</b><p data-cod-alert-text></p></div><button type="button" id="afPartnerOrderAction" class="af-market-primary">Traiter</button></section><div class="af-partner-top-section">'+partnerLandingHeader()+'<button type="button" class="af-partner-scroll-cue" data-partner-scroll="afProductsTop" aria-label="Défiler vers les produits">'+icon("down")+'<span>Défiler</span></button></div>'
         + partnerLandingProducts()
         + partnerContent()
       : mode === "partner_waiting"
@@ -1582,6 +1598,8 @@
       : catalogContent()) + "</main>";
     bind();
     var codOrders=el("afCODOrders");if(codOrders)codOrders.onclick=function(){if(!window.AfriCOD)return notice("Module de commande indisponible.");var dialog=modal('<button type="button" class="af-modal-x" aria-label="Fermer">×</button><div id="afCODList"></div>');dialog.querySelector(".af-modal-x").onclick=closeModal;window.AfriCOD.mount(dialog.querySelector("#afCODList"),false);dialog.querySelector("details").open=true;};
+    var orderAction=el("afPartnerOrderAction");if(orderAction&&codOrders)orderAction.onclick=function(){codOrders.click();};
+    if(mode==="partner_approved")refreshOrderAlerts();
     if (mode === "partner_approved" && window.AfriMarketCountryLogo) {
       var market = assignedPartnerMarket();
       window.AfriMarketCountryLogo.mount(el("afPartnerCountryLogo"),market.code,market.name);
