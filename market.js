@@ -368,10 +368,11 @@
       announcement.querySelector(".af-modal-x").onclick = closeModal; announcement.querySelector("[data-x]").onclick = closeModal; if (p.original_path) scheduleImages(); return;
     }
     var discount = discountPercent(p), facts = salesFacts(p);
-    var available = inStock(p);
-    var m = modal('<button type="button" class="af-modal-x" aria-label="Fermer">×</button><div class="af-detail' + (available ? '' : ' is-out-of-stock') + '"><div class="af-media" data-market-image="' + esc(p.id) + '" data-alt="' + esc(p.name) + '">' + media(p) + (available ? '' : '<span class="af-stock-badge">Rupture de stock</span>') + '</div><div class="af-detail-body">' + (p.promotion_label || discount ? '<span class="af-promo">' + esc(p.promotion_label || "Offre spéciale") + '</span>' : '') + '<div class="af-product-cat">' + esc(p.category) + "</div><h2>" + esc(p.name) + '</h2><div class="af-price-line"><div class="af-product-price">' + esc(formatPrice(p.price, p.currency)) + "</div>" + (discount ? '<span class="af-old-price">' + esc(formatPrice(p.compare_at_price, p.currency)) + '</span><span class="af-discount">-' + discount + '%</span>' : '') + '</div><p>' + esc(p.description || "Produit sélectionné par AfriFloW.") + '</p>' + (facts.length ? '<ul class="af-sales-facts">' + facts.map(function (fact) { return '<li>' + esc(fact) + '</li>'; }).join('') + '</ul>' : '') + '<div class="af-actions">' + (available ? '<button type="button" class="af-market-primary" data-q>Demander un devis</button>' : '<span class="af-stock-note">Indisponible pour le moment</span>') + '<button type="button" class="af-market-secondary" data-x>Fermer</button></div></div></div>');
+    var available = inStock(p), min=Math.max(1,Math.ceil(Number(p.minimum_order_quantity)||1)), priced=p.price!=null&&p.price!==""&&Number.isFinite(Number(p.price))&&Number(p.price)>0;
+    var m = modal('<button type="button" class="af-modal-x" aria-label="Fermer">×</button><div class="af-detail' + (available ? '' : ' is-out-of-stock') + '"><div class="af-media" data-market-image="' + esc(p.id) + '" data-alt="' + esc(p.name) + '">' + media(p) + (available ? '' : '<span class="af-stock-badge">Rupture de stock</span>') + '</div><div class="af-detail-body">' + (p.promotion_label || discount ? '<span class="af-promo">' + esc(p.promotion_label || "Offre spéciale") + '</span>' : '') + '<div class="af-product-cat">' + esc(p.category) + "</div><h2>" + esc(p.name) + '</h2><div class="af-price-line"><div class="af-product-price">' + esc(formatPrice(p.price, p.currency)) + "</div>" + (discount ? '<span class="af-old-price">' + esc(formatPrice(p.compare_at_price, p.currency)) + '</span><span class="af-discount">-' + discount + '%</span>' : '') + '</div><p>' + esc(p.description || "Produit sélectionné par AfriFloW.") + '</p>' + (facts.length ? '<ul class="af-sales-facts">' + facts.map(function (fact) { return '<li>' + esc(fact) + '</li>'; }).join('') + '</ul>' : '') + (available&&priced?'<div class="af-detail-order"><label for="afDetailQty">Quantité (minimum '+min+')</label><input id="afDetailQty" type="number" min="'+min+'" max="1000000" step="1" value="'+min+'" inputmode="numeric"><p id="afDetailTotal" role="status">Sous-total indicatif : '+esc(formatPrice(Number(p.price)*min,p.currency))+'</p><button type="button" class="af-market-primary" id="afDetailAdd">Ajouter au panier</button></div>':'') + '<div class="af-actions">' + (available ? '<button type="button" class="af-market-secondary" data-q>Demander un devis</button>' : '<span class="af-stock-note">Indisponible pour le moment</span>') + '<button type="button" class="af-market-secondary" data-x>Fermer</button></div></div></div>');
     m.querySelector(".af-modal-x").onclick = closeModal; m.querySelector("[data-x]").onclick = closeModal;
     var quote = m.querySelector("[data-q]"); if (quote) quote.onclick = function () { closeModal(); openQuote(p); };
+    var qty=m.querySelector("#afDetailQty"),add=m.querySelector("#afDetailAdd");if(qty&&add){qty.oninput=function(){var q=Number(qty.value),valid=qty.checkValidity()&&Number.isSafeInteger(q)&&q>=min;add.disabled=!valid;m.querySelector("#afDetailTotal").textContent=valid?"Sous-total indicatif : "+formatPrice(Number(p.price)*q,p.currency):"Quantité minimale : "+min;};add.onclick=function(){if(!qty.reportValidity())return;addToCart(p,Number(qty.value));closeModal();};}
   }
   function openQuote(p) {
     if (!inStock(p)) { notice("Ce produit est actuellement en rupture de stock."); return; }
@@ -1125,11 +1126,15 @@
   /* ---------- Panier et favoris (données stockées uniquement dans ce navigateur) ---------- */
   function cartCount() { return state.cart.reduce(function (sum, row) { return sum + Number(row.quantity || 0); }, 0); }
   function cartTotal() { return state.cart.reduce(function (sum, row) { return sum + Number(row.quantity || 0) * convertedPrice(row.price, row.currency); }, 0); }
-  function addToCart(product) {
-    if (!product || !inStock(product)) return notice("Ce produit est actuellement indisponible.");
+  function addToCart(product,quantity) {
+    if (!product || isAnnouncement(product) || !inStock(product)) return notice("Ce produit est actuellement indisponible.");
+    if(product.price==null||product.price===""||!Number.isFinite(Number(product.price))||Number(product.price)<=0)return openQuote(product);
     var row = state.cart.filter(function (item) { return item.id === product.id; })[0];
-    if (row) row.quantity += 1;
-    else state.cart.push({ id: product.id, name: product.name, price: product.price, currency: product.currency, quantity: Math.max(1, Number(product.minimum_order_quantity) || 1) });
+    var min=Math.max(1,Math.ceil(Number(product.minimum_order_quantity)||1));
+    var count=quantity==null?(row?1:min):Number(quantity);
+    if(!Number.isSafeInteger(count)||count<1||count>1000000||(!row&&count<min))return notice("Quantité invalide. Minimum : "+min+" unités.");
+    if(row){if(!Number.isSafeInteger(row.quantity+count)||row.quantity+count>1000000)return notice("Quantité trop élevée.");row.quantity=Math.max(min,row.quantity+count);}
+    else state.cart.push({ id: product.id, name: product.name, price: product.price, currency: product.currency, quantity: count });
     persistShop(); render(); notice("Produit ajouté au panier.");
   }
   function favoriteButton(product) {
@@ -1188,7 +1193,7 @@
     var html = '<button type="button" class="af-modal-x" aria-label="Fermer">×</button><div class="af-cart"><h3>Mon panier <span>' + cartCount() + ' article' + (cartCount() > 1 ? "s" : "") + '</span></h3><p>Préparez votre demande : AfriFloW confirmera les prix, stocks et délais avant tout paiement.</p><div class="af-cart-list">' + state.cart.map(function (row) { return '<article><div><b>' + esc(row.name) + '</b><small>' + esc(formatPrice(row.price, row.currency)) + ' / unité</small></div><div class="af-cart-qty"><button type="button" data-cart-minus="' + esc(row.id) + '">−</button><b>' + esc(row.quantity) + '</b><button type="button" data-cart-plus="' + esc(row.id) + '">+</button></div><button type="button" class="af-cart-remove" data-cart-remove="' + esc(row.id) + '">Retirer</button></article>'; }).join("") + '</div><div class="af-cart-total"><span>Total estimatif</span><b>' + esc(Number.isFinite(cartTotal())?formatPrice(cartTotal(), currency):"À confirmer") + '</b><small>Conversion indicative : le devis final reste le montant de référence.</small></div><div class="af-actions"><button type="button" class="af-market-primary" id="afCartCOD">Paiement à la livraison</button><button type="button" class="af-market-secondary" id="afCartGuest">Autres moyens de paiement</button><button type="button" class="af-market-primary" id="afCartQuote">Demander un devis groupé</button><button type="button" class="af-market-secondary" id="afCartClose">Continuer mes achats</button></div></div>';
     var m = modal(html); m.querySelector(".af-modal-x").onclick = closeModal; m.querySelector("#afCartClose").onclick = closeModal;
     m.querySelectorAll("[data-cart-plus]").forEach(function (button) { button.onclick = function () { var row = state.cart.filter(function (x) { return x.id === button.dataset.cartPlus; })[0]; if (row) { row.quantity += 1; persistShop(); closeModal(); openCart(); } }; });
-    m.querySelectorAll("[data-cart-minus]").forEach(function (button) { button.onclick = function () { var row = state.cart.filter(function (x) { return x.id === button.dataset.cartMinus; })[0]; if (row) { row.quantity -= 1; if (row.quantity < 1) state.cart = state.cart.filter(function (x) { return x.id !== row.id; }); persistShop(); closeModal(); if (state.cart.length) openCart(); else render(); } }; });
+    m.querySelectorAll("[data-cart-minus]").forEach(function (button) { button.onclick = function () { var row = state.cart.filter(function (x) { return x.id === button.dataset.cartMinus; })[0]; if (row) { var product=productById(row.id),min=Math.max(1,Math.ceil(Number(product&&product.minimum_order_quantity)||1)); if(row.quantity<=min)return notice("Minimum : "+min+" unités. Utilisez Retirer pour supprimer le produit.");row.quantity=Math.max(min,row.quantity-1); persistShop(); closeModal(); if (state.cart.length) openCart(); else render(); } }; });
     m.querySelectorAll("[data-cart-remove]").forEach(function (button) { button.onclick = function () { state.cart = state.cart.filter(function (x) { return x.id !== button.dataset.cartRemove; }); persistShop(); closeModal(); if (state.cart.length) openCart(); else render(); }; });
     m.querySelector("#afCartGuest").onclick = openGuestCheckout;
     m.querySelector("#afCartCOD").onclick=function(){if(!window.AfriCOD)return notice("Module de commande indisponible.");var dialog=modal('<button type="button" class="af-modal-x" aria-label="Fermer">×</button><div id="afCODCheckout"></div>');dialog.querySelector(".af-modal-x").onclick=closeModal;window.AfriCOD.checkout(dialog.querySelector("#afCODCheckout"),state.cart.slice(),function(){closeModal();openAuth("login");}).catch(function(e){notice(e.message);});};
@@ -1218,7 +1223,7 @@
       + '<div class="af-actions">' + (available ? '<button type="button" class="af-market-primary" data-add-cart="' + esc(p.id) + '">' + icon("bag") + '<span>Ajouter au panier</span></button>' : '<button type="button" class="af-market-unavailable" disabled>Rupture de stock</button>') + '<button type="button" class="af-market-secondary" data-market-detail="' + esc(p.id) + '">Voir les détails</button></div></div></article></div>';
   }
   function productsHtml(products) {
-    if (!products.length) return '<div class="af-market-empty">'+(state.favoriteOnly?"Vous n’avez pas encore enregistré de favori.":"Aucun produit ne correspond à votre recherche pour le moment.")+'</div>';
+    if (!products.length) return '<section id="afMarketGrid"><div class="af-market-empty">'+(state.favoriteOnly?"Aucun favori correspondant aux filtres.":"Aucun produit ne correspond à votre recherche pour le moment.")+'</div></section>';
     // Keep a stable card layout even when a filter returns a single product.
     return '<section id="afMarketGrid" class="af-market-grid" data-n="' + Math.min(products.length, 5) + '">' + products.map(function (item, index) { return isAnnouncement(item) ? announcementCard(item) : productCard(item, index); }).join("") + "</section>";
   }
@@ -1621,6 +1626,8 @@
     document.querySelectorAll("[data-market-jump]").forEach(function (button) {
       button.onclick = function () {
         var jump = button.dataset.marketJump;
+        if(jump==="categories"&&!el("afMarketCategories")){scrollMarketTo("afProductsTop");var category=el("afCatalogCategory");if(category)category.focus({preventScroll:true});return;}
+        if(jump==="news"&&!el("afMarketNews")){state.favoriteOnly=false;state.category="";state.term="";clearCatalogFilters();render();}
         scrollMarketTo(jump === "categories" ? "afMarketCategories" : jump === "news" ? "afMarketNews" : "afProductsTop");
       };
     });
