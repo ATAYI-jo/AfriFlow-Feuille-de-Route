@@ -120,6 +120,10 @@
   function clearHero() { if (state.heroTimer) { clearInterval(state.heroTimer); state.heroTimer = null; } }
   function open(context) {
     state.context = context || { kind: "public" }; state.favoriteOnly=false; state.category="";state.term="";clearCatalogFilters(); loadShop(); state.currency.code = preferredCurrency(); hideWorkspace(); render(); loadCurrencyRates();
+    if (window.AfriHasLinkedMessage && window.AfriHasLinkedMessage()) {
+      if (state.context.kind === "public") openAuth("login");
+      if (state.context.kind === "authenticated") window.AfriOpenLinkedMessage();
+    }
     if (roleMode(state.context.market) === "partner_approved") { loadPartnerPortal(); loadCatalog(); return; }
     if (roleMode(state.context.market) === "partner_waiting") { loadCatalog(); return; }
     loadHero(); loadCatalog();

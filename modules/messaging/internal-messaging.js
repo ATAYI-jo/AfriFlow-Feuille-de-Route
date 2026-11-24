@@ -117,11 +117,36 @@ async function showAtt(v,x){
     }catch(e){if($("mDbxNote"))$("mDbxNote").textContent="Archivage Dropbox impossible : "+(e.message||e)}
   }
 }
-function openMsg(i){
+var pendingKey="afriflow.pendingMessage",pendingId=new URLSearchParams(location.search).get("message")||"";
+try {
+  if(pendingId && pendingId.length<=240) sessionStorage.setItem(pendingKey,pendingId);
+  else pendingId=sessionStorage.getItem(pendingKey)||"";
+} catch(e){}
+window.AfriHasLinkedMessage=function(){return !!pendingId && pendingId.length<=240;};
+window.AfriOpenLinkedMessage=async function(){
+  if(!window.AfriHasLinkedMessage()||!me()||!S())return;
+  var id=pendingId,account=me();
+  pendingId="";
+  try {
+    var r=await S().from(T()).select("key,value").eq("key","msg:"+account+":"+id).maybeSingle();
+    if(me()!==account)return;
+    if(r.error)throw r.error;
+    if(!r.data||String(r.data.value.to).toLowerCase()!==account){
+      if(window.toast)toast("Ce message est indisponible pour le compte connecté.");
+    } else {
+      tab="in"; W=[r.data]; openMsg(0,true);
+      $("msgBox").focus({preventScroll:true});
+    }
+    try{sessionStorage.removeItem(pendingKey);}catch(e){}
+    var url=new URL(location.href);url.searchParams.delete("message");history.replaceState(history.state,"",url);
+  } catch(e){pendingId=id;if(window.toast)toast("Lecture impossible. Rechargez la page pour réessayer.");}
+};
+window.addEventListener("afriflow:verified-role",function(){if(me())window.AfriOpenLinkedMessage();});
+function openMsg(i,linked){
   var x=W[i];if(!x)return;var v=x.value,h=msgHost();++mailEpoch;
   var grp=v.group&&v.group.length>1?'<p style="color:var(--muted);margin:0 0 8px;font-size:.9rem">Envoyé à '+v.group.length+' personnes : '+esc(v.group.join(", "))+'</p>':'';
-  h.innerHTML='<div class="toolbar"><b>'+esc(v.subject||"(sans objet)")+'</b><div class="toolbar-actions"><button type="button" id="mBack">← Retour</button>'+(tab==="in"?'<button type="button" class="p" id="mRep">Répondre</button>':'')+'</div></div><div class="journal-article" id="mRead"><p style="color:var(--muted);margin-top:0">'+(tab==="in"?"De : "+esc(v.fromName||v.from)+" ("+esc(v.from)+")":"À : "+esc(v.to))+' · '+fdt(v.ts)+'</p>'+grp+'<div style="white-space:pre-wrap;overflow-wrap:anywhere">'+esc(v.body)+'</div>'+(v.att?'<div id="mAtt"><small style="color:var(--muted)">Chargement des pièces jointes…</small></div>':'')+'</div>';
-  $("mBack").onclick=function(){window.renMsg()};
+  h.innerHTML='<div class="toolbar"><b>'+esc(v.subject||"(sans objet)")+'</b><div class="toolbar-actions"><button type="button" id="mBack">'+(linked?"Fermer":"← Retour")+'</button>'+(tab==="in"&&!linked?'<button type="button" class="p" id="mRep">Répondre</button>':'')+'</div></div><div class="journal-article" id="mRead"><p style="color:var(--muted);margin-top:0">'+(tab==="in"?"De : "+esc(v.fromName||v.from)+" ("+esc(v.from)+")":"À : "+esc(v.to))+' · '+fdt(v.ts)+'</p>'+grp+'<div style="white-space:pre-wrap;overflow-wrap:anywhere">'+esc(v.body)+'</div>'+(v.att?'<div id="mAtt"><small style="color:var(--muted)">Chargement des pièces jointes…</small></div>':'')+'</div>';
+  $("mBack").onclick=function(){if(linked)closeMessages();else window.renMsg()};
   if($("mRep"))$("mRep").onclick=function(){compose(v.from,"Re : "+String(v.subject||"").replace(/^Re : /,""))};
   if(tab==="in"&&!v.read){v.read=true;S().from(T()).update({value:v}).eq("key",x.key).then(function(){poll()})}
   if(v.att)showAtt(v,x).catch(function(){if($("mAtt"))$("mAtt").textContent="Pièces jointes indisponibles."});
