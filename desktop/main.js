@@ -10,6 +10,33 @@ let win, tray, quitting = false;
 let startAtLogin = true;
 let lastRecovery = 0;
 let updateReady = false;
+function messageTarget(args) {
+  for (const arg of args) {
+    if (typeof arg !== 'string' || !arg.startsWith('afriflow://')) continue;
+    try {
+      const url = new URL(arg);
+      const id = url.searchParams.get('message');
+      if (url.protocol !== 'afriflow:' || url.host !== 'message' || !id || !/^[0-9]{10,17}:[a-z0-9]{1,16}$/.test(id)) continue;
+      const dest = new URL(HOME);
+      dest.searchParams.set('message', id);
+      return dest.href;
+    } catch (_) {}
+  }
+  return '';
+}
+let pendingMessageUrl = messageTarget(process.argv);
+function openLinkedMessage(args) {
+  const target = messageTarget(args);
+  if (!target) return false;
+  if (win && !win.isDestroyed()) {
+    win.loadURL(target).catch(err => console.warn('AfriFloW linked message:', err.message));
+    reveal();
+  } else {
+    pendingMessageUrl = target;
+    if (app.isReady()) reveal();
+  }
+  return true;
+}
 // Keep the same installation and userData directory; do not uninstall to update.
 function installDownloadedUpdate() {
   if (!updateReady) return;
@@ -77,7 +104,7 @@ function teamsUrl(raw) {
 if (!single) {
   app.quit();
 } else {
-  app.on('second-instance', () => reveal());
+  app.on('second-instance', (_event, argv) => { if (!openLinkedMessage(argv)) reveal(); });
 }
 function reveal() {
   if (!win || win.isDestroyed()) { createWindow(); return; }
@@ -178,7 +205,9 @@ function createWindow() {
   win.once('ready-to-show',()=>{
     if(!process.argv.includes('--hidden'))reveal();
   });
-  win.loadURL(HOME);
+  const initialUrl = pendingMessageUrl || HOME;
+  pendingMessageUrl = '';
+  win.loadURL(initialUrl);
 }
 function createTray() {
   const file=path.join(__dirname,'assets','icon.png');
@@ -217,7 +246,10 @@ function createTray() {
 }
 app.whenReady().then(()=>{
   if(!single)return;
-  if(process.platform==='win32')app.setAppUserModelId('africa.afriflow.desktop');
+  if(process.platform==='win32') {
+    app.setAppUserModelId('africa.afriflow.desktop');
+    if (app.isPackaged) app.setAsDefaultProtocolClient('afriflow');
+  }
   readPreferences();
   // Enable background launch by default on the first run, but honor manual opt-out.
   configureStartup();

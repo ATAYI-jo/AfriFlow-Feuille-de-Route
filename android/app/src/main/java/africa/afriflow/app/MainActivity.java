@@ -138,6 +138,23 @@ public class MainActivity extends Activity {
     }catch(Exception ignored){}
     return false;
   }
+  // Only accept a message identifier, never an arbitrary URL or credentials.
+  private String linkedMessage(Intent intent) {
+    if(intent==null || !Intent.ACTION_VIEW.equals(intent.getAction()))return null;
+    try {
+      Uri uri=intent.getData();
+      if(uri==null || !"afriflow".equals(uri.getScheme()) || !"message".equals(uri.getHost()))return null;
+      String id=uri.getQueryParameter("message");
+      if(id==null || !id.matches("[0-9]{10,17}:[a-z0-9]{1,16}"))return null;
+      return Uri.parse(HOME).buildUpon().appendQueryParameter("message",id).build().toString();
+    }catch(Exception ignored){return null;}
+  }
+  @Override protected void onNewIntent(Intent intent) {
+    super.onNewIntent(intent);
+    setIntent(intent);
+    String url=linkedMessage(intent);
+    if(url!=null && web!=null)web.loadUrl(url);
+  }
   @Override public void onCreate(Bundle state) {
     super.onCreate(state);
     web = new WebView(this);
@@ -183,7 +200,8 @@ public class MainActivity extends Activity {
         catch (Exception e) { fileCallback = null; return false; }
       }
     });
-    web.loadUrl(HOME);
+    String linked=linkedMessage(getIntent());
+    web.loadUrl(linked==null?HOME:linked);
     checkForAppUpdate();
   }
   @Override protected void onActivityResult(int requestCode,int resultCode,Intent data) {
