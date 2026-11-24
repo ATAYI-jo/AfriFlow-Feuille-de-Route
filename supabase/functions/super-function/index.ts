@@ -13,19 +13,16 @@ export function messageEmail(value: Record<string, unknown>, id: string) {
   const urgentPrefix = /^urgent\s*[·:–—-]\s*/i;
   const urgent = value.urgent === true || (value.urgent == null && urgentPrefix.test(subject));
   const body = String(value.body || "").replace(/\r\n?/g, "\n");
-  const excerpt = line(body, 160) || (value.att ? "Ce message contient une pièce jointe." : "");
+  const fullBody = body || (value.att ? "Ce message contient une pièce jointe." : "");
+  const excerpt = line(fullBody, 160);
   const sender = line(value.fromName || value.from, 100) || "AfriFloW";
   const url = new URL("https://afriflow.pages.dev/");
   url.searchParams.set("message", id);
 
-  // The quote service writes these four fields in this order. Other messages keep their own wording.
-  const quote = value.quoteKey && /^Nouvelle demande de devis\s*\nProduit : ([^\n]+)\nQuantité : ([^\n]+)\nMessage : ([\s\S]*)\nClient : [^\n]+$/u.exec(body.trim());
-  const fields: [string, string][] = Array.isArray(quote) ? [
-    ["Produit", line(quote[1], 90)], ["Quantité", line(quote[2], 30)], ["Message", line(quote[3], 90)],
-  ] : [];
-  const heading = fields.length ? "Nouvelle demande de devis" : (urgent ? subject.replace(urgentPrefix, "") : subject) || "Message";
-  const preview = fields.length ? line(fields.map(([k,v]) => k + " : " + v).join(" · "), 160) : excerpt;
-  const fieldRows = fields.map(([label, content]) => `<tr><td style="padding:10px 0;border-bottom:1px solid #dce5dc"><div style="font-size:12px;color:#516657;margin-bottom:3px">${escapeHtml(label)}</div><strong style="font-size:15px;line-height:1.45;color:#213b2d">${escapeHtml(content)}</strong></td></tr>`).join("");
+  const heading = (urgent ? subject.replace(urgentPrefix, "") : subject) || "Message";
+  const preview = excerpt;
+  const bodyHtml = escapeHtml(fullBody).replace(/\n/g, "<br>");
+  const attachmentNote = value.att ? "Les pièces jointes sont disponibles dans votre messagerie AfriFloW." : "";
   const html = `<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <style>@media (prefers-reduced-motion:no-preference){.af-mark{animation:af-appear .65s ease-out 1}}@keyframes af-appear{from{transform:translateY(3px);opacity:.75}to{transform:translateY(0);opacity:1}}</style></head>
 <body style="margin:0;background:#f1f5f0;color:#213b2d;font-family:Arial,Helvetica,sans-serif">
@@ -39,13 +36,14 @@ export function messageEmail(value: Record<string, unknown>, id: string) {
 ${urgent ? '<span style="display:inline-block;background:#ffe8e8;color:#8a2633;padding:4px 10px;border-radius:12px;font-size:12px;font-weight:bold">Urgent</span>' : ''}
 <h1 style="margin:10px 0 6px;font-size:22px;line-height:1.25;color:#193e2b">${escapeHtml(heading)}</h1>
 <p style="margin:0 0 18px;font-size:14px;color:#516657">De ${escapeHtml(sender)}</p>
-${fields.length ? '<table role="presentation" width="100%" cellpadding="0" cellspacing="0">'+fieldRows+'</table>' : '<p style="font-size:16px;line-height:1.55;margin:0">'+escapeHtml(excerpt)+'</p>'}
-<table role="presentation" cellpadding="0" cellspacing="0" style="margin-top:22px"><tr><td bgcolor="#205e3d" style="border-radius:8px;mso-padding-alt:13px 22px"><a href="${escapeHtml(url.href)}" style="display:inline-block;padding:13px 22px;color:#ffffff;font:700 15px/20px Arial,sans-serif;text-decoration:none">Lire la suite</a></td></tr></table>
-<p style="margin:10px 0 0;color:#516657;font-size:13px;line-height:1.5">Le message complet vous attend dans votre messagerie AfriFloW.</p>
+<p style="font-size:16px;line-height:1.55;margin:0;white-space:pre-wrap;overflow-wrap:anywhere">${bodyHtml}</p>
+${attachmentNote ? '<p style="margin:14px 0 0;font-size:13px;color:#516657">'+escapeHtml(attachmentNote)+'</p>' : ""}
+<table role="presentation" cellpadding="0" cellspacing="0" style="margin-top:22px"><tr><td bgcolor="#205e3d" style="border-radius:8px;mso-padding-alt:13px 22px"><a href="${escapeHtml(url.href)}" style="display:inline-block;padding:13px 22px;color:#ffffff;font:700 15px/20px Arial,sans-serif;text-decoration:none">Ouvrir la messagerie</a></td></tr></table>
+<p style="margin:10px 0 0;color:#516657;font-size:13px;line-height:1.5">Pour répondre à ce message, accédez à votre messagerie AfriFloW.</p>
 </td></tr></table></td></tr></table></body></html>`;
   return {
     subject: "AfriFloW · " + subject,
-    text: [urgent ? "Urgent" : "", heading, "De " + sender, fields.length ? fields.map(([k,v]) => k + " : " + v).join("\n") : excerpt, "Lire la suite dans votre messagerie AfriFloW : " + url.href].filter(Boolean).join("\n\n"),
+    text: [urgent ? "Urgent" : "", heading, "De " + sender, fullBody, attachmentNote, "Ouvrir la messagerie AfriFloW : " + url.href].filter(Boolean).join("\n\n"),
     html,
   };
 }
