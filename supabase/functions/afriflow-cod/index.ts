@@ -14,6 +14,23 @@ function unitPriceMinor(value:unknown,from:string,to:string){
  }
  return Math.round(amount*scale(to));
 }
+// Transactional email only: verified recipients, escaped content, canonical site URL.
+function orderEmail(o:any,subject:string,message:string,urgent:boolean){
+ const site="https://afriflow.pages.dev/";
+ const esc=(v:unknown)=>String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"} as Record<string,string>)[c]);
+ const fmt=(v:unknown)=>new Intl.NumberFormat("fr-FR",{style:"currency",currency:o.currency}).format(Number(v)/scale(o.currency));
+ const items=Array.isArray(o.items)?o.items:[];
+ const preview=items.slice(0,3).map((i:any)=>String(i.quantity)+" × "+String(i.name).slice(0,140));
+ if(items.length>3)preview.push("+"+(items.length-3)+" autre(s) article(s)");
+ const state:Record<string,string>={requested:"En attente de confirmation",accepted:"Acceptée",delivered:"Livraison déclarée",cash_received:"Encaissement déclaré",cancelled:"Annulée"};
+ const status=state[o.status]||"Commande enregistrée",ref=String(o.id).slice(0,8).toUpperCase();
+ const totalLabel=o.status==="cancelled"?"Total initial":o.status==="cash_received"?"Total de la commande":"Total à régler à la livraison";
+ const action=urgent?"Consulter les commandes à valider":"Suivre la commande";
+ const summary=[...preview,totalLabel+" : "+fmt(o.total),"Statut : "+status].join("\n");
+ const text=subject+"\n\n"+message+"\n\n"+summary+"\n\n"+action+" : "+site;
+ const html=`<!doctype html><html lang="fr"><body style="margin:0;background:#eff4ef;color:#20382b;font-family:Arial,sans-serif"><div style="display:none;max-height:0;overflow:hidden;opacity:0">${esc(preview.join(" · ")+" · "+status)}</div><table role="presentation" width="100%" cellspacing="0" cellpadding="0"><tr><td align="center" style="padding:24px 12px"><table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:580px;background:#fff;border:1px solid #dce8df;border-radius:18px"><tr><td style="padding:22px 26px;background:#205a3c;color:#fff;border-radius:17px 17px 0 0"><strong style="font-size:23px">AfriFloW</strong><div style="font-size:12px;margin-top:6px">Du territoire africain vers le monde.</div></td></tr><tr><td style="padding:24px 26px"><p style="font-size:12px;color:#496b55;margin:0 0 10px">COMMANDE #${esc(ref)}</p><h1 style="font-size:22px;line-height:1.35;margin:0 0 12px">${esc(subject)}</h1><p style="font-size:15px;line-height:1.6">${esc(message)}</p><div style="padding:14px;background:#f0f5f1;border-radius:12px"><strong style="color:#205a3c;font-size:14px">${esc(status)}</strong>${preview.map(v=>'<p style="margin:9px 0;font-size:14px">'+esc(v)+'</p>').join("")}<div style="border-top:1px solid #d4e0d7;margin-top:12px;padding-top:12px;font-size:14px">${esc(totalLabel)}<br><strong style="font-size:21px;color:#205a3c">${esc(fmt(o.total))}</strong></div></div><p style="margin:24px 0"><a href="${site}" style="display:inline-block;background:#205a3c;color:#fff;text-decoration:none;padding:13px 19px;border-radius:9px;font-weight:bold">${esc(action)}</a></p><p style="font-size:12px;color:#53675a;line-height:1.5">Connectez-vous à votre compte pour consulter les détails. Aucun lien ne valide automatiquement une commande.</p></td></tr><tr><td style="border-top:1px solid #dce8df;padding:16px 26px;font-size:12px;color:#53675a"><a style="color:#205a3c" href="${site}">afriflow.pages.dev</a> · Notification transactionnelle AfriFloW</td></tr></table></td></tr></table></body></html>`;
+ return {text,html};
+}
 Deno.serve(async(req)=>{
  const origin=req.headers.get("origin")||"";
  const headers={"Content-Type":"application/json","Cache-Control":"no-store","Vary":"Origin","Access-Control-Allow-Origin":origins.has(origin)?origin:"","Access-Control-Allow-Headers":"authorization, apikey, content-type, x-client-info","Access-Control-Allow-Methods":"POST, OPTIONS"};
@@ -62,7 +79,7 @@ Deno.serve(async(req)=>{
     const apiKey=Deno.env.get("AFRIFLOW_ORDER_EMAIL_API_KEY"),sender=Deno.env.get("AFRIFLOW_ORDER_EMAIL_FROM");
     if(apiKey&&sender&&Deno.env.get("AFRIFLOW_ORDER_EMAIL_ENABLED")==="true"){
      try{
-      const response=await fetch("https://api.resend.com/emails",{method:"POST",headers:{"Authorization":"Bearer "+apiKey,"Content-Type":"application/json","Idempotency-Key":key},body:JSON.stringify({from:sender,to:[entry.email],subject:entry.subject,text:entry.message+"\\n\\n"+site}),signal:AbortSignal.timeout(5000)});
+      const response=await fetch("https://api.resend.com/emails",{method:"POST",headers:{"Authorization":"Bearer "+apiKey,"Content-Type":"application/json","Idempotency-Key":key},body:JSON.stringify({from:sender,to:[entry.email],subject:entry.subject,...orderEmail(o,entry.subject,entry.message,entry.urgent)}),signal:AbortSignal.timeout(5000)});
       if(response.ok)emails++;else console.error("cod email provider status",response.status);
      }catch(_e){console.error("cod email delivery request failed");}
     }
