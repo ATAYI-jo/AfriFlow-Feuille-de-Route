@@ -46,7 +46,18 @@ async function checkout(host,cart,login){
  select.onchange=update;await update();
  form.onsubmit=async e=>{e.preventDefault();if(!quote)return;submit.disabled=true;const accepted=quote;
  try{const result=await call("create",{country:select.value,requestId:ref,name:name.value,phone:phone.value,address:address.value,items,expectedTotal:accepted.total,expectedCurrency:accepted.currency,expectedSeller:accepted.seller_name});
- host.replaceChildren();node("h3","Demande enregistrée",host);node("p","Référence : "+result.order.id,host);node("p","Total : "+money(result.order.total,result.order.currency)+" · En attente de confirmation du vendeur. Aucun paiement reçu.",host);
+ if(!host.isConnected)return;
+ host.replaceChildren();const receipt=node("section",null,host);receipt.className="af-cod-receipt";receipt.setAttribute("role","status");receipt.tabIndex=-1;
+ const mark=node("div",null,receipt);mark.className="af-cod-receipt-icon";orderStageIcon("confirmed",mark);
+ node("h3","Votre demande de commande est enregistrée",receipt);
+ node("p","Commande #"+orderReference(result.order.id),receipt).className="af-cod-receipt-ref";
+ node("p","Le vendeur doit encore confirmer le stock et accepter la commande.",receipt);
+ const total=orderLine(receipt,"Total à régler à la livraison",money(result.order.total,result.order.currency));total.classList.add("af-cod-total");
+ node("p","Aucun paiement en ligne n’a été effectué.",receipt).className="af-cod-note";
+ const follow=button(receipt,"Suivre ma commande",()=>{const b=document.getElementById("afCODOrders");if(b)b.click();});follow.classList.add("af-market-primary");
+ if(result.alerts&&result.alerts.internal===0)node("p","La demande est enregistrée. L’envoi des notifications n’a pas pu être confirmé.",receipt).className="af-cod-note";
+ receipt.focus({preventScroll:true});
+ window.dispatchEvent(new Event("afri:cod-changed"));
  }catch(e){status.textContent=e.message;submit.disabled=false;}};
 
 }
@@ -54,6 +65,7 @@ function orderLine(parent,label,value){const line=node("div",null,parent);line.c
 function orderReference(id){return String(id||"").slice(0,8).toUpperCase();}
 const orderStages=[["requested","Demandée"],["accepted","Acceptée"],["delivered","Livrée"],["cash_received","Encaissée"]];
 const orderIconPaths={
+ confirmed:[["circle",{cx:12,cy:12,r:9}],["path",{d:"m8 12 3 3 5-6"}]],
  requested:[["rect",{x:5,y:3,width:14,height:19,rx:2}],["path",{d:"M9 8h6M9 12h6M9 16h4"}]],
  accepted:[["path",{d:"m3 7 9-5 9 5v11l-9 5-9-5zM3 7l9 5 9-5M12 12v11M8 5l9 5"}]],
  delivered:[["path",{d:"M2 5h13v12H2zM15 9h4l3 4v4h-7"}],["circle",{cx:6,cy:18,r:2}],["circle",{cx:18,cy:18,r:2}]],
@@ -91,7 +103,7 @@ function orderCard(o,host,refresh){
  orderLine(details,"Destinataire",o.customer_name||"Non renseigné");orderLine(details,"Téléphone",o.phone||"Non renseigné");orderLine(details,"Adresse",o.address||"Non renseignée");orderLine(details,"Référence complète",o.id);
  if(o.status==="cash_received"){const commission=node("p","Commission contractuelle indicative sur les produits : "+money(Math.round(Number(o.subtotal)*Number(o.commission_rate)/100),o.currency)+" — reversement non confirmé.",card);commission.className="af-cod-note";}
  const actions=node("div",null,card);actions.className="af-cod-actions";
- async function change(status,cashConfirmed=false){await call("transition",{id:o.id,status,cashConfirmed});await refresh();}
+ async function change(status,cashConfirmed=false){await call("transition",{id:o.id,status,cashConfirmed});window.dispatchEvent(new Event("afri:cod-changed"));await refresh();}
  if(o.canFulfill&&o.status==="requested")button(actions,"Accepter après contrôle du stock",()=>change("accepted")).classList.add("af-cod-primary");
  if(o.canFulfill&&o.status==="accepted")button(actions,"Confirmer la livraison",()=>change("delivered")).classList.add("af-cod-primary");
  if(o.canFulfill&&o.status==="delivered")button(actions,"Confirmer l’encaissement réel",async()=>{if(window.confirm("Confirmez uniquement si le vendeur a effectivement reçu "+money(o.total,o.currency)+". Continuer ?"))await change("cash_received",true);}).classList.add("af-cod-primary");
@@ -102,7 +114,9 @@ function orderCard(o,host,refresh){
 async function orderList(host){
  const {orders}=await call("list");if(!host.isConnected)return;host.replaceChildren();
  if(!orders.length){node("p","Aucune commande enregistrée.",host).className="af-cod-empty";return;}
- for(const o of orders)orderCard(o,host,()=>orderList(host));
+ const pending=orders.filter(o=>o.canFulfill&&o.status==="requested"),rest=orders.filter(o=>!pending.includes(o));
+ if(pending.length){const title=node("h4",pending.length+" commande"+(pending.length>1?"s":"")+" à valider",host);title.className="af-cod-pending-heading";}
+ for(const o of [...pending,...rest])orderCard(o,host,()=>orderList(host));
 }
 function mount(host,admin=false){
  if(!host)return;host.replaceChildren();
@@ -132,5 +146,5 @@ function mount(host,admin=false){
  const bar=node("div",null,content);bar.className="af-cod-list-bar";node("h4",admin?"Commandes enregistrées":"Suivi des commandes",bar);const list=node("div",null,content);list.className="af-cod-list";button(bar,"Actualiser",()=>orderList(list)).classList.add("af-cod-refresh");await orderList(list);
  }catch(e){node("p",e.message,content);delete content.dataset.loaded;}};
 }
-window.AfriCOD={checkout,mount};
+window.AfriCOD={checkout,mount,pendingCount:async()=>{const data=await call("pending_count");return Number(data.count)||0;}};
 })();
