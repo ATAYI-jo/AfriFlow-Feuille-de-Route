@@ -4,7 +4,7 @@
   var DEF_TITLE = "AfriFloW – De l’Afrique vers le monde", HERO_KEY = "pub:markethero", HERO_LS = "afriflow_markethero_v1", EXT = ["jpg", "jpeg", "webp", "png"];
   function readHeroLocal() { try { return JSON.parse(localStorage.getItem(HERO_LS) || "{}") || {}; } catch (error) { return {}; } }
   /* Le bandeau est toujours repris depuis le serveur : aucune ancienne image locale ne réapparaît au rechargement. */
-  var state = { products: [], adminProducts: [], category: "", term: "", context: { kind: "public" }, timers: [], heroTimer: null, rotationTimer: null, rotationStep: 0, heroIdx: 0, imgs: {}, imgErr: {}, hero: {}, aiPolling: {}, partner: null, partnerAdmin: null, disputes: [], disputeFiles: [], disputesAdmin: [], adminDisputeFiles: [], cart: [], favorites: [], currency: { code: "", rates: {}, loading: false } };
+  var state = { products: [], adminProducts: [], category: "", term: "", catalogOrigin:"", catalogStock:false, catalogSort:"default", context: { kind: "public" }, timers: [], heroTimer: null, rotationTimer: null, rotationStep: 0, heroIdx: 0, imgs: {}, imgErr: {}, hero: {}, aiPolling: {}, partner: null, partnerAdmin: null, disputes: [], disputeFiles: [], disputesAdmin: [], adminDisputeFiles: [], cart: [], favorites: [], currency: { code: "", rates: {}, loading: false } };
 
   function el(id) { return document.getElementById(id); }
   function loadStored(key, fallback) { try { var value = JSON.parse(localStorage.getItem(key) || ""); return Array.isArray(value) ? value : fallback; } catch (error) { return fallback; } }
@@ -58,13 +58,15 @@
   function currentCurrency() { return state.currency.code || preferredCurrency(); }
   function convertedPrice(value, currency) {
     var base = String(currency || "XOF").toUpperCase(), target = currentCurrency(), amount = Number(value);
+    if(value==null||value==="")return NaN;
     if (!Number.isFinite(amount) || base === target) return amount;
     var rate = Number(state.currency.rates[base]);
-    return Number.isFinite(rate) && rate > 0 ? amount * rate : amount;
+    return Number.isFinite(rate) && rate > 0 ? amount * rate : ["XOF","XAF"].includes(base)&&target==="EUR"?amount/655.957:base==="EUR"&&["XOF","XAF"].includes(target)?amount*655.957:NaN;
   }
   function formatPrice(value, currency) {
     if (value == null || value === "") return "Sur demande";
     var target = currentCurrency(), amount = convertedPrice(value, currency);
+    if(!Number.isFinite(amount)){if(!Number.isFinite(Number(value)))return "Tarif à confirmer";target=String(currency||"XOF").toUpperCase();amount=Number(value);}
     try { return new Intl.NumberFormat("fr-FR", { style: "currency", currency: target, maximumFractionDigits: target === "XOF" ? 0 : 2 }).format(amount); }
     catch (error) { return amount.toLocaleString("fr-FR") + " " + target; }
   }
@@ -84,6 +86,7 @@
     }
   }
   function discountPercent(product) {
+    if(product.price==null||product.price===""||product.compare_at_price==null||product.compare_at_price==="")return 0;
     var current = Number(product.price), previous = Number(product.compare_at_price);
     return Number.isFinite(current) && Number.isFinite(previous) && previous > current ? Math.round((1 - current / previous) * 100) : 0;
   }
@@ -113,7 +116,7 @@
   function clearTimers() { state.timers.forEach(function (t) { clearTimeout(t); }); state.timers = []; if (state.rotationTimer) { clearInterval(state.rotationTimer); state.rotationTimer = null; } clearHero(); }
   function clearHero() { if (state.heroTimer) { clearInterval(state.heroTimer); state.heroTimer = null; } }
   function open(context) {
-    state.context = context || { kind: "public" }; state.favoriteOnly=false; loadShop(); state.currency.code = preferredCurrency(); hideWorkspace(); render(); loadCurrencyRates();
+    state.context = context || { kind: "public" }; state.favoriteOnly=false; state.category="";state.term="";clearCatalogFilters(); loadShop(); state.currency.code = preferredCurrency(); hideWorkspace(); render(); loadCurrencyRates();
     if (roleMode(state.context.market) === "partner_approved") { loadPartnerPortal(); loadCatalog(); return; }
     if (roleMode(state.context.market) === "partner_waiting") { loadCatalog(); return; }
     loadHero(); loadCatalog();
@@ -137,13 +140,30 @@
   }
   function closeAuth() { var auth = el("auth-screen"); if (auth) auth.classList.add("off"); document.body.classList.remove("af-auth-open"); }
   function categoryList() { var seen = {}; state.products.forEach(function (product) { if (product.category) seen[product.category] = true; }); return Object.keys(seen).sort(); }
-  function filteredProducts() {
-    if(state.favoriteOnly)return state.products.filter(function(product){return state.favorites.indexOf(product.id)>-1;});
-    var term = state.term.trim().toLocaleLowerCase("fr");
-    return state.products.filter(function (product) {
-      if (isAnnouncement(product)) return false;
-      return (!state.category || product.category === state.category) && (!term || [product.name, product.description, product.category].join(" ").toLocaleLowerCase("fr").indexOf(term) > -1);
+  function searchKey(value){return String(value||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLocaleLowerCase("fr").replace(/[^\p{L}\p{N}]+/gu," ").trim();}
+  function clearCatalogFilters(){state.catalogOrigin="";state.catalogStock=false;state.catalogSort="default";}
+  function catalogNarrowed(){return !!(state.favoriteOnly||state.category||state.term.trim()||state.catalogOrigin||state.catalogStock||state.catalogSort!=="default");}
+  function filteredProducts(){
+    var words=searchKey(state.term).split(" ").filter(Boolean);
+    var products=state.products.filter(function(p){
+      if(isAnnouncement(p))return !!state.favoriteOnly&&state.favorites.indexOf(p.id)>-1;
+      if(state.favoriteOnly&&state.favorites.indexOf(p.id)<0)return false;
+      var hay=searchKey([p.name,p.description,p.category,p.origin_country].join(" "));
+      return (!state.category||p.category===state.category)&&(!state.catalogOrigin||p.origin_country===state.catalogOrigin)&&(!state.catalogStock||inStock(p))&&words.every(function(word){return hay.indexOf(word)>-1;});
     });
+    if(state.catalogSort==="priceAsc"||state.catalogSort==="priceDesc"){
+      var direction=state.catalogSort==="priceAsc"?1:-1;
+      products.sort(function(a,b){var x=convertedPrice(a.price,a.currency),y=convertedPrice(b.price,b.currency);return !Number.isFinite(x)?(!Number.isFinite(y)?0:1):!Number.isFinite(y)?-1:direction*(x-y);});
+    }else if(state.catalogSort==="available")products.sort(function(a,b){return Number(inStock(b))-Number(inStock(a));});
+    else if(state.catalogSort==="newest")products.sort(function(a,b){return String(b.created_at||"").localeCompare(String(a.created_at||""));});
+    return products;
+  }
+  function catalogFiltersHtml(){
+    var commercial=state.products.filter(function(p){return !isAnnouncement(p);});
+    function options(values,selected,all){return '<option value="">'+all+'</option>'+values.map(function(v){return '<option value="'+esc(v)+'"'+(v===selected?' selected':'')+'>'+esc(v)+'</option>';}).join("");}
+    var origins=Array.from(new Set(commercial.map(function(p){return p.origin_country;}).filter(Boolean))).sort();
+    var categories=Array.from(new Set(commercial.map(function(p){return p.category;}).filter(Boolean))).sort();
+    return '<section class="af-catalog-controls" aria-label="Filtrer les produits"><div class="af-catalog-controls-top"><b>Affiner les produits</b><button type="button" id="afCatalogReset" class="af-market-secondary">Réinitialiser</button></div><div class="af-catalog-filter-grid"><label>Catégorie<select id="afCatalogCategory">'+options(categories,state.category,"Toutes les catégories")+'</select></label><label>Origine<select id="afCatalogOrigin">'+options(origins,state.catalogOrigin,"Tous les pays")+'</select></label><label>Trier par<select id="afCatalogSort">'+[["default","Pertinence"],["available","Disponibles en premier"],["newest","Nouveautés"],["priceAsc","Prix croissant"],["priceDesc","Prix décroissant"]].map(function(o){return '<option value="'+o[0]+'"'+(o[0]===state.catalogSort?' selected':'')+'>'+o[1]+'</option>';}).join("")+'</select></label><label class="af-catalog-stock"><input type="checkbox" id="afCatalogStock"'+(state.catalogStock?' checked':'')+'> Disponibles uniquement</label></div></section>';
   }
 
   /* ---------- Images : Dropbox (fonction serveur) puis dossier products/ du site ---------- */
@@ -1156,7 +1176,7 @@
       '<label><input type="radio" name="afGuestPay" value="card" checked> Carte bancaire (Visa / Mastercard)</label>' +
       '<label><input type="radio" name="afGuestPay" value="mobile"> Mobile Money (selon le pays)</label></div>' +
       '<div class="af-guest-step"><strong>3. Récapitulatif</strong>' +
-      '<p>' + esc(cartCount()) + ' article(s) · Total produits estimatif : <b>' + esc(formatPrice(cartTotal(),currentCurrency())) + '</b></p>' +
+      '<p>' + esc(cartCount()) + ' article(s) · Total produits estimatif : <b>' + esc(Number.isFinite(cartTotal())?formatPrice(cartTotal(),currentCurrency()):"À confirmer") + '</b></p>' +
       '<p>Prix, disponibilité, taxes, conversion et livraison à vérifier côté serveur avant tout paiement.</p></div>' +
       '<div class="af-guest-pending" role="status"><strong>Paiement invité en préparation</strong>' +
       '<p>Le compte marchand AfriFloW est en cours de validation chez FedaPay. Le paiement réel et la confirmation de commande ne sont pas encore disponibles.</p></div>' +
@@ -1165,7 +1185,7 @@
     m.querySelector(".af-modal-x").onclick=closeModal;
     m.querySelector("#afGuestBack").onclick=function(){closeModal();openCart();};
   }
-    var html = '<button type="button" class="af-modal-x" aria-label="Fermer">×</button><div class="af-cart"><h3>Mon panier <span>' + cartCount() + ' article' + (cartCount() > 1 ? "s" : "") + '</span></h3><p>Préparez votre demande : AfriFloW confirmera les prix, stocks et délais avant tout paiement.</p><div class="af-cart-list">' + state.cart.map(function (row) { return '<article><div><b>' + esc(row.name) + '</b><small>' + esc(formatPrice(row.price, row.currency)) + ' / unité</small></div><div class="af-cart-qty"><button type="button" data-cart-minus="' + esc(row.id) + '">−</button><b>' + esc(row.quantity) + '</b><button type="button" data-cart-plus="' + esc(row.id) + '">+</button></div><button type="button" class="af-cart-remove" data-cart-remove="' + esc(row.id) + '">Retirer</button></article>'; }).join("") + '</div><div class="af-cart-total"><span>Total estimatif</span><b>' + esc(formatPrice(cartTotal(), currency)) + '</b><small>Conversion indicative : le devis final reste le montant de référence.</small></div><div class="af-actions"><button type="button" class="af-market-primary" id="afCartCOD">Paiement à la livraison</button><button type="button" class="af-market-secondary" id="afCartGuest">Autres moyens de paiement</button><button type="button" class="af-market-primary" id="afCartQuote">Demander un devis groupé</button><button type="button" class="af-market-secondary" id="afCartClose">Continuer mes achats</button></div></div>';
+    var html = '<button type="button" class="af-modal-x" aria-label="Fermer">×</button><div class="af-cart"><h3>Mon panier <span>' + cartCount() + ' article' + (cartCount() > 1 ? "s" : "") + '</span></h3><p>Préparez votre demande : AfriFloW confirmera les prix, stocks et délais avant tout paiement.</p><div class="af-cart-list">' + state.cart.map(function (row) { return '<article><div><b>' + esc(row.name) + '</b><small>' + esc(formatPrice(row.price, row.currency)) + ' / unité</small></div><div class="af-cart-qty"><button type="button" data-cart-minus="' + esc(row.id) + '">−</button><b>' + esc(row.quantity) + '</b><button type="button" data-cart-plus="' + esc(row.id) + '">+</button></div><button type="button" class="af-cart-remove" data-cart-remove="' + esc(row.id) + '">Retirer</button></article>'; }).join("") + '</div><div class="af-cart-total"><span>Total estimatif</span><b>' + esc(Number.isFinite(cartTotal())?formatPrice(cartTotal(), currency):"À confirmer") + '</b><small>Conversion indicative : le devis final reste le montant de référence.</small></div><div class="af-actions"><button type="button" class="af-market-primary" id="afCartCOD">Paiement à la livraison</button><button type="button" class="af-market-secondary" id="afCartGuest">Autres moyens de paiement</button><button type="button" class="af-market-primary" id="afCartQuote">Demander un devis groupé</button><button type="button" class="af-market-secondary" id="afCartClose">Continuer mes achats</button></div></div>';
     var m = modal(html); m.querySelector(".af-modal-x").onclick = closeModal; m.querySelector("#afCartClose").onclick = closeModal;
     m.querySelectorAll("[data-cart-plus]").forEach(function (button) { button.onclick = function () { var row = state.cart.filter(function (x) { return x.id === button.dataset.cartPlus; })[0]; if (row) { row.quantity += 1; persistShop(); closeModal(); openCart(); } }; });
     m.querySelectorAll("[data-cart-minus]").forEach(function (button) { button.onclick = function () { var row = state.cart.filter(function (x) { return x.id === button.dataset.cartMinus; })[0]; if (row) { row.quantity -= 1; if (row.quantity < 1) state.cart = state.cart.filter(function (x) { return x.id !== row.id; }); persistShop(); closeModal(); if (state.cart.length) openCart(); else render(); } }; });
@@ -1199,7 +1219,7 @@
   }
   function productsHtml(products) {
     if (!products.length) return '<div class="af-market-empty">'+(state.favoriteOnly?"Vous n’avez pas encore enregistré de favori.":"Aucun produit ne correspond à votre recherche pour le moment.")+'</div>';
-    if (products.length === 1 && !isAnnouncement(products[0])) return featuredCard(products[0]);
+    // Keep a stable card layout even when a filter returns a single product.
     return '<section id="afMarketGrid" class="af-market-grid" data-n="' + Math.min(products.length, 5) + '">' + products.map(function (item, index) { return isAnnouncement(item) ? announcementCard(item) : productCard(item, index); }).join("") + "</section>";
   }
   function relevantBell(item) {
@@ -1386,12 +1406,11 @@
   }
   function catalogContent() {
     var products = filteredProducts();
-    return '<section class="af-ali">' + catsHtml() + heroHtml() + sideHtml() + scrollCueHtml() + "</section>"
-      // Le catalogue est la première section après l'en-tête de la vitrine.
-      + '<div class="af-market-section-head" id="afProductsTop"><h2>' + (state.favoriteOnly ? "Vos favoris" : state.category ? esc(state.category) : "Nos produits") + "</h2><p>" + (products.length ? products.length + " produit" + (products.length > 1 ? "s" : "") : "Catalogue en préparation") + "</p></div>"
-      + productsHtml(products)
-      + marketShowcaseHtml()
-      + announcementsHtml()
+    return (catalogNarrowed() ? "" : '<section class="af-ali">' + catsHtml() + heroHtml() + sideHtml() + scrollCueHtml() + "</section>")
+      // Results are immediately visible during search and filtering.
+      + '<div class="af-market-section-head" id="afProductsTop"><h2>' + (state.favoriteOnly ? "Vos favoris" : state.category ? esc(state.category) : "Nos produits") + "</h2><p>" + (products.length + " produit" + (products.length !== 1 ? "s" : "")) + "</p></div>"
+      + catalogFiltersHtml() + productsHtml(products)
+      + (catalogNarrowed() ? "" : marketShowcaseHtml() + announcementsHtml())
       + (isAdmin() ? adminPanel() : "");
   }
   function waitContent() {
@@ -1619,7 +1638,7 @@
       var url = state.imgs[box.dataset.marketImage];
       if (url) box.style.setProperty("--showcase-bg", 'url("' + String(url).replace(/"/g,"%22") + '")');
     });
-    var home = el("afMarketHome"); if (home) home.onclick = function (event) { event.preventDefault(); state.favoriteOnly=false; state.category = ""; state.term = ""; render(); loadCatalog(); };
+    var home = el("afMarketHome"); if (home) home.onclick = function (event) { event.preventDefault(); state.favoriteOnly=false; state.category = ""; state.term = ""; clearCatalogFilters(); render(); loadCatalog(); };
     var back = el("afMarketBack"); if (back) back.onclick = closeToWorkspace;
     var signIn = el("afMarketSignIn"); if (signIn) signIn.onclick = function () { openAuth("login"); };
     var sideIn = el("afSideSignIn"); if (sideIn) sideIn.onclick = function () { openAuth("login"); };
@@ -1718,9 +1737,11 @@
         button.disabled=false;
       }
     };
-    var search = el("afMarketSearch"); if (search) search.onsubmit = function (event) { event.preventDefault(); state.favoriteOnly=false; state.term = el("afMarketSearchInput").value; render(); loadCatalog(false); };
-    document.querySelectorAll("[data-market-category]").forEach(function (button) { button.onclick = function () { state.favoriteOnly=false; state.category = button.dataset.marketCategory || ""; render(); loadCatalog(false); }; });
-    document.querySelectorAll("[data-market-favorites]").forEach(function(button){button.onclick=function(){state.favoriteOnly=!state.favoriteOnly;state.term="";state.category="";render();scrollMarketTo("afProductsTop");};});
+    [["afCatalogCategory","category"],["afCatalogOrigin","catalogOrigin"],["afCatalogSort","catalogSort"],["afCatalogStock","catalogStock"]].forEach(function(pair){var input=el(pair[0]);if(input)input.onchange=function(){state[pair[1]]=input.type==="checkbox"?input.checked:input.value;render();var next=el(pair[0]);if(next)next.focus({preventScroll:true});scrollMarketTo("afProductsTop");};});
+    var reset=el("afCatalogReset");if(reset)reset.onclick=function(){state.category="";state.term="";state.favoriteOnly=false;clearCatalogFilters();render();scrollMarketTo("afProductsTop");};
+    var search = el("afMarketSearch"); if (search) search.onsubmit = function (event) { event.preventDefault(); state.favoriteOnly=false; state.term = el("afMarketSearchInput").value; render(); scrollMarketTo("afProductsTop"); };
+    document.querySelectorAll("[data-market-category]").forEach(function (button) { button.onclick = function () { state.favoriteOnly=false; state.category = button.dataset.marketCategory || ""; render(); scrollMarketTo("afProductsTop"); }; });
+    document.querySelectorAll("[data-market-favorites]").forEach(function(button){button.onclick=function(){state.favoriteOnly=!state.favoriteOnly;state.term="";state.category="";clearCatalogFilters();render();scrollMarketTo("afProductsTop");};});
     document.querySelectorAll("[data-market-detail]").forEach(function (button) {
       var open = function (event) { if (button.matches("article[role=button]") && event && event.target.closest("button")) return; var p = productById(button.dataset.marketDetail); if (p) openDetail(p); };
       button.onclick = open;
