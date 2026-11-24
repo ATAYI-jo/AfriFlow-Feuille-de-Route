@@ -113,7 +113,7 @@
   function clearTimers() { state.timers.forEach(function (t) { clearTimeout(t); }); state.timers = []; if (state.rotationTimer) { clearInterval(state.rotationTimer); state.rotationTimer = null; } clearHero(); }
   function clearHero() { if (state.heroTimer) { clearInterval(state.heroTimer); state.heroTimer = null; } }
   function open(context) {
-    state.context = context || { kind: "public" }; loadShop(); state.currency.code = preferredCurrency(); hideWorkspace(); render(); loadCurrencyRates();
+    state.context = context || { kind: "public" }; state.favoriteOnly=false; loadShop(); state.currency.code = preferredCurrency(); hideWorkspace(); render(); loadCurrencyRates();
     if (roleMode(state.context.market) === "partner_approved") { loadPartnerPortal(); loadCatalog(); return; }
     if (roleMode(state.context.market) === "partner_waiting") { loadCatalog(); return; }
     loadHero(); loadCatalog();
@@ -138,6 +138,7 @@
   function closeAuth() { var auth = el("auth-screen"); if (auth) auth.classList.add("off"); document.body.classList.remove("af-auth-open"); }
   function categoryList() { var seen = {}; state.products.forEach(function (product) { if (product.category) seen[product.category] = true; }); return Object.keys(seen).sort(); }
   function filteredProducts() {
+    if(state.favoriteOnly)return state.products.filter(function(product){return state.favorites.indexOf(product.id)>-1;});
     var term = state.term.trim().toLocaleLowerCase("fr");
     return state.products.filter(function (product) {
       if (isAnnouncement(product)) return false;
@@ -1111,10 +1112,31 @@
     else state.cart.push({ id: product.id, name: product.name, price: product.price, currency: product.currency, quantity: Math.max(1, Number(product.minimum_order_quantity) || 1) });
     persistShop(); render(); notice("Produit ajouté au panier.");
   }
+  function favoriteButton(product) {
+    var selected=state.favorites.indexOf(product.id)>-1;
+    return '<button type="button" class="af-favorite'+(selected?' on':'')+'" data-favorite="'+esc(product.id)+'" aria-pressed="'+selected+'" aria-label="'+(selected?'Retirer des favoris':'Ajouter aux favoris')+'" title="'+(selected?'Retirer des favoris':'Ajouter aux favoris')+'">'+icon("heart")+'</button>';
+  }
   function toggleFavorite(product) {
-    if (!product) return; var index = state.favorites.indexOf(product.id);
-    if (index < 0) { state.favorites.push(product.id); notice("Ajouté à vos favoris."); } else { state.favorites.splice(index, 1); notice("Retiré de vos favoris."); }
-    persistShop(); render();
+    if (!product) return;
+    var index=state.favorites.indexOf(product.id),selected=index<0;
+    if(selected)state.favorites.push(product.id);else state.favorites.splice(index,1);
+    persistShop();
+    document.querySelectorAll("[data-favorite]").forEach(function(button){
+      if(button.dataset.favorite!==String(product.id))return;
+      button.classList.toggle("on",selected);
+      button.setAttribute("aria-pressed",String(selected));
+      button.setAttribute("aria-label",selected?"Retirer des favoris":"Ajouter aux favoris");
+      button.title=selected?"Retirer des favoris":"Ajouter aux favoris";
+      button.classList.remove("af-fav-add","af-fav-remove");
+      void button.offsetWidth;
+      button.classList.add(selected?"af-fav-add":"af-fav-remove");
+    });
+    document.querySelectorAll("[data-market-favorites] [data-favorite-count]").forEach(function(label){label.textContent="Favoris ("+state.favorites.length+")";});
+    notice(selected?"Ajouté à vos favoris.":"Retiré de vos favoris.");
+    if(state.favoriteOnly&&!selected){
+      var reduced=window.matchMedia&&window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      setTimeout(function(){if(state.favoriteOnly&&state.favorites.indexOf(product.id)<0){var restore=document.activeElement&&document.activeElement.dataset.favorite===String(product.id);render();if(restore){var nav=document.querySelector("[data-market-favorites]");if(nav)nav.focus({preventScroll:true});}}},reduced?0:280);
+    }
   }
   function openCart() {
     if (!state.cart.length) return notice("Votre panier est vide pour le moment.");
@@ -1163,20 +1185,20 @@
   /* ---------- Rendu ---------- */
   function productCard(product, i) {
     var discount = discountPercent(product), facts = salesFacts(product), available = inStock(product);
-    return '<article class="af-product' + (available ? '' : ' is-out-of-stock') + '" style="--i:' + i + '" tabindex="0" role="button" data-market-detail="' + esc(product.id) + '" aria-label="Voir les détails de ' + esc(product.name) + '"><div class="af-product-media af-media" data-market-image="' + esc(product.id) + '" data-alt="' + esc(product.name) + '">' + media(product) + (product.promotion_label || discount ? '<span class="af-promo">' + esc(product.promotion_label || "Offre spéciale") + '</span>' : '') + '<button type="button" class="af-favorite' + (state.favorites.indexOf(product.id) > -1 ? ' on' : '') + '" data-favorite="' + esc(product.id) + '" aria-label="Ajouter aux favoris">' + icon("heart") + '</button>' + (available ? '' : '<span class="af-stock-badge">Rupture de stock</span>') + "</div>"
+    return '<article class="af-product' + (available ? '' : ' is-out-of-stock') + '" style="--i:' + i + '" tabindex="0" role="button" data-market-detail="' + esc(product.id) + '" aria-label="Voir les détails de ' + esc(product.name) + '"><div class="af-product-media af-media" data-market-image="' + esc(product.id) + '" data-alt="' + esc(product.name) + '">' + media(product) + (product.promotion_label || discount ? '<span class="af-promo">' + esc(product.promotion_label || "Offre spéciale") + '</span>' : '') + favoriteButton(product) + (available ? '' : '<span class="af-stock-badge">Rupture de stock</span>') + "</div>"
       + '<div class="af-product-body"><div class="af-product-cat">' + esc(product.category) + '</div><h3>' + esc(product.name) + '</h3><div class="af-price-line"><div class="af-product-price">' + esc(formatPrice(product.price, product.currency)) + '</div>' + (discount ? '<span class="af-old-price">' + esc(formatPrice(product.compare_at_price, product.currency)) + '</span><span class="af-discount">-' + discount + '%</span>' : '') + '</div>'
       + '<div class="af-product-meta">' + (product.minimum_order_quantity ? '<span>Min. ' + esc(product.minimum_order_quantity) + ' unité' + (Number(product.minimum_order_quantity) > 1 ? 's' : '') + '</span>' : '<span>Sur demande</span>') + (product.origin_country ? '<span>' + esc(product.origin_country) + '</span>' : '') + '</div><div class="af-verified"><i>✓</i><b>Certifié</b><span>AfriFloW</span></div>'
       + '<div class="af-card-actions">' + (available ? '<button type="button" class="af-market-primary" data-add-cart="' + esc(product.id) + '">' + icon("bag") + '<span>Ajouter</span></button>' : '<button type="button" class="af-market-unavailable" disabled>Rupture</button>') + '<button type="button" class="af-market-secondary" data-market-detail="' + esc(product.id) + '">Détails</button></div></div></article>';
   }
   function featuredCard(p) {
     var available = inStock(p), discount = discountPercent(p);
-    return '<div class="af-feature-wrap"><article class="af-feature' + (available ? '' : ' is-out-of-stock') + '"><div class="af-media af-feature-media" data-market-image="' + esc(p.id) + '" data-alt="' + esc(p.name) + '">' + media(p) + (available ? '' : '<span class="af-stock-badge">Rupture de stock</span>') + "</div>"
+    return '<div class="af-feature-wrap"><article class="af-feature' + (available ? '' : ' is-out-of-stock') + '"><div class="af-media af-feature-media" data-market-image="' + esc(p.id) + '" data-alt="' + esc(p.name) + '">' + media(p) + favoriteButton(p) + (available ? '' : '<span class="af-stock-badge">Rupture de stock</span>') + "</div>"
       + '<div class="af-feature-body"><div class="af-feature-top"><span class="af-chip">' + esc(p.promotion_label || "Produit à la une") + '</span><span class="af-verified"><i>✓</i><b>Certifié</b> <span>AfriFloW</span></span></div><h3>' + esc(p.name) + '</h3><div class="af-feature-pricing"><div class="af-product-price af-big">' + esc(formatPrice(p.price, p.currency)) + '</div>' + (discount ? '<div><span class="af-old-price">' + esc(formatPrice(p.compare_at_price, p.currency)) + '</span><span class="af-discount">-' + discount + '%</span></div>' : '') + '</div><p>' + esc(p.description || "Produit sélectionné par AfriFloW.") + "</p>"
       + '<div class="af-feature-meta">' + (p.minimum_order_quantity ? 'Commande minimum : <b>' + esc(p.minimum_order_quantity) + ' unité' + (Number(p.minimum_order_quantity) > 1 ? 's' : '') + '</b>' : 'Quantité sur demande') + (p.origin_country ? ' <span>· Origine : ' + esc(p.origin_country) + '</span>' : '') + '</div><ul class="af-points"><li>Produit contrôlé par AfriFloW</li><li>Devis personnalisé sur demande</li><li>Contact direct avec l’équipe</li></ul>'
       + '<div class="af-actions">' + (available ? '<button type="button" class="af-market-primary" data-add-cart="' + esc(p.id) + '">' + icon("bag") + '<span>Ajouter au panier</span></button>' : '<button type="button" class="af-market-unavailable" disabled>Rupture de stock</button>') + '<button type="button" class="af-market-secondary" data-market-detail="' + esc(p.id) + '">Voir les détails</button></div></div></article></div>';
   }
   function productsHtml(products) {
-    if (!products.length) return '<div class="af-market-empty">Aucun produit ne correspond à votre recherche pour le moment.</div>';
+    if (!products.length) return '<div class="af-market-empty">'+(state.favoriteOnly?"Vous n’avez pas encore enregistré de favori.":"Aucun produit ne correspond à votre recherche pour le moment.")+'</div>';
     if (products.length === 1 && !isAnnouncement(products[0])) return featuredCard(products[0]);
     return '<section id="afMarketGrid" class="af-market-grid" data-n="' + Math.min(products.length, 5) + '">' + products.map(function (item, index) { return isAnnouncement(item) ? announcementCard(item) : productCard(item, index); }).join("") + "</section>";
   }
@@ -1366,7 +1388,7 @@
     var products = filteredProducts();
     return '<section class="af-ali">' + catsHtml() + heroHtml() + sideHtml() + scrollCueHtml() + "</section>"
       // Le catalogue est la première section après l'en-tête de la vitrine.
-      + '<div class="af-market-section-head" id="afProductsTop"><h2>' + (state.category ? esc(state.category) : "Nos produits") + "</h2><p>" + (products.length ? products.length + " produit" + (products.length > 1 ? "s" : "") : "Catalogue en préparation") + "</p></div>"
+      + '<div class="af-market-section-head" id="afProductsTop"><h2>' + (state.favoriteOnly ? "Vos favoris" : state.category ? esc(state.category) : "Nos produits") + "</h2><p>" + (products.length ? products.length + " produit" + (products.length > 1 ? "s" : "") : "Catalogue en préparation") + "</p></div>"
       + productsHtml(products)
       + marketShowcaseHtml()
       + announcementsHtml()
@@ -1395,7 +1417,7 @@
         '<button type="button" data-market-jump="categories">' + icon("categories") + 'Catégories</button>' +
         '<button type="button" data-market-jump="products">' + icon("bag") + 'Nos produits</button>' +
         '<button type="button" data-market-jump="news">' + icon("globe") + 'Actualités</button>' +
-        '<button type="button" data-market-favorites>' + icon("heart") + '<span>Favoris (' + state.favorites.length + ')</span></button>' +
+        '<button type="button" data-market-favorites aria-pressed="'+!!state.favoriteOnly+'">' + icon("heart") + '<span data-favorite-count>Favoris (' + state.favorites.length + ')</span></button>' +
         '<span class="af-market-nav-trust">' + icon("sparkle") + 'Produits contrôlés · Support AfriFloW</span></nav>' : '') + "</header>";
   }
   function adminPanel() {
@@ -1563,7 +1585,8 @@
       if (!target && id === "afProductsTop") target = document.querySelector("#market-view .af-ali + *");
       if (!target) return;
       var reduced=window.matchMedia&&window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-      var top=target.getBoundingClientRect().top+window.scrollY-96;
+      var header=document.querySelector("#market-view .af-market-top");
+      var top=target.getBoundingClientRect().top+window.scrollY-(header?header.getBoundingClientRect().height:96)-12;
       if (reduced) { window.scrollTo(0,Math.max(0,top)); return; }
       // Explicit eased animation for hosts where native scrollIntoView is abrupt.
       var from=window.scrollY,to=Math.max(0,top),start=null,duration=Math.min(950,Math.max(420,Math.abs(to-from)*0.65));
@@ -1596,7 +1619,7 @@
       var url = state.imgs[box.dataset.marketImage];
       if (url) box.style.setProperty("--showcase-bg", 'url("' + String(url).replace(/"/g,"%22") + '")');
     });
-    var home = el("afMarketHome"); if (home) home.onclick = function (event) { event.preventDefault(); state.category = ""; state.term = ""; render(); loadCatalog(); };
+    var home = el("afMarketHome"); if (home) home.onclick = function (event) { event.preventDefault(); state.favoriteOnly=false; state.category = ""; state.term = ""; render(); loadCatalog(); };
     var back = el("afMarketBack"); if (back) back.onclick = closeToWorkspace;
     var signIn = el("afMarketSignIn"); if (signIn) signIn.onclick = function () { openAuth("login"); };
     var sideIn = el("afSideSignIn"); if (sideIn) sideIn.onclick = function () { openAuth("login"); };
@@ -1695,13 +1718,13 @@
         button.disabled=false;
       }
     };
-    var search = el("afMarketSearch"); if (search) search.onsubmit = function (event) { event.preventDefault(); state.term = el("afMarketSearchInput").value; render(); loadCatalog(false); };
-    document.querySelectorAll("[data-market-category]").forEach(function (button) { button.onclick = function () { state.category = button.dataset.marketCategory || ""; render(); loadCatalog(false); }; });
-    document.querySelectorAll("[data-market-favorites]").forEach(function (button) { button.onclick = function () { var favorites = state.products.filter(function (product) { return state.favorites.indexOf(product.id) > -1; }); if (!favorites.length) return notice("Vous n’avez pas encore enregistré de favori."); state.term = ""; state.category = ""; var target = el("afProductsTop"); if (target) target.scrollIntoView({ behavior: "smooth" }); var grid = el("afMarketGrid"); if (grid) { grid.innerHTML = favorites.map(productCard).join(""); bind(); } }; });
+    var search = el("afMarketSearch"); if (search) search.onsubmit = function (event) { event.preventDefault(); state.favoriteOnly=false; state.term = el("afMarketSearchInput").value; render(); loadCatalog(false); };
+    document.querySelectorAll("[data-market-category]").forEach(function (button) { button.onclick = function () { state.favoriteOnly=false; state.category = button.dataset.marketCategory || ""; render(); loadCatalog(false); }; });
+    document.querySelectorAll("[data-market-favorites]").forEach(function(button){button.onclick=function(){state.favoriteOnly=!state.favoriteOnly;state.term="";state.category="";render();scrollMarketTo("afProductsTop");};});
     document.querySelectorAll("[data-market-detail]").forEach(function (button) {
       var open = function (event) { if (button.matches("article[role=button]") && event && event.target.closest("button")) return; var p = productById(button.dataset.marketDetail); if (p) openDetail(p); };
       button.onclick = open;
-      if (button.matches("article[role=button]")) button.onkeydown = function (event) { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); open(); } };
+      if (button.matches("article[role=button]")) button.onkeydown = function (event) { if (event.target===button&&(event.key === "Enter" || event.key === " ")) { event.preventDefault(); open(event); } };
     });
     document.querySelectorAll("[data-market-quote]").forEach(function (button) { button.onclick = function () { var p = productById(button.dataset.marketQuote); if (p) openQuote(p); }; });
     document.querySelectorAll("[data-add-cart]").forEach(function (button) { button.onclick = function (event) { event.stopPropagation(); addToCart(productById(button.dataset.addCart)); }; });
@@ -1709,7 +1732,7 @@
     document.querySelectorAll("[data-act]").forEach(function (button) {
       button.onclick = function () {
         var a = button.dataset.act;
-        if (a === "products") { var t = el("afProductsTop"); if (t) t.scrollIntoView({ behavior: "smooth", block: "start" }); }
+        if (a === "products") { scrollMarketTo("afProductsTop"); }
         else if (a === "quote") { var f = filteredProducts()[0] || state.products[0]; if (f) openQuote(f); else notice("Le catalogue est en préparation."); }
         else if (a === "hero-edit") heroEditor();
       };
