@@ -81,7 +81,7 @@ async function archiveDispute(t:string,dispute:any,market:any,uid:string){
  await ensureFolders(t,root);
  const files=await service.from("afriflow_partner_dropbox_files").select("file_name,dropbox_path,content_type,file_size,created_at").eq("dispute_id",dispute.id);
  if(files.error)throw files.error;
- const data=new TextEncoder().encode(JSON.stringify({format:"AfriFloW partner case v1",exported_at:new Date().toISOString(),dispute:dispute,files:files.data||[]},null,2));
+ const data=new TextEncoder().encode(JSON.stringify({format:"AfriFlow partner case v1",exported_at:new Date().toISOString(),dispute:dispute,files:files.data||[]},null,2));
  await contentApi(t,"upload",{path:root+"/Dossier_Signalement.json",mode:"overwrite",autorename:false,mute:true},data);
  return root+"/Dossier_Signalement.json";
 }

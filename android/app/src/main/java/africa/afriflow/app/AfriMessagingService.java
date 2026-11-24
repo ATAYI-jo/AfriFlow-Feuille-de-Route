@@ -35,7 +35,7 @@ public class AfriMessagingService extends FirebaseMessagingService {
   @Override public void onMessageReceived(RemoteMessage message) {
     Map<String,String> data = message.getData();
     if(data == null || data.isEmpty()) return;
-    String title = data.getOrDefault("title", "AfriFloW");
+    String title = data.getOrDefault("title", "AfriFlow");
     String body = data.getOrDefault("body", "Nouvelle notification");
     String teams = data.getOrDefault("teamsUrl", "");
     boolean meeting = "meeting".equals(data.get("kind"));
@@ -43,7 +43,7 @@ public class AfriMessagingService extends FirebaseMessagingService {
     if(mgr == null) return;
     if(Build.VERSION.SDK_INT >= 26) {
       NotificationChannel channel = new NotificationChannel(CHANNEL,
-        "Réunions et messages AfriFloW",NotificationManager.IMPORTANCE_HIGH);
+        "Réunions et messages AfriFlow",NotificationManager.IMPORTANCE_HIGH);
       channel.enableVibration(true);
       mgr.createNotificationChannel(channel);
     }

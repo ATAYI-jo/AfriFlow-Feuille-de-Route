@@ -1,4 +1,4 @@
-/* AfriFloW — commandes avec paiement à la livraison. */
+/* AfriFlow — commandes avec paiement à la livraison. */
 (function(){
 "use strict";
 const labels={BF:"Burkina Faso",TG:"Togo",BJ:"Bénin",CI:"Côte d’Ivoire",SN:"Sénégal",FR:"France"};
@@ -124,7 +124,7 @@ function mount(host,admin=false){
  details.ontoggle=async()=>{if(!details.open||content.dataset.loaded)return;content.dataset.loaded="1";try{
  if(admin){
  const {candidates,routes}=await call("admin_config");
- node("p","Activez exclusivement un vendeur régulièrement enregistré, autorisé à vendre et encaisser sur le marché concerné. AfriFloW est créée au Burkina Faso.",content);
+ node("p","Activez exclusivement un vendeur régulièrement enregistré, autorisé à vendre et encaisser sur le marché concerné. AfriFlow est créée au Burkina Faso.",content);
  const form=node("form",null,content);layout(form);
  const selectLabel=node("label","Partenaire commercial",form);selectLabel.style.cssText="display:grid;gap:6px";const select=node("select",null,selectLabel);select.style.width="100%";
  const first=node("option","Sélectionner un partenaire",select);first.value="";

@@ -1,4 +1,4 @@
-/* AfriFloW Market — catalogue public façon place de marché, séparé de l'espace collaborateur. */
+/* AfriFlow Market — catalogue public façon place de marché, séparé de l'espace collaborateur. */
 #market-view{display:none;min-height:100dvh;position:relative;isolation:isolate;background:color-mix(in srgb,var(--bg) 16%,transparent);color:var(--ink);font-family:system-ui,-apple-system,"Segoe UI",sans-serif}
 body.af-market-mode{background:transparent!important}
 body.af-market-mode>#view-home,body.af-market-mode>#viewHost,body.af-market-mode>#menuBtn,body.af-market-mode>#side,body.af-market-mode>#scrim,body.af-market-mode>#memberHub,body.af-market-mode>.wrap:not(#market-view){display:none!important}
@@ -222,7 +222,7 @@ body.af-market-mode #market-view{display:block}
 }
 @media(max-width:390px){.af-market-grid,.af-market-grid[data-n="5"]{grid-template-columns:1fr}.af-product-media{min-height:200px}}
 
-/* AfriFloW news reader: keep editorial image and full article visible. */
+/* AfriFlow news reader: keep editorial image and full article visible. */
 .af-modal-box:has(.af-announcement-detail){width:min(860px,100%);max-height:min(92dvh,920px);overflow-y:auto;overscroll-behavior:contain;background:#fffefb}
 .af-announcement-detail{display:flex;flex-direction:column;min-width:0}
 .af-announcement-detail .af-media{flex:0 0 auto;width:100%;height:clamp(190px,32dvh,340px);min-height:0;max-height:340px;background:#f0f5ee}
@@ -233,7 +233,7 @@ body.af-market-mode #market-view{display:block}
 @media(max-width:700px){.af-modal{padding:10px}.af-modal-box:has(.af-announcement-detail){max-height:calc(100dvh - 20px)}.af-announcement-detail .af-media{height:clamp(150px,27dvh,240px);min-height:0}.af-announcement-detail .af-detail-body{padding:20px 17px 26px}}
 
 
-/* AfriFloW — liens des sources officielles sous les actualités */
+/* AfriFlow — liens des sources officielles sous les actualités */
 .af-news-sources{margin-top:14px;padding-top:18px;border-top:1px solid #d7e4d9}
 .af-news-sources h3{font-size:1.05rem;margin:0 0 8px;color:#19553a}
 .af-news-sources p{font-size:.86rem;margin:0 0 12px;color:#53695e;line-height:1.55}
@@ -242,7 +242,7 @@ body.af-market-mode #market-view{display:block}
 .af-news-sources a{color:#1262aa;text-decoration:underline;text-underline-offset:3px;overflow-wrap:anywhere}
 .af-news-sources a:hover,.af-news-sources a:focus-visible{color:#0d432d}
 
-/* Actualités liées aux opérations AfriFloW : repère éditorial, sans note politique. */
+/* Actualités liées aux opérations AfriFlow : repère éditorial, sans note politique. */
 .af-news-relevance{display:inline-flex;align-items:center;gap:5px;align-self:flex-start;width:max-content;max-width:100%;padding:5px 9px;border:1px solid #d0a34b;border-radius:999px;background:#fff5de;color:#705019;font-size:.76rem;font-weight:800;line-height:1.3}
 .af-announcement-card .af-news-relevance{font-size:.68rem;margin:5px 0;white-space:normal}
 .af-announcement-detail .af-news-relevance{margin:4px 0 6px}
@@ -408,7 +408,7 @@ body.af-market-mode #market-view{display:block}
   #market-view .af-market-link#afMarketBack span{font-size:.69rem}
 }
 
-/* AfriFloW commercial showcase — data-backed offers and lightweight photo motion */
+/* AfriFlow commercial showcase — data-backed offers and lightweight photo motion */
 #market-view .af-market-showcase{display:grid;grid-template-columns:minmax(0,1.65fr) repeat(2,minmax(0,1fr));gap:15px;margin:36px 0 28px;align-items:stretch}
 #market-view .af-showcase-card{position:relative;min-width:0;overflow:hidden;isolation:isolate;display:flex;flex-direction:column;min-height:230px;border:1px solid rgba(255,255,255,.68);border-radius:22px;padding:clamp(16px,2vw,26px);box-shadow:0 12px 32px rgba(15,63,39,.12);background:linear-gradient(135deg,rgba(255,255,255,.76),rgba(230,247,237,.61));-webkit-backdrop-filter:blur(18px) saturate(150%);backdrop-filter:blur(18px) saturate(150%)}
 #market-view .af-showcase-card h3{font-size:clamp(1.13rem,1.9vw,1.65rem);line-height:1.15;letter-spacing:-.025em;overflow-wrap:anywhere;margin:8px 0;color:#133c29}
@@ -585,7 +585,7 @@ body.af-market-mode #market-view{display:block}
   #market-view .af-showcase-gifts .af-gift-brand{width:36px}
 }
 
-/* Administration AfriFloW — annuaire et décisions de rôles */
+/* Administration AfriFlow — annuaire et décisions de rôles */
 :is(#afAccessAdmin,#adMarketAccess) .af-access-summary{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin:16px 0}
 :is(#afAccessAdmin,#adMarketAccess) .af-access-summary span{display:flex;justify-content:space-between;gap:8px;background:rgba(17,110,69,.07);border:1px solid rgba(17,110,69,.13);border-radius:12px;padding:12px;font-size:.86rem}
 :is(#afAccessAdmin,#adMarketAccess) .af-access-user{display:grid;grid-template-columns:minmax(180px,1.5fr) minmax(130px,1fr) minmax(160px,1fr) auto;gap:9px;align-items:center;padding:12px;border-bottom:1px solid rgba(17,110,69,.14)}
@@ -618,7 +618,7 @@ body.af-market-mode #market-view{display:block}
   }
 }
 
-/* Administration AfriFloW — annuaire et décisions de rôles */
+/* Administration AfriFlow — annuaire et décisions de rôles */
 :is(#afAccessAdmin,#adMarketAccess) .af-access-summary{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin:16px 0}
 :is(#afAccessAdmin,#adMarketAccess) .af-access-summary span{display:flex;justify-content:space-between;gap:8px;background:rgba(17,110,69,.07);border:1px solid rgba(17,110,69,.13);border-radius:12px;padding:12px;font-size:.86rem}
 :is(#afAccessAdmin,#adMarketAccess) .af-access-user{display:grid;grid-template-columns:minmax(180px,1.5fr) minmax(130px,1fr) minmax(160px,1fr) auto;gap:9px;align-items:center;padding:12px;border-bottom:1px solid rgba(17,110,69,.14)}
@@ -1253,7 +1253,7 @@ body.af-market-mode #market-view{display:block}
 }
 
 
-/* The partner card shows the AfriFloW logo directly, without a white tile. */
+/* The partner card shows the AfriFlow logo directly, without a white tile. */
 #market-view .af-partner-wallet-top .af-partner-company-logo{
   box-sizing:border-box;
   width:clamp(64px,7.2vw,94px);

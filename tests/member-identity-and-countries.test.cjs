@@ -15,7 +15,7 @@ test("email login stays on Supabase Auth; identifiers have guarded sign-in",()=>
  assert.match(signIn,/auth.signInWithPassword/);
  assert.match(signIn,/Trop de tentatives/);
  assert.doesNotMatch(signIn,/console.log\(.*password/);
- assert.match(core,/identifiant personnel AfriFloW/);
+ assert.match(core,/identifiant personnel AfriFlow/);
 });
 test("member profile shows two immutable references",()=>{
  assert.match(profile,/afriflow_member_ids/);

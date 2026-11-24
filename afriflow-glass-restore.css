@@ -1,4 +1,4 @@
-/* Restore AfriFloW's original frosted-glass language without changing layout,
+/* Restore AfriFlow's original frosted-glass language without changing layout,
    navigation, background animation, or commercial behavior. */
 :root{
  --af-glass-opacity:70%;--af-glass-base:#fff;--af-glass-ink:#1d2a22;

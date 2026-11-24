@@ -1,6 +1,6 @@
 <!doctype html>
 <html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="robots" content="noindex,nofollow"><title>Vérification du certificat — AfriFloW</title>
+<meta name="robots" content="noindex,nofollow"><title>Vérification du certificat — AfriFlow</title>
 <style>
 :root{font-family:system-ui,-apple-system,Segoe UI,sans-serif;color:#143729;background:#f5f9f5}
 *{box-sizing:border-box}body{margin:0;padding:24px}.sheet{margin:4vh auto;max-width:660px;border:1px solid #b6d3bf;border-radius:20px;padding:clamp(22px,5vw,45px);background:#fff;box-shadow:0 12px 42px #153f2714}
@@ -10,15 +10,15 @@ dt{color:#6b7a71;font-size:.85rem;margin-top:12px}dd{margin:3px 0 0;font-weight:
 footer{margin-top:30px;color:#607568;font-size:.85rem;text-align:center}
 a{color:#145f3a} 
 </style></head><body><main class="sheet"><div class="brand">AFRIFLOW</div>
-<h1>Vérification d'un certificat</h1><p class="lead">Contrôlez la validité d'une attestation émise par la Direction AfriFloW.</p>
+<h1>Vérification d'un certificat</h1><p class="lead">Contrôlez la validité d'une attestation émise par la Direction AfriFlow.</p>
 <div id="result" class="result" aria-live="polite">Vérification en cours…</div>
-<footer>La validité est vérifiée en temps réel et peut changer en cas de révocation ou de modification des habilitations.<p><a href="/">Retour à AfriFloW</a></p></footer>
+<footer>La validité est vérifiée en temps réel et peut changer en cas de révocation ou de modification des habilitations.<p><a href="/">Retour à AfriFlow</a></p></footer>
 </main>
 <script>
 (function(){
  "use strict";
  var box=document.getElementById("result"),token=new URLSearchParams(location.search).get("token")||"";
- function invalid(){box.className="result invalid";box.textContent="Certificat introuvable, invalide ou révoqué. Veuillez contacter AfriFloW."}
+ function invalid(){box.className="result invalid";box.textContent="Certificat introuvable, invalide ou révoqué. Veuillez contacter AfriFlow."}
  if(!/^[a-f0-9]{64}$/i.test(token)){invalid();return}
  fetch("https://jgvwdpzevghfavmpjbqp.supabase.co/functions/v1/afriflow-certificates?action=verify&token="+encodeURIComponent(token),{cache:"no-store"})
  .then(function(r){if(!r.ok)throw Error("Certificate not found");return r.json()})

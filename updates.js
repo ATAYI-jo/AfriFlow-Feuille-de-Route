@@ -1,4 +1,4 @@
-/* AfriFloW: sync the deployed website with installed Windows, Android and PWA shells.
+/* AfriFlow: sync the deployed website with installed Windows, Android and PWA shells.
    These shells open the live HTTPS site. Detect changes in HTML AND external
    JavaScript files without intercepting Supabase, OAuth or Dropbox requests.
    Recheck when the app returns to the foreground; never interrupt editors. */

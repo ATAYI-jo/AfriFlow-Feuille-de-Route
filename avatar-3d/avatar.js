@@ -1,5 +1,5 @@
-// AfriFloW 3D mascot — procedural 3D model with browser-driven animations.
-// Copyright (c) AfriFloW. All assets from the user remain their property.
+// AfriFlow 3D mascot — procedural 3D model with browser-driven animations.
+// Copyright (c) AfriFlow. All assets from the user remain their property.
 import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.164.1/build/three.module.js';
 const viewport = document.getElementById('avatarViewport');
 const status = document.getElementById('sceneStatus');
@@ -164,7 +164,7 @@ document.getElementById('mode3d').addEventListener('click',()=>switchMode(false)
 switchMode(true);
 window.addEventListener('beforeunload',()=>synth?.cancel());
 
-// Safe same-origin bridge to the existing AfriFloW chatbot.
+// Safe same-origin bridge to the existing AfriFlow chatbot.
 window.addEventListener('message', function(event) {
   if (event.origin !== window.location.origin) return;
   if (!event.data || event.data.type !== 'AFRIFLOW_SPEAK') return;

@@ -1,4 +1,4 @@
-// AfriFloW - chargeur du véritable modèle 3D (aucun modèle géométrique inventé).
+// AfriFlow - chargeur du véritable modèle 3D (aucun modèle géométrique inventé).
 import * as THREE from "three";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 

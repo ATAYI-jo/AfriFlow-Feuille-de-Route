@@ -51,7 +51,7 @@ async function gdeltArticles() {
   url.searchParams.set("maxrecords", "8");
   url.searchParams.set("timespan", "1d");
   url.searchParams.set("sort", "DateDesc");
-  const response = await fetch(url, { signal: AbortSignal.timeout(7000), headers: { "User-Agent": "AfriFloW-agro-brief/1.0" } });
+  const response = await fetch(url, { signal: AbortSignal.timeout(7000), headers: { "User-Agent": "AfriFlow-agro-brief/1.0" } });
   if (!response.ok) throw new Error("Les sources d’actualité sont indisponibles");
   const data = await response.json().catch(() => ({}));
   const dedupe = new Set<string>();
@@ -74,7 +74,7 @@ async function googleNewsArticles() {
   url.searchParams.set("hl", "fr");
   url.searchParams.set("gl", "FR");
   url.searchParams.set("ceid", "FR:fr");
-  const response = await fetch(url, { signal: AbortSignal.timeout(7000), headers: { "User-Agent": "AfriFloW-agro-brief/1.0" } });
+  const response = await fetch(url, { signal: AbortSignal.timeout(7000), headers: { "User-Agent": "AfriFlow-agro-brief/1.0" } });
   if (!response.ok) return [];
   const xml = await response.text();
   const items = xml.match(/<item>[\s\S]*?<\/item>/g) || [];
@@ -95,7 +95,7 @@ async function googleNewsArticles() {
 async function faoNewsArticles() {
   const response = await fetch("https://www.fao.org/feeds/fao-newsroom-rss", {
     signal: AbortSignal.timeout(7000),
-    headers: { "User-Agent": "AfriFloW-agro-brief/1.0" }
+    headers: { "User-Agent": "AfriFlow-agro-brief/1.0" }
   });
   if (!response.ok) return [];
   const xml = await response.text();
@@ -163,7 +163,7 @@ async function fetchSourceArticle(source:{url:string;title:string;domain:string;
     !allowed.some(host=>url.hostname===host || url.hostname.endsWith("."+host))) return "";
   try {
     const res=await fetch(url,{signal:AbortSignal.timeout(10000),redirect:"error",
-      headers:{"Accept":"text/html","User-Agent":"AfriFloW-news-editor/1.0"}});
+      headers:{"Accept":"text/html","User-Agent":"AfriFlow-news-editor/1.0"}});
     if(!res.ok || !/text\/html/i.test(res.headers.get("content-type")||""))return "";
     const html=(await res.text()).slice(0,350000);
     return articleTextFromMarkup(html);
@@ -175,7 +175,7 @@ async function fetchSourceArticle(source:{url:string;title:string;domain:string;
 async function writeBrief(apiKey: string, sources: Array<{ title: string; url: string; domain: string; date: string }>, articleText: string) {
   const model = clean(Deno.env.get("GEMINI_AGRO_MODEL") || "gemini-3.8-flash", 80);
   const prompt = [
-    "Tu es journaliste de synthèse pour AfriFloW. Rédige un texte informatif approfondi en français fondé exclusivement sur le contenu vérifié ci-dessous, sans prétendre avoir lu ce qui manque.",
+    "Tu es journaliste de synthèse pour AfriFlow. Rédige un texte informatif approfondi en français fondé exclusivement sur le contenu vérifié ci-dessous, sans prétendre avoir lu ce qui manque.",
     "Explique les faits, le contexte, les acteurs et les enjeux selon le texte. Attribue les prises de position, conserve la nuance et le point d’interrogation éventuel; ne transforme jamais une accusation ou un débat en fait établi. Aucun fait ou chiffre inventé.",
     "Réponds strictement en JSON valide : {\"title\":\"...\",\"description\":\"...\"}. title: 45 à 140 caractères. description: 750 à 2200 caractères, 3 à 5 paragraphes informatifs et structurés en texte simple.",
     JSON.stringify(sources.slice(0,2)),
@@ -205,7 +205,7 @@ function sourceBrief(sources: Array<{ title: string; url: string; domain: string
   const domain=clean(lead?.domain || "une source journalistique",100);
   return {
     title,
-    description: clean("Actualité relayée par " + domain + " : « " + title + " ». AfriFloW présente ce sujet à partir du titre et des métadonnées de la publication d’origine. Aucun détail supplémentaire n’est affirmé sans vérification du texte complet. Consultez l’article source pour comprendre les faits et leur contexte.",4000)
+    description: clean("Actualité relayée par " + domain + " : « " + title + " ». AfriFlow présente ce sujet à partir du titre et des métadonnées de la publication d’origine. Aucun détail supplémentaire n’est affirmé sans vérification du texte complet. Consultez l’article source pour comprendre les faits et leur contexte.",4000)
   };
 }
 
@@ -216,7 +216,7 @@ async function frenchBriefFallback(sources: Array<{ title: string; url: string; 
   try {
     const model = "@cf/meta/llama-3.1-8b-instruct";
     const prompt = [
-      "Rédige en français un titre (max 160 caractères) et une synthèse journalistique détaillée (entre 650 et 1600 caractères) de cette actualité pour AfriFloW.",
+      "Rédige en français un titre (max 160 caractères) et une synthèse journalistique détaillée (entre 650 et 1600 caractères) de cette actualité pour AfriFlow.",
       "Utilise STRICTEMENT le contenu vérifiable fourni. Explique faits, contexte, acteurs et enjeux. Attribue les propos. Ne transforme aucune question en affirmation et n’invente rien.",
       "Réponds uniquement avec un objet JSON valide ayant les deux propriétés title et description. N'inclus aucun Markdown.",
       JSON.stringify(sources.slice(0, 2)),
@@ -309,7 +309,7 @@ async function openverseIllustration(service: ReturnType<typeof createClient>, d
   url.searchParams.set("license", "cc0,pdm");
   url.searchParams.set("mature", "false");
   url.searchParams.set("page_size", "6");
-  const search = await fetch(url, { signal: AbortSignal.timeout(6000), headers: { "User-Agent": "AfriFloW-news/1.0" } });
+  const search = await fetch(url, { signal: AbortSignal.timeout(6000), headers: { "User-Agent": "AfriFlow-news/1.0" } });
   const data = await search.json().catch(() => ({}));
   const candidate = asArray(data?.results).find((item: Record<string, unknown>) => /^https:\/\//.test(String(item?.url || "")) && /image\/(jpeg|png|webp)/i.test(String(item?.filetype || "image/jpeg"))) as Record<string, unknown> | undefined;
   if (!search.ok || !candidate) throw new Error("Aucune illustration libre exploitable");
@@ -394,7 +394,7 @@ async function worldArticles(slot: NewsSlot) {
   };
   const results=await Promise.allSettled(feeds[slot].map(async(feed)=>{
     const response=await fetch(feed.url,{signal:AbortSignal.timeout(8500),
-      headers:{"User-Agent":"AfriFloW-WorldNews/1.0","Accept":"application/rss+xml, application/xml, text/xml"}});
+      headers:{"User-Agent":"AfriFlow-WorldNews/1.0","Accept":"application/rss+xml, application/xml, text/xml"}});
     if(!response.ok)throw new Error(feed.domain+": "+response.status);
     const xml=await response.text();
     const items=xml.match(/<item\b[^>]*>[\s\S]*?<\/item>/gi)||[];

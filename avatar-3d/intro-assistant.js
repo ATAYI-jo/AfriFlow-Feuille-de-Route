@@ -199,7 +199,7 @@ export function installIntroAssistant(video, container) {
       playGesture();
       window.dispatchEvent(new CustomEvent('afriflow:intro-avatar-ready', { detail: { gestures: [...actions.keys()] } }));
     } catch (error) {
-      console.warn('[AfriFloW] Intro 3D unavailable:', error);
+      console.warn('[AfriFlow] Intro 3D unavailable:', error);
       stop();
     }
   }

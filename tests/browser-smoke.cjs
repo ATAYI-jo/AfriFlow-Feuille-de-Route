@@ -38,12 +38,12 @@ test('Anonymous page boots and locally hosted JavaScript loads', { timeout: 9000
     });
     await page.goto('http://127.0.0.1:' + port + '/', { waitUntil: 'domcontentloaded', timeout: 45000 });
     await page.waitForTimeout(2000);
-    assert.equal(await page.title(), 'AfriFloW – Accueil');
+    assert.equal(await page.title(), 'AfriFlow – Accueil');
     assert.equal(await page.locator('#introVideo').count(), 1);
     assert.equal(await page.locator('#auth-screen').count(), 1);
     assert.equal(await page.locator('#market-view').count(), 1);
     assert.equal(await page.locator('#afPwaInstallBtn').getAttribute('aria-label'),
-      'Installer ou télécharger AfriFloW');
+      'Installer ou télécharger AfriFlow');
     assert.equal(await page.locator('#afPwaInstallBtn svg').count(), 1);
     assert.equal((await page.locator('#afPwaInstallBtn').textContent()).trim(), '');
     // The install flag survives a reload and hides the invitation.

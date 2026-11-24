@@ -253,12 +253,12 @@ function renTre(){
   if(!rs.length)body+='<tr><td colspan="7" style="color:var(--muted)">Aucune opération. Ajoutez une entrée ou une sortie ci-dessous.</td></tr>';
   var today=new Date().toISOString().slice(0,10);
   $("viewHost").innerHTML='<div class="toolbar"><b>Trésorerie · entrées et sorties de fonds</b><div class="toolbar-actions"><button type="button" class="p" id="pdfBtn">⬇ Télécharger le relevé (PDF)</button></div></div>'+pubBar("treasury")
-  +'<div class="stm"><div class="stm-head"><img src="logo.png" alt="Logo AfriFloW" onerror="this.onerror=null;this.src=\'https://placehold.co/64x64/ffffff/1f5d3a?text=A\'"><div><h2>Relevé de compte</h2><p>AfriFloW · Compte de trésorerie<br>Période : '+per+' · Devise : '+cu+'</p></div></div>'
+  +'<div class="stm"><div class="stm-head"><img src="logo.png" alt="Logo AfriFlow" onerror="this.onerror=null;this.src=\'https://placehold.co/64x64/ffffff/1f5d3a?text=A\'"><div><h2>Relevé de compte</h2><p>AfriFlow · Compte de trésorerie<br>Période : '+per+' · Devise : '+cu+'</p></div></div>'
   +'<div class="stm-sum"><div><small>Solde initial</small><input type="number" step="any" id="tOpen" value="'+(Number(T.open)||0)+'" aria-label="Solde initial"></div><div><small>Total des entrées</small><b class="in">+ '+fmt(C.ti)+' '+cu+'</b></div><div><small>Total des sorties</small><b class="out">− '+fmt(C.to)+' '+cu+'</b></div><div><small>Solde final</small><b'+(C.bal<0?' class="out"':'')+'>'+fmt(C.bal)+' '+cu+'</b></div><div><small>Titulaire (en-tête du PDF)</small><textarea id="tHol" rows="2" style="width:100%" aria-label="Titulaire"></textarea></div><div><small>Devise</small><select id="tCur"><option value="XOF">FCFA</option><option value="EUR">Euro</option><option value="USD">Dollar US</option></select></div></div>'
   +'<div style="overflow-x:auto"><table class="t"><thead><tr><th>Date</th><th>Libellé</th><th>Réf.</th><th class="n">Entrée</th><th class="n">Sortie</th><th class="n">Solde</th><th></th></tr></thead><tbody>'+body+'</tbody></table></div></div>'
   +'<div class="addrow"><label>Date<input type="date" id="aD" value="'+today+'"></label><label>Libellé<input id="aL" placeholder="Ex. Vente de karité"></label><label>Référence<input id="aR" placeholder="Facultatif"></label><label>Type<select id="aT"><option value="in">Entrée de fonds</option><option value="out">Sortie de fonds</option></select></label><label>Montant ('+cu+')<input type="number" step="any" min="0" id="aM"></label><label>&nbsp;<button type="button" class="p" id="aB">Ajouter la ligne</button></label><div id="aErr" role="alert" style="grid-column:1/-1;color:#c0392b;font-size:.85rem"></div></div>';
   if(!cep("treasury")){var ar=document.querySelector("#viewHost .addrow");if(ar)ar.remove();document.querySelectorAll("#viewHost [data-rm]").forEach(function(x){x.remove()});["tOpen","tCur","tHol"].forEach(function(i){$(i).disabled=true})}
-  $("tCur").value=T.cur; $("tHol").value=T.holder||"AfriFloW"; $("tHol").onchange=function(){T.holder=this.value;touch("treasury");save()};
+  $("tCur").value=T.cur; $("tHol").value=T.holder||"AfriFlow"; $("tHol").onchange=function(){T.holder=this.value;touch("treasury");save()};
   $("tCur").onchange=function(){T.cur=this.value;touch("treasury");save();renTre()};
   $("tOpen").onchange=function(){T.open=parseFloat(this.value)||0;touch("treasury");save();renTre()};
   $("pdfBtn").onclick=pdf; bindPub("treasury");
@@ -289,9 +289,9 @@ async function pdf(){
   d.setFont("helvetica","bold").setFontSize(12).text("INFORMATIONS DU COMPTE",L,56);
   d.setLineWidth(.6).line(L,58.5,100,58.5);
   d.setFontSize(9.5).text("Titulaire du compte",L,65);
-  d.setFont("helvetica","normal").setFontSize(8.5).text(["AfriFloW","Compte de trésorerie - "+cu,rs.length+" opération"+(rs.length>1?"s":"")+" sur la période"],L,69.5);
+  d.setFont("helvetica","normal").setFontSize(8.5).text(["AfriFlow","Compte de trésorerie - "+cu,rs.length+" opération"+(rs.length>1?"s":"")+" sur la période"],L,69.5);
   /* adresse (police machine, comme sur un relevé bancaire) */
-  d.setFont("courier","normal").setFontSize(9).text((T.holder||"AfriFloW").toUpperCase().split("\n"),112,58);
+  d.setFont("courier","normal").setFontSize(9).text((T.holder||"AfriFlow").toUpperCase().split("\n"),112,58);
   /* phrase solde */
   var y=90; d.setFillColor(0).triangle(L,y-2.6,L,y+.2,L+1.8,y-1.2,"F");
   d.setFont("helvetica","normal").setFontSize(9).text("Nous vous informons qu'au "+fd(last)+", votre solde est "+(bal<0?"débiteur de - ":"créditeur de ")+fmt(Math.abs(bal),1)+" "+cw+".",L+4,y);
@@ -315,7 +315,7 @@ async function pdf(){
     d.setFont("helvetica","normal").setFontSize(8.5).setTextColor(0).text(ls,L+4,y); y+=ls.length*4+3;
   }
   note("Sur la période du "+fd(first)+" au "+fd(last)+", le total des sorties de fonds est de "+fmt(C.to,1)+" "+cw+" et celui des entrées de fonds est de "+fmt(C.ti,1)+" "+cw+".");
-  note("Relevé établi à partir des opérations enregistrées dans l'espace Trésorerie d'AfriFloW.");
+  note("Relevé établi à partir des opérations enregistrées dans l'espace Trésorerie d'AfriFlow.");
   /* filets épais du tableau */
   d.setPage(1); d.setDrawColor(0).setLineWidth(.8).line(L,104,R,104);
   d.setPage(tp); d.setDrawColor(0).setLineWidth(.8).line(L,fy,R,fy);
@@ -323,14 +323,14 @@ async function pdf(){
   var n=d.getNumberOfPages();
   for(var i=1;i<=n;i++){
     d.setPage(i);
-    if(lg){var hh=17;d.addImage(lg.d,"PNG",L,10,hh*lg.w/lg.h,hh)}else{d.setFont("helvetica","bold").setFontSize(18).setTextColor(0).text("AfriFloW",L,20)}
+    if(lg){var hh=17;d.addImage(lg.d,"PNG",L,10,hh*lg.w/lg.h,hh)}else{d.setFont("helvetica","bold").setFontSize(18).setTextColor(0).text("AfriFlow",L,20)}
     d.setTextColor(0).setFont("helvetica","bold").setFontSize(15).text("RELEVÉ DE COMPTE",R,17,{align:"right"});
     var eb="en "+cw; d.setFontSize(10); var wb=d.getTextWidth(eb);
     d.text(eb,R,23,{align:"right"}); d.setFont("helvetica","normal").text("COMPTE DE TRÉSORERIE - ",R-wb,23,{align:"right"});
     d.setDrawColor(0).setLineWidth(.9).line(L,31,R,31);
     d.setFont("helvetica","bold").setFontSize(9.5).text("du "+fd(first)+" au "+fd(last),R,37,{align:"right"}).text("Page "+i+"/"+n,R,42,{align:"right"});
     d.setLineWidth(.6).line(L,282,R,282);
-    d.setFont("helvetica","normal").setFontSize(6.5).setTextColor(60).text(["AfriFloW - Compte de trésorerie","Relevé édité le "+now],L,286);
+    d.setFont("helvetica","normal").setFontSize(6.5).setTextColor(60).text(["AfriFlow - Compte de trésorerie","Relevé édité le "+now],L,286);
   }
   d.save("releve-afriflow-"+iso+".pdf");
 }
@@ -363,7 +363,7 @@ try{localStorage.removeItem(DK);sessionStorage.removeItem("afriflow_pkce")}catch
 var afDbxServerRoot="/AfriFlow";
 function dbxReady(){return window.USER_ROLE==="admin" && !!window.__sb}
 async function dbxBackend(action,body){
-  if(!window.__sb)throw new Error("Connectez-vous à AfriFloW.");
+  if(!window.__sb)throw new Error("Connectez-vous à AfriFlow.");
   var r=await window.__sb.functions.invoke("afriflow-dropbox-admin",{body:Object.assign({action:action},body||{})});
   if(r.error){var message=r.error.message||"Service indisponible";try{var details=await r.error.context.json();if(details.error)message=details.error}catch(e){}throw new Error(message)}
   if(r.data&&r.data.error)throw new Error(r.data.error);
@@ -380,7 +380,7 @@ async function dbxDialog(){
  var b=$("xmBox");
  b.innerHTML='<h2 style="margin-top:0">Dropbox · Connexion sécurisée</h2>'
   +'<p>La connexion Dropbox est centralisée dans Supabase. Aucune clé ni aucun jeton n’est enregistré sur cet appareil.</p>'
-  +'<p>Pour consulter les réglages, confirmez le mot de passe de votre compte administrateur AfriFloW.</p>'
+  +'<p>Pour consulter les réglages, confirmez le mot de passe de votre compte administrateur AfriFlow.</p>'
   +'<div class="fm"><label for="dkPassword">Mot de passe administrateur</label><input id="dkPassword" type="password" autocomplete="current-password"></div>'
   +'<div id="xerr" role="alert" style="color:#c0392b;min-height:1.5em"></div>'
   +'<div id="dkStatus" aria-live="polite"></div>'
@@ -389,7 +389,7 @@ async function dbxDialog(){
  $("xno").onclick=function(){$("dkPassword").value="";$("xm").classList.remove("on")};
  $("dkGo").onclick=async function(){
    var password=$("dkPassword").value,btn=this;
-   if(!password){$("xerr").textContent="Saisissez votre mot de passe AfriFloW.";return}
+   if(!password){$("xerr").textContent="Saisissez votre mot de passe AfriFlow.";return}
    btn.disabled=true;$("xerr").textContent="";
    try{
      var me=await window.__sb.auth.getUser();

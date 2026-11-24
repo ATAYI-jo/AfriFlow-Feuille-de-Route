@@ -28,17 +28,17 @@
 <meta charset="utf-8">
 <!-- Intro Three.js loads on admin preview only; ordinary visitors receive the standard video. -->
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>AfriFloW – Accueil</title>
+<title>AfriFlow – Accueil</title>
 <link rel="icon" type="image/png" sizes="192x192" href="./icons/icon-192-v2.png">
 <link rel="stylesheet" href="./market.css?v=20261124-panier-messagerie">
 <meta property="og:type" content="website">
-<meta property="og:site_name" content="AfriFloW">
-<meta property="og:title" content="AfriFloW – Accueil">
-<meta property="og:description" content="AfriFloW, corridors d’exportation et gestion de la chaîne logistique.">
+<meta property="og:site_name" content="AfriFlow">
+<meta property="og:title" content="AfriFlow – Accueil">
+<meta property="og:description" content="AfriFlow, corridors d’exportation et gestion de la chaîne logistique.">
 <meta property="og:url" content="https://afriflow.pages.dev/">
 <meta property="og:image" content="https://afriflow.pages.dev/logo.png">
 <meta name="twitter:card" content="summary">
-<meta name="description" content="Feuille de route interactive d’AfriFloW en mode journal avec registre START des connexions.">
+<meta name="description" content="Feuille de route interactive d’AfriFlow en mode journal avec registre START des connexions.">
 <script src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit" async defer></script>
 <script>try{if(sessionStorage.getItem("afriflow_intro_seen"))document.documentElement.classList.add("no-intro")}catch(e){}</script>
 <link rel="stylesheet" href="./afriflow-core.css?v=20261121">
@@ -51,15 +51,15 @@
 </style>
 
 
-<!-- AfriFloW PWA: installation metadata only -->
+<!-- AfriFlow PWA: installation metadata only -->
 <link rel="manifest" href="./manifest.webmanifest">
 <meta name="theme-color" content="#1f5d3a">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="AfriFloW">
+<meta name="apple-mobile-web-app-title" content="AfriFlow">
 <link rel="apple-touch-icon" sizes="180x180" href="./icons/apple-touch-icon-adaptive.png">
 <style>
-/* AfriFloW PWA installation styles, scoped to new elements */
+/* AfriFlow PWA installation styles, scoped to new elements */
 .af-pwa-install-area{position:sticky;top:calc(env(safe-area-inset-top, 0px) + 6px);z-index:200;display:flex;justify-content:flex-end;margin:-12px 0 12px;pointer-events:none}
 .af-pwa-install-button{pointer-events:auto}
 .af-pwa-install-area[hidden],.af-pwa-dialog[hidden]{display:none!important}
@@ -99,7 +99,7 @@
 #afDownloadPanel .af-sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
 #afDownloadPanel .af-platform[hidden]{display:none!important}
 </style>\n
-<!-- AfriFloW enhanced brand colors and active-session alerts -->
+<!-- AfriFlow enhanced brand colors and active-session alerts -->
 <link rel="stylesheet" href="./afriflow-alerts.css">
 <style id="afri-download-brand-2026">
 /* Floating installation glyph: keep a 48px accessible hit target, without a visible tile. */
@@ -196,11 +196,11 @@ window.ic=function(n,s){return '<svg class="ic"'+(s?' style="width:'+s+';height:
 </script>
 
 <div id="bgLayer" aria-hidden="true"></div>
-<div id="intro" aria-label="Animation d'ouverture AfriFloW">
+<div id="intro" aria-label="Animation d'ouverture AfriFlow">
   <video id="introBackdropVideo" class="intro-video-backdrop" muted playsinline webkit-playsinline preload="auto" aria-hidden="true" tabindex="-1">
     <source src="./afriflow-intro-white.mp4" type="video/mp4">
   </video>
-  <video id="introVideo" playsinline webkit-playsinline preload="auto" disablepictureinpicture disableremoteplayback controlslist="nodownload noplaybackrate noremoteplayback" aria-label="Animation d'introduction AfriFloW">
+  <video id="introVideo" playsinline webkit-playsinline preload="auto" disablepictureinpicture disableremoteplayback controlslist="nodownload noplaybackrate noremoteplayback" aria-label="Animation d'introduction AfriFlow">
     <source src="./afriflow-intro-white.mp4" type="video/mp4">
   </video>
   <button type="button" id="introSnd" title="Couper le son" aria-label="Couper le son">🔊</button>
@@ -210,8 +210,8 @@ window.ic=function(n,s){return '<svg class="ic"'+(s?' style="width:'+s+';height:
 <div id="auth-screen" class="off" role="dialog" aria-modal="true" aria-labelledby="authTitle">
   <div class="auth-box">
     <button type="button" class="auth-close" id="authClose" aria-label="Fermer">×</button>
-    <img src="logo.png" alt="AfriFloW" onerror="this.onerror=null;this.src='https://placehold.co/72x72/1f5d3a/ffffff?text=A'">
-    <h2 id="authTitle">Accès AfriFloW</h2>
+    <img src="logo.png" alt="AfriFlow" onerror="this.onerror=null;this.src='https://placehold.co/72x72/1f5d3a/ffffff?text=A'">
+    <h2 id="authTitle">Accès AfriFlow</h2>
     <div class="auth-tabs"><button type="button" id="tabLogin" class="on">Se connecter</button><button type="button" id="tabReg">S'inscrire</button></div>
     <p id="authProgress" class="auth-progress" aria-live="polite"></p>
     <p id="authHint">Connectez-vous avec votre email et votre mot de passe personnel.</p>
@@ -241,21 +241,21 @@ window.ic=function(n,s){return '<svg class="ic"'+(s?' style="width:'+s+';height:
 <main id="market-view" aria-live="polite"></main>
 
 <div class="wrap" id="view-home">
-  <!-- AfriFloW distribution: downloads appear only after verified GitHub release assets -->
+  <!-- AfriFlow distribution: downloads appear only after verified GitHub release assets -->
   <div id="afPwaInstallArea" class="af-pwa-install-area" hidden>
-    <button id="afPwaInstallBtn" class="af-pwa-install-button" type="button" aria-label="Installer ou télécharger AfriFloW" title="Installer ou télécharger AfriFloW" aria-controls="afDownloadPanel" aria-expanded="false"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M7.5 18.5H6a4 4 0 0 1-.6-7.95A7 7 0 0 1 19 9.9a4.3 4.3 0 0 1-.7 8.6H16.5"/><path d="M12 12v9m0 0-3.2-3.2M12 21l3.2-3.2"/></svg></button>
+    <button id="afPwaInstallBtn" class="af-pwa-install-button" type="button" aria-label="Installer ou télécharger AfriFlow" title="Installer ou télécharger AfriFlow" aria-controls="afDownloadPanel" aria-expanded="false"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M7.5 18.5H6a4 4 0 0 1-.6-7.95A7 7 0 0 1 19 9.9a4.3 4.3 0 0 1-.7 8.6H16.5"/><path d="M12 12v9m0 0-3.2-3.2M12 21l3.2-3.2"/></svg></button>
     <div id="afDownloadPanel" class="af-download-panel" hidden>
-      <strong>Application AfriFloW</strong>
+      <strong>Application AfriFlow</strong>
       <p>Choisissez votre appareil. Versions de test : connexion Internet nécessaire.</p>
-      <a id="afDownloadAndroid" class="af-download-link af-platform" hidden rel="noopener noreferrer" title="Télécharger AfriFloW pour Android" aria-label="Télécharger AfriFloW pour Android (.apk)"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path fill="currentColor" d="m6.4 7.2-1.2-2.1.9-.5 1.3 2.2A8 8 0 0 1 12 5.6c1.7 0 3.2.4 4.6 1.2l1.3-2.2.9.5-1.2 2.1a7.7 7.7 0 0 1 2.4 4.5H4a7.7 7.7 0 0 1 2.4-4.5ZM8 9a.8.8 0 1 0 0 1.6A.8.8 0 0 0 8 9Zm8 0a.8.8 0 1 0 0 1.6A.8.8 0 0 0 16 9ZM4 12.8h16v4.7c0 .7-.6 1.3-1.3 1.3H18V21h-2v-2.2H8V21H6v-2.2h-.7c-.7 0-1.3-.6-1.3-1.3z"/></svg><span class="af-sr-only">Android</span></a>
-      <a id="afDownloadWindows" class="af-download-link af-platform" hidden rel="noopener noreferrer" title="Télécharger AfriFloW pour Windows" aria-label="Télécharger AfriFloW pour Windows (.exe)"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path fill="currentColor" d="M2 4.3 11 3v8H2V4.3Zm10-1.5L22 1v10H12V2.8ZM2 12h9v8l-9-1.3V12Zm10 0h10v10l-10-1.6V12Z"/></svg><span class="af-sr-only">Windows</span></a>
+      <a id="afDownloadAndroid" class="af-download-link af-platform" hidden rel="noopener noreferrer" title="Télécharger AfriFlow pour Android" aria-label="Télécharger AfriFlow pour Android (.apk)"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path fill="currentColor" d="m6.4 7.2-1.2-2.1.9-.5 1.3 2.2A8 8 0 0 1 12 5.6c1.7 0 3.2.4 4.6 1.2l1.3-2.2.9.5-1.2 2.1a7.7 7.7 0 0 1 2.4 4.5H4a7.7 7.7 0 0 1 2.4-4.5ZM8 9a.8.8 0 1 0 0 1.6A.8.8 0 0 0 8 9Zm8 0a.8.8 0 1 0 0 1.6A.8.8 0 0 0 16 9ZM4 12.8h16v4.7c0 .7-.6 1.3-1.3 1.3H18V21h-2v-2.2H8V21H6v-2.2h-.7c-.7 0-1.3-.6-1.3-1.3z"/></svg><span class="af-sr-only">Android</span></a>
+      <a id="afDownloadWindows" class="af-download-link af-platform" hidden rel="noopener noreferrer" title="Télécharger AfriFlow pour Windows" aria-label="Télécharger AfriFlow pour Windows (.exe)"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path fill="currentColor" d="M2 4.3 11 3v8H2V4.3Zm10-1.5L22 1v10H12V2.8ZM2 12h9v8l-9-1.3V12Zm10 0h10v10l-10-1.6V12Z"/></svg><span class="af-sr-only">Windows</span></a>
       <p id="afDownloadStatus" role="status">Recherche des versions disponibles…</p>
-      <button id="afDownloadIos" class="af-download-ios af-platform" type="button" title="Installer sur iPhone avec Safari" aria-label="Installer AfriFloW sur iPhone avec Safari"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path fill="currentColor" d="M17.1 12.1c0-2 1.6-3 1.7-3.1-.9-1.4-2.4-1.6-2.9-1.6-1.3-.2-2.6.8-3.3.8s-1.8-.8-2.9-.8C8.2 7.4 6.8 8.2 6 9.5c-1.7 2.8-.4 7 1.2 9.3.8 1.1 1.6 2.3 2.8 2.2 1.1 0 1.5-.7 2.9-.7s1.8.7 2.9.7c1.2 0 2-1.1 2.7-2.2.9-1.2 1.2-2.4 1.2-2.5-2.5-.9-2.6-3.6-2.6-4.2ZM15.3 5.9c.6-.8 1.1-1.8 1-2.9-1 0-2.1.7-2.8 1.5-.6.7-1.2 1.8-1.1 2.8 1.1.1 2.2-.5 2.9-1.4Z"/></svg><span class="af-sr-only">iPhone</span></button>
+      <button id="afDownloadIos" class="af-download-ios af-platform" type="button" title="Installer sur iPhone avec Safari" aria-label="Installer AfriFlow sur iPhone avec Safari"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path fill="currentColor" d="M17.1 12.1c0-2 1.6-3 1.7-3.1-.9-1.4-2.4-1.6-2.9-1.6-1.3-.2-2.6.8-3.3.8s-1.8-.8-2.9-.8C8.2 7.4 6.8 8.2 6 9.5c-1.7 2.8-.4 7 1.2 9.3.8 1.1 1.6 2.3 2.8 2.2 1.1 0 1.5-.7 2.9-.7s1.8.7 2.9.7c1.2 0 2-1.1 2.7-2.2.9-1.2 1.2-2.4 1.2-2.5-2.5-.9-2.6-3.6-2.6-4.2ZM15.3 5.9c.6-.8 1.1-1.8 1-2.9-1 0-2.1.7-2.8 1.5-.6.7-1.2 1.8-1.1 2.8 1.1.1 2.2-.5 2.9-1.4Z"/></svg><span class="af-sr-only">iPhone</span></button>
     </div>
   </div>
 
   <div class="brand">
-    <img class="logo-img" src="logo.png" alt="Logo AfriFloW" onerror="this.onerror=null;this.src='https://placehold.co/78x78/ffffff/1f5d3a?text=A'">
+    <img class="logo-img" src="logo.png" alt="Logo AfriFlow" onerror="this.onerror=null;this.src='https://placehold.co/78x78/ffffff/1f5d3a?text=A'">
     <div>
       <h1>Afri<span>FloW</span> · Journal de Bord & Feuille de Route</h1>
       <p class="sub">Cliquez sur un cadran pour consulter les articles détaillés au format journal.</p>
@@ -1501,7 +1501,7 @@ var DEF=
 
 +'<h3>Étape 3 : Déploiement digital et notoriété internationale</h3>'
 +'<p><b>Début :</b> 4 janvier 2027 · <b>Fin :</b> 17 janvier 2027</p>'
-+'<p>Asseoir la crédibilité d’AfriFloW en ligne pour soutenir les partenaires en France, au Bénin, en Tunisie et au Burkina Faso.</p>'
++'<p>Asseoir la crédibilité d’AfriFlow en ligne pour soutenir les partenaires en France, au Bénin, en Tunisie et au Burkina Faso.</p>'
 +'<p><b>Du 04/01/2027 au 17/01/2027 : stratégie de contenu B2B et relations partenaires</b></p><ul><li>Animation ciblée sur LinkedIn et les réseaux professionnels pour valoriser la maîtrise de la chaîne logistique internationale.</li><li>Campagnes de notoriété numérique pour soutenir les distributeurs dans les pays partenaires.</li></ul>'
 
 +'<h3>Étape 4 : Marketing du point de vente et extension de marché</h3>'
@@ -2449,7 +2449,7 @@ if(window.__sb&&window.__sb.functions){
     if(!stage||document.getElementById("afLivePose"))return;
     liveImg=document.createElement("img");
     liveImg.id="afLivePose";
-    liveImg.alt="Assistante AfriFloW : expression correspondant à la conversation";
+    liveImg.alt="Assistante AfriFlow : expression correspondant à la conversation";
     liveImg.style.cssText="position:absolute;inset:0;width:100%;height:100%;object-fit:contain;object-position:center;background:#f2f8f3;pointer-events:none;z-index:1";
     liveImg.onerror=function(){if(liveImg.src.indexOf("avatar.jpg")<0)liveImg.src=fallback};
     stage.insertBefore(liveImg,stage.firstChild);
@@ -2474,12 +2474,12 @@ if(window.__sb&&window.__sb.functions){
     var header=box.firstElementChild;
     var btn=document.createElement("button");
     btn.id="afAvatarToggle";btn.type="button";btn.textContent="Assistante";
-    btn.title="Afficher ou masquer les expressions de l'assistante AfriFloW";
+    btn.title="Afficher ou masquer les expressions de l'assistante AfriFlow";
     btn.style.cssText="font-size:12px;padding:5px 9px;margin-left:auto;border-radius:12px";
     header.insertBefore(btn,header.lastElementChild);
     var pane=document.createElement("div");pane.id="afAvatarPanel";pane.hidden=true;
     pane.style.cssText="flex:0 0 225px;min-height:0;border:1px solid var(--line);border-radius:12px;overflow:hidden;background:#f2f8f3;position:relative;text-align:center";
-    panelImg=document.createElement("img");panelImg.alt="Assistante AfriFloW";
+    panelImg=document.createElement("img");panelImg.alt="Assistante AfriFlow";
     panelImg.style.cssText="width:100%;height:100%;min-height:205px;max-height:235px;object-fit:contain;display:block";
     panelImg.onerror=function(){if(panelImg.src.indexOf("avatar.jpg")<0)panelImg.src=fallback};
     var lab=document.createElement("span");lab.id="afPoseLabel";
@@ -2631,7 +2631,7 @@ if(window.__sb&&window.__sb.functions){
 <script src="document-urgency.js" defer></script>
 
 <style id="af-embedded-office-style">
-/* Éditeur de documents dans la page AfriFloW, et non fenêtre plein écran */
+/* Éditeur de documents dans la page AfriFlow, et non fenêtre plein écran */
 #dvView #dwApp{
   position:relative!important;inset:auto!important;z-index:1!important;
   width:100%;height:min(84vh,1150px);min-height:600px;
@@ -2837,7 +2837,7 @@ body.af-profile-open #afCloudSyncBadge{visibility:hidden!important}
 #memberHub{position:fixed;right:22px;bottom:78px;z-index:905;display:grid;place-items:center;width:62px;height:62px;padding:0;border:0;border-radius:50%;background:transparent!important;box-shadow:0 7px 22px rgba(16,57,34,.24)!important;cursor:pointer}#memberHub[hidden]{display:none!important}#memberHub .pf-avatar{width:62px;height:62px;border:3px solid #fff;box-shadow:0 0 0 2px color-mix(in srgb,var(--green) 55%,transparent),0 7px 22px rgba(16,57,34,.22)}#memberHub .member-hub-count{position:absolute;right:-4px;top:-5px;min-width:22px;height:22px;padding:0 5px;display:grid;place-items:center;border:2px solid #fff;border-radius:999px;background:#d62c2c;color:#fff;font-size:.72rem;font-weight:800;line-height:1;box-shadow:0 2px 7px rgba(0,0,0,.22)}body.af-profile-open #memberHub,#afCloudSyncBadge{display:none!important}.member-shell{display:grid;grid-template-columns:minmax(240px,.78fr) minmax(0,1.42fr);gap:18px;align-items:start}.member-list-card,.member-detail-card{min-height:440px}.member-list{display:grid;gap:8px;max-height:63vh;overflow:auto;padding-right:3px}.member-list-item{display:flex!important;align-items:center!important;gap:10px!important;width:100%;padding:10px!important;text-align:left!important;background:transparent!important;border:1px solid var(--line)!important;box-shadow:none!important}.member-list-item:hover,.member-list-item.on{background:color-mix(in srgb,var(--green) 8%,var(--card))!important;border-color:color-mix(in srgb,var(--green) 38%,var(--line))!important}.member-list-item .pf-avatar{width:48px;height:48px}.member-list-item b,.member-list-item small{display:block}.member-list-item small{margin-top:2px;color:var(--muted);font-weight:500}.member-detail-empty{display:grid;place-items:center;min-height:360px;text-align:center;color:var(--muted)}.member-identity{display:flex;gap:16px;align-items:center;padding-bottom:18px;border-bottom:1px solid var(--line)}.member-identity .pf-avatar{width:88px;height:88px}.member-identity h3{margin:0 0 4px}.member-public-info{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:18px 0}.member-public-info div{padding:10px 12px;border-radius:10px;background:color-mix(in srgb,var(--ink) 3%,var(--card))}.member-public-info small{display:block;color:var(--muted);font-weight:700;margin-bottom:3px}.member-bio{margin:14px 0;color:var(--ink);line-height:1.55;white-space:pre-wrap}.member-chat{display:flex;flex-direction:column;min-height:410px}.member-chat-head{display:flex;align-items:center;gap:10px;padding-bottom:12px;border-bottom:1px solid var(--line)}.member-chat-head .pf-avatar{width:50px;height:50px}.member-chat-log{flex:1;min-height:260px;max-height:47vh;overflow:auto;display:flex;flex-direction:column;gap:8px;padding:16px 4px}.member-bubble{max-width:min(82%,520px);padding:9px 12px;border-radius:15px 15px 15px 4px;background:color-mix(in srgb,var(--green) 8%,var(--card));border:1px solid color-mix(in srgb,var(--green) 15%,var(--line));line-height:1.4;white-space:pre-wrap;overflow-wrap:anywhere}.member-bubble.mine{align-self:flex-end;border-radius:15px 15px 4px 15px;background:var(--green);border-color:var(--green);color:#fff}.member-bubble small{display:block;margin-top:5px;opacity:.76;font-size:.72rem}.member-chat-compose{display:flex;gap:9px;align-items:flex-end;padding-top:10px;border-top:1px solid var(--line)}.member-chat-compose textarea{flex:1;min-height:48px;max-height:120px;resize:vertical}.member-chat-compose button{min-height:48px}.profile-back{margin-bottom:14px}.profile-reminder{position:fixed;z-index:890;right:18px;bottom:86px;max-width:min(360px,calc(100vw - 36px));display:flex!important;align-items:flex-start!important;gap:9px!important;text-align:left!important;padding:11px 13px!important;border-radius:13px!important;background:var(--card)!important;color:var(--ink)!important;border:1px solid color-mix(in srgb,var(--amber) 55%,var(--line))!important;box-shadow:0 10px 30px rgba(18,55,34,.18)!important}.profile-reminder strong,.profile-reminder span{display:block}.profile-reminder span{font-size:.81rem;color:var(--muted);font-weight:400;line-height:1.35}
 @media(max-width:720px){.profile-grid{grid-template-columns:1fr}.profile-form{grid-template-columns:1fr}.profile-top{padding-left:16px;padding-right:16px}.avatar-choice{grid-template-columns:repeat(6,1fr)}.profile-main{padding:20px 14px 34px}.avatar-builder{grid-template-columns:1fr}.avatar-builder-preview{justify-items:start;text-align:left}.avatar-tuning{grid-template-columns:1fr}.member-shell{grid-template-columns:1fr}.member-list-card,.member-detail-card{min-height:0}.member-list{max-height:280px}.member-public-info{grid-template-columns:1fr}.member-identity .pf-avatar{width:74px;height:74px}.member-chat{min-height:360px}.member-chat-log{max-height:42vh}.m-preview{padding:8px}.m-preview-body iframe{height:60vh}}
 
-/* AfriFloW mobile UX — 2026-11-11 : correctifs non destructifs. */
+/* AfriFlow mobile UX — 2026-11-11 : correctifs non destructifs. */
 #profilePanel.member-hub-mode{
   inset:0!important;z-index:1515!important;display:flex!important;
   visibility:hidden;pointer-events:none;transform:none!important;
@@ -2911,17 +2911,17 @@ body.af-profile-open #afCloudSyncBadge{visibility:hidden!important}
 }
 </style>
 <section id="profilePanel" class="profile-panel" aria-hidden="true" aria-label="Profil et annuaire">
-  <div class="profile-top"><h2>Profil AfriFloW</h2><button type="button" id="profileClose" class="profile-close"><svg class="ic" aria-hidden="true"><use href="#i-close"/></svg> Fermer</button></div>
+  <div class="profile-top"><h2>Profil AfriFlow</h2><button type="button" id="profileClose" class="profile-close"><svg class="ic" aria-hidden="true"><use href="#i-close"/></svg> Fermer</button></div>
   <main id="profileMain" class="profile-main"><p class="profile-note">Chargement du profil…</p></main>
 </section>
 <script src="./afriflow-countries.js?v=20261122"></script>
 <script src="./afriflow-profile.js?v=20261122-member-ids"></script>
 
-<!-- AfriFloW PWA install guidance -->
+<!-- AfriFlow PWA install guidance -->
 <div id="afPwaHelp" class="af-pwa-dialog" role="dialog" aria-modal="true" aria-labelledby="afPwaHelpTitle" hidden>
   <div class="af-pwa-box">
     <button id="afPwaHelpClose" class="af-pwa-close" type="button" aria-label="Fermer les instructions">×</button>
-    <h2 id="afPwaHelpTitle">Installer AfriFloW</h2>
+    <h2 id="afPwaHelpTitle">Installer AfriFlow</h2>
     <div id="afPwaHelpText"></div>
   </div>
 </div>
@@ -2941,7 +2941,7 @@ body.af-profile-open #afCloudSyncBadge{visibility:hidden!important}
     return window.matchMedia('(display-mode: standalone)').matches ||
       window.matchMedia('(display-mode: fullscreen)').matches ||
       window.navigator.standalone === true ||
-      /AfriFloW/i.test(navigator.userAgent || '');
+      /AfriFlow/i.test(navigator.userAgent || '');
   }
   function previouslyInstalled() {
     try { return localStorage.getItem(installedKey) === 'yes'; } catch (ignore) { return false; }
@@ -3040,10 +3040,10 @@ body.af-profile-open #afCloudSyncBadge{visibility:hidden!important}
 <link rel="stylesheet" href="./afriflow-ux-polish.css?v=20261124-scroll-v1">
 <script src="./afriflow-first-use.js" defer></script>
 
-<!-- Notifications and meeting-calls for active AfriFloW sessions -->
+<!-- Notifications and meeting-calls for active AfriFlow sessions -->
 <script src="./afriflow-alerts.js" defer></script>
 
-<!-- AfriFloW: detect new published versions and refresh only when idle -->
+<!-- AfriFlow: detect new published versions and refresh only when idle -->
 <script src="./updates.js" defer></script>
 
 <!-- Public Market catalogue, loaded after the existing authenticated workspace -->
@@ -3051,12 +3051,12 @@ body.af-profile-open #afCloudSyncBadge{visibility:hidden!important}
 <script src="./afriflow-cod.js?v=20261124-order-alerts-v3" defer></script>
 <script src="./market.js?v=20261124-promote-shareholder" defer></script>
 
-<!-- AfriFloW PWA: registration without request interception -->
+<!-- AfriFlow PWA: registration without request interception -->
 <script>
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', function () {
     navigator.serviceWorker.register('./sw.js').catch(function (error) {
-      console.warn('AfriFloW PWA registration:', error);
+      console.warn('AfriFlow PWA registration:', error);
     });
   });
 }

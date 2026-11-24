@@ -81,23 +81,23 @@ async function loadIdentifiers(){
   var q=await window.__sb.from("afriflow_member_ids").select("login_id,admin_number").eq("user_id",current.user.id).single();
   if(q.error)throw q.error;
   var id=q.data||{};
-  host.innerHTML='<h3>Mes références AfriFloW</h3><p class="profile-note">Références permanentes et personnelles : elles ne changent pas si vous modifiez votre pays ou votre rôle.</p>'
+  host.innerHTML='<h3>Mes références AfriFlow</h3><p class="profile-note">Références permanentes et personnelles : elles ne changent pas si vous modifiez votre pays ou votre rôle.</p>'
     +'<p><strong>Identifiant de connexion :</strong> <code>'+esc(id.login_id||"")+'</code></p>'
     +'<p><strong>Numéro administratif :</strong> <code>'+esc(id.admin_number||"")+'</code></p>'
     +'<p class="profile-note">Vous pouvez utiliser l’identifiant avec votre mot de passe sur l’écran de connexion. Le numéro administratif sert uniquement aux dossiers.</p>';
- }catch(e){if(host.isConnected)host.innerHTML='<h3>Mes références AfriFloW</h3><p class="profile-note">Identifiants indisponibles : '+esc(e.message||e)+'</p>'}
+ }catch(e){if(host.isConnected)host.innerHTML='<h3>Mes références AfriFlow</h3><p class="profile-note">Identifiants indisponibles : '+esc(e.message||e)+'</p>'}
 }
 async function loadCertificatesProfile(){
  var host=$("pfCertificates");if(!host)return;
  try{
   var response=await certificateCall("profile_summary"),d=response.profile||{};
   if(!host.isConnected)return;
-  var role=d.type==="partner"?"Partenaire commercial":d.type==="shareholder"?"Actionnaire":"Membre AfriFloW";
-  var status=d.approved?"Statut confirmé dans AfriFloW":"Statut non approuvé ou à confirmer";
-  host.innerHTML='<h3>Mon attestation AfriFloW</h3><p class="profile-note">Document généré automatiquement à partir de votre profil et de votre statut actuel. Aucun administrateur ne doit émettre le document.</p>'
+  var role=d.type==="partner"?"Partenaire commercial":d.type==="shareholder"?"Actionnaire":"Membre AfriFlow";
+  var status=d.approved?"Statut confirmé dans AfriFlow":"Statut non approuvé ou à confirmer";
+  host.innerHTML='<h3>Mon attestation AfriFlow</h3><p class="profile-note">Document généré automatiquement à partir de votre profil et de votre statut actuel. Aucun administrateur ne doit émettre le document.</p>'
    +'<div class="pf-cert-row"><b>'+esc(d.name||"Membre")+'</b><small>Rôle : '+esc(role)+'</small><small>'+esc(status)+'</small>'
    +(d.type==="partner"?'<small>Marché commercial : '+esc(d.market||"Non renseigné")+'</small>':'')
-   +'<p class="profile-note">'+(d.approved?"Votre attestation reflète le statut actuel enregistré dans AfriFloW.":"Votre fiche est disponible. Elle ne certifie pas une qualité d’actionnaire ou de partenaire tant que le statut n’est pas approuvé.")+'</p>'
+   +'<p class="profile-note">'+(d.approved?"Votre attestation reflète le statut actuel enregistré dans AfriFlow.":"Votre fiche est disponible. Elle ne certifie pas une qualité d’actionnaire ou de partenaire tant que le statut n’est pas approuvé.")+'</p>'
    +'<div class="profile-actions"><button type="button" class="p" id="pfProfileView">Voir le document</button><button type="button" id="pfProfilePdf">Télécharger le PDF</button></div></div>';
   ["pfProfileView","pfProfilePdf"].forEach(function(id){
    var btn=$(id);if(!btn)return;
@@ -109,16 +109,16 @@ async function loadCertificatesProfile(){
     var url=URL.createObjectURL(blob);
     if(id==="pfProfileView"){
       var opened=window.open(url,"_blank","noopener,noreferrer");
-      if(!opened){var a=document.createElement("a");a.href=url;a.download="AfriFloW-attestation-de-profil.pdf";document.body.appendChild(a);a.click();a.remove()}
+      if(!opened){var a=document.createElement("a");a.href=url;a.download="AfriFlow-attestation-de-profil.pdf";document.body.appendChild(a);a.click();a.remove()}
     }else{
-      var a=document.createElement("a");a.href=url;a.download="AfriFloW-attestation-de-profil.pdf";document.body.appendChild(a);a.click();a.remove();
+      var a=document.createElement("a");a.href=url;a.download="AfriFlow-attestation-de-profil.pdf";document.body.appendChild(a);a.click();a.remove();
     }
     setTimeout(function(){URL.revokeObjectURL(url)},60000);
    }catch(e){host.querySelector(".profile-note").textContent="Téléchargement impossible : "+(e.message||e)}
    finally{btn.disabled=false}
    };
   });
- }catch(e){if(host.isConnected)host.innerHTML='<h3>Mon attestation AfriFloW</h3><p class="profile-note">Service indisponible : '+esc(e.message||e)+'</p>'}
+ }catch(e){if(host.isConnected)host.innerHTML='<h3>Mon attestation AfriFlow</h3><p class="profile-note">Service indisponible : '+esc(e.message||e)+'</p>'}
 }
 
 function profilePage(){
@@ -127,19 +127,19 @@ function profilePage(){
     +field("Prénom *","first",p.first_name,"text",false,"Ex. Aïcha")+field("Nom *","last",p.last_name,"text",false,"Ex. Mensah")
     +field("E-mail", "email",p.email||current.user.email,"email",true)+field("Téléphone *","phone",p.phone,"tel",false,"Ex. +228 …")+field("Date de naissance *","birth",p.birth_date,"date",false)
     +'<label>Pays de résidence (ISO 3166-1)<select id="pf_countryCode">'+(window.AfriCountries?window.AfriCountries.options(p.country_code||d.country_code||window.AfriCountries.match(p.country||d.country)):'<option value="">Indisponible</option>')+'</select></label>'+field("Ville *","city",p.city||d.city,"text",false,"Ex. Lomé")+field("Adresse *","address",p.address,"text",true,"Quartier, rue, numéro")
-    +field("Fonction","job",p.job_title||d.job_title,"text",false,"Ex. Responsable export")+field("Département","department",p.department||d.department,"text",false,"Ex. Opérations")+field("Organisation","organization",p.organization||d.organization,"text",true,"Ex. AfriFloW")
+    +field("Fonction","job",p.job_title||d.job_title,"text",false,"Ex. Responsable export")+field("Département","department",p.department||d.department,"text",false,"Ex. Opérations")+field("Organisation","organization",p.organization||d.organization,"text",true,"Ex. AfriFlow")
     +field("Langues","languages",p.languages,"text",true,"Ex. Français, anglais")+field("Contact d’urgence","emergencyName",p.emergency_name,"text",false,"Nom")+field("Téléphone d’urgence","emergencyPhone",p.emergency_phone,"tel",false,"Numéro")
     +'<div id="pfIdentity" class="wide pf-certificates"><h3>Références personnelles</h3><p class="profile-note">Chargement des identifiants...</p></div>'
-    +'<label class="wide">Présentation publique<textarea id="pf_bio" maxlength="360" placeholder="Présentez brièvement votre expertise ou votre rôle.">'+esc(d.bio||"")+'</textarea></label><div class="wide"><b style="font-size:.84rem;color:var(--muted)">Portrait DiceBear personnalisable *</b>'+avatarEditor()+'<label style="margin-top:10px">ou ajouter une photo publique<input id="pf_photo" type="file" accept="image/png,image/jpeg,image/webp"></label><small style="display:block;color:var(--muted);margin-top:5px">Vous pouvez ajuster le portrait à tout moment. Ajouter une photo remplace le portrait généré ; choisir une nouvelle proposition le réactive.</small></div></div><div id="pfErr" role="alert" style="color:#b43b35;min-height:1.3em;margin-top:12px"></div><div class="profile-actions"><button type="button" id="pfSave" class="p">Enregistrer mon profil</button></div></section><aside class="profile-card"><h3>Informations proposées</h3><p class="profile-note">Pour un profil professionnel utile, vous pouvez aussi renseigner :</p><ul style="line-height:1.65;margin:0;padding-left:19px"><li>fonction et département ;</li><li>organisation et langues ;</li><li>ville et pays ;</li><li>une courte présentation ;</li><li>un contact d’urgence privé.</li></ul><div id="pfCertificates" class="pf-certificates"><h3>Mes certificats AfriFloW</h3><p class="profile-note">Chargement...</p></div></aside></div>';
+    +'<label class="wide">Présentation publique<textarea id="pf_bio" maxlength="360" placeholder="Présentez brièvement votre expertise ou votre rôle.">'+esc(d.bio||"")+'</textarea></label><div class="wide"><b style="font-size:.84rem;color:var(--muted)">Portrait DiceBear personnalisable *</b>'+avatarEditor()+'<label style="margin-top:10px">ou ajouter une photo publique<input id="pf_photo" type="file" accept="image/png,image/jpeg,image/webp"></label><small style="display:block;color:var(--muted);margin-top:5px">Vous pouvez ajuster le portrait à tout moment. Ajouter une photo remplace le portrait généré ; choisir une nouvelle proposition le réactive.</small></div></div><div id="pfErr" role="alert" style="color:#b43b35;min-height:1.3em;margin-top:12px"></div><div class="profile-actions"><button type="button" id="pfSave" class="p">Enregistrer mon profil</button></div></section><aside class="profile-card"><h3>Informations proposées</h3><p class="profile-note">Pour un profil professionnel utile, vous pouvez aussi renseigner :</p><ul style="line-height:1.65;margin:0;padding-left:19px"><li>fonction et département ;</li><li>organisation et langues ;</li><li>ville et pays ;</li><li>une courte présentation ;</li><li>un contact d’urgence privé.</li></ul><div id="pfCertificates" class="pf-certificates"><h3>Mes certificats AfriFlow</h3><p class="profile-note">Chargement...</p></div></aside></div>';
   bindProfile();loadIdentifiers();loadCertificatesProfile();
 }
 function directoryPage(){
   $("profileMain").innerHTML='<div class="profile-tabs"><button type="button" data-profile-tab="me">Mon profil</button><button type="button" class="on" data-profile-tab="directory">Annuaire des membres</button></div><section class="profile-card"><h3>Annuaire des membres</h3><p class="profile-note">Retrouvez les collègues inscrits et leur rôle. Les coordonnées personnelles ne sont pas affichées ici.</p><div id="memberDirectory" class="directory-grid"><p class="profile-note">Chargement…</p></div></section>';
   $("profileMain").querySelectorAll("[data-profile-tab]").forEach(function(b){b.onclick=function(){profilePage()}});
-  window.AFRI.listMembers().then(function(list){var box=$("memberDirectory");if(!box)return;box.innerHTML=list.length?list.map(function(m){return '<article class="member-card">'+avatar(m.avatar_kind,m.avatar_value,m.name)+'<div><b>'+esc(m.name)+'</b><small>'+esc([m.job_title,m.department].filter(Boolean).join(" · ")||"Membre AfriFloW")+'</small><small>'+esc([m.city,m.country].filter(Boolean).join(", "))+'</small>'+(m.bio?'<small>'+esc(m.bio)+'</small>':'')+'</div></article>'}).join(""):'<p class="profile-note">Aucun membre à afficher.</p>'}).catch(function(e){var box=$("memberDirectory");if(box)box.innerHTML='<p class="profile-note">Annuaire indisponible : '+esc(e.message||e)+'</p>'});
+  window.AFRI.listMembers().then(function(list){var box=$("memberDirectory");if(!box)return;box.innerHTML=list.length?list.map(function(m){return '<article class="member-card">'+avatar(m.avatar_kind,m.avatar_value,m.name)+'<div><b>'+esc(m.name)+'</b><small>'+esc([m.job_title,m.department].filter(Boolean).join(" · ")||"Membre AfriFlow")+'</small><small>'+esc([m.city,m.country].filter(Boolean).join(", "))+'</small>'+(m.bio?'<small>'+esc(m.bio)+'</small>':'')+'</div></article>'}).join(""):'<p class="profile-note">Aucun membre à afficher.</p>'}).catch(function(e){var box=$("memberDirectory");if(box)box.innerHTML='<p class="profile-note">Annuaire indisponible : '+esc(e.message||e)+'</p>'});
 }
 /* Accès rapide à l'annuaire : seules les informations professionnelles publiques sont affichées. */
-function hubAvatar(){return '<span class="pf-avatar pf-dicebear"><img src="https://api.dicebear.com/10.x/lorelei/svg?seed=afriflow-assistance&backgroundColor=e8f2ec" alt="Annuaire AfriFloW" referrerpolicy="no-referrer"></span>'}
+function hubAvatar(){return '<span class="pf-avatar pf-dicebear"><img src="https://api.dicebear.com/10.x/lorelei/svg?seed=afriflow-assistance&backgroundColor=e8f2ec" alt="Annuaire AfriFlow" referrerpolicy="no-referrer"></span>'}
 function mountMemberHub(){
   var h=$("memberHub");
   if(!h){h=document.createElement("button");h.type="button";h.id="memberHub";h.title="Membres et messages";h.setAttribute("aria-label","Ouvrir les membres et messages");h.innerHTML=hubAvatar()+'<span class="member-hub-count" hidden aria-label="Messages non lus"></span>';document.body.appendChild(h);h.onclick=openMemberHub}
@@ -165,11 +165,11 @@ async function sendDirect(peer,text){
 async function openMemberHub(){
   if(!window.loggedUserEmail){if(window.toast)toast("Connectez-vous pour consulter les membres.");return}
   var panel=$("profilePanel");panel.classList.remove("member-selected");panel.classList.add("member-hub-mode","open");panel.setAttribute("aria-hidden","false");document.body.classList.add("af-profile-open");panel.scrollTop=0;
-  $("profileMain").innerHTML='<section class="profile-card"><div class="profile-tabs"><button type="button" class="on">Membres et messages</button><button type="button" id="memberHubProfile">Mon profil</button></div><div class="member-shell"><section class="profile-card member-list-card"><h3>Membres AfriFloW</h3><p class="profile-note">Sélectionnez un membre pour consulter son profil professionnel ou lui écrire.</p><div id="memberHubList" class="member-list"><p class="profile-note">Chargement…</p></div></section><section id="memberHubDetail" class="profile-card member-detail-card"><div class="member-detail-empty">Choisissez un membre dans l’annuaire.</div></section></div></section>';
+  $("profileMain").innerHTML='<section class="profile-card"><div class="profile-tabs"><button type="button" class="on">Membres et messages</button><button type="button" id="memberHubProfile">Mon profil</button></div><div class="member-shell"><section class="profile-card member-list-card"><h3>Membres AfriFlow</h3><p class="profile-note">Sélectionnez un membre pour consulter son profil professionnel ou lui écrire.</p><div id="memberHubList" class="member-list"><p class="profile-note">Chargement…</p></div></section><section id="memberHubDetail" class="profile-card member-detail-card"><div class="member-detail-empty">Choisissez un membre dans l’annuaire.</div></section></div></section>';
   $("memberHubProfile").onclick=async function(){try{panel.classList.remove("member-hub-mode");await load();profilePage()}catch(e){if(window.toast)toast("Profil indisponible.")}};
   try{
     var list=(await window.AFRI.listMembers()).filter(function(m){return m.email&&m.email!==String(window.loggedUserEmail||"").toLowerCase()});
-    var box=$("memberHubList");box.innerHTML=list.length?list.map(function(m,i){return '<button type="button" class="member-list-item" data-member="'+i+'">'+avatar(m.avatar_kind,m.avatar_value,m.name)+'<span><b>'+esc(m.name||"Membre AfriFloW")+'</b><small>'+esc([m.job_title,m.department].filter(Boolean).join(" · ")||"Membre AfriFloW")+'</small></span></button>'}).join(""):'<p class="profile-note">Aucun autre membre inscrit pour le moment.</p>';
+    var box=$("memberHubList");box.innerHTML=list.length?list.map(function(m,i){return '<button type="button" class="member-list-item" data-member="'+i+'">'+avatar(m.avatar_kind,m.avatar_value,m.name)+'<span><b>'+esc(m.name||"Membre AfriFlow")+'</b><small>'+esc([m.job_title,m.department].filter(Boolean).join(" · ")||"Membre AfriFlow")+'</small></span></button>'}).join(""):'<p class="profile-note">Aucun autre membre inscrit pour le moment.</p>';
     box.onclick=function(e){var b=e.target.closest("[data-member]");if(b)showMemberDetail(list[Number(b.dataset.member)])};
   }catch(e){$("memberHubList").innerHTML='<p class="profile-note">Annuaire indisponible : '+esc(e.message||e)+'</p>'}
 }
@@ -177,7 +177,7 @@ function showMemberDetail(member){
   var card=$("memberHubDetail");if(!card||!member)return;
   $("profilePanel").classList.add("member-selected");
   $("memberHubList").querySelectorAll(".member-list-item").forEach(function(b){b.classList.toggle("on",Number(b.dataset.member)>=0&&b.textContent.indexOf(member.name||"")>=0)});
-  card.innerHTML='<div class="member-identity">'+avatar(member.avatar_kind,member.avatar_value,member.name)+'<div><h3>'+esc(member.name||"Membre AfriFloW")+'</h3><p class="profile-note">'+esc(member.job_title||"Membre AfriFloW")+'</p></div></div><div class="member-public-info"><div><small>Département</small>'+esc(member.department||"Non renseigné")+'</div><div><small>Organisation</small>'+esc(member.organization||"AfriFloW")+'</div><div><small>Pays</small>'+esc(member.country||"Non renseigné")+'</div><div><small>Ville</small>'+esc(member.city||"Non renseignée")+'</div></div>'+(member.bio?'<p class="member-bio">'+esc(member.bio)+'</p>':'')+'<div class="profile-actions" style="justify-content:flex-start"><button type="button" class="p" id="memberWrite">Écrire à '+esc((member.name||"").split(" ")[0])+'</button></div>';
+  card.innerHTML='<div class="member-identity">'+avatar(member.avatar_kind,member.avatar_value,member.name)+'<div><h3>'+esc(member.name||"Membre AfriFlow")+'</h3><p class="profile-note">'+esc(member.job_title||"Membre AfriFlow")+'</p></div></div><div class="member-public-info"><div><small>Département</small>'+esc(member.department||"Non renseigné")+'</div><div><small>Organisation</small>'+esc(member.organization||"AfriFlow")+'</div><div><small>Pays</small>'+esc(member.country||"Non renseigné")+'</div><div><small>Ville</small>'+esc(member.city||"Non renseignée")+'</div></div>'+(member.bio?'<p class="member-bio">'+esc(member.bio)+'</p>':'')+'<div class="profile-actions" style="justify-content:flex-start"><button type="button" class="p" id="memberWrite">Écrire à '+esc((member.name||"").split(" ")[0])+'</button></div>';
   $("memberWrite").onclick=function(){openDirectChat(member)};
 }
 
@@ -185,7 +185,7 @@ function showMemberDetail(member){
 // Aucun focus() sur le textarea à l'ouverture ou après chargement.
 async function openDirectChat(member){
   var card=$("memberHubDetail");if(!card)return;
-  card.innerHTML='<div class="member-chat"><div class="member-chat-head">'+avatar(member.avatar_kind,member.avatar_value,member.name)+'<div><b>'+esc(member.name||"Membre AfriFloW")+'</b><small>Discussion privée</small></div></div><div id="memberChatLog" class="member-chat-log"><p class="profile-note">Chargement…</p></div><div class="member-chat-compose"><textarea id="memberChatText" maxlength="5000" placeholder="Écrire un message…"></textarea><button type="button" class="p" id="memberChatSend">Envoyer</button></div></div>';
+  card.innerHTML='<div class="member-chat"><div class="member-chat-head">'+avatar(member.avatar_kind,member.avatar_value,member.name)+'<div><b>'+esc(member.name||"Membre AfriFlow")+'</b><small>Discussion privée</small></div></div><div id="memberChatLog" class="member-chat-log"><p class="profile-note">Chargement…</p></div><div class="member-chat-compose"><textarea id="memberChatText" maxlength="5000" placeholder="Écrire un message…"></textarea><button type="button" class="p" id="memberChatSend">Envoyer</button></div></div>';
   async function render(){try{var rows=await directRows(member),log=$("memberChatLog"),mine=String(window.loggedUserEmail||"").toLowerCase();if(!log)return;log.innerHTML=rows.length?rows.map(function(x){var v=x.value||{},own=String(v.from||"").toLowerCase()===mine;return '<div class="member-bubble'+(own?' mine':'')+'>'+esc(v.body||"")+'<small>'+esc(directTime(v.ts))+'</small></div>'}).join(""):'<p class="profile-note">Commencez la discussion avec '+esc(member.name||"ce membre")+'.</p>';log.scrollTop=log.scrollHeight;var unread=rows.filter(function(x){return String(x.value.from||"").toLowerCase()===member.email&&!x.value.read});if(unread.length){await Promise.all(unread.map(function(x){return window.__sb.from(window.__TABLE||"afriflow_state").update({value:Object.assign({},x.value,{read:true})}).eq("key",x.key)}));}}catch(e){var log=$("memberChatLog");if(log)log.innerHTML='<p class="profile-note">Conversation indisponible : '+esc(e.message||e)+'</p>'}}
   $("memberChatSend").onclick=async function(){var input=$("memberChatText"),text=input.value.trim(),btn=this;if(!text)return;btn.disabled=true;try{await sendDirect(member,text);input.value="";await render()}catch(e){if(window.toast)toast("Envoi impossible : "+(e.message||e))}finally{btn.disabled=false}};
   $("memberChatText").onkeydown=function(e){if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();$("memberChatSend").click()}};

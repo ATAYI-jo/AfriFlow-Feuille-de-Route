@@ -29,7 +29,7 @@
   }
   function notify(error) {
     if (window.toast) window.toast(error.message || String(error));
-    else console.error('[AfriFloW documents]', error);
+    else console.error('[AfriFlow documents]', error);
   }
   function wordEdit(path, original) {
     load().then(function () { window.dvWordEdit(path, original); }).catch(notify);

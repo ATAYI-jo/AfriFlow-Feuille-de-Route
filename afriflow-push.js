@@ -1,4 +1,4 @@
-/* AfriFloW PWA Web Push subscription: permission is always opt-in.
+/* AfriFlow PWA Web Push subscription: permission is always opt-in.
    Installed iOS PWA, Android browsers and desktop browsers may support it.
    The native Android WebView and current Electron wrapper need their own native push integration. */
 (function(){
@@ -22,7 +22,7 @@
   }
   function status(text) {
     if(!text)return;
-    console.info('AfriFloW Web Push: '+text);
+    console.info('AfriFlow Web Push: '+text);
   }
   async function getKey(){
     var response=await fetch(URL,{method:'GET',cache:'no-store'});

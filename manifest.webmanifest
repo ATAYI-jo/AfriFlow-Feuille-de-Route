@@ -1,8 +1,8 @@
 {
   "id": "./",
-  "name": "AfriFloW",
-  "short_name": "AfriFloW",
-  "description": "Plateforme de gestion et de suivi des projets AfriFloW",
+  "name": "AfriFlow",
+  "short_name": "AfriFlow",
+  "description": "Plateforme de gestion et de suivi des projets AfriFlow",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",

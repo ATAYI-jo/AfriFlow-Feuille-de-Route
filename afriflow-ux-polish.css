@@ -1,4 +1,4 @@
-/* AfriFloW — shared interaction polish, deliberately scoped to existing components. */
+/* AfriFlow — shared interaction polish, deliberately scoped to existing components. */
 :root{--af-focus:#c77819;--af-ease:cubic-bezier(.2,.7,.25,1);--af-fast:160ms;--af-dialog-bg:var(--card,#fff);--af-dialog-ink:var(--ink,#173a28)}
 #viewHost :is(button,a,input,select,textarea,summary):focus-visible,
 #market-view :is(button,a,input,select,textarea,summary):focus-visible,

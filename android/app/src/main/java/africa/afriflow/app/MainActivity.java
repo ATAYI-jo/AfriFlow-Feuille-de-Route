@@ -82,8 +82,8 @@ public class MainActivity extends Activity {
       byte[] bytes=body.toString().getBytes(java.nio.charset.StandardCharsets.UTF_8);
       try(OutputStream out=connection.getOutputStream()){out.write(bytes);}
       int code=connection.getResponseCode();
-      if(code>=400)android.util.Log.w("AfriFloW","FCM device registration rejected: HTTP "+code);
-    }catch(Exception e){android.util.Log.w("AfriFloW","FCM registration unavailable",e);}
+      if(code>=400)android.util.Log.w("AfriFlow","FCM device registration rejected: HTTP "+code);
+    }catch(Exception e){android.util.Log.w("AfriFlow","FCM registration unavailable",e);}
     finally{if(connection!=null)connection.disconnect();}
   }
   // Public GitHub release check: never silently installs an APK or deletes local data.
@@ -100,7 +100,7 @@ public class MainActivity extends Activity {
         conn=(HttpURLConnection)u.openConnection();
         conn.setConnectTimeout(8000);conn.setReadTimeout(8000);
         conn.setRequestProperty("Accept","application/vnd.github+json");
-        conn.setRequestProperty("User-Agent","AfriFloW-Android");
+        conn.setRequestProperty("User-Agent","AfriFlow-Android");
         if(conn.getResponseCode()!=200)return;
         java.io.ByteArrayOutputStream out=new java.io.ByteArrayOutputStream();
         try(java.io.InputStream in=conn.getInputStream()){
@@ -116,15 +116,15 @@ public class MainActivity extends Activity {
         runOnUiThread(()->{
           if(isFinishing() || isDestroyed())return;
           new AlertDialog.Builder(this)
-            .setTitle("Mise à jour AfriFloW disponible")
+            .setTitle("Mise à jour AfriFlow disponible")
             .setMessage("Version "+latest+" disponible. L'installation peut conserver vos données si la signature correspond à celle de l'application déjà installée.")
             .setNegativeButton("Plus tard",null)
             .setPositiveButton("Voir la mise à jour",(dialog,which)->{
               Intent intent=new Intent(Intent.ACTION_VIEW,Uri.parse("https://github.com/ATAYI-jo/AfriFlow-Feuille-de-Route/releases/latest"));
-              try{startActivity(intent);}catch(Exception ex){android.util.Log.w("AfriFloW","Update page unavailable",ex);}
+              try{startActivity(intent);}catch(Exception ex){android.util.Log.w("AfriFlow","Update page unavailable",ex);}
             }).show();
         });
-      }catch(Exception ex){android.util.Log.w("AfriFloW","Update check failed",ex);}
+      }catch(Exception ex){android.util.Log.w("AfriFlow","Update check failed",ex);}
       finally{if(conn!=null)conn.disconnect();}
     });
   }
@@ -178,7 +178,7 @@ public class MainActivity extends Activity {
             JSONObject json=new JSONObject(message.getData());
             if("enablePush".equals(json.optString("action")))
               runOnUiThread(()->enablePush(json.optString("accessToken")));
-          }catch(Exception e){android.util.Log.w("AfriFloW","Invalid native bridge request");}
+          }catch(Exception e){android.util.Log.w("AfriFlow","Invalid native bridge request");}
         });
     }
     web.setWebViewClient(new WebViewClient() {

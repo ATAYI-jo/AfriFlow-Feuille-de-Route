@@ -64,7 +64,7 @@ Deno.serve(async (req:Request)=>{
     const path=String(input.path||"");
     const data=String(input.data||"");
     if(!validPath(path)||!(/\.(docx|xlsx)$/i.test(path)))return respond({error:"Seuls les documents DOCX et XLSX autorisés peuvent être modifiés."},400);
-    if(!Array.isArray(listed.data?.value?.items)||!listed.data.value.items.some((x:any)=>x&&x.path===path))return respond({error:"Fichier non publié sur AfriFloW"},403);
+    if(!Array.isArray(listed.data?.value?.items)||!listed.data.value.items.some((x:any)=>x&&x.path===path))return respond({error:"Fichier non publié sur AfriFlow"},403);
     const allowed=permissions.data?.value?.users||{};
     const members=Array.isArray(allowed[path.toLowerCase()])?allowed[path.toLowerCase()]:[];
     if(!admin&&!members.some((v:unknown)=>String(v).toLowerCase()===email)){

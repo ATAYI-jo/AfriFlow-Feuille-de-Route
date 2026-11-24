@@ -1,7 +1,7 @@
 {
   "name": "afriflow-desktop",
   "version": "0.2.1",
-  "description": "AfriFloW Desktop",
+  "description": "AfriFlow Desktop",
   "main": "main.js",
   "private": true,
   "scripts": {
@@ -14,7 +14,7 @@
   },
   "build": {
     "appId": "africa.afriflow.desktop",
-    "productName": "AfriFloW",
+    "productName": "AfriFlow",
     "files": [
       "main.js",
       "preload.js",
@@ -49,7 +49,7 @@
     ],
     "protocols": [
       {
-        "name": "AfriFloW message",
+        "name": "AfriFlow message",
         "schemes": [
           "afriflow"
         ]

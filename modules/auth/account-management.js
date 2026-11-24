@@ -33,12 +33,12 @@ async function ensureMemberProfile(us){
       user_id:us.id,email:email,first_name:n.first,last_name:n.last,
       profile_due_at:new Date(Date.now()+15*24*60*60*1000).toISOString(),created_at:now,updated_at:now
     });
-    if(p.error&&p.error.code!=="23505")console.warn("Profil AfriFloW :",p.error.message);
+    if(p.error&&p.error.code!=="23505")console.warn("Profil AfriFlow :",p.error.message);
     var d=await SB().from("afriflow_member_directory").insert({
       user_id:us.id,email:email,first_name:n.first,last_name:n.last,
       display_name:String(nameOf(us)||email),created_at:now,updated_at:now
     });
-    if(d.error&&d.error.code!=="23505")console.warn("Annuaire AfriFloW :",d.error.message);
+    if(d.error&&d.error.code!=="23505")console.warn("Annuaire AfriFlow :",d.error.message);
   }catch(e){console.warn("Initialisation du profil :",e.message||e)}
 }
 async function finish(us,intent){
@@ -107,7 +107,7 @@ AFRI.promptRoleChoice=async function(){
     overlay.setAttribute("aria-modal","true");overlay.setAttribute("aria-labelledby","afRoleHeading");
     overlay.style.cssText="position:fixed;inset:0;z-index:2147483000;display:grid;place-items:center;background:rgba(6,24,17,.88);padding:18px";
     overlay.innerHTML='<section style="width:min(100%,500px);max-height:90dvh;overflow:auto;background:#fff;color:#163b2a;padding:27px;border-radius:22px;box-shadow:0 16px 70px #0005;font:16px/1.5 system-ui">'
-      +'<h2 id="afRoleHeading" style="margin:0 0 10px">Bienvenue sur AfriFloW</h2>'
+      +'<h2 id="afRoleHeading" style="margin:0 0 10px">Bienvenue sur AfriFlow</h2>'
       +'<p>Pour votre première connexion, choisissez votre profil. Ce choix ne pourra pas vous donner de droits supplémentaires sans validation.</p>'
       +'<div style="display:grid;gap:12px">'
       +'<button type="button" data-af-role="client">Client — accéder à la Marketplace</button>'
@@ -343,7 +343,7 @@ function oauthFriendlyError(message) {
   var raw=String(message||"").toLowerCase();
   if(raw.indexOf("redirect_uri")>-1||raw.indexOf("redirect")>-1) return "Google refuse le retour de connexion : l’adresse de retour doit être autorisée dans Google et Supabase.";
   if(raw.indexOf("access_blocked")>-1||raw.indexOf("not configured")>-1||raw.indexOf("client")>-1) return "Connexion Google non finalisée côté administrateur. Vérifiez l’identifiant et le secret Google dans Supabase.";
-  return "Connexion Google refusée. Réessayez, ou contactez AfriFloW si le problème persiste.";
+  return "Connexion Google refusée. Réessayez, ou contactez AfriFlow si le problème persiste.";
 }
 function oauthRedirect() { return 'https://afriflow.pages.dev/'; }
 async function loginOAuth(provider) {
@@ -391,7 +391,7 @@ async function finishOAuthUser(user) {
     if (oauthReturning) history.replaceState(null, '', location.pathname);
   } catch (error) {
     oauthHandled = false;
-    oauthError('Compte connecté, mais ouverture AfriFloW impossible : ' + fail(error));
+    oauthError('Compte connecté, mais ouverture AfriFlow impossible : ' + fail(error));
   }
 }
 (async function oauthResume() {

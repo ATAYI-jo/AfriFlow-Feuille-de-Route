@@ -1,4 +1,4 @@
-// AfriFloW PWA: Web Push while closed. No fetch interception or caching.
+// AfriFlow PWA: Web Push while closed. No fetch interception or caching.
 // Live Supabase, Dropbox and chatbot requests remain untouched.
 self.addEventListener('install', function(){self.skipWaiting();});
 self.addEventListener('activate', function(event){event.waitUntil(self.clients.claim());});
@@ -7,7 +7,7 @@ self.addEventListener('push', function(event){
     var data={};
     try{data=event.data?event.data.json():{}}catch(e){return}
     if(!data||!data.title)return;
-    // Prevent duplicate notifications when AfriFloW is already visible.
+    // Prevent duplicate notifications when AfriFlow is already visible.
     var active=await self.clients.matchAll({type:'window',includeUncontrolled:true});
     if(active.some(function(c){return c.visibilityState==='visible' && c.url.startsWith(self.registration.scope)}))return;
     var body=String(data.body||'').slice(0,240);

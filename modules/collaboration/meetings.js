@@ -118,7 +118,7 @@ document.addEventListener("click",async function(e){
     }
     try {
       var opened=await window.AfriFlowNative.openTeams(target);
-      if(!opened||!opened.ok)toast("Impossible d’ouvrir Teams depuis AfriFloW Windows. Vérifiez le lien et votre application Teams.");
+      if(!opened||!opened.ok)toast("Impossible d’ouvrir Teams depuis AfriFlow Windows. Vérifiez le lien et votre application Teams.");
     }catch(error){toast("Impossible d’ouvrir Teams : "+(error.message||error));}
     return;
   }

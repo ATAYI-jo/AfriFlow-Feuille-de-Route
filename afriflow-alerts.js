@@ -1,4 +1,4 @@
-/* AfriFloW notifications: active sessions only.
+/* AfriFlow notifications: active sessions only.
    No push in a closed app, no surprise permission requests.
    Original short tones synthesized locally (no third-party audio). */
 (function () {
@@ -47,9 +47,9 @@
     ring = element('div',{id:'af-meet-call',role:'alertdialog','aria-modal':'true','aria-labelledby':'af-meet-title',hidden:''},document.body);
     var panel=element('div',{id:'af-meet-panel'},ring);
     element('div',{id:'af-meet-incoming',text:'Appel entrant'},panel);
-    element('img',{src:'./logo.png',alt:'AfriFloW'},panel);
+    element('img',{src:'./logo.png',alt:'AfriFlow'},panel);
     element('h2',{id:'af-meet-title',text:'Appel Teams entrant'},panel);
-    element('p',{id:'af-meet-source',text:'AfriFloW · via Teams'},panel);
+    element('p',{id:'af-meet-source',text:'AfriFlow · via Teams'},panel);
     element('p',{id:'af-meet-info'},panel);
     element('p',{id:'af-meet-time'},panel);
     var actions=element('div',{id:'af-meet-actions'},panel);
@@ -57,7 +57,7 @@
     var accept=element('button',{type:'button',id:'af-meet-accept','aria-label':'Répondre et ouvrir Teams',text:'Répondre'},actions);
     decline.insertBefore(callActionIcon('decline'),decline.firstChild);
     accept.insertBefore(callActionIcon('answer'),accept.firstChild);
-    element('small',{text:'Répondre ouvre Teams. Sonnerie et alertes disponibles lorsque AfriFloW est actif.'},panel);
+    element('small',{text:'Répondre ouvre Teams. Sonnerie et alertes disponibles lorsque AfriFlow est actif.'},panel);
     decline.addEventListener('click',endCall);
     accept.addEventListener('click',function(){
       var m=activeMeeting;endCall();
@@ -168,7 +168,7 @@
     ringTimer=setInterval(function(){if(!ring.hidden)tone('call')},2400);
     setTimeout(function(){if(!ring.hidden)endCall()},120000);
     if('Notification' in window && Notification.permission==='granted'){
-      try {new Notification('Appel Teams entrant',{body:(m.title||'Réunion AfriFloW')+' · Ouvrez AfriFloW pour répondre.',icon:'./logo.png',tag:'af-meeting-'+(m.id||'now')})}catch(e){}
+      try {new Notification('Appel Teams entrant',{body:(m.title||'Réunion AfriFlow')+' · Ouvrez AfriFlow pour répondre.',icon:'./logo.png',tag:'af-meeting-'+(m.id||'now')})}catch(e){}
     }
   }
   function callMeeting(m,url) {
@@ -180,7 +180,7 @@
   if(window.AfriFlowNative && typeof window.AfriFlowNative.onIncomingMeeting==='function'){
     window.AfriFlowNative.onIncomingMeeting(function(details){
       if(!details || !/^https:\/\//i.test(String(details.teamsUrl||'')))return;
-      showMeetingCall({title:String(details.title||'Réunion AfriFloW'),id:'windows-'+Date.now()},String(details.teamsUrl));
+      showMeetingCall({title:String(details.title||'Réunion AfriFlow'),id:'windows-'+Date.now()},String(details.teamsUrl));
     });
   }
   async function poll() {
@@ -208,7 +208,7 @@
         var current=new Set(unread.map(function(x){return x.key}));
         if(!firstMessages){
           var newones=unread.filter(function(x){return !known.has(x.key)});
-          if(newones.length) notice('AfriFloW — Nouveau message',newones.length===1?(newones[0].value.subject||'Vous avez un nouveau message'):newones.length+' nouveaux messages','afri-messages');
+          if(newones.length) notice('AfriFlow — Nouveau message',newones.length===1?(newones[0].value.subject||'Vous avez un nouveau message'):newones.length+' nouveaux messages','afri-messages');
         }
         known=current;firstMessages=false;
       }
@@ -263,10 +263,10 @@
         var days=Math.floor((date.getTime()-new Date().setHours(0,0,0,0))/86400000);
         var day=new Date().toISOString().slice(0,10);
         if(days>=0&&days<=1&&enabled&&!seen('deadline_'+it.id+'_'+day)) {
-          notice('Rappel AfriFloW',it.title+(days===0?' : échéance aujourd’hui':' : échéance demain'),'afri-deadline-'+it.id);
+          notice('Rappel AfriFlow',it.title+(days===0?' : échéance aujourd’hui':' : échéance demain'),'afri-deadline-'+it.id);
         }
       });
-    }catch(e){console.warn('AfriFloW notifications:',e.message)}
+    }catch(e){console.warn('AfriFlow notifications:',e.message)}
     finally {busy=false;}
   }
   function start(){

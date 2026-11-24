@@ -36,7 +36,7 @@ function lines(text:string,font:any,size:number,maxWidth:number){
 async function certificatePdf(row:any){
  const doc=await PDFDocument.create(),page=doc.addPage([595.28,841.89]),{width:w,height:h}=page.getSize();
  const font=await doc.embedFont(StandardFonts.Helvetica),bold=await doc.embedFont(StandardFonts.HelveticaBold);
- // Use the official AfriFloW logo when its public PNG can be fetched;
+ // Use the official AfriFlow logo when its public PNG can be fetched;
  // failure must never block certificate generation.
  try{
   const response=await fetch(ORIGIN+"/logo.png",{signal:AbortSignal.timeout(2500)});
@@ -59,19 +59,19 @@ async function certificatePdf(row:any){
  const isPartner=row.certificate_type==="partner";
  center(isPartner?"CERTIFICAT DE PARTENARIAT COMMERCIAL":"ATTESTATION DE STATUT ACTIONNAIRE",h-183,bold,isPartner?17:16);
  center(isPartner?"Commercial Partnership Certificate":"Shareholder Status Attestation",h-207,font,10,muted);
- center("La Direction d'AfriFloW atteste que",h-270,font,12,muted);
+ center("La Direction d'AfriFlow atteste que",h-270,font,12,muted);
  const name=ascii(row.holder_name);
  center(name,h-315,bold,Math.min(21,Math.max(12,410/(Math.max(1,name.length)*.55))),green);
  const para=isPartner
-  ?"est reconnu(e) comme partenaire commercial d'AfriFloW sur le marche indique ci-dessous, selon les conditions contractuelles en vigueur."
-  :"est reconnu(e) comme actionnaire d'AfriFloW, apres verification des justificatifs par la Direction. Ce document ne constitue pas un titre de propriete.";
+  ?"est reconnu(e) comme partenaire commercial d'AfriFlow sur le marche indique ci-dessous, selon les conditions contractuelles en vigueur."
+  :"est reconnu(e) comme actionnaire d'AfriFlow, apres verification des justificatifs par la Direction. Ce document ne constitue pas un titre de propriete.";
  let y=h-365;for(const l of lines(para,font,11,450)){center(l,y,font,11,muted);y-=19;}
  if(isPartner){center("MARCHE COMMERCIAL ATTRIBUE",h-450,bold,11,gold);center(row.market_name,h-475,bold,17,green)}
  const no="AF-"+row.certificate_type.toUpperCase().slice(0,3)+"-"+row.id.slice(0,8).toUpperCase();
  page.drawText("Reference : "+no,{x:80,y:310,size:10,font:bold,color:green});
  page.drawText("Date d'emission : "+new Date(row.issued_at).toLocaleDateString("fr-FR",{timeZone:"UTC"}),{x:80,y:286,size:10,font,color:muted});
  page.drawText("Statut lors de l'emission : Actif",{x:80,y:264,size:10,font,color:muted});
- page.drawText("Validation electronique AfriFloW",{x:80,y:222,size:11,font:bold,color:green});
+ page.drawText("Validation electronique AfriFlow",{x:80,y:222,size:11,font:bold,color:green});
  page.drawText("Document verifiable en ligne. Aucune signature manuscrite simulee.",{x:80,y:201,size:9,font,color:muted});
  const qr=qrcode(0,"M");qr.addData(verifyUrl(row.verification_token));qr.make();
  const count=qr.getModuleCount(),unit=2.65,qx=w-80-count*unit,qy=175;
@@ -94,7 +94,7 @@ async function liveProfile(db:any,userId:string){
  const p=identity.data||{},r=role.data||{},type=["partner","shareholder"].includes(r.requested_role)?r.requested_role:"member";
  const approved=type!=="member"&&r.access_mode===type+"_approved"&&(type!=="partner"||terms.data?.is_enabled===true);
  const marketName=type==="partner"?string(market.data?.market_name,80):"";
- return {loginId:ids.data?.login_id||null,adminNumber:ids.data?.admin_number||null,name:string([p.first_name,p.last_name].filter(Boolean).join(" "),160)||"Membre AfriFloW",
+ return {loginId:ids.data?.login_id||null,adminNumber:ids.data?.admin_number||null,name:string([p.first_name,p.last_name].filter(Boolean).join(" "),160)||"Membre AfriFlow",
    type,approved,market:marketName||null,roleStatus:string(r.access_mode,40)||"non renseigne",
    job:string(p.job_title,120)||null,birth:string(p.birth_date,10)||null,organization:string(p.organization,120)||null,
    country:string(p.country,80)||null,countryCode:string(p.country_code,2)||null,marketCode:string(market.data?.country_code,2)||null,city:string(p.city,80)||null};
@@ -107,7 +107,7 @@ async function profilePdf(data:any){
  const body=await doc.embedFont(StandardFonts.Helvetica),
        bold=await doc.embedFont(StandardFonts.HelveticaBold),
        italic=await doc.embedFont(StandardFonts.HelveticaOblique);
- // AfriFloW identity: institutional deep green + living green and mango-orange accents.
+ // AfriFlow identity: institutional deep green + living green and mango-orange accents.
  // The document keeps a white background and sober typography; color is used sparingly.
  const ink=rgb(.08,.10,.10),grey=rgb(.34,.38,.37),
        green=rgb(24/255,93/255,52/255),
@@ -132,15 +132,15 @@ async function profilePdf(data:any){
    if(bytes.length<600000){const logo=await doc.embedPng(bytes),size=logo.scaleToFit(65,58);page.drawImage(logo,{x:(w-size.width)/2,y:h-118,width:size.width,height:size.height})}
   }
  }catch(_e){}
- // Balanced visual anchor below the centered official AfriFloW logo.
+ // Balanced visual anchor below the centered official AfriFlow logo.
  page.drawLine({start:{x:w/2-31,y:h-131},end:{x:w/2+17,y:h-131},thickness:2.5,color:leaf});
  page.drawLine({start:{x:w/2+19,y:h-131},end:{x:w/2+31,y:h-131},thickness:2.5,color:orange});
  const title="ATTESTATION DE "+(data.approved&&data.type==="partner"?"PARTENARIAT COMMERCIAL":data.approved&&data.type==="shareholder"?"STATUT ACTIONNAIRE":"PROFIL");
  centered(title,h-157,bold,title.length>35?14:16,green);
- centered("AfriFloW profile attestation",h-175,italic,10,grey);
- write("La Direction d'AfriFloW constate que",x,h-248,body,11);
- write("AfriFloW management confirms that",x,h-265,italic,10,grey);
- let name=ascii(data.name||"Membre AfriFloW"),nameSize=15;
+ centered("AfriFlow profile attestation",h-175,italic,10,grey);
+ write("La Direction d'AfriFlow constate que",x,h-248,body,11);
+ write("AfriFlow management confirms that",x,h-265,italic,10,grey);
+ let name=ascii(data.name||"Membre AfriFlow"),nameSize=15;
  while(nameSize>10&&bold.widthOfTextAtSize(name,nameSize)>contentWidth)nameSize--;
  write(name,x,h-305,bold,nameSize,ink);
  if(data.adminNumber)write("N° de dossier administratif : "+data.adminNumber,x,h-327,body,10,grey);
@@ -150,10 +150,10 @@ async function profilePdf(data:any){
  if(data.organization){write("Organisation (organization) : "+data.organization,x,yy,body,10.5);yy-=19;}
  yy-=30;
  const intro=data.approved&&data.type==="partner"
-  ?"est enregistre(e) comme partenaire commercial approuve(e) dans AfriFloW, pour le marche indique ci-dessous."
+  ?"est enregistre(e) comme partenaire commercial approuve(e) dans AfriFlow, pour le marche indique ci-dessous."
   :data.approved&&data.type==="shareholder"
-  ?"dispose d'un compte actionnaire approuve dans la plateforme AfriFloW, sous reserve des actes sociaux applicables."
-  :"dispose d'un profil AfriFloW dont le statut institutionnel reste a confirmer.";
+  ?"dispose d'un compte actionnaire approuve dans la plateforme AfriFlow, sous reserve des actes sociaux applicables."
+  :"dispose d'un profil AfriFlow dont le statut institutionnel reste a confirmer.";
  yy=wrapped(intro,x,yy,contentWidth,body,11,16);
  yy-=13;
  page.drawLine({start:{x,y:yy},end:{x:right,y:yy},thickness:1,color:green});
@@ -166,8 +166,8 @@ async function profilePdf(data:any){
   yy=Math.min(yy-25,next-12);
  }
  if(data.loginId)row("Identifiant (login ID) :",data.loginId);
- row("Role (role) :",data.type==="partner"?"Partenaire commercial":data.type==="shareholder"?"Actionnaire":"Membre AfriFloW");
- row("Statut (status) :",data.approved?"Approuve dans AfriFloW":"En attente ou non approuve");
+ row("Role (role) :",data.type==="partner"?"Partenaire commercial":data.type==="shareholder"?"Actionnaire":"Membre AfriFlow");
+ row("Statut (status) :",data.approved?"Approuve dans AfriFlow":"En attente ou non approuve");
  if(data.type==="partner")row("Marche commercial (market) :",(data.market||"Non renseigne")+(data.marketCode?" ("+data.marketCode+")":""));
  if(data.job)row("Fonction (position) :",data.job);
  // Date and organizational sign-off are textual, not a representation of
@@ -176,7 +176,7 @@ async function profilePdf(data:any){
  const signX=325;
  write("Etabli automatiquement le "+date,signX,152,body,10);
  write("Automatically generated on "+date,signX,136,italic,9.5,grey);
- write("Pour AfriFloW",signX,103,body,11);
+ write("Pour AfriFlow",signX,103,body,11);
  write("La Direction",signX,85,bold,11,green);
  // Plain disclaimer is mandatory because an account role does not establish
  // legal share ownership or a signed commercial mandate.
@@ -215,7 +215,7 @@ Deno.serve(async(req:Request)=>{
   if(action==="profile_pdf"){
     const data=await liveProfile(db,user.id);
     const pdf=await profilePdf(data);
-    return new Response(pdf,{status:200,headers:{...cors,"Content-Type":"application/octet-stream","Content-Disposition":'attachment; filename="AfriFloW-profil.pdf"',"Cache-Control":"no-store"}});
+    return new Response(pdf,{status:200,headers:{...cors,"Content-Type":"application/octet-stream","Content-Disposition":'attachment; filename="AfriFlow-profil.pdf"',"Cache-Control":"no-store"}});
   }
   if(action==="mine"){
    const {data, error}=await db.from("afriflow_certificates").select("*").eq("holder_user_id",user.id).order("issued_at",{ascending:false}).limit(20);
@@ -248,7 +248,7 @@ Deno.serve(async(req:Request)=>{
    if(row.holder_user_id!==user.id&&!isAdmin)return json({error:"Acces refuse"},403);
    if(row.status!=="active"||!(await eligibility(db,row)))return json({error:"Ce certificat n'est plus valide. Une reemission est necessaire."},409);
    const pdf=await certificatePdf(row);
-   return new Response(pdf,{status:200,headers:{...cors,"Content-Type":"application/octet-stream","Content-Disposition":'attachment; filename="AfriFloW-certificat-'+row.id.slice(0,8)+'.pdf"',"Cache-Control":"no-store"}});
+   return new Response(pdf,{status:200,headers:{...cors,"Content-Type":"application/octet-stream","Content-Disposition":'attachment; filename="AfriFlow-certificat-'+row.id.slice(0,8)+'.pdf"',"Cache-Control":"no-store"}});
   }
   return json({error:"Action inconnue"},400);
  }catch(e){console.error("Certificate service error",e);return json({error:"Service certificats momentanement indisponible"},500);}

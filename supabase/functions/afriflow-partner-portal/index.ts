@@ -15,7 +15,7 @@ function money(value: unknown) { const n = Number(value); return Number.isFinite
 
 async function notifyAdmins(service: ReturnType<typeof createClient>, subject: string, body: string, urgent: boolean) {
   const { data: admins, error } = await service.from("afriflow_admins").select("email");
-  if (error) throw new Error("Alerte AfriFloW indisponible");
+  if (error) throw new Error("Alerte AfriFlow indisponible");
   const token = crypto.randomUUID(), now = new Date().toISOString();
   const rows = (admins || []).map((admin) => ({ key: `msg:${String(admin.email).toLowerCase()}:${token}`, value: { from: "partenaire@afriflow", fromName: "Portail partenaire", to: String(admin.email).toLowerCase(), subject, body, urgent, read: false, ts: Date.now() }, updated_at: now }));
   if (rows.length) { const sent = await service.from("afriflow_state").insert(rows); if (sent.error) throw new Error("Opération enregistrée, mais alerte indisponible"); }
@@ -39,7 +39,7 @@ Deno.serve(async (req: Request) => {
     const isApprovedPartner = isPartner && profile?.access_mode === "partner_approved";
 
     if (action === "dashboard") {
-      if (!isApprovedPartner) return reply(req, { error: "Votre espace partenaire attend une approbation d’AfriFloW." }, 403);
+      if (!isApprovedPartner) return reply(req, { error: "Votre espace partenaire attend une approbation d’AfriFlow." }, 403);
       const [terms, products, orders, reports, market] = await Promise.all([
         service.from("afriflow_partner_terms").select("commission_rate,is_enabled,payment_notes").eq("partner_user_id", user.id).maybeSingle(),
         service.from("afriflow_market_products").select("id,name,category,description,price,currency,minimum_order_quantity,is_in_stock").eq("listing_type", "product").eq("is_active", true).eq("is_in_stock", true).order("created_at", { ascending: false }).limit(100),
@@ -53,9 +53,9 @@ Deno.serve(async (req: Request) => {
     }
 
     if (action === "request_order") {
-      if (!isApprovedPartner) return reply(req, { error: "Votre espace partenaire attend une approbation d’AfriFloW." }, 403);
+      if (!isApprovedPartner) return reply(req, { error: "Votre espace partenaire attend une approbation d’AfriFlow." }, 403);
       const { data: terms } = await service.from("afriflow_partner_terms").select("is_enabled").eq("partner_user_id", user.id).maybeSingle();
-      if (!terms?.is_enabled) return reply(req, { error: "Votre partenariat attend encore l’activation d’AfriFloW." }, 403);
+      if (!terms?.is_enabled) return reply(req, { error: "Votre partenariat attend encore l’activation d’AfriFlow." }, 403);
       const productId = text(body.productId, 36), quantity = positiveInteger(body.quantity), note = text(body.note, 1200);
       if (!uuid(productId) || !quantity) return reply(req, { error: "Produit ou quantité invalide" }, 400);
       const { data: product } = await service.from("afriflow_market_products").select("id,name,price,currency,minimum_order_quantity,is_active,is_in_stock,listing_type").eq("id", productId).maybeSingle();
@@ -64,19 +64,19 @@ Deno.serve(async (req: Request) => {
       const saved = await service.from("afriflow_partner_orders").insert({ partner_user_id: user.id, product_id: product.id, quantity_requested: quantity, unit_price: product.price, currency: product.currency, note }).select("id").single();
       if (saved.error) throw new Error("Impossible d’enregistrer la demande produit");
       // La notification est créée automatiquement par le déclencheur af_partner_order_event.
-      return reply(req, { ok: true, message: "Demande envoyée à AfriFloW. Elle apparaîtra dans votre suivi dès validation." });
+      return reply(req, { ok: true, message: "Demande envoyée à AfriFlow. Elle apparaîtra dans votre suivi dès validation." });
     }
 
     if (action === "report_sale") {
-      if (!isApprovedPartner) return reply(req, { error: "Votre espace partenaire attend une approbation d’AfriFloW." }, 403);
+      if (!isApprovedPartner) return reply(req, { error: "Votre espace partenaire attend une approbation d’AfriFlow." }, 403);
       const { data: terms } = await service.from("afriflow_partner_terms").select("commission_rate,is_enabled").eq("partner_user_id", user.id).maybeSingle();
-      if (!terms?.is_enabled) return reply(req, { error: "Votre partenariat attend encore l’activation d’AfriFloW." }, 403);
+      if (!terms?.is_enabled) return reply(req, { error: "Votre partenariat attend encore l’activation d’AfriFlow." }, 403);
       const orderId = text(body.orderId, 36), quantity = positiveInteger(body.quantity), note = text(body.note, 1200);
       if (!uuid(orderId) || !quantity) return reply(req, { error: "Déclaration de vente invalide" }, 400);
       const { data: order } = await service.from("afriflow_partner_orders").select("id,product_id,quantity_requested,unit_price,currency,status,product:afriflow_market_products(name)").eq("id", orderId).eq("partner_user_id", user.id).maybeSingle();
       if (!order || !["approved", "supplied"].includes(order.status)) return reply(req, { error: "Cette allocation n’est pas encore prête à la vente." }, 409);
       const price = money(order.unit_price);
-      if (price === null) return reply(req, { error: "Prix d’allocation indisponible. Contactez AfriFloW." }, 409);
+      if (price === null) return reply(req, { error: "Prix d’allocation indisponible. Contactez AfriFlow." }, 409);
       const { data: previous, error: previousError } = await service.from("afriflow_partner_sales_reports").select("quantity_sold").eq("order_id", order.id).in("status", ["pending_review", "validated", "settled"]);
       if (previousError) throw new Error("Impossible de contrôler les quantités déclarées");
       const alreadySold = (previous || []).reduce((sum, row) => sum + Number(row.quantity_sold || 0), 0);
@@ -88,7 +88,7 @@ Deno.serve(async (req: Request) => {
       if (saved.error) throw new Error("Impossible d’enregistrer la vente");
       const productName = Array.isArray(order.product) ? order.product[0]?.name : order.product?.name;
       // La notification est créée automatiquement par le déclencheur af_partner_sale_event.
-      return reply(req, { ok: true, calculation: { gross, afriflowAmount, partnerNet, commissionRate: Number(terms.commission_rate), currency: order.currency }, message: "Vente déclarée. AfriFloW a reçu l’alerte urgente." });
+      return reply(req, { ok: true, calculation: { gross, afriflowAmount, partnerNet, commissionRate: Number(terms.commission_rate), currency: order.currency }, message: "Vente déclarée. AfriFlow a reçu l’alerte urgente." });
     }
 
     if (action === "admin_access_list") {
@@ -211,7 +211,7 @@ Deno.serve(async (req: Request) => {
       if (!shareholder || shareholder.requested_role !== "shareholder") return reply(req, { error: "Actionnaire introuvable" }, 404);
       const saved = await service.from("afriflow_market_profiles").update({ access_mode: "shareholder_approved" }).eq("user_id", shareholderId);
       if (saved.error) throw new Error("Impossible de valider l’actionnaire");
-      await notifyAdmins(service, "Actionnaire validé", "Une demande d’accès actionnaire a été validée par un administrateur AfriFloW.", false);
+      await notifyAdmins(service, "Actionnaire validé", "Une demande d’accès actionnaire a été validée par un administrateur AfriFlow.", false);
       return reply(req, { ok: true, message: "Actionnaire validé. Son espace actionnaire pourra désormais être ouvert." });
     }
 

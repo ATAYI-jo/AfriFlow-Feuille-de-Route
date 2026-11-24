@@ -83,7 +83,7 @@ function hordeHeaders() {
   /* The anonymous community key is intentionally used only when no private
      key is configured. It never reaches the browser. A dedicated free Horde
      key can later be added as AI_HORDE_API_KEY for a better queue priority. */
-  return { "content-type": "application/json", apikey: Deno.env.get("AI_HORDE_API_KEY") || "0000000000", "Client-Agent": "AfriFloW:1.0:afriflow.info@gmail.com" };
+  return { "content-type": "application/json", apikey: Deno.env.get("AI_HORDE_API_KEY") || "0000000000", "Client-Agent": "AfriFlow:1.0:afriflow.info@gmail.com" };
 }
 function hordePrompt(instruction: string) {
   return ("Photographie e-commerce fidèle du produit fourni. Garde exactement le produit, son emballage, sa forme, ses couleurs, ses proportions, son logo et tout texte lisible. Ne change que le décor, la lumière et le cadrage. " + instruction + " ### produit déformé, emballage modifié, texte illisible, nouveau logo, nouveau produit, mains, personnes, watermark").slice(0, 2800);

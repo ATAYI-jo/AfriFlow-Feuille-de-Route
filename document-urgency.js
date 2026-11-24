@@ -50,7 +50,7 @@ async function poll(){
     if(key&&key!==already&&urgent.length){
       // Browser notifications only when the user has already opted in and granted OS permission.
       if(window.AfriFlowAlerts?.enabled() && "Notification" in window && Notification.permission==="granted"){
-        try{new Notification("AfriFloW · document urgent",{body:urgent[0].title||urgent[0].path.split("/").pop(),tag:"afriflow-document-urgent"})}catch(_){}
+        try{new Notification("AfriFlow · document urgent",{body:urgent[0].title||urgent[0].path.split("/").pop(),tag:"afriflow-document-urgent"})}catch(_){}
       }
       try{localStorage.setItem(localKey,key)}catch(_){}
     }

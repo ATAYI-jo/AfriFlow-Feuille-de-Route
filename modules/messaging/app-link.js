@@ -18,10 +18,10 @@
       "#Intent;scheme=afriflow;package=africa.afriflow.app;S.browser_fallback_url=" +
       encodeURIComponent(web.href) + ";end";
     var box = document.createElement("aside");
-    box.setAttribute("aria-label", "Ouverture du message AfriFloW");
+    box.setAttribute("aria-label", "Ouverture du message AfriFlow");
     box.style.cssText = "position:fixed;top:calc(env(safe-area-inset-top, 0px) + 10px);left:50%;transform:translateX(-50%);width:min(440px,calc(100% - 24px));box-sizing:border-box;z-index:2147483000;background:#fff;color:#193c2b;border:1px solid #b9d1c2;border-radius:16px;padding:16px;box-shadow:0 8px 32px #0003;font:15px/1.45 system-ui,sans-serif";
     var title = document.createElement("strong");
-    title.textContent = "Lire dans AfriFloW";
+    title.textContent = "Lire dans AfriFlow";
     var desc = document.createElement("p");
     desc.textContent = "Ouvrez le message dans votre application installée, ou continuez ici.";
     desc.style.margin = "6px 0 12px";

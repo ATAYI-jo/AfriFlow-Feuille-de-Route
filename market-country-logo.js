@@ -1,4 +1,4 @@
-/* AfriFloW: geographic market emblems. Company logo remains unchanged. */
+/* AfriFlow: geographic market emblems. Company logo remains unchanged. */
 (function () {
   "use strict";
   var map = Object.create(null);
@@ -63,7 +63,7 @@
     if (!/^[A-Z]{2}$/.test(iso2) || !map[iso2]) return;
     var iso3=map[iso2], seq=iso3;
     host.dataset.countryCode=iso2;
-    host.setAttribute("aria-label","Emblème AfriFloW du marché "+(label || iso2));
+    host.setAttribute("aria-label","Emblème AfriFlow du marché "+(label || iso2));
     function show(feature){
       if (!host.isConnected || host.dataset.countryCode!==iso2) return;
       try { var svg=createSvg(feature);svg.setAttribute("aria-label","Contour du pays pour "+(label||iso2));host.replaceChildren(svg); }
@@ -73,7 +73,7 @@
     fetch("https://raw.githubusercontent.com/johan/world.geo.json/master/countries/"+iso3+".geo.json")
       .then(function(res){if(!res.ok)throw Error("HTTP "+res.status);return res.json();})
       .then(function(feature){cache[seq]=feature;show(feature);})
-      .catch(function(error){console.warn("Contour de marché introuvable; logo AfriFloW conservé.",iso2,error);});
+      .catch(function(error){console.warn("Contour de marché introuvable; logo AfriFlow conservé.",iso2,error);});
   }
   window.AfriMarketCountryLogo={mount:mount};
 })();

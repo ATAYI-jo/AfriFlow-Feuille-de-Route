@@ -58,7 +58,7 @@ test('Justification refusals require a reason and resubmissions reopen review',(
  assert.match(html,/Historique des décisions/);
  assert.match(html,/history:history/);
 });
-test('Decisions notify active sessions via the AfriFloW alerts system',()=>{
+test('Decisions notify active sessions via the AfriFlow alerts system',()=>{
  const alerts=read('afriflow-alerts.js');
  assert.match(alerts,/att:jd-%:/);
  assert.match(alerts,/Justificatif refusé/);

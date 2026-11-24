@@ -29,7 +29,7 @@ function openLinkedMessage(args) {
   const target = messageTarget(args);
   if (!target) return false;
   if (win && !win.isDestroyed()) {
-    win.loadURL(target).catch(err => console.warn('AfriFloW linked message:', err.message));
+    win.loadURL(target).catch(err => console.warn('AfriFlow linked message:', err.message));
     reveal();
   } else {
     pendingMessageUrl = target;
@@ -45,18 +45,18 @@ function installDownloadedUpdate() {
 }
 function checkForUpdates() {
   if (process.platform !== 'win32' || !app.isPackaged) return;
-  autoUpdater.checkForUpdates().catch(err => console.warn('AfriFloW update check:', err.message));
+  autoUpdater.checkForUpdates().catch(err => console.warn('AfriFlow update check:', err.message));
 }
 function configureUpdates() {
   if (process.platform !== 'win32' || !app.isPackaged) return;
   autoUpdater.autoDownload = true;
   autoUpdater.autoInstallOnAppQuit = true;
   autoUpdater.allowPrerelease = false;
-  autoUpdater.on('error', err => console.warn('AfriFloW update:', err.message));
+  autoUpdater.on('error', err => console.warn('AfriFlow update:', err.message));
   autoUpdater.on('update-downloaded', info => {
     updateReady = true;
     const choice = dialog.showMessageBoxSync({
-      type: 'info', title: 'Mise à jour AfriFloW',
+      type: 'info', title: 'Mise à jour AfriFlow',
       message: `La version ${info.version} est prête. Installer maintenant ?`,
       detail: 'Vos documents et vos paramètres sont conservés. La mise à jour remplace l’application sans désinstallation.',
       buttons: ['Installer maintenant', 'Plus tard'], defaultId: 0, cancelId: 1
@@ -75,18 +75,18 @@ function readPreferences(){
 }
 function savePreferences(){
   try{fs.mkdirSync(app.getPath('userData'),{recursive:true});fs.writeFileSync(preferencesPath(),JSON.stringify({startAtLogin}));}
-  catch(err){console.warn('AfriFloW settings could not be saved:',err.message);}
+  catch(err){console.warn('AfriFlow settings could not be saved:',err.message);}
 }
 function configureStartup(){
   if(process.platform!=='win32'||!app.isPackaged)return;
-  try{app.setLoginItemSettings({openAtLogin:startAtLogin,path:process.execPath,args:['--hidden'],name:'AfriFloW'});}
-  catch(err){console.warn('AfriFloW startup registration failed:',err.message);}
+  try{app.setLoginItemSettings({openAtLogin:startAtLogin,path:process.execPath,args:['--hidden'],name:'AfriFlow'});}
+  catch(err){console.warn('AfriFlow startup registration failed:',err.message);}
 }
 function recover(reason){
   if(quitting||!win||win.isDestroyed()||Date.now()-lastRecovery<12000)return;
   lastRecovery=Date.now();
-  console.warn('AfriFloW background recovery:',reason);
-  win.webContents.loadURL(HOME).catch(err=>console.warn('AfriFloW reload failed:',err.message));
+  console.warn('AfriFlow background recovery:',reason);
+  win.webContents.loadURL(HOME).catch(err=>console.warn('AfriFlow reload failed:',err.message));
 }
 
 function parseSafeUrl(raw) {
@@ -113,10 +113,10 @@ function reveal() {
   win.focus();
 }
 function notifyFromRenderer(event, details) {
-  // A compromised website outside AfriFloW must never invoke privileged APIs.
+  // A compromised website outside AfriFlow must never invoke privileged APIs.
   if (!event.sender || !parseSafeUrl(event.sender.getURL())) return;
   if (!details || typeof details !== 'object') return;
-  const title = String(details.title || 'AfriFloW').slice(0, 120);
+  const title = String(details.title || 'AfriFlow').slice(0, 120);
   const body = String(details.body || '').slice(0, 350);
   const teams = teamsUrl(String(details.teamsUrl || ''));
   const meetingTitle = String(details.meetingTitle || '').slice(0, 160);
@@ -135,12 +135,12 @@ function notifyFromRenderer(event, details) {
 }
 ipcMain.on('afriflow:notify',notifyFromRenderer);
 function presentIncomingMeeting(event, details) {
-  // Only the trusted AfriFloW renderer can ask the desktop app to present a call.
+  // Only the trusted AfriFlow renderer can ask the desktop app to present a call.
   if (!event.sender || !parseSafeUrl(event.sender.getURL())) return;
   if (!details || typeof details !== 'object') return;
   const teams = teamsUrl(String(details.teamsUrl || ''));
   if (!teams) return;
-  const title = String(details.meetingTitle || 'Réunion AfriFloW').slice(0, 160);
+  const title = String(details.meetingTitle || 'Réunion AfriFlow').slice(0, 160);
   reveal();
   if (win && !win.isDestroyed()) {
     win.webContents.send('afriflow:incoming-meeting', { title, teamsUrl: teams });
@@ -157,14 +157,14 @@ ipcMain.handle('afriflow:open-teams', async (event, rawUrl) => {
     await shell.openExternal(url);
     return {ok:true};
   } catch (error) {
-    console.warn('AfriFloW could not open Teams:', error.message);
+    console.warn('AfriFlow could not open Teams:', error.message);
     return {ok:false,reason:'open_failed'};
   }
 });
 function createWindow() {
   win = new BrowserWindow({
     width:1200, height:840, minWidth:360, minHeight:540,
-    title:'AfriFloW',autoHideMenuBar:true,
+    title:'AfriFlow',autoHideMenuBar:true,
     show:false,
     icon:path.join(__dirname,'assets','icon.png'),
     webPreferences:{
@@ -182,7 +182,7 @@ function createWindow() {
   });
   win.webContents.on('render-process-gone',(_event,details)=>recover('renderer: '+details.reason));
   win.webContents.on('did-fail-load',(_event,code,description,validatedURL,isMainFrame)=>{
-    if(isMainFrame&&code!==-3)console.warn('AfriFloW page not loaded:',description,validatedURL);
+    if(isMainFrame&&code!==-3)console.warn('AfriFlow page not loaded:',description,validatedURL);
   });
   win.webContents.on('will-navigate',(event,url)=>{
     if(!parseSafeUrl(url)){
@@ -213,10 +213,10 @@ function createTray() {
   const file=path.join(__dirname,'assets','icon.png');
   const icon=nativeImage.createFromPath(file).resize({width:20,height:20});
   tray=new Tray(icon);
-  tray.setToolTip('AfriFloW — actif en arrière-plan');
+  tray.setToolTip('AfriFlow — actif en arrière-plan');
   function updateMenu(){
     tray.setContextMenu(Menu.buildFromTemplate([
-      {label:'Ouvrir AfriFloW',click:reveal},
+      {label:'Ouvrir AfriFlow',click:reveal},
       {label:'Lancer au démarrage de Windows',type:'checkbox',checked:startAtLogin,
         click:(item)=>{startAtLogin=item.checked;savePreferences();configureStartup();updateMenu();}},
       {label:'Tester une notification Windows',click:()=>{
@@ -226,8 +226,8 @@ function createTray() {
           return;
         }
         const test=new Notification({
-          title:'AfriFloW — test de notification',
-          body:'Les alertes Windows fonctionnent. AfriFloW continue en arrière-plan.',
+          title:'AfriFlow — test de notification',
+          body:'Les alertes Windows fonctionnent. AfriFlow continue en arrière-plan.',
           icon:path.join(__dirname,'assets','icon.png'),
           silent:false
         });

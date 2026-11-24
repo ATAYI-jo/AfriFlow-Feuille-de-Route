@@ -1,4 +1,4 @@
-/* AfriFloW — local payment simulation only. No network, no real money. */
+/* AfriFlow — local payment simulation only. No network, no real money. */
 (function(root){
 "use strict";
 function createLedger(){

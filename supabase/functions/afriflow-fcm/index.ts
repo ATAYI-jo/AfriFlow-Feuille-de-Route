@@ -76,7 +76,7 @@ async function dispatch(){
    const m=row.value||{},to=String(m.to||"").trim().toLowerCase();
    if(!to||m.read||!String(row.key).startsWith("msg:"+to+":"))continue;
    for(const device of byEmail.get(to)||[])pending.push({key:"msg:"+row.key,device,content:{
-     title:"AfriFloW · Nouveau message",body:clean(m.subject||"Vous avez reçu un message"),kind:"message"}});
+     title:"AfriFlow · Nouveau message",body:clean(m.subject||"Vous avez reçu un message"),kind:"message"}});
  }
  const {data:meetings,error:meetErr}=await sb.from("afriflow_state").select("value").like("key","meet:%").limit(500);
  if(meetErr)throw meetErr;
@@ -87,7 +87,7 @@ async function dispatch(){
    const delta=start-now,starting=delta<=0&&delta>=-120000,soon=delta>0&&delta<=15*60000&&delta>=13*60000;
    if(!starting&&!soon)continue;
    const key="meeting:"+m.id+":"+start+":"+(starting?"start":"soon");
-   const content={title:starting?"AfriFloW · Réunion maintenant":"AfriFloW · Réunion dans 15 min",
+   const content={title:starting?"AfriFlow · Réunion maintenant":"AfriFlow · Réunion dans 15 min",
      body:clean(m.title||"Réunion programmée"),kind:"meeting",teamsUrl:validTeams(m.link||config?.value?.link)};
    for(const device of devices as Device[])pending.push({key,device,content});
  }
@@ -96,7 +96,7 @@ async function dispatch(){
  if(new Date(now).getUTCHours()===8)for(const task of reminders?.value?.items||[]){
    if(task.done||task.due!==today||!task.id)continue;
    for(const device of devices as Device[])pending.push({key:"deadline:"+today+":"+task.id,device,content:{
-     title:"AfriFloW · Échéance aujourd’hui",body:clean(task.title),kind:"reminder"}});
+     title:"AfriFlow · Échéance aujourd’hui",body:clean(task.title),kind:"reminder"}});
  }
  const [{data:members,error:memberError},{data:profiles,error:profileError},{data:admins,error:adminError}] = await Promise.all([
    sb.from("afriflow_market_profiles").select("user_id").limit(2000),
@@ -119,7 +119,7 @@ async function dispatch(){
    for(const device of devices as Device[]) {
      if(!authorizedNewsEmails.has(device.user_email.toLowerCase())) continue;
      pending.push({key:"agro-news:"+article.id,device,content:{
-       title:"Actualité AfriFloW",body:clean(article.name),kind:"news"}});
+       title:"Actualité AfriFlow",body:clean(article.name),kind:"news"}});
    }
  }
 
@@ -159,5 +159,5 @@ Deno.serve(async(req:Request)=>{
      return json(req,await dispatch());
    }
    return json(req,{error:"unknown_action"},400);
- }catch(e){console.error("AfriFloW FCM error",(e as Error).message);return json(req,{error:"service_unavailable"},500);}
+ }catch(e){console.error("AfriFlow FCM error",(e as Error).message);return json(req,{error:"service_unavailable"},500);}
 });

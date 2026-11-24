@@ -113,7 +113,7 @@ async function dispatch() {
     if(!String(m.key).startsWith("msg:"+recipient+":")) continue;
     for(const dest of byEmail.get(recipient)||[]) {
       pending.push({key:"message:"+m.key,dest,payload:{
-        title:"AfriFloW · Nouveau message",
+        title:"AfriFlow · Nouveau message",
         body:clean(v.subject || "Vous avez un nouveau message"),
         tag:"msg-"+m.key,kind:"message",url:ownSite,
       }});
@@ -135,7 +135,7 @@ async function dispatch() {
     const link=teamsUrl(v.link || cfg?.value?.link);
     for(const dest of subs) {
       pending.push({key,dest,payload:{
-        title:atStart?"AfriFloW · Réunion maintenant":"AfriFloW · Réunion dans 15 min",
+        title:atStart?"AfriFlow · Réunion maintenant":"AfriFlow · Réunion dans 15 min",
         body:clean(v.title || "Réunion programmée"),
         tag:key,kind:"meeting",url:ownSite,teamsUrl:link,
       }});
@@ -149,7 +149,7 @@ async function dispatch() {
     if(localHour!==8)continue;
     for(const dest of subs){
       pending.push({key:"deadline:"+today+":"+due.id,dest,payload:{
-        title:"AfriFloW · Échéance aujourd’hui",body:clean(due.title),
+        title:"AfriFlow · Échéance aujourd’hui",body:clean(due.title),
         tag:"deadline-"+due.id,kind:"reminder",url:ownSite,
       }});
     }
@@ -175,7 +175,7 @@ async function dispatch() {
    for(const dest of subs) {
      if(!authorizedNewsEmails.has(dest.user_email.toLowerCase())) continue;
      const key="agro-news:"+article.id;
-     pending.push({key,dest,payload:{title:"Actualité AfriFloW",
+     pending.push({key,dest,payload:{title:"Actualité AfriFlow",
        body:clean(article.name),tag:key,kind:"news",url:ownSite}});
    }
  }
@@ -212,7 +212,7 @@ async function dispatchMessage(req: Request, messageKey: unknown) {
   if(deviceError)throw deviceError;
   const keys=await vapid(),eventKey="message:"+String(message.key);
   const states=await Promise.all((devices||[]).map(async(dest:Subscription)=>deliver(eventKey,dest,{
-    title:"AfriFloW · Nouveau message",
+    title:"AfriFlow · Nouveau message",
     body:clean(value.subject || "Vous avez un nouveau message"),
     tag:"msg-"+String(message.key),kind:"message",url:ownSite,
   },keys)));
@@ -247,7 +247,7 @@ Deno.serve(async(req:Request)=>{
       const eventKey="selftest:"+email+":"+Math.floor(Date.now()/120000);
       const state=await Promise.all((devices||[]).map(async(d:Subscription)=>
         await deliver(eventKey,d,{
-          title:"AfriFloW · Notification de test",
+          title:"AfriFlow · Notification de test",
           body:"Si vous voyez ce message sur votre écran verrouillé, les notifications Web Push fonctionnent.",
           tag:"afri-selftest",kind:"test",url:ownSite,
         },keys)));
@@ -264,7 +264,7 @@ Deno.serve(async(req:Request)=>{
     if(match!==0)return json(req,{error:"forbidden"},403);
     return json(req,await dispatch());
   } catch(e) {
-    console.error("AfriFloW push failed:",(e as Error).message);
+    console.error("AfriFlow push failed:",(e as Error).message);
     return json(req,{error:"push_service_unavailable"},500);
   }
 });

@@ -1,4 +1,4 @@
-/* Order summaries only. Preserve AfriFloW's glass surfaces and existing navigation. */
+/* Order summaries only. Preserve AfriFlow's glass surfaces and existing navigation. */
 .af-cod-section,.af-cod-content,.af-cod-list{min-width:0}
 .af-cod-section>summary{font-weight:750;font-size:1.08rem;line-height:1.4;color:var(--af-glass-accent,var(--green));cursor:pointer;padding:8px 0}
 #afCODList .af-cod-section>summary{padding-right:48px;min-height:44px;box-sizing:border-box}

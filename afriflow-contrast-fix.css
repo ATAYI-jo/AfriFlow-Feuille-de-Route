@@ -1,4 +1,4 @@
-/* Keep the earlier AfriFloW glassmorphism menu. Preserve contrast fixes only for first-use consent. */
+/* Keep the earlier AfriFlow glassmorphism menu. Preserve contrast fixes only for first-use consent. */
 #side {
   background: color-mix(in srgb, var(--card) 57%, transparent) !important;
   -webkit-backdrop-filter: blur(22px) saturate(165%) !important;

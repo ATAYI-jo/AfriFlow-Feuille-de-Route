@@ -34,7 +34,7 @@
       position: 'fixed', inset: '0', zIndex: '10010', background: 'white',
       overflow: 'hidden', display: 'block'
     });
-    overlay.innerHTML = '<video playsinline webkit-playsinline preload="auto" aria-label="Prévisualisation de l’introduction AfriFloW" style="position:absolute;inset:0;width:100%;height:100%;object-fit:contain;background:#fff;opacity:0;transition:opacity .3s" src="./afriflow-intro-white.mp4"></video><button type="button" aria-label="Fermer la prévisualisation" style="position:absolute;z-index:20;top:14px;right:14px;padding:10px 16px;border:0;border-radius:20px;background:#175c3d;color:white;cursor:pointer">Fermer ✕</button>';
+    overlay.innerHTML = '<video playsinline webkit-playsinline preload="auto" aria-label="Prévisualisation de l’introduction AfriFlow" style="position:absolute;inset:0;width:100%;height:100%;object-fit:contain;background:#fff;opacity:0;transition:opacity .3s" src="./afriflow-intro-white.mp4"></video><button type="button" aria-label="Fermer la prévisualisation" style="position:absolute;z-index:20;top:14px;right:14px;padding:10px 16px;border:0;border-radius:20px;background:#175c3d;color:white;cursor:pointer">Fermer ✕</button>';
     const css = document.createElement('style');
     css.textContent = '#afAdminIntroPreview .af-intro-avatar{position:absolute;right:2%;bottom:2%;width:min(30vw,380px);height:min(75vh,580px);pointer-events:none;opacity:0;transition:opacity .35s;z-index:5}#afAdminIntroPreview .af-intro-avatar.visible{opacity:1}#afAdminIntroPreview canvas{width:100%;height:100%;display:block;pointer-events:none}@media(max-width:650px){#afAdminIntroPreview .af-intro-avatar{right:0;bottom:3%;width:45vw;height:54vh}}';
     overlay.appendChild(css);
@@ -76,7 +76,7 @@
       if (!controller) return beginVideo();
       controller.start();
     } catch (error) {
-      console.warn('[AfriFloW] Prévisualisation 3D indisponible:', error);
+      console.warn('[AfriFlow] Prévisualisation 3D indisponible:', error);
       beginVideo();
     }
   }

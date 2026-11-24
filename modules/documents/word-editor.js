@@ -44,7 +44,7 @@ var APP=null;
 function build(path,orig,html,title){
   if($("dwApp"))$("dwApp").remove();
   var st={dirty:false,saved:false,backed:false,busy:false,rng:null,zoom:1};
-  var app=document.createElement("section");app.id="dwApp";app.setAttribute("aria-label","Éditeur AfriFloW intégré");APP=app;
+  var app=document.createElement("section");app.id="dwApp";app.setAttribute("aria-label","Éditeur AfriFlow intégré");APP=app;
   app.innerHTML=
    '<div class="dw-top">'+b("save",SV.save,"Enregistrer (Ctrl+S)","dw-q")+b("undo","↶","Annuler","dw-q")+b("redo","↷","Rétablir","dw-q")
     +'<span class="dw-name">'+esc(title)+' — Dropbox</span><span class="dw-st" id="dwSt"></span>'+b("close",SV.close,"Fermer","dw-q")+'</div>'
@@ -237,7 +237,7 @@ function build(path,orig,html,title){
       case "replace":searchPanel(true);return;
       case "selectAll":{page.focus();var rg=document.createRange();rg.selectNodeContents(page);var sl=window.getSelection();sl.removeAllRanges();sl.addRange(rg);return}
       case "print":window.print();return;
-      case "shortcuts":alert("Raccourcis de l'éditeur AfriFloW (éditeur actif) :\nCtrl+S — Enregistrer\nCtrl+B — Gras\nCtrl+I — Italique\nCtrl+U — Souligné\nCtrl+Z / Ctrl+Y — Annuler / Rétablir\nCtrl+L / Ctrl+E / Ctrl+R — Alignements\nCtrl+J ou Ctrl+Alt+J — Justifier (Ctrl+J peut être réservé aux téléchargements du navigateur)\nCtrl+F — Rechercher\nCtrl+H — Rechercher et remplacer\nCtrl+A — Tout sélectionner dans le document");return;
+      case "shortcuts":alert("Raccourcis de l'éditeur AfriFlow (éditeur actif) :\nCtrl+S — Enregistrer\nCtrl+B — Gras\nCtrl+I — Italique\nCtrl+U — Souligné\nCtrl+Z / Ctrl+Y — Annuler / Rétablir\nCtrl+L / Ctrl+E / Ctrl+R — Alignements\nCtrl+J ou Ctrl+Alt+J — Justifier (Ctrl+J peut être réservé aux téléchargements du navigateur)\nCtrl+F — Rechercher\nCtrl+H — Rechercher et remplacer\nCtrl+A — Tout sélectionner dans le document");return;
       case "table":{
         var p=(prompt("Lignes, colonnes ?","3,3")||"").split(",").map(Number),r=p[0],k=p[1];if(!(r>0&&k>0))return;
         r=Math.min(r,30);k=Math.min(k,12);var t="<table><tbody>";

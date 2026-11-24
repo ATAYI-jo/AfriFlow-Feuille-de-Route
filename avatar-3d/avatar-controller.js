@@ -11,7 +11,7 @@ function switchMode(photoMode) {
   photo.classList.toggle("hidden", show3d);
   $("modePhoto").classList.toggle("active", !show3d);
   $("mode3d").classList.toggle("active", show3d);
-  status.textContent = show3d ? "Modèle GLB chargé" : "Portrait original AfriFloW";
+  status.textContent = show3d ? "Modèle GLB chargé" : "Portrait original AfriFlow";
   document.querySelector(".hint").textContent = show3d ? "Modèle 3D chargé et articulé" : "Image originale, sans déformation des traits";
 }
 async function open3D() {

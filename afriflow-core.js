@@ -2,7 +2,7 @@
 var STORAGE_KEY = "afriflow_journal_v8", THEME_KEY = "afriflow_theme_v1", MAX_LOGS = 300;
 
 var DEFAULT_ITEMS = [
-  {country:"tg",status:"done",date:"Juin–juil. 2026",title:"1. Identité de marque",desc:"Création du logo, animation et visuels de la marque AfriFloW.",details:"Mise en place de l'identité visuelle complète, des supports de communication et validation de la charte graphique fondatrice. Les premiers retours de terrain confirment l'adéquation de notre image avec les attentes du marché togolais et ouest-africain."},
+  {country:"tg",status:"done",date:"Juin–juil. 2026",title:"1. Identité de marque",desc:"Création du logo, animation et visuels de la marque AfriFlow.",details:"Mise en place de l'identité visuelle complète, des supports de communication et validation de la charte graphique fondatrice. Les premiers retours de terrain confirment l'adéquation de notre image avec les attentes du marché togolais et ouest-africain."},
   {country:"tg",status:"done",date:"Juin–août 2026",title:"2. Structure et gouvernance",desc:"Organisation des fonctions, règlement intérieur et réunions hebdomadaires.",details:"Définition des rôles des associés, structuration de la gouvernance exécutive et mise en place des indicateurs clés de performance (KPI) pour le suivi opérationnel."},
   {country:"tg",status:"doing",date:"Sept. 2026",title:"3. Prospection et marché togolais",desc:"Premiers tests concluants et accueil favorable du goût du produit.",details:"Analyse approfondie des retours clients, dégustations publiques réussies et adaptation ciblée de l'emballage pour maximiser l'attractivité en rayon."},
   {country:"bf",status:"todo",date:"Q4 2026",title:"4. Référencement grandes surfaces",desc:"Constitution des dossiers fournisseurs pour les enseignes partenaires.",details:"Préparation des catalogues produits, mise aux normes des packagings et négociations commerciales avancées pour un référencement national."},
@@ -151,7 +151,7 @@ function renderAuthStep(){
   $("authNext").textContent=roleStep?"Continuer par e-mail":"Continuer";
   if(roleStep) $("authHint").textContent=register?"Choisissez votre profil. Les accès Partenaire et Actionnaire sont soumis à validation.":"Choisissez votre mode de connexion.";
   else if(nameStep) $("authHint").textContent="Comment devons-nous vous appeler ?";
-  else if(emailStep) $("authHint").textContent=register?"Quelle est votre adresse e-mail ?":"Entrez votre adresse e-mail ou votre identifiant personnel AfriFloW.";
+  else if(emailStep) $("authHint").textContent=register?"Quelle est votre adresse e-mail ?":"Entrez votre adresse e-mail ou votre identifiant personnel AfriFlow.";
   else $("authHint").textContent=register ? "Créez un mot de passe de 12 caractères minimum, avec majuscule, minuscule, chiffre et symbole." : "Entrez votre mot de passe pour continuer.";
   if(roleStep){ /* Do not autofocus the bottom action on opening: it scrolls short mobile screens. */ if(register) authStepFocus("authMarketRole"); } else if(nameStep) authStepFocus("authName"); else if(emailStep) authStepFocus("authEmailInput"); else authStepFocus("authPasswordInput");
 }
@@ -159,12 +159,12 @@ function nextAuthStep(){
   var register=AUTH_MODE === "register", err=$("authError"); err.textContent="";
   if(AUTH_STEP === 2 && register && $("authName").value.trim().length < 2){ err.textContent="Indiquez votre nom complet."; return; }
   var emailStep=(!register && AUTH_STEP === 2)||(register && AUTH_STEP === 3);
-  if(emailStep && !(register?/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test($("authEmailInput").value.trim()):(/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test($("authEmailInput").value.trim())||/^AF-[0-9]{6,12}$/i.test($("authEmailInput").value.trim())))){err.textContent=register?"Adresse e-mail invalide.":"Indiquez votre e-mail ou votre identifiant AfriFloW.";return;}
+  if(emailStep && !(register?/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test($("authEmailInput").value.trim()):(/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test($("authEmailInput").value.trim())||/^AF-[0-9]{6,12}$/i.test($("authEmailInput").value.trim())))){err.textContent=register?"Adresse e-mail invalide.":"Indiquez votre e-mail ou votre identifiant AfriFlow.";return;}
   AUTH_STEP=Math.min(authFinalStep(),AUTH_STEP+1); renderAuthStep();
 }
 function setAuthMode(m){
   AUTH_MODE = m; AUTH_STEP = 1; var reg = m === "register";
-  $("authTitle").textContent=reg?"Créer un compte":"Bienvenue sur AfriFloW";
+  $("authTitle").textContent=reg?"Créer un compte":"Bienvenue sur AfriFlow";
   $("authRecoveryFields").style.display = "none"; $("tabLogin").parentNode.style.display = ""; $("authNext").parentNode.style.display="";
   $("authBtn").textContent = reg ? "S'inscrire" : "Se connecter";
   $("tabLogin").classList.toggle("on", !reg); $("tabReg").classList.toggle("on", reg);
@@ -332,7 +332,7 @@ function openJournalView(index){
   var details = it.details ? esc(it.details).replace(/\n/g, "<br>") : "Aucun détail supplémentaire rédigé pour le moment.";
   article.innerHTML =
     '<div class="lock-banner"><span>'+ic("unlock")+' <strong>Modification directe</strong></span><button type="button" class="p" data-act="edit" style="padding:6px 14px;font-size:.85rem">'+ic("edit")+' Modifier</button></div>' +
-    '<div class="journal-header"><div class="journal-kicker">AfriFloW · Chronique de croissance · Chapitre ' + (index + 1) + '</div>' +
+    '<div class="journal-header"><div class="journal-kicker">AfriFlow · Chronique de croissance · Chapitre ' + (index + 1) + '</div>' +
     '<h2 class="journal-title">' + esc(it.title) + '</h2>' +
     '<div class="journal-date">' + (it.date ? "Période : " + esc(it.date) + " · " : "") + "Statut : " + esc(ST[it.status][0]) + '</div></div>' +
     '<p style="font-weight:700;font-size:1.1rem;line-height:1.5;margin-bottom:20px">' + esc(it.desc) + '</p>' +
@@ -361,7 +361,7 @@ function openStartArchives(again){
   logs += "</div>";
   if(USER_ROLE !== "admin") logs = '<div class="logs" style="margin-top:20px"><p style="color:var(--muted);font-style:italic">Le journal des connexions est réservé à l\'administrateur.</p></div>';
   article.innerHTML =
-    '<div class="journal-header"><div class="journal-kicker">Point zéro · Registre d\'audit AfriFloW</div><h2 class="journal-title">' + esc(it.title) + '</h2><div class="journal-date">' + esc(it.date) + '</div></div>' +
+    '<div class="journal-header"><div class="journal-kicker">Point zéro · Registre d\'audit AfriFlow</div><h2 class="journal-title">' + esc(it.title) + '</h2><div class="journal-date">' + esc(it.date) + '</div></div>' +
     '<p style="font-weight:700;font-size:1.05rem;line-height:1.5;margin-bottom:20px">' + esc(it.desc) + '</p>' + logs +
     docsBlock("Documents fondateurs START :", "📁", it.docs) +
     '<div style="margin-top:30px;text-align:center"><button type="button" class="p" data-act="close">Fermer le registre</button></div>';

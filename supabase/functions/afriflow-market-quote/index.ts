@@ -31,7 +31,7 @@ Deno.serve(async (req: Request) => {
     const quoteRow = await service.from("afriflow_state").insert({ key: `quote:${ts}:${token}`, value: quote, updated_at: now.toISOString() });
     if (quoteRow.error) throw new Error("Impossible d’enregistrer la demande de devis");
     const admins = await service.from("afriflow_admins").select("email");
-    if (admins.error) throw new Error("Impossible d’alerter l’équipe AfriFloW");
+    if (admins.error) throw new Error("Impossible d’alerter l’équipe AfriFlow");
     const subject = `Urgent · nouveau devis pour ${product.data.name}`;
     const mail = { from: email, fromName: quote.name || email, subject, body: `Nouvelle demande de devis\n\nProduit : ${product.data.name}\nQuantité : ${quantity || "non précisée"}\nMessage : ${message || "aucun message"}\nClient : ${email}`, ts, read: false, urgent: true, quoteKey: `quote:${ts}:${token}` };
     const rows = (admins.data || []).map((admin) => ({ key: `msg:${String(admin.email).toLowerCase()}:${token}`, value: { ...mail, to: String(admin.email).toLowerCase() }, updated_at: now.toISOString() }));

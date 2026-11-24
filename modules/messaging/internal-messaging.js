@@ -50,7 +50,7 @@ function msgHost(){
   mailReturnFocus=document.activeElement;
   var layer=document.createElement("div");layer.id="afMailLayer";
   h=document.createElement("section");h.id="msgBox";h.className="msg-box";h.tabIndex=-1;
-  h.setAttribute("role","dialog");h.setAttribute("aria-modal","true");h.setAttribute("aria-label","Messagerie AfriFloW");
+  h.setAttribute("role","dialog");h.setAttribute("aria-modal","true");h.setAttribute("aria-label","Messagerie AfriFlow");
   layer.appendChild(h);document.body.appendChild(layer);
   document.body.classList.add("af-mail-open");
   return h;

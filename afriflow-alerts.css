@@ -1,4 +1,4 @@
-/* AfriFloW: in-app alerts and Teams call overlay */
+/* AfriFlow: in-app alerts and Teams call overlay */
 #af-notice-control{position:fixed;top:calc(env(safe-area-inset-top,0px) + 72px);right:14px;z-index:800;max-width:230px;display:none}
 #af-notice-control button{padding:8px 12px;border:1px solid #dd9734;border-radius:999px;background:#155b38;color:#fff;font:600 12px system-ui;box-shadow:0 4px 12px #10291c3b;cursor:pointer}
 #af-alert-toast{position:fixed;right:16px;bottom:80px;z-index:14500;display:none;max-width:min(390px,calc(100vw - 32px));border-radius:16px;background:#fff;color:#173b29;padding:15px 18px;box-shadow:0 12px 40px #0003;border-left:5px solid #e99d36;font:14px/1.5 system-ui}

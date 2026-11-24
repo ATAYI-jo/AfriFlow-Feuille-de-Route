@@ -163,7 +163,7 @@ function deadlineForm(){
     +'<label class="full">Destinataires<select id="fdrTarget"><option value="all">Tous les membres</option><option value="selected">Personnes précises</option></select></label>'
     +'<div class="full fdr-picker" id="fdrPeople" hidden><label for="fdrSearch">Rechercher un membre</label>'
     +'<input type="search" id="fdrSearch" autocomplete="off" placeholder="Nom ou adresse e-mail" aria-controls="fdrMembers" disabled>'
-    +'<p id="fdrSelected" role="status">0 membre sélectionné</p><div id="fdrMembers" role="group" aria-label="Membres AfriFloW"></div></div>'
+    +'<p id="fdrSelected" role="status">0 membre sélectionné</p><div id="fdrMembers" role="group" aria-label="Membres AfriFlow"></div></div>'
     +'<label class="full">Précision (facultatif)<textarea id="fdrN" rows="2" maxlength="400" placeholder="Ce qui est attendu, qui est concerné…"></textarea></label></div>'
     +'<div id="fdrErr" role="alert" style="color:#c0392b;min-height:1.2em;font-size:.88rem"></div>'
     +'<button type="button" class="p" id="fdrGo">Créer et envoyer l’alerte</button>':'';
@@ -315,7 +315,7 @@ function renderDeadlinePage(){
   var form=deadlineForm();
   if(form)openSet.dl=true;
   var urgent=cache.some(function(i){return !i.done&&daysLeft(i.due)<=7});
-  $("viewHost").innerHTML='<div class="fdr" data-fdr-view="'+(deadlineOnly?"deadlines":"marketing")+'"><div class="fdr-hero"><h2>Échéances et alertes</h2><p>Suivez les actions à venir et les rappels AfriFloW.</p></div><div class="fdr-mobile-shortcuts" aria-label="Raccourcis"><button type="button" data-fdr-shortcut="profileReminder">Profil à compléter</button><button type="button" data-fdr-shortcut="memberHub">Membres</button><button type="button" data-fdr-shortcut="aiBtn">Assistance</button></div>'+bar("dl","Échéances et alertes","…","…","var(--todo)",form+'<div id="fdrDl"></div>',{open:urgent,metaId:"fdrDlMeta",tagId:"fdrDlTag"})+'</div>';
+  $("viewHost").innerHTML='<div class="fdr" data-fdr-view="'+(deadlineOnly?"deadlines":"marketing")+'"><div class="fdr-hero"><h2>Échéances et alertes</h2><p>Suivez les actions à venir et les rappels AfriFlow.</p></div><div class="fdr-mobile-shortcuts" aria-label="Raccourcis"><button type="button" data-fdr-shortcut="profileReminder">Profil à compléter</button><button type="button" data-fdr-shortcut="memberHub">Membres</button><button type="button" data-fdr-shortcut="aiBtn">Assistance</button></div>'+bar("dl","Échéances et alertes","…","…","var(--todo)",form+'<div id="fdrDl"></div>',{open:urgent,metaId:"fdrDlMeta",tagId:"fdrDlTag"})+'</div>';
   $("viewHost").onclick=onClick;
   setupRecipientPicker();
   drawBanner(cache);drawList();tick();
