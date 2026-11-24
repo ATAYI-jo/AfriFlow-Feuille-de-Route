@@ -175,7 +175,9 @@ body:not(.af-off):has(> #afBg){background:transparent!important}
 #auth-screen:not(.off){
  display:flex;align-items:flex-start;justify-content:center;box-sizing:border-box;
  padding:calc(16px + env(safe-area-inset-top,0px)) max(12px,env(safe-area-inset-right,0px)) calc(16px + env(safe-area-inset-bottom,0px)) max(12px,env(safe-area-inset-left,0px));
- background:radial-gradient(ellipse at 12% 0%,color-mix(in srgb,var(--green) 15%,var(--bg)),var(--bg) 72%)!important;
+ /* The landscape is a separate fixed layer: never cover it with an opaque gradient. */
+ background:color-mix(in srgb,var(--bg) 18%,transparent)!important;
+ -webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px);
  overscroll-behavior:contain;scroll-padding:16px;
 }
 #auth-screen::before{display:none}
@@ -243,3 +245,6 @@ body:has(#auth-screen:not(.off)) :is(#aiBtn,#memberHub,#afIntroAdminPreviewBtn){
 @media(max-height:500px) and (orientation:landscape){
  #auth-screen .auth-box{margin:0 auto!important}
 }
+
+/* Respect the user's explicit choice to switch off the animated landscape. */
+body.af-off #auth-screen:not(.off){background:var(--bg)!important;-webkit-backdrop-filter:none;backdrop-filter:none}
