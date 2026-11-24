@@ -154,3 +154,11 @@ body #memberHub{position:fixed!important;inset:auto 12px calc(78px + env(safe-ar
 @media(max-width:700px) and (max-height:460px){
  body #afIntroAdminPreviewBtn{left:12px!important;right:auto!important;bottom:calc(12px + env(safe-area-inset-bottom,0px))!important}
 }
+
+/* iOS installed PWA: paint behind the status bar, keep interactive content below it. */
+@media (display-mode: standalone) {
+ html{min-height:100%;background-color:var(--bg)}
+ body{min-height:100vh;min-height:100dvh}
+ #afBg{position:fixed;inset:0;width:100%;height:100%}
+ #market-view .af-market-top{top:env(safe-area-inset-top,0px)}
+}
