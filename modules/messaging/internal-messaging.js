@@ -37,7 +37,8 @@ async function rows(p){
 async function poll(){
   if(!me()||!S()){first=true;unread=0;return}
   try{
-    var n=(await rows("msg:")).filter(function(x){return !x.value.read}).length;
+    var account=me(),inbox=await rows("msg:");if(account!==me())return;updateUrgentCount(inbox,account);
+    var n=inbox.filter(function(x){return !x.value.read}).length;
     if(n>unread&&!first&&window.toast)toast("Nouveau message reçu");
     first=false;unread=n;window.MSG_UNREAD=n;
     var b=document.querySelector('.nv[data-id="messages"]');if(b)b.textContent="Messagerie"+(n?" ("+n+")":"");
@@ -72,19 +73,32 @@ document.addEventListener("keydown",function(e){
   if(!items.length){e.preventDefault();dialog.focus();return;}
   if(!dialog.contains(document.activeElement)||e.shiftKey&&document.activeElement===items[0]||!e.shiftKey&&document.activeElement===items[items.length-1]){e.preventDefault();(e.shiftKey?items[items.length-1]:items[0]).focus();}
 },true);
+var urgentCount=null,urgentAccount="";
+function updateUrgentCount(messages,account){
+  if(account!==me())return;
+  urgentAccount=account;
+  urgentCount=messages.filter(function(row){return isUrgent(row.value)}).length;
+  if($("mUrgentCount"))$("mUrgentCount").textContent=" ("+urgentCount+")";
+}
+function folderButton(value,id,label){
+  var selected=tab===value;
+  return '<button type="button" id="'+id+'" data-folder="'+value+'" aria-pressed="'+selected+'" class="'+(selected?"on":"")+'">'+label+'</button>';
+}
 function shell(){
   var h=msgHost();++mailEpoch;
   h.innerHTML='<div class="toolbar"><b>Messagerie</b><button type="button" id="mClose" aria-label="Fermer la messagerie">Fermer</button></div>'
     +'<div class="mail-actions"><button type="button" class="p" id="mNew">Nouveau message</button>'
     +(isAdm()&&window.DBX?'<button type="button" id="mDbx">Dropbox '+(DBX.ready()?"connecté":"à connecter")+'</button>':'')+'</div>'
-    +'<div class="auth-tabs" role="group" aria-label="Dossier"><button type="button" id="mIn" aria-pressed="'+(tab==="in")+'" class="'+(tab==="in"?"on":"")+'">Réception</button><button type="button" id="mOut" aria-pressed="'+(tab==="out")+'" class="'+(tab==="out"?"on":"")+'">Envoyés</button></div>'
+    +'<div class="auth-tabs" role="group" aria-label="Dossier">'
+    +folderButton("urgent","mUrgent",'Urgent<span id="mUrgentCount">'+(urgentAccount===me()?" ("+urgentCount+")":"")+'</span>')
+    +folderButton("in","mIn","Réception")+folderButton("out","mOut","Envoyés")+'</div>'
     +'<div class="dgrid" id="msgList"><p>Chargement…</p></div>';
   h.onclick=function(e){
     var b=e.target.closest("button"),c=e.target.closest(".dcard");
     if(b&&b.id==="mClose")closeMessages();
     else if(b&&b.id==="mNew")compose();
     else if(b&&b.id==="mDbx"&&window.DBX)DBX.dialog();
-    else if(b&&(b.id==="mIn"||b.id==="mOut")){tab=b.id==="mIn"?"in":"out";window.renMsg()}
+    else if(b&&b.dataset.folder){tab=b.dataset.folder;window.renMsg();$(b.id).focus({preventScroll:true})}
     else if(c&&$("msgList"))openMsg(+c.dataset.i);
   };
 }
@@ -101,22 +115,23 @@ function urgentBadge(v){
   return isUrgent(v)?'<span class="mail-urgent-badge">Urgent</span> ':"";
 }
 async function fill(){
-  var box=$("msgList"),request=++fillEpoch,selectedTab=tab,L;if(!box)return;
-  try{L=await rows(selectedTab==="in"?"msg:":"sent:")}catch(e){if(box.isConnected&&request===fillEpoch)box.textContent="Lecture impossible : "+(e.message||e);return}
-  if(!box.isConnected||box!==$("msgList")||request!==fillEpoch||selectedTab!==tab)return;W=L.sort(function(a,b){return Number(b.value.ts)-Number(a.value.ts)});
-  var urgent=[],ordinary=[];
-  W.forEach(function(row,i){
-    var v=row.value,who=tab==="in"?(v.fromName||v.from):v.to;
-    var card='<button type="button" class="dcard'+(isUrgent(v)?' mail-urgent':'')+'" data-i="'+i+'">'
-      +urgentBadge(v)+(tab==="in"&&!v.read?'<span class="mail-unread">Non lu</span>':'')
-      +'<b>'+messageTitle(v)+'</b><small>'+(tab==="in"?"De : ":"À : ")+esc(who)+' · '+fdt(v.ts)+'</small><small>'
-      +(v.nf?"Pièce jointe · ":"")+esc(String(v.body||"").slice(0,90))+'</small></button>';
-    (isUrgent(v)?urgent:ordinary).push(card);
-  });
-  function section(title,cards){
-    return cards.length?'<section class="mail-group"><h3>'+title+' ('+cards.length+')</h3>'+cards.join("")+'</section>':"";
+  var box=$("msgList"),request=++fillEpoch,selectedTab=tab,account=me(),L;if(!box)return;
+  try{L=await rows(selectedTab==="out"?"sent:":"msg:")}catch(e){if(box.isConnected&&request===fillEpoch)box.textContent="Lecture impossible : "+(e.message||e);return}
+  if(!box.isConnected||box!==$("msgList")||request!==fillEpoch||selectedTab!==tab||account!==me())return;
+  if(selectedTab!=="out"){
+    updateUrgentCount(L,account);
+    L=L.filter(function(row){return isUrgent(row.value)===(selectedTab==="urgent")});
   }
-  box.innerHTML=section("Urgences",urgent)+section("Messages simples",ordinary)||'<p>Aucun message.</p>';
+  W=L.sort(function(a,b){return Number(b.value.ts)-Number(a.value.ts)});
+  var cards=W.map(function(row,i){
+    var v=row.value,who=tab!=="out"?(v.fromName||v.from):v.to;
+    return '<button type="button" class="dcard'+(isUrgent(v)?' mail-urgent':'')+'" data-i="'+i+'">'
+      +urgentBadge(v)+(tab!=="out"&&!v.read?'<span class="mail-unread">Non lu</span>':'')
+      +'<b>'+messageTitle(v)+'</b><small>'+(tab!=="out"?"De : ":"À : ")+esc(who)+' · '+fdt(v.ts)+'</small><small>'
+      +(v.nf?"Pièce jointe · ":"")+esc(String(v.body||"").slice(0,90))+'</small></button>';
+  });
+  var empty=selectedTab==="urgent"?"Aucun message urgent.":selectedTab==="out"?"Aucun message envoyé.":"Aucun message reçu dans ce dossier.";
+  box.innerHTML=cards.join("")||'<p>'+empty+'</p>';
 }
 window.renMsg=function(silent){if(!me()||!S())return;if(silent){if($("msgList"))fill();return;}var opened=!!$("msgBox");shell();if(!opened)$("msgBox").focus({preventScroll:true});fill()};
 
@@ -128,7 +143,7 @@ async function showAtt(v,x){
   if(r.error||!fs.length){box.innerHTML='<small style="color:var(--muted)">Pièces jointes indisponibles.</small>';return}
   box.innerHTML='<h4 style="margin:14px 0 6px;font-family:var(--font-family)">Pièces jointes ('+fs.length+')</h4>'+fs.map(function(f,i){return '<div class="file-row"><div><b>'+esc(f.n||"Fichier")+'</b><small style="color:var(--muted)"> · '+fsz(f.s)+'</small></div><div class="file-actions">'+(previewable(f)?'<button type="button" data-mpreview="'+i+'">Aperçu</button>':'')+'<button type="button" data-mdownload="'+i+'">Télécharger</button></div></div>'}).join("")+'<div id="mDbxNote" style="font-size:.85rem;color:var(--muted);margin-top:6px"></div>';
   box.onclick=function(e){var b=e.target.closest("button");if(!b)return;var i=+(b.dataset.mpreview||b.dataset.mdownload);try{if(b.dataset.mpreview!==undefined)previewAttachment(fs[i]).catch(function(x){if(window.toast)toast(x.message||String(x))});else downloadAttachment(fs[i])}catch(x){if(window.toast)toast(x.message||String(x))}};
-  if(tab==="in"&&isAdm()&&window.DBX){
+  if(tab!=="out"&&isAdm()&&window.DBX){
     var nt=$("mDbxNote");
     if(!DBX.ready()){nt.textContent="Dropbox non connecté : utilisez le bouton « ☁ Dropbox » pour archiver automatiquement les pièces jointes.";return}
     if(v.dbxAt){nt.textContent="✔ Déjà archivées dans Dropbox ("+fdt(v.dbxAt)+").";return}
@@ -157,7 +172,7 @@ window.AfriOpenLinkedMessage=async function(){
     if(!r.data||String(r.data.value.to).toLowerCase()!==account){
       if(window.toast)toast("Ce message est indisponible pour le compte connecté.");
     } else {
-      tab="in"; W=[r.data]; openMsg(0,true);
+      tab=isUrgent(r.data.value)?"urgent":"in"; W=[r.data]; openMsg(0,true);
       $("msgBox").focus({preventScroll:true});
     }
     try{sessionStorage.removeItem(pendingKey);}catch(e){}
@@ -168,10 +183,10 @@ window.addEventListener("afriflow:verified-role",function(){if(me())window.AfriO
 function openMsg(i,linked){
   var x=W[i];if(!x)return;var v=x.value,h=msgHost();++mailEpoch;
   var grp=v.group&&v.group.length>1?'<p style="color:var(--muted);margin:0 0 8px;font-size:.9rem">Envoyé à '+v.group.length+' personnes : '+esc(v.group.join(", "))+'</p>':'';
-  h.innerHTML='<div class="toolbar"><b>'+urgentBadge(v)+messageTitle(v)+'</b><div class="toolbar-actions"><button type="button" id="mBack">'+(linked?"Fermer":"← Retour")+'</button>'+(tab==="in"&&!linked?'<button type="button" class="p" id="mRep">Répondre</button>':'')+'</div></div><div class="journal-article" id="mRead"><p style="color:var(--muted);margin-top:0">'+(tab==="in"?"De : "+esc(v.fromName||v.from)+" ("+esc(v.from)+")":"À : "+esc(v.to))+' · '+fdt(v.ts)+'</p>'+grp+'<div style="white-space:pre-wrap;overflow-wrap:anywhere">'+esc(v.body)+'</div>'+(v.att?'<div id="mAtt"><small style="color:var(--muted)">Chargement des pièces jointes…</small></div>':'')+'</div>';
+  h.innerHTML='<div class="toolbar"><b>'+urgentBadge(v)+messageTitle(v)+'</b><div class="toolbar-actions"><button type="button" id="mBack">'+(linked?"Fermer":"← Retour")+'</button>'+(tab!=="out"&&!linked?'<button type="button" class="p" id="mRep">Répondre</button>':'')+'</div></div><div class="journal-article" id="mRead"><p style="color:var(--muted);margin-top:0">'+(tab!=="out"?"De : "+esc(v.fromName||v.from)+" ("+esc(v.from)+")":"À : "+esc(v.to))+' · '+fdt(v.ts)+'</p>'+grp+'<div style="white-space:pre-wrap;overflow-wrap:anywhere">'+esc(v.body)+'</div>'+(v.att?'<div id="mAtt"><small style="color:var(--muted)">Chargement des pièces jointes…</small></div>':'')+'</div>';
   $("mBack").onclick=function(){if(linked)closeMessages();else window.renMsg()};
   if($("mRep"))$("mRep").onclick=function(){compose(v.from,"Re : "+String(v.subject||"").replace(/^Re : /,""))};
-  if(tab==="in"&&!v.read){v.read=true;S().from(T()).update({value:v}).eq("key",x.key).then(function(){poll()})}
+  if(tab!=="out"&&!v.read){v.read=true;S().from(T()).update({value:v}).eq("key",x.key).then(function(){poll()})}
   if(v.att)showAtt(v,x).catch(function(){if($("mAtt"))$("mAtt").textContent="Pièces jointes indisponibles."});
 }
 async function compose(to,subj){
