@@ -781,6 +781,14 @@ if(window.loggedUserEmail)setTimeout(pull,1500);
 .fdr-form{display:grid;grid-template-columns:2fr 1fr;gap:14px;margin:6px 0 12px}
 .fdr-form label{display:flex;flex-direction:column;gap:6px;font-size:.82rem;font-weight:700;color:var(--muted)}
 .fdr-form .full{grid-column:1/-1}
+.fdr-picker{min-width:0}
+.fdr-picker #fdrSelected{margin:8px 0;color:var(--muted);font-size:.84rem}
+.fdr-picker #fdrMembers{max-height:240px;overflow:auto;overscroll-behavior:contain}
+.fdr-form .fdr-member{flex-direction:row;align-items:center;gap:12px;padding:8px 10px;min-height:44px;color:var(--ink);border-bottom:1px solid var(--line);cursor:pointer}
+.fdr-form .fdr-member[hidden]{display:none}
+.fdr-form .fdr-member input{appearance:auto;width:18px;height:18px;margin:0;padding:0;flex:none;accent-color:var(--green)}
+.fdr-member span{min-width:0;overflow-wrap:anywhere}
+.fdr-member small{display:block;color:var(--muted);font-weight:400}
 .fdr-form input,.fdr-form textarea{width:100%}
 @media (max-width:640px){.fdr-form{grid-template-columns:1fr}}
 .fdr-row{display:flex;gap:14px;align-items:center;justify-content:space-between;flex-wrap:wrap;border-left:4px solid var(--c,var(--green));border-radius:12px;padding:14px 16px;margin-top:12px;background:color-mix(in srgb,var(--card) 42%,transparent)}
@@ -794,7 +802,7 @@ if(window.loggedUserEmail)setTimeout(pull,1500);
 .fdr-ban b{color:var(--c,var(--amber))}
 </style>
 
-<script src="./modules/roadmap/timeline.js?v=20261124-deadlines"></script>
+<script src="./modules/roadmap/timeline.js?v=20261124-deadline-recipients"></script>
   
 <style>
 #afBg{--n:0;--aT:rgb(90,169,230);--aB:rgb(207,233,255);position:fixed;inset:0;z-index:-3;pointer-events:none;overflow:hidden}
