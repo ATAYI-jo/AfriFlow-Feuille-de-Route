@@ -8,14 +8,55 @@ function line(value: unknown, limit: number) {
 function escapeHtml(text: string) {
   return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 }
-export function messageEmail(value: Record<string, unknown>, id: string) {
+type Sender = {name:string; address?:string; photo?:{content:string; contentType:string; filename:string; cid:string; encoding:"base64"}};
+function isPersonal(value: Record<string, unknown>, id:string) {
+  return /^[0-9]{10,17}:[a-z0-9]{1,16}$/.test(id) && !value.orderId && !value.quoteKey;
+}
+function systemSender(value: Record<string, unknown>):Sender {
+  return {name: value.urgent === true || (value.urgent == null && /^urgent\s*[·:–—-]/i.test(String(value.subject||""))) ? "AfriFloW · Alerte" : "AfriFloW"};
+}
+function validEmail(value:unknown) {
+  const email=String(value||"").trim().toLowerCase();
+  return email.length<=254 && /^[^\s@,;<>]+@[^\s@,;<>]+\.[^\s@,;<>]+$/.test(email) ? email : "";
+}
+function publicPhoto(kind:unknown,value:unknown):Sender["photo"] {
+  if(kind!=="photo" || typeof value!=="string" || value.length>350000)return undefined;
+  const match=/^data:image\/(png|jpeg|jpg|webp);base64,([A-Za-z0-9+/]+={0,2})$/.exec(value);
+  if(!match || match[2].length%4!==0)return undefined;
+  const format=match[1]==="jpg"?"jpeg":match[1];
+  try {
+    const head=atob(match[2].slice(0,24));
+    if(format==="png"&&!head.startsWith("\x89PNG\r\n\x1a\n"))return undefined;
+    if(format==="jpeg"&&!head.startsWith("\xff\xd8\xff"))return undefined;
+    if(format==="webp"&&!(head.startsWith("RIFF")&&head.slice(8,12)==="WEBP"))return undefined;
+  }catch{return undefined;}
+  return {content:match[2],contentType:"image/"+format,filename:"portrait."+format,cid:"sender-portrait@afriflow",encoding:"base64"};
+}
+async function identifySender(db:any,value:Record<string,unknown>,id:string):Promise<Sender> {
+  if(!isPersonal(value,id))return systemSender(value);
+  const email=validEmail(value.from);
+  if(!email)return {name:"AfriFloW"};
+  const {data:profile,error}=await db.from("afriflow_profiles").select("user_id,first_name,last_name").eq("email",email).maybeSingle();
+  if(error||!profile?.user_id)return {name:"AfriFloW"};
+  const {data:auth,error:authError}=await db.auth.admin.getUserById(profile.user_id);
+  if(authError || !auth?.user?.email_confirmed_at || validEmail(auth.user.email)!==email)return {name:"AfriFloW"};
+  const name=line([profile.first_name,profile.last_name].filter(Boolean).join(" "),100)||email;
+  const {data:directory}=await db.from("afriflow_member_directory").select("avatar_kind,avatar_value").eq("user_id",profile.user_id).maybeSingle();
+  return {name,address:email,photo:publicPhoto(directory?.avatar_kind,directory?.avatar_value)};
+}
+export function messageEmail(value: Record<string, unknown>, id: string, identity:Sender = systemSender(value)) {
   const subject = line(value.subject, 120) || "Message sans objet";
   const urgentPrefix = /^urgent\s*[·:–—-]\s*/i;
   const urgent = value.urgent === true || (value.urgent == null && urgentPrefix.test(subject));
   const body = String(value.body || "").replace(/\r\n?/g, "\n");
   const fullBody = body || (value.att ? "Ce message contient une pièce jointe." : "");
   const excerpt = line(fullBody, 160);
-  const sender = line(value.fromName || value.from, 100) || "AfriFloW";
+  const sender = identity.name;
+  const initials = sender.split(/\s+/u).slice(0,2).map(word=>Array.from(word)[0]||"").join("").toUpperCase();
+  const senderBadge = identity.address ? (identity.photo
+    ? '<img src="cid:sender-portrait@afriflow" width="46" height="46" alt="" style="display:block;border-radius:50%;object-fit:cover;border:0">'
+    : '<span style="display:block;width:46px;height:46px;line-height:46px;text-align:center;border-radius:50%;background:#e4efe7;color:#205e3d;font-size:17px;font-weight:bold">'+escapeHtml(initials)+'</span>') : "";
+  const senderEmail = identity.address ? '<div style="font-size:12px;color:#516657;overflow-wrap:anywhere">'+escapeHtml(identity.address)+'</div>' : "";
   const url = new URL("https://afriflow.pages.dev/");
   url.searchParams.set("message", id);
 
@@ -35,15 +76,17 @@ export function messageEmail(value: Record<string, unknown>, id: string) {
 <tr><td style="padding:22px;word-break:break-word;overflow-wrap:anywhere">
 ${urgent ? '<span style="display:inline-block;background:#ffe8e8;color:#8a2633;padding:4px 10px;border-radius:12px;font-size:12px;font-weight:bold">Urgent</span>' : ''}
 <h1 style="margin:10px 0 6px;font-size:22px;line-height:1.25;color:#193e2b">${escapeHtml(heading)}</h1>
-<p style="margin:0 0 18px;font-size:14px;color:#516657">De ${escapeHtml(sender)}</p>
+<table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 0 18px"><tr>
+${senderBadge ? '<td valign="middle" width="58">'+senderBadge+'</td>' : ""}
+<td valign="middle" style="font-size:14px;color:#516657"><strong>De ${escapeHtml(sender)}</strong>${senderEmail}</td></tr></table>
 <p style="font-size:16px;line-height:1.55;margin:0;white-space:pre-wrap;overflow-wrap:anywhere">${bodyHtml}</p>
 ${attachmentNote ? '<p style="margin:14px 0 0;font-size:13px;color:#516657">'+escapeHtml(attachmentNote)+'</p>' : ""}
 <table role="presentation" cellpadding="0" cellspacing="0" style="margin-top:22px"><tr><td bgcolor="#205e3d" style="border-radius:8px;mso-padding-alt:13px 22px"><a href="${escapeHtml(url.href)}" style="display:inline-block;padding:13px 22px;color:#ffffff;font:700 15px/20px Arial,sans-serif;text-decoration:none">Ouvrir la messagerie</a></td></tr></table>
-<p style="margin:10px 0 0;color:#516657;font-size:13px;line-height:1.5">Pour répondre à ce message, accédez à votre messagerie AfriFloW.</p>
+<p style="margin:10px 0 0;color:#516657;font-size:13px;line-height:1.5">${identity.address ? "Vous pouvez répondre à ce courriel ou utiliser votre messagerie AfriFloW. Une réponse par courriel ne sera pas ajoutée automatiquement à la conversation AfriFloW." : "Pour répondre à ce message, accédez à votre messagerie AfriFloW."}</p>
 </td></tr></table></td></tr></table></body></html>`;
   return {
     subject: "AfriFloW · " + subject,
-    text: [urgent ? "Urgent" : "", heading, "De " + sender, fullBody, attachmentNote, "Ouvrir la messagerie AfriFloW : " + url.href].filter(Boolean).join("\n\n"),
+    text: [urgent ? "Urgent" : "", heading, "De " + sender + (identity.address ? " (" + identity.address + ")" : ""), fullBody, attachmentNote, "Ouvrir la messagerie AfriFloW : " + url.href].filter(Boolean).join("\n\n"),
     html,
   };
 }
@@ -64,6 +107,13 @@ Deno.serve(async (req) => {
   if (!data) return new Response("unknown recipient");
   const gmail = Deno.env.get("GMAIL_USER")!;
   const mailer = nodemailer.createTransport({host:"smtp.gmail.com", port:465, secure:true, auth:{user:gmail, pass:Deno.env.get("GMAIL_APP_PASSWORD")}});
-  await mailer.sendMail({from:{name:"AfriFloW",address:gmail}, to:{name:"",address:to}, ...messageEmail(record.value,id)});
+  const identity=await identifySender(db,record.value,id);
+  await mailer.sendMail({
+    from:{name:identity.address?identity.name+" · AfriFloW":identity.name,address:gmail},
+    to:{name:"",address:to},
+    ...(identity.address?{replyTo:{name:identity.name,address:identity.address}}:{}),
+    ...(identity.photo?{attachments:[identity.photo]}:{}),
+    ...messageEmail(record.value,id,identity),
+  });
   return new Response("sent");
 });
