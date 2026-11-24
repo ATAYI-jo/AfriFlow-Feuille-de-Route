@@ -24,7 +24,7 @@
    image tiles, controls and favorites independent. */
 body #viewHost :is(.mt-box,.mt-adm,.mt-card,.mt-m,.af-partners-overview,.toolbar,.journal-article,.dcard,.map-panel,.fdr-card),
 body #msgBox.msg-box,
-body #profilePanel :is(.profile-card,.member-list-card,.member-detail-card),
+body #profilePanel :is(.profile-top,.profile-main,.profile-card,.member-list-card,.member-detail-card),
 body #auth-screen .auth-box,
 body .af-modal .af-modal-box,
 body #market-view :is(.af-market-admin,.af-market-admin-card,.af-market-status,.af-market-empty,.af-market-wait,.af-ali-cats,.af-ali-side,.af-feature,.af-partner-card,.af-catalog-controls),
@@ -45,6 +45,7 @@ body #market-view #afMarketGrid .af-product:not(.af-announcement-card){
 /* Inner sections use the parent's glass rather than stacking opaque panels. */
 body #viewHost .af-partners-overview :is(.af-market-kpi,.af-market-summary,.af-market-summary-partner),
 body #msgBox :is(.toolbar,.dcard,.journal-article),
+body #profilePanel .profile-main :is(.profile-card,.member-list-card,.member-detail-card),
 body #market-view .af-market-admin .af-market-admin-card,
 body #market-view .af-market-admin-row,
 body #market-view .af-product .af-product-body,
