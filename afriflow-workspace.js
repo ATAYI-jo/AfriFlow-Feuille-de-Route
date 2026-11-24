@@ -252,6 +252,9 @@ function renTre(){
   $("tCur").onchange=function(){T.cur=this.value;touch("treasury");save();renTre()};
   $("tOpen").onchange=function(){T.open=parseFloat(this.value)||0;touch("treasury");save();renTre()};
   $("pdfBtn").onclick=pdf; bindPub("treasury");
+  if(isAdmin()&&window.AfriPaymentSimulation){
+    var demo=document.createElement("section");demo.className="mt-box";demo.style.marginTop="22px";$("viewHost").appendChild(demo);window.AfriPaymentSimulation.mount(demo);
+  }
   if($("aB"))$("aB").onclick=function(){
     var d=$("aD").value,l=$("aL").value.trim(),m=parseFloat(String($("aM").value).replace(",","."));
     if(!d||!l||!(m>0)){$("aErr").textContent="Renseignez la date, le libellé et un montant supérieur à 0.";return}
