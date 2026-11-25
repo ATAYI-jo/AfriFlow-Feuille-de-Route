@@ -5,9 +5,6 @@ const CORS = {
   "Access-Control-Allow-Headers": "authorization, apikey, content-type, x-client-info",
   "Access-Control-Allow-Methods": "POST, OPTIONS"
 };
-function respond(data: unknown, status = 200) {
-  return new Response(JSON.stringify(data), { status, headers: { ...CORS, "Content-Type": "application/json", "Cache-Control": "no-store" } });
-}
 const root = (Deno.env.get("DROPBOX_ROOT") || "").replace(/\/+$/, "");
 function validPath(raw: string) {
   if (!raw || !raw.startsWith("/") || raw.includes("\\") || raw.slice(1).split("/").some(p => p === ".." || p === "." || !p)) return false;
@@ -36,7 +33,16 @@ async function dbxToken() {
   return j.access_token as string;
 }
 Deno.serve(async (req:Request)=>{
-  if(req.method==="OPTIONS")return new Response("ok",{headers:CORS});
+  const origin=req.headers.get("origin");
+  const headers={
+    ...CORS,
+    "Access-Control-Allow-Origin":origin==="https://afriflow.pages.dev"?origin:CORS["Access-Control-Allow-Origin"],
+    "Vary":"Origin"
+  };
+  function respond(data: unknown,status=200){
+    return new Response(JSON.stringify(data),{status,headers:{...headers,"Content-Type":"application/json","Cache-Control":"no-store"}});
+  }
+  if(req.method==="OPTIONS")return new Response("ok",{headers});
   if(req.method!=="POST")return respond({error:"Méthode interdite"},405);
   try{
     const accessToken=(req.headers.get("authorization")||"").replace(/^Bearer\s+/i,"");
