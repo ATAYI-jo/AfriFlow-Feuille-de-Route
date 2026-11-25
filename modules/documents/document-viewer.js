@@ -284,10 +284,57 @@ window.dvWordSource=async function(path){
   return source===wordSource&&source.box.isConnected?html:null;
 };
 function officeLink(path,extension){
-  var app={docx:"Word",xlsx:"Excel",pptx:"PowerPoint"}[extension];
+  if(extension==="docx"||extension==="doc")
+    return '<button type="button" data-word-launch disabled>Ouvrir dans Word</button><span data-word-alternative hidden></span>';
+  var app={xlsx:"Excel",pptx:"PowerPoint"}[extension];
   if(!app||!path.startsWith("/"))return "";
   var url="https://www.dropbox.com/preview"+path.split("/").map(encodeURIComponent).join("/");
   return '<a class="af-office-open" href="'+esc(url)+'" target="_blank" rel="noopener noreferrer" title="Dans Dropbox, choisissez Ouvrir avec Microsoft '+app+'">'+app+' via Dropbox ↗</a>';
+}
+async function prepareWordLaunch(box,path){
+  var button=box.querySelector("[data-word-launch]");
+  var alternative=box.querySelector("[data-word-alternative]");
+  if(!button||!alternative)return;
+  try{
+    var result=await call({action:"link",path:path});
+    var file=new URL(result.link);
+    if(file.protocol!=="https:"||file.href.includes("|"))throw new Error("Lien invalide");
+    var native=document.createElement("a"),web=document.createElement("a");
+    native.className=web.className="af-office-open";
+    native.textContent="Ouvrir dans Word";
+    native.href="ms-word:ofv|u|"+file.href;
+    web.textContent="Lire dans Word en ligne";
+    web.href="https://view.officeapps.live.com/op/view.aspx?src="+encodeURIComponent(file.href);
+    web.referrerPolicy="no-referrer";
+    alternative.replaceChildren(web);
+    button.replaceWith(native);
+    var cancelPending=function(){};
+    native.onclick=function(event){
+      if(event.ctrlKey||event.metaKey||event.shiftKey||event.altKey)return;
+      cancelPending();
+      alternative.hidden=false;
+      var timer=setTimeout(function(){
+        cancelPending();
+        if(native.isConnected&&!document.hidden&&document.hasFocus())web.click();
+      },3000);
+      function cancel(){
+        clearTimeout(timer);
+        window.removeEventListener("blur",cancel);
+        document.removeEventListener("visibilitychange",cancel);
+        document.removeEventListener("pointerdown",cancel,true);
+        document.removeEventListener("keydown",cancel,true);
+      }
+      cancelPending=cancel;
+      window.addEventListener("blur",cancel);
+      document.addEventListener("visibilitychange",cancel);
+      document.addEventListener("pointerdown",cancel,true);
+      document.addEventListener("keydown",cancel,true);
+    };
+  }catch(error){
+    button.disabled=false;
+    button.textContent="Réessayer l’ouverture dans Word";
+    button.onclick=function(){button.disabled=true;prepareWordLaunch(box,path)};
+  }
 }
 async function show(i){
   wordSource=null;
@@ -324,6 +371,7 @@ var bar='<div class="toolbar"><b>'+name+'</b><div class="toolbar-actions">'+edBt
   else if(e==="mp3")box.innerHTML=bar+'<audio src="'+mkUrl(new Blob([blob],{type:MIME[e]}))+'" controls style="width:100%"></audio>';
   else if(e==="docx"){
     box.innerHTML=bar+'<div class="dvp dvp-word-reader"><p>Mise en page…</p></div>';
+    prepareWordLaunch(box,view.path);
     var word=box.querySelector(".dvp");
     var source=wordSource={path:view.path,blob:blob,box:box};
     try{
@@ -347,6 +395,7 @@ var bar='<div class="toolbar"><b>'+name+'</b><div class="toolbar-actions">'+edBt
   }else if(/^(txt|md|json|html|xml)$/.test(e)){
     box.innerHTML=bar+'<div class="dv-txt" id="dvTx"></div>';$("dvTx").textContent=await blob.text();
   }else box.innerHTML=bar+'<p>Aperçu indisponible pour ce format : utilisez « Télécharger ».</p>';
+  if(e==="doc")prepareWordLaunch(box,view.path);
 }
 function open(i){
   var box=$("dvView"),opening=show(i),my=token;
