@@ -11,11 +11,13 @@ function renderCardStatus(){
    if(!row)return;
    card.classList.toggle("af-card-urgent",urgent);
    var badge=row.querySelector(".af-document-status");
-   if(!badge){badge=document.createElement("span");badge.className="af-document-status";row.appendChild(badge)}
-   if(badge.dataset.urgent===String(urgent))return;
-   badge.dataset.urgent=String(urgent);
-   if(urgent)badge.innerHTML=alertIcon+"Urgent";
-   else badge.textContent="Non urgent";
+   if(!urgent){if(badge)badge.remove();return}
+   if(!badge){
+     badge=document.createElement("span");
+     badge.className="af-document-status";
+     badge.innerHTML=alertIcon+"Urgent";
+     row.appendChild(badge);
+   }
  });
 }
 document.addEventListener("af-document-cards-rendered",function(){if(knownItems)renderCardStatus();else poll()});
