@@ -105,6 +105,50 @@ function createPager(host,stageClass,draw){
     +'<div class="dvp-stage '+stageClass+'" tabindex="0" aria-label="Page du document"></div>';
   var stage=host.querySelector(".dvp-stage"),status=host.querySelector("[role=status]");
   var buttons=host.querySelectorAll("button"),nav=host.querySelector(".dvp-nav");
+  var expand=document.createElement("button");
+  expand.type="button";
+  expand.innerHTML='<svg aria-hidden="true" viewBox="0 0 24 24"><path/></svg>';
+  nav.appendChild(expand);
+  var dialog=null;
+  function syncFullscreen(){
+    var active=document.fullscreenElement===host||Boolean(dialog&&dialog.open);
+    var label=active?"Quitter le plein écran":"Afficher en plein écran";
+    expand.title=label;
+    expand.setAttribute("aria-label",label);
+    expand.setAttribute("aria-pressed",String(active));
+    expand.querySelector("path").setAttribute("d",active
+      ?"M3 9h6V3m6 0v6h6m0 6h-6v6m-6 0v-6H3"
+      :"M9 3H3v6m12-6h6v6m0 6v6h-6m-6 0H3v-6");
+  }
+  function openDialog(){
+    if(!host.isConnected||dialog)return;
+    dialog=document.createElement("dialog");
+    dialog.className="dvp-full-dialog";
+    dialog.setAttribute("aria-label","Document en plein écran");
+    host.appendChild(dialog);
+    dialog.append(nav,stage);
+    dialog.addEventListener("close",function(){
+      host.append(nav,stage);
+      dialog.remove();
+      dialog=null;
+      syncFullscreen();
+      expand.focus({preventScroll:true});
+    },{once:true});
+    dialog.showModal();
+    expand.focus();
+    syncFullscreen();
+  }
+  expand.onclick=async function(){
+    if(dialog){dialog.close();return}
+    if(document.fullscreenElement===host){await document.exitFullscreen();return}
+    if(host.requestFullscreen){
+      try{await host.requestFullscreen();return}catch(error){}
+    }
+    openDialog();
+  };
+  document.addEventListener("fullscreenchange",syncFullscreen);
+  onDetach(host,function(){document.removeEventListener("fullscreenchange",syncFullscreen)});
+  syncFullscreen();
   var current=0,total=0,touch;
   function go(page){
     if(page===current||page<1||page>total||!host.isConnected)return;
@@ -140,7 +184,8 @@ function createPager(host,stageClass,draw){
     stage:stage,
     setTotal:function(pages){
       total=pages;
-      nav.hidden=pages<2;
+      nav.hidden=false;
+      buttons[0].hidden=buttons[1].hidden=pages<2;
       var page=Math.min(current||1,pages);
       current=0;
       return go(page);
