@@ -31,7 +31,7 @@ async function poll(){
    var btn=bar.querySelector("[data-af-urgent]");
    if(admin()){
     if(!btn){btn=document.createElement("button");btn.type="button";btn.className="af-urgent-toggle";btn.dataset.afUrgent="1";var ref=bar.querySelector("[data-dvp-edit]");if(ref)bar.insertBefore(btn,ref);else bar.prepend(btn)}
-    btn.textContent=active?"🔴 Urgent":"Marquer urgent";btn.setAttribute("aria-pressed",String(active));
+    btn.textContent=active?"Urgent":"Marquer urgent";btn.setAttribute("aria-pressed",String(active));
     btn.onclick=async function(){
       btn.disabled=true;
       try{
