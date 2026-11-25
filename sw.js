@@ -1,7 +1,38 @@
-// AfriFlow PWA: Web Push while closed. No fetch interception or caching.
-// Live Supabase, Dropbox and chatbot requests remain untouched.
-self.addEventListener('install', function(){self.skipWaiting();});
-self.addEventListener('activate', function(event){event.waitUntil(self.clients.claim());});
+// AfriFlow: public offline recovery shell + existing Web Push.
+// Never cache authenticated API responses, user documents, or mutations.
+const OFFLINE_PREFIX = 'afriflow-offline-shell-';
+const OFFLINE_CACHE = OFFLINE_PREFIX + 'v1';
+const scope = new URL(self.registration.scope);
+const offlinePage = new URL('offline.html', scope).href;
+self.addEventListener('install', event => {
+  event.waitUntil((async () => {
+    const cache = await caches.open(OFFLINE_CACHE);
+    await cache.add(new Request(offlinePage, {cache:'reload', credentials:'omit'}));
+    await self.skipWaiting();
+  })());
+});
+self.addEventListener('activate', event => {
+  event.waitUntil((async () => {
+    const keys = await caches.keys();
+    await Promise.all(keys.filter(key => key.startsWith(OFFLINE_PREFIX) && key !== OFFLINE_CACHE).map(key => caches.delete(key)));
+    await self.clients.claim();
+  })());
+});
+self.addEventListener('fetch', event => {
+  const req = event.request;
+  if (req.method !== 'GET' || req.mode !== 'navigate') return;
+  const url = new URL(req.url);
+  // OAuth callbacks, deep links and external services remain untouched.
+  if (url.origin !== scope.origin || url.search ||
+      ![scope.pathname, new URL('index.html', scope).pathname].includes(url.pathname)) return;
+  event.respondWith((async () => {
+    try { return await fetch(req); }
+    catch (_) {
+      const cache = await caches.open(OFFLINE_CACHE);
+      return await cache.match(offlinePage) || Response.error();
+    }
+  })());
+});
 self.addEventListener('push', function(event){
   event.waitUntil((async function(){
     var data={};
