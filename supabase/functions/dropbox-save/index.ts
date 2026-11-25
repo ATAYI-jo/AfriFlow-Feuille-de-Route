@@ -39,11 +39,11 @@ Deno.serve(async (req:Request)=>{
   if(req.method==="OPTIONS")return new Response("ok",{headers:CORS});
   if(req.method!=="POST")return respond({error:"Méthode interdite"},405);
   try{
-    const access=(req.headers.get("authorization")||"").replace(/^Bearer\s+/i,"");
-    if(!access)return respond({error:"Connexion requise"},401);
+    const accessToken=(req.headers.get("authorization")||"").replace(/^Bearer\s+/i,"");
+    if(!accessToken)return respond({error:"Connexion requise"},401);
     const url=Deno.env.get("SUPABASE_URL")!;
     const service=createClient(url,Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
-    const userResult=await service.auth.getUser(access);
+    const userResult=await service.auth.getUser(accessToken);
     const user=userResult.data.user;
     if(userResult.error||!user?.email||!user.email_confirmed_at)return respond({error:"Session invalide"},401);
     const email=user.email.toLowerCase();
@@ -83,7 +83,8 @@ Deno.serve(async (req:Request)=>{
       method:"POST",
       headers:{
         "Authorization":"Bearer "+token,
-        "Dropbox-API-Arg":JSON.stringify({path,mode:"overwrite",autorename:false,mute:false}),
+        "Dropbox-API-Arg":JSON.stringify({path,mode:"overwrite",autorename:false,mute:false})
+          .replace(/[^\x20-\x7e]/g, char => "\\u"+char.charCodeAt(0).toString(16).padStart(4,"0")),
         "Content-Type":"application/octet-stream"
       },
       body:bytes
