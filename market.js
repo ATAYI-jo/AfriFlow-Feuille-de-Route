@@ -235,7 +235,7 @@
   }
   function media(p) { var u = state.imgs[p.id]; return u ? '<img class="af-photo" src="' + esc(u) + '" alt="' + esc(p.name) + '">' : fallbackHtml(p); }
   function announcementMedia(p) {
-    if (p.original_path) return '<div class="af-product-media af-media" data-market-image="' + esc(p.id) + '" data-alt="' + esc(p.name) + '">' + media(p) + '<span class="af-promo">Annonce AfriFlow</span></div>';
+    if (p.original_path) return '<div class="af-product-media af-media" data-market-image="' + esc(p.id) + '" data-alt="' + esc(p.name) + '">' + media(p) + '<span class="af-promo">Annonce</span></div>';
     return '<div class="af-product-media af-announcement-placeholder"><img src="logo.svg?v=2" alt=""><span>Veille AfriFlow</span><small>Illustration en préparation</small></div>';
   }
   function fitMedia(box, image) {
@@ -281,6 +281,7 @@
     var additional = state.products.filter(function (item) {
       return !isAnnouncement(item) && (item.is_active !== false);
     }).slice(0, 10);
+    additional=additional.concat(state.products.filter(isAnnouncement).slice(0,6).filter(function(item){return item.original_path}));
     additional.forEach(function (item) {
       if (!batch.some(function (p) { return p.id === item.id; })) batch.push(item);
     });
@@ -1510,7 +1511,7 @@
       // Results are immediately visible during search and filtering.
       + '<div class="af-market-section-head" id="afProductsTop"><h2>' + (state.favoriteOnly ? "Vos favoris" : state.category ? esc(state.category) : "Nos produits") + "</h2><p>" + (products.length + " produit" + (products.length !== 1 ? "s" : "")) + "</p></div>"
       + catalogFiltersHtml() + productsHtml(products)
-      + (catalogNarrowed() ? "" : marketShowcaseHtml() + announcementsHtml())
+      + (catalogNarrowed() ? "" : marketShowcaseHtml()) + announcementsHtml()
       + (isAdmin() ? adminPanel() : "");
   }
   function waitContent() {
@@ -1685,7 +1686,7 @@
     root.innerHTML = top() + '<main class="af-market-main">' + (mode === "partner_approved"
       ? '<section id="afPartnerOrderAlert" class="af-cod-alert" hidden aria-live="polite">'+icon("bag")+'<div><b>Commandes à valider</b><p data-cod-alert-text></p></div><button type="button" id="afPartnerOrderAction" class="af-market-primary">Traiter</button></section><div class="af-partner-top-section">'+partnerLandingHeader()+'<button type="button" class="af-partner-scroll-cue" data-partner-scroll="afProductsTop" aria-label="Défiler vers les produits">'+icon("down")+'<span>Défiler</span></button></div>'
         + partnerLandingProducts()
-        + partnerContent()
+        + partnerContent() + announcementsHtml()
       : mode === "partner_waiting"
       ? '<section class="af-ali">' + catsHtml() + heroHtml() + sideHtml() + scrollCueHtml() + '</section>' + waitContent() + announcementsHtml()
       : mode === "shareholder_pending"
@@ -1740,7 +1741,6 @@
       button.onclick = function () {
         var jump = button.dataset.marketJump;
         if(jump==="categories"&&!el("afMarketCategories")){scrollMarketTo("afProductsTop");var category=el("afCatalogCategory");if(category)category.focus({preventScroll:true});return;}
-        if(jump==="news"&&!el("afMarketNews")){state.favoriteOnly=false;state.category="";state.term="";clearCatalogFilters();render();}
         scrollMarketTo(jump === "categories" ? "afMarketCategories" : jump === "news" ? "afMarketNews" : "afProductsTop");
       };
     });
@@ -1913,11 +1913,15 @@
       var fields = "id,name,description,category,listing_type,price,compare_at_price,currency,minimum_order_quantity,origin_country,delivery_info,promotion_label,is_in_stock,original_path,news_sources,news_relevance,created_at,is_active";
       var publicCatalog = sb().from("afriflow_market_products").select(fields).eq("is_active", true).order("created_at", { ascending: false }).limit(100);
       var allCatalog = isAdmin() ? sb().from("afriflow_market_products").select(fields).order("created_at", { ascending: false }).limit(100) : null;
-      var result = allCatalog ? await Promise.all([publicCatalog, allCatalog]) : [await publicCatalog, null];
+      var newsCatalog=sb().from("afriflow_market_products").select(fields).eq("is_active",true).eq("listing_type","announcement").order("created_at",{ascending:false}).limit(6);
+      var result=await Promise.all([publicCatalog,allCatalog,newsCatalog]);
       if(request!==catalogRequest||context!==state.context)return;
       if (result[0].error) throw result[0].error;
       if (result[1] && result[1].error) throw result[1].error;
       state.products = result[0].data || [];
+      var ids=new Set(state.products.map(function(item){return item.id}));
+      var extraNews=(result[2].data||[]).filter(function(item){return isAnnouncement(item)&&!ids.has(item.id)});
+      state.products=state.products.concat(extraNews);
       state.adminProducts = result[1] ? result[1].data || [] : [];
       render(); scheduleImages(); if (isAdmin()) loadAdminList();
     } catch (error) { if(request===catalogRequest&&context===state.context)showCatalogError("Le catalogue est momentanément indisponible."); }

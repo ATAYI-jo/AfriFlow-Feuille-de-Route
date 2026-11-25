@@ -37,3 +37,10 @@
 #market-view #afBuyFilters label{display:grid;gap:5px;font-size:.84rem;font-weight:650}
 #market-view #afBuyFilters :is(input,select,button){min-width:0;width:100%;min-height:44px;box-sizing:border-box}
 #market-view #afBuyFilters :is(input,select){padding:8px;border:1px solid var(--af-ui-edge,var(--line));border-radius:9px;background:var(--af-ui-sub,var(--card));color:inherit;font:inherit;font-size:16px}
+
+#market-view .af-announcements-grid{grid-template-columns:repeat(auto-fit,minmax(min(100%,260px),1fr))}
+#market-view .af-product.af-announcement-card{height:auto!important;max-height:none;min-width:0}
+#market-view .af-announcement-card .af-product-media{height:auto!important;min-height:0;flex:0 0 auto;aspect-ratio:16/9}
+#market-view .af-announcement-card .af-product-body{gap:7px;overflow:visible}
+#market-view .af-announcement-card h3{display:block;-webkit-line-clamp:unset;overflow:visible;max-height:none;overflow-wrap:anywhere}
+#market-view .af-announcement-card .af-announcement-text{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:3;flex:none;overflow:hidden;max-height:none;margin:0 0 8px}
