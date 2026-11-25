@@ -670,7 +670,7 @@ $("addExportBtn").onclick = function(e){
 [$("startBtn"), $("addBtn")].forEach(function(el){
   el.addEventListener("keydown", function(e){ if(e.key === "Enter" || e.key === " "){ e.preventDefault(); el.click(); } });
 });
-$("logout-btn").onclick = function(){ recordUserAction("Déconnexion"); logout(); };
+$("logout-btn").onclick = async function(){ try{if(window.AfriOutbox&&!await AfriOutbox.beforeLogout())return;recordUserAction("Déconnexion");logout();}catch(e){if(window.toast)toast("Déconnexion interrompue : "+(e.message||e));} };
 $("ov").addEventListener("click", function(e){ if(e.target === this) closeDrawer(); });
 $("customizer-modal").addEventListener("click", function(e){ if(e.target === this) this.classList.remove("on"); });
 document.addEventListener("keydown", function(e){
