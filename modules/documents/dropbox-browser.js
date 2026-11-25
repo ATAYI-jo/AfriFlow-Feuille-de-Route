@@ -44,14 +44,14 @@ function render(){
   if(!active)return;
   var h='<div class="toolbar"><b>Documents</b></div>';
   h+=items.length?'<div class="dv-grid">'+items.map(function(it,i){
-    return '<div class="dcard af-clickable" data-dvopen="'+i+'" role="button" tabindex="0"><div class="dtype">'+esc((ext(it.path)||"fichier").toUpperCase())+'</div><b>'+esc(it.title)+'</b><div class="dact">'
+    return '<div class="dcard af-clickable" data-document-path="'+esc(it.path)+'" data-dvopen="'+i+'" role="button" tabindex="0"><div class="af-document-badges"><div class="dtype">'+esc((ext(it.path)||"fichier").toUpperCase())+'</div></div><b>'+esc(it.title)+'</b><div class="dact">'
       +(adm()?'<button type="button" class="danger" data-dvrm="'+i+'">Retirer</button>':'')+'</div></div>';
   }).join("")+'</div>':'<p style="color:var(--muted)">Aucun document n\'est affiché pour le moment.</p>';
   h+='<div class="dv-view" id="dvView"></div>';
   h+='<div class="mt-box" style="margin-top:34px"><h3>'+(adm()?"Choisir les fichiers à afficher":"Parcourir les fichiers partagés")+'</h3>'
     +'<p style="color:var(--muted);font-size:.9rem;margin-top:0">'+(adm()?"Seuls les fichiers cochés ici sont visibles par les utilisateurs. Le reste de la Dropbox reste privé.":"Vous pouvez parcourir et ouvrir uniquement les fichiers publiés pour les membres. Les autres fichiers Dropbox restent privés.")+'</p>'
     +'<div class="dact" style="margin:0 0 14px"><button type="button" id="dvBrowse">'+(adm()?"Parcourir ma Dropbox":"Parcourir les fichiers partagés")+'</button></div><div id="dvBrowser"></div></div>';
-  vh.innerHTML=h;vh.onclick=onClick;vh.onkeydown=function(e){var c=e.target.closest("[data-dvopen],[data-dvdir]");if(c&&(e.key==="Enter"||e.key===" ")&&!e.target.closest("button")){e.preventDefault();if(c.dataset.dvopen!=null)openFile(+c.dataset.dvopen);else browse(c.dataset.dvdir)}};
+  vh.innerHTML=h;document.dispatchEvent(new Event("af-document-cards-rendered"));vh.onclick=onClick;vh.onkeydown=function(e){var c=e.target.closest("[data-dvopen],[data-dvdir]");if(c&&(e.key==="Enter"||e.key===" ")&&!e.target.closest("button")){e.preventDefault();if(c.dataset.dvopen!=null)openFile(+c.dataset.dvopen);else browse(c.dataset.dvdir)}};
 }
 async function browse(p){
   cwd=p;var b=$("dvBrowser");if(!b)return;b.innerHTML='<p style="color:var(--muted)">Chargement…</p>';
