@@ -12,7 +12,7 @@ test("Administrators can see an account access console",()=>{
   assert.match(market,/id="afAccessAdmin"/);
   assert.match(market,/loadQuotes\(\); loadPartnerAdmin\(\); loadAccessAdmin\(\)/);
   assert.match(market,/afriflow-access-admin/);
-  assert.match(css,/#afAccessAdmin \.af-access-user/);
+  assert.match(css,/(?:#afAccessAdmin|:is\(#afAccessAdmin,#adMarketAccess\))\s+\.af-access-user\s*\{/);
 });
 test("Only verified administrators can list or change access",()=>{
   assert.match(edge,/service\.auth\.getUser\(token\)/);

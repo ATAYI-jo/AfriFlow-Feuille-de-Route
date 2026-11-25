@@ -8,6 +8,12 @@ const vm = require('node:vm');
 const root = path.resolve(__dirname, '..');
 const read = name => fs.readFileSync(path.join(root, name), 'utf8');
 const html = read('index.html');
+const scriptTags = [...html.matchAll(/<script\b[^>]*\bsrc=["']([^"']+)["'][^>]*>/gi)];
+function assertScriptOnce(filename) {
+  const count=scriptTags.filter(m=>m[1].split(/[?#]/)[0].replace(/^\.\//,'')===filename).length;
+  assert.equal(count,1,filename+' absent ou chargé plusieurs fois');
+}
+
 const essentialScripts = [
   'afriflow-core.js', 'afriflow-workspace.js', 'afriflow-profile.js',
   'afriflow-push.js', 'afriflow-first-use.js', 'afriflow-alerts.js', 'market.js'
@@ -74,8 +80,7 @@ test('Les trois scripts extraits sont chargés une fois et dans le bon ordre', (
   ];
   for (const script of extracted) {
     assert.ok(fs.existsSync(path.join(root, script)), 'Module absent : ' + script);
-    const tag = '<script src="./' + script + '?v=20261121-modularisation-1"></script>';
-    assert.equal(html.split(tag).length - 1, 1, 'Chargement manquant ou dupliqué : ' + script);
+    assertScriptOnce(script);
   }
   assert.ok(html.indexOf('modules/messaging/internal-messaging.js') <
             html.indexOf('modules/documents/document-viewer.js'));
@@ -116,8 +121,7 @@ test('Gestion des comptes et explorateur Dropbox chargés une fois', () => {
     'modules/documents/dropbox-browser.js'
   ];
   for (const filename of paths) {
-    const tag = '<script src="./' + filename + '?v=20261121-modularisation-3"></script>';
-    assert.equal(html.split(tag).length - 1, 1, filename + ' absent ou dupliqué');
+    assertScriptOnce(filename);
     assert.ok(fs.existsSync(path.join(root, filename)), filename + ' manquant');
   }
   assert.ok(html.indexOf('modules/auth/account-management.js') <
@@ -132,8 +136,7 @@ test('Gestion des comptes et explorateur Dropbox chargés une fois', () => {
 test('Assistant IA et moteur mathématique chargés dans leur ordre initial', () => {
   const paths = ['modules/assistant/chat-ui.js', 'modules/assistant/math-rendering.js'];
   for (const filename of paths) {
-    const tag = '<script src="./' + filename + '?v=20261121-modularisation-4"></script>';
-    assert.equal(html.split(tag).length - 1, 1, filename + ' absent ou dupliqué');
+    assertScriptOnce(filename);
     assert.ok(fs.existsSync(path.join(root, filename)), filename + ' manquant');
   }
   assert.ok(html.indexOf('modules/assistant/chat-ui.js') <
@@ -150,8 +153,7 @@ test('Réunions, feuille de route et décor chargé une seule fois', () => {
     'modules/ui/animated-background.js'
   ];
   for (const filename of extracted) {
-    const tag = '<script src="./' + filename + '?v=20261121-modularisation-5"></script>';
-    assert.equal(html.split(tag).length - 1, 1, filename + ' absent ou dupliqué');
+    assertScriptOnce(filename);
     assert.ok(fs.existsSync(path.join(root, filename)), filename + ' absent');
   }
   assert.ok(html.indexOf('modules/roadmap/timeline.js') < html.indexOf('modules/ui/animated-background.js'));

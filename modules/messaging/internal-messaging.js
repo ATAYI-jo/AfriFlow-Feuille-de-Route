@@ -3,6 +3,7 @@
 (function(){
 var tab="in",unread=0,first=true,W=[],$=function(i){return document.getElementById(i)};
 var MAX_FILES=5,MAX_TOTAL=2.5*1024*1024,mailReturnFocus=null,mailEpoch=0,fillEpoch=0;
+var memberCache=[],memberCacheAccount="";
 function T(){return window.__TABLE||"afriflow_state"} function S(){return window.__sb}
 function me(){return String(loggedUserEmail||"").toLowerCase()}
 function isAdm(){return window.USER_ROLE==="admin"}
@@ -91,7 +92,7 @@ function shell(){
     +(isAdm()&&window.DBX?'<button type="button" id="mDbx">Dropbox '+(DBX.ready()?"connecté":"à connecter")+'</button>':'')+'</div>'
     +'<div class="auth-tabs" role="group" aria-label="Dossier">'
     +folderButton("urgent","mUrgent",'Urgent<span id="mUrgentCount">'+(urgentAccount===me()?" ("+urgentCount+")":"")+'</span>')
-    +folderButton("in","mIn","Réception")+folderButton("out","mOut","Envoyés")+'</div>'
+    +folderButton("in","mIn","Réception")+folderButton("out","mOut","Envoyés")+folderButton("pending","mPending","En attente")+'</div>'
     +'<div class="dgrid" id="msgList"><p>Chargement…</p></div>';
   h.onclick=function(e){
     var b=e.target.closest("button"),c=e.target.closest(".dcard");
@@ -116,6 +117,16 @@ function urgentBadge(v){
 }
 async function fill(){
   var box=$("msgList"),request=++fillEpoch,selectedTab=tab,account=me(),L;if(!box)return;
+  if(selectedTab==="pending"){
+    try{
+      var pending=window.AfriOutbox?await AfriOutbox.list():[];
+      if(!box.isConnected||request!==fillEpoch||account!==me()||tab!=="pending")return;
+      box.innerHTML=pending.map(function(item,i){return '<div class="dcard"><b>'+esc(item.subject||"(sans objet)")+'</b><small>À : '+esc(item.rec.join(", "))+'</small><small>'+esc(item.body)+'</small><small>'+(item.state==="blocked"?"Envoi bloqué — vérifiez vos droits ou réessayez":"En attente de connexion / synchronisation")+'</small><div><button type="button" data-outbox-retry="'+i+'">Réessayer</button> <button type="button" data-outbox-discard="'+i+'">Retirer</button></div></div>'}).join("")||'<p>Aucun message en attente.</p>';
+      box.onclick=function(e){var b=e.target.closest("button");if(!b)return;e.stopPropagation();var id=pending[Number(b.dataset.outboxRetry??b.dataset.outboxDiscard)]?.id;if(!id)return;if(b.dataset.outboxRetry!==undefined)AfriOutbox.retry(id).catch(function(err){if(window.toast)toast(err.message)});else if(confirm("Supprimer ce message en attente ?"))AfriOutbox.discard(id).catch(function(err){if(window.toast)toast(err.message)});};
+    }catch(e){if(box.isConnected)box.textContent="Stockage local indisponible.";}
+    return;
+  }
+  box.onclick=null;
   try{L=await rows(selectedTab==="out"?"sent:":"msg:")}catch(e){if(box.isConnected&&request===fillEpoch)box.textContent="Lecture impossible : "+(e.message||e);return}
   if(!box.isConnected||box!==$("msgList")||request!==fillEpoch||selectedTab!==tab||account!==me())return;
   if(selectedTab!=="out"){
@@ -191,8 +202,9 @@ function openMsg(i,linked){
 }
 async function compose(to,subj){
   var h=msgHost(),U=[],F=[],sel={},epoch=++mailEpoch;
-  try{U=await AFRI.listMembers()}catch(e){if(window.toast)toast("Annuaire indisponible : "+(e.message||e))}
-  if(!h.isConnected||epoch!==mailEpoch)return;
+  var composeAccount=me();
+  try{U=await AFRI.listMembers();if(me()===composeAccount&&U.length){memberCache=U;memberCacheAccount=composeAccount;}}catch(e){if(memberCacheAccount===composeAccount)U=memberCache.slice();else if(window.toast)toast("Annuaire indisponible : "+(e.message||e))}
+  if(!h.isConnected||epoch!==mailEpoch||composeAccount!==me())return;
   U=U.filter(function(u){return u.email&&u.email!==me()});
   if(to)sel[to]=1;
   h.innerHTML='<div class="toolbar"><b>Nouveau message</b><div class="toolbar-actions"><button type="button" id="mBack">← Annuler</button></div></div><div class="journal-article"><div class="fm">'
@@ -237,6 +249,14 @@ async function compose(to,subj){
     if(!rec.length||!b){$("mErr").textContent="Choisissez au moins un destinataire et écrivez un message.";return}
     btn.disabled=true;$("mErr").textContent="";
     try{
+      if(composeAccount!==me())throw new Error("Compte modifié.");
+      if(!F.length&&window.AfriOutbox){
+        await AfriOutbox.enqueue(s,b,rec);
+        if(window.toast)toast("Message enregistré — envoi automatique dès que possible");
+        if(h.isConnected&&epoch===mailEpoch){tab="pending";window.renMsg();}
+        return;
+      }
+      if(!navigator.onLine)throw new Error("Les pièces jointes nécessitent une connexion. Votre texte reste dans le formulaire.");
       var files=await Promise.all(F.map(readFile));
       var ts=Date.now(),k=ts+":"+Math.random().toString(36).slice(2,6),now=new Date().toISOString();
       var base={from:me(),fromName:USER_NAME||me(),subject:s,body:b,ts:ts,read:false};
@@ -255,6 +275,8 @@ async function compose(to,subj){
     }catch(e){btn.disabled=false;if(h.isConnected&&epoch===mailEpoch&&$("mErr"))$("mErr").textContent="Envoi impossible : "+(e.message||e)}
   };
 }
+window.addEventListener("afriflow:outbox-changed",function(){if(tab==="pending"&&$("msgList"))fill();});
+window.addEventListener("afriflow:verified-role",function(){if(memberCacheAccount!==me()){memberCache=[];memberCacheAccount="";}});
 var prev=window.onRole;
 window.onRole=function(){if(prev)prev();setTimeout(poll,1500)};
 setInterval(poll,25000);

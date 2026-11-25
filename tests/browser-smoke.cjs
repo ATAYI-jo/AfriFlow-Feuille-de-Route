@@ -174,16 +174,35 @@ test('Deadline alerts reach only the members selected across search results', as
             {name:'Admin',email:'admin@example.test'}
           ]
         },
-        __sb:{from:()=>({
-          select:()=>({eq:(_field,key)=>({maybeSingle:async()=>({data:window.records[key]||null})})}),
-          insert:async rows=>{for(const row of rows){window.records[row.key]=row;window.sent.push(row);}return {};},
-          upsert:async row=>{window.records[row.key]=row;return {};}
-        })}
+        __sb:{
+          from:()=>({select:()=>({eq:(_field,key)=>({maybeSingle:async()=>({data:window.records[key]||null})})})}),
+          rpc:async (name,{p_action,p_payload})=>{
+            if(name!=='af_deadline_action')throw new Error('Unexpected RPC: '+name);
+            const members=await window.AFRI.listUsers();
+            const eligible=members.filter(m=>m.email!==window.loggedUserEmail);
+            if(p_action==='directory')return {data:eligible};
+            if(p_action==='create'){
+              const recipients=p_payload.targeted?p_payload.recipients:eligible.map(m=>m.email);
+              if(!recipients.length||recipients.some(email=>!eligible.some(m=>m.email===email)))throw new Error('Invalid recipients');
+              window.testDeadlineRecipients=recipients.slice();
+              const item={id:'deadline-test',title:p_payload.title,start:p_payload.start,due:p_payload.due,note:p_payload.note,author:window.loggedUserEmail,notified:Date.now(),notifiedCount:recipients.length};
+              window.records['pub:deadlines']={key:'pub:deadlines',value:{items:[item]}};
+              for(const email of recipients)window.sent.push({key:'msg:'+email,value:{to:email}});
+              return {data:{items:[item],count:recipients.length}};
+            }
+            if(p_action==='resend'){
+              if(p_payload.id!=='deadline-test')throw new Error('Invalid deadline');
+              for(const email of window.testDeadlineRecipients)window.sent.push({key:'msg:'+email,value:{to:email}});
+              return {data:{items:window.records['pub:deadlines'].value.items,count:window.testDeadlineRecipients.length}};
+            }
+            throw new Error('Unexpected action: '+p_action);
+          }
+        }
       });
     });
     await page.addScriptTag({path:path.join(root, 'modules/roadmap/timeline.js')});
     await page.locator('[data-fdr-nav]').click();
-    await page.locator('#b-dl > button').click();
+    if(await page.locator('#b-dl > button').getAttribute('aria-expanded')==='false')await page.locator('#b-dl > button').click();
     await page.locator('#fdrT').fill('Préparer le bilan');
     await page.locator('#fdrTarget').selectOption('selected');
     await page.locator('#fdrGo').click();

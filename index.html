@@ -396,7 +396,7 @@ window.ic=function(n,s){return '<svg class="ic"'+(s?' style="width:'+s+';height:
   </div>
 </div>
 
-<script src="./afriflow-core.js?v=20261124-auth-compact-v2"></script>
+<script src="./afriflow-core.js?v=20261125-outbox-logout"></script>
 <script type="importmap">
 {"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.164.1/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.164.1/examples/jsm/"}}
 </script>
@@ -523,7 +523,8 @@ window.ic=function(n,s){return '<svg class="ic"'+(s?' style="width:'+s+';height:
 <script src="./modules/auth/account-management.js?v=20261123-canonical-auth"></script>
 
 <script src="./modules/messaging/app-link.js?v=20261124-app-first"></script>
-<script src="./modules/messaging/internal-messaging.js?v=20261124-mail-folders"></script>
+<script src="./modules/messaging/offline-outbox.js?v=1"></script>
+<script src="./modules/messaging/internal-messaging.js?v=20261125-outbox"></script>
   
 <style id="ai-v2-css">
 #aiBox .aiic{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;vertical-align:-4px;flex:none}
@@ -544,117 +545,7 @@ window.ic=function(n,s){return '<svg class="ic"'+(s?' style="width:'+s+';height:
 
 <script src="./modules/assistant/chat-ui.js?v=20261121-modularisation-4"></script>
   
-<style>
-/* ---------- Jetons du verre ---------- */
-:root{--g-bg:84%;--g-bg-ok:56%;--g-edge:72%;--g-hi:.6;--g-blur:20px;--g-shadow:rgba(24,48,36,.10)}
-@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--g-bg-ok:46%;--g-edge:11%;--g-hi:.07;--g-shadow:rgba(0,0,0,.4)}}
-:root[data-theme="dark"]{--g-bg-ok:46%;--g-edge:11%;--g-hi:.07;--g-shadow:rgba(0,0,0,.4)}
-@supports ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){:root{--g-bg:var(--g-bg-ok)}}
-@media (prefers-reduced-transparency:reduce){:root{--g-bg:96%!important;--g-blur:0px!important}}
-
-/* ---------- Fond : dégradé doux derrière le verre ---------- */
-body::before{content:"";position:fixed;inset:0;z-index:-2;pointer-events:none;background:
- radial-gradient(900px 620px at 8% -8%,color-mix(in srgb,var(--green) 26%,transparent),transparent 62%),
- radial-gradient(760px 560px at 100% 6%,color-mix(in srgb,var(--amber) 20%,transparent),transparent 60%),
- radial-gradient(900px 700px at 55% 112%,color-mix(in srgb,#4a90c2 18%,transparent),transparent 62%)}
-#auth-screen{background:radial-gradient(800px 560px at 12% 0%,color-mix(in srgb,var(--green) 24%,transparent),transparent 62%),radial-gradient(700px 520px at 100% 100%,color-mix(in srgb,var(--amber) 20%,transparent),transparent 60%),var(--bg)}
-
-/* ---------- Surfaces en verre ---------- */
-.toolbar,.map-panel,.step-card,.dcard,.journal-article,.addrow,.stm,.ed-bar,.pubbar,.lock-banner,.auth-box,.customizer-box,.fdr-card,.fdr-tbl,.xlw,.start-pill,.plus-card,.border-sign,#side,#menuBtn{
- background:color-mix(in srgb,var(--card) var(--g-bg),transparent);
- -webkit-backdrop-filter:blur(var(--g-blur)) saturate(165%);backdrop-filter:blur(var(--g-blur)) saturate(165%);
- box-shadow:0 12px 40px var(--g-shadow),inset 0 1px 0 rgba(255,255,255,var(--g-hi))}
-.toolbar,.map-panel,.step-card,.dcard,.journal-article,.addrow,.stm,.ed-bar,.pubbar,.auth-box,.customizer-box,.fdr-tbl,.xlw,#side,#menuBtn,.fdr-card{
- border-color:color-mix(in srgb,#fff var(--g-edge),transparent)}
-/* les liserés de couleur gardent leur sens */
-.step-card{border-top-color:var(--c)}
-.fdr-card.fdr-ph,.fdr-card.fdr-dl{border-left-color:var(--c,var(--green))}
-.fdr-jal .fdr-card{border-top-color:var(--c,var(--todo))}
-.stm-sum div{background:color-mix(in srgb,var(--card) 40%,transparent)}
-table.t th,.fdr-tbl th{background:color-mix(in srgb,var(--green) 9%,transparent)}
-.brand{box-shadow:0 18px 46px rgba(20,60,39,.22),inset 0 1px 0 rgba(255,255,255,.22);border:1px solid rgba(255,255,255,.18)}
-#ov{background:rgba(10,20,15,.35);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px)}
-#scrim{background:rgba(10,20,15,.28);-webkit-backdrop-filter:blur(4px);backdrop-filter:blur(4px)}
-#pn{background:color-mix(in srgb,var(--bg) 74%,transparent);-webkit-backdrop-filter:blur(26px) saturate(160%);backdrop-filter:blur(26px) saturate(160%);border-left:1px solid color-mix(in srgb,#fff var(--g-edge),transparent)}
-#xm,#customizer-modal{-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px)}
-
-/* ---------- Champs et boutons ---------- */
-.fm input,.fm select,.fm textarea,.addrow input,.addrow select,.fdr-form input,.fdr-form textarea,.auth-box input,.stm-sum input,.stm-sum select,.toolbar select,.toolbar input:not([type=file]),.ed-bar select,.prow input,.map-head select{
- background:color-mix(in srgb,var(--card) 62%,transparent);border-radius:12px;padding:12px 16px;
- border-color:color-mix(in srgb,var(--ink) 14%,transparent)}
-.toolbar button:not(.p),.dact button:not(.p):not(.danger),.ed-bar button,.map-head select{background:color-mix(in srgb,var(--card) 58%,transparent)}
-button{padding:11px 20px;border-radius:12px}
-button:hover{filter:none;background-image:linear-gradient(rgba(255,255,255,.12),rgba(255,255,255,.12))}
-button.p:hover{filter:brightness(1.08)}
-
-/* ---------- Respiration : espacements plus généreux ---------- */
-body{line-height:1.65}
-.wrap{padding:88px 36px 110px}
-.brand{padding:40px 44px;border-radius:28px;margin-bottom:34px;gap:26px}
-.toolbar{padding:20px 28px;margin:26px 0 38px;gap:20px;border-radius:20px}
-.toolbar-actions{gap:14px}
-.map-panel{padding:30px;margin:0 0 42px;border-radius:24px}
-.map-head{margin-bottom:18px}
-.legend{gap:20px;margin:14px 0 18px}
-.road-container{margin:56px auto;padding:56px 0;border-radius:32px}
-.road-step{margin:120px 0}
-.step-card{padding:30px 32px;border-radius:24px}
-.step-card b{margin-bottom:10px}
-.step-card .date-badge{margin-top:16px}
-.border-sign{padding:12px 24px;border-radius:16px}
-.start-pill{padding:18px 34px}
-.plus-card{padding:26px 38px;border-radius:24px}
-.dgrid{gap:24px}
-.dcard{padding:26px;gap:12px;border-radius:20px}
-.dact{margin-top:14px;gap:12px}
-.journal-article{padding:48px 44px;border-radius:24px}
-.journal-header{padding-bottom:22px;margin-bottom:32px}
-.journal-columns{line-height:1.8;margin-bottom:32px}
-.journal-docs{margin-top:34px;padding-top:22px}
-.lock-banner{padding:16px 20px;margin-bottom:28px}
-.fm{gap:12px;margin-bottom:24px}
-.fm label{margin-top:6px}
-#pn{padding:52px 44px}
-.addrow{padding:26px;gap:18px;border-radius:20px}
-.stm{border-radius:22px;margin-bottom:30px}
-.stm-head{padding:30px 34px;gap:24px}
-.stm-sum div{padding:20px 24px}
-table.t th,table.t td{padding:15px 18px}
-.ed-bar{padding:14px 16px;gap:10px;border-radius:16px;margin-bottom:18px}
-.ed-scroll{padding:24px;border-radius:18px}
-.pubbar{padding:14px 20px;margin:0 0 22px;gap:14px}
-.auth-box{padding:46px 38px;border-radius:28px}
-.auth-box input{margin-bottom:18px}
-.customizer-box{padding:36px;border-radius:28px}
-.file-row{padding:14px 0}
-/* menu latéral */
-#side{width:min(330px,88vw);padding:calc(env(safe-area-inset-top,0px) + 22px) 18px 22px;border-radius:0 26px 26px 0}
-.side-h{margin-bottom:32px;gap:14px}
-.nvr{margin-bottom:8px;gap:6px}
-.nv{padding:15px 20px;font-weight:600;border-radius:14px}
-.nv:hover{background:color-mix(in srgb,var(--green) 9%,transparent)}
-.nv.on{background:color-mix(in srgb,var(--green) 17%,transparent)}
-.nx{padding:8px 11px;border-radius:12px}
-#menuBtn{border-radius:16px}
-/* pages ajoutées (Feuille de route) */
-.fdr-card{padding:26px 28px;margin-bottom:18px;border-radius:20px}
-.fdr h3{margin:48px 0 20px}
-.fdr-hero{padding:38px 40px;border-radius:28px;margin-bottom:28px}
-.fdr-ph>summary{padding:22px 26px}
-.fdr-body{padding:0 26px 24px}
-.fdr-seq{padding:18px 0}
-.fdr-jal{gap:18px}
-.fdr-tbl th,.fdr-tbl td{padding:14px 18px}
-@media (max-width:768px){
- .wrap{padding:84px 16px 90px}
- .brand{padding:28px 24px}
- .journal-article{padding:28px 20px}
- #pn{padding:30px 18px}
- .step-card{padding:24px}
- .road-step,.road-step.item-odd,.road-step.item-even{margin:70px 0}
- .map-panel{padding:20px}
-}
-</style>
+<link rel="stylesheet" href="./afriflow-glass-layout.css?v=1">
 
 <script>
 (function(){
@@ -3062,7 +2953,8 @@ body.af-profile-open #afCloudSyncBadge{visibility:hidden!important}
 <script src="./afriflow-cod.js?v=20261124-order-alerts-v3" defer></script>
 <script src="./market.js?v=20261124-promote-shareholder" defer></script>
 
-<!-- AfriFlow PWA: registration without request interception -->
+<script src="./afriflow-network-status.js?v=1" defer></script>
+<!-- AfriFlow PWA: public offline recovery and push -->
 <script>
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', function () {
