@@ -74,8 +74,8 @@ test('Les trois scripts extraits sont chargés une fois et dans le bon ordre', (
   ];
   for (const script of extracted) {
     assert.ok(fs.existsSync(path.join(root, script)), 'Module absent : ' + script);
-    const tag = '<script src="./' + script + '?v=20261121-modularisation-1"></script>';
-    assert.equal(html.split(tag).length - 1, 1, 'Chargement manquant ou dupliqué : ' + script);
+    assert.equal(html.split('<script src="./' + script + '?v=').length - 1, 1,
+      'Chargement manquant ou dupliqué : ' + script);
   }
   assert.ok(html.indexOf('modules/messaging/internal-messaging.js') <
             html.indexOf('modules/documents/document-viewer.js'));
