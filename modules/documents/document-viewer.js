@@ -96,6 +96,11 @@ function onDetach(host,dispose){
   return observer;
 }
 function createPager(host,stageClass,draw){
+  var visibility=new IntersectionObserver(function(entries){
+    host.classList.toggle("dvp-in-view",entries[0].isIntersecting);
+  });
+  visibility.observe(host);
+  onDetach(host,function(){visibility.disconnect()});
   host.setAttribute("role","region");
   host.setAttribute("aria-label","Aperçu du document");
   host.innerHTML='<div class="dvp-nav" hidden>'
@@ -215,6 +220,7 @@ async function renderPdf(blob,host,my){
       var pg=await pdf.getPage(page);
       if(id!==drawId||my!==token||!host.isConnected)return;
       var size=pg.getViewport({scale:1}),dpr=Math.min(window.devicePixelRatio||1,2);
+      stage.style.setProperty("--dvp-page-ratio",String(size.width/size.height));
       var scale=Math.min(stage.clientWidth/size.width,stage.clientHeight/size.height);
       var viewport=pg.getViewport({scale:Math.max(scale,.1)*dpr});
       var canvas=document.createElement("canvas");
