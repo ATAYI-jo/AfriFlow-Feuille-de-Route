@@ -5,7 +5,7 @@
 (function () {
   'use strict';
   var promise = null;
-  var url = './modules/documents/word-editor.js?v=20261121-modularisation-2';
+  var url = './modules/documents/word-editor.js?v=20261125-word-preview';
   function load() {
     if (promise) return promise;
     promise = new Promise(function (resolve, reject) {
@@ -32,7 +32,7 @@
     else console.error('[AfriFlow documents]', error);
   }
   function wordEdit(path, original) {
-    load().then(function () { window.dvWordEdit(path, original); }).catch(notify);
+    load().then(function () { return window.dvWordEdit(path, original); }).catch(notify);
   }
   function permission(path) {
     return load().then(function () { return window.dvPerm(path); }).catch(function (error) {

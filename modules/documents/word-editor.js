@@ -307,10 +307,10 @@ window.dvTogglePerm=async function(p){
 };
 
 /* Point d'entrée appelé par le bouton « Modifier » du lecteur de documents */
-window.dvWordEdit=function(path,orig){
-  var src=document.querySelector("#dvView .wpage");
-  if(!src){toast("Document non chargé : patientez puis réessayez.");return}
+window.dvWordEdit=async function(path,orig){
   var t=document.querySelector("#dvView .toolbar b");
-  build(String(path),orig||null,clean(src.innerHTML),t?t.textContent:String(path).split("/").pop());
+  var html=await window.dvWordSource(path);
+  if(html===null)return;
+  build(String(path),orig||null,clean(html),t?t.textContent:String(path).split("/").pop());
 };
 })();

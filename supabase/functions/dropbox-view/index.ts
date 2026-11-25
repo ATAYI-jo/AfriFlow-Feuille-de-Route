@@ -150,15 +150,24 @@ Deno.serve(async (req) => {
       return json({ link: result.link });
     }
 
-    if (action === "stream") {
+    if (action === "stream" || action === "preview") {
       const path = safePath(body?.path ?? "");
       if (!canRead(path)) return json({ error: "Document non publié ou accès interdit" }, 403);
+      const preview = action === "preview";
+      if (preview && !/\.(docx?|pptx?)$/i.test(path))
+        return json({ error: "Ce format ne dispose pas d’un aperçu paginé" }, 400);
       const token = await dropboxToken();
-      const response = await fetch("https://content.dropboxapi.com/2/files/download", {
+      const endpoint = preview ? "get_preview" : "download";
+      const apiArg = JSON.stringify({ path }).replace(/[^\x20-\x7e]/g, (char) =>
+        "\\u" + char.charCodeAt(0).toString(16).padStart(4, "0"));
+      const response = await fetch("https://content.dropboxapi.com/2/files/" + endpoint, {
         method: "POST",
-        headers: { Authorization: "Bearer " + token, "Dropbox-API-Arg": JSON.stringify({ path }) },
+        headers: { Authorization: "Bearer " + token, "Dropbox-API-Arg": apiArg },
       });
-      if (!response.ok) throw new Error("Téléchargement Dropbox indisponible");
+      if (!response.ok) {
+        if (preview) return json({ error: "Aperçu paginé Dropbox indisponible" }, 502);
+        throw new Error("Téléchargement Dropbox indisponible");
+      }
       return new Response(response.body, { headers: { ...cors, "Content-Type": "application/octet-stream", "Cache-Control": "no-store" } });
     }
 

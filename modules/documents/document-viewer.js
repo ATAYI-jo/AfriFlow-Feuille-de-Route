@@ -262,7 +262,23 @@ function renderWord(html,host){
   });
   measure();
 }
+var wordSource;
+function wordHtml(source){
+  if(!source.html)source.html=(async function(){
+    await lib("mammoth");
+    var result=await window.mammoth.convertToHtml({arrayBuffer:await source.blob.arrayBuffer()});
+    return clean(result.value);
+  })().catch(function(error){source.html=null;throw error});
+  return source.html;
+}
+window.dvWordSource=async function(path){
+  var source=wordSource;
+  if(!source||source.path!==path||!source.box.isConnected)return null;
+  var html=await wordHtml(source);
+  return source===wordSource&&source.box.isConnected?html:null;
+};
 async function show(i){
+  wordSource=null;
   var my=++token,box=$("dvView");if(!box)return;
   freeUrls();
   box.innerHTML='<p style="color:var(--muted)">Chargement du document… (un gros fichier peut prendre quelques secondes)</p>';
@@ -297,9 +313,20 @@ var bar='<div class="toolbar"><b>'+name+'</b><div class="toolbar-actions">'+edBt
   else if(e==="docx"){
     box.innerHTML=bar+'<div class="dvp dvp-word-reader"><p>Mise en page…</p></div>';
     var word=box.querySelector(".dvp");
-    await lib("mammoth");
-    var result=await window.mammoth.convertToHtml({arrayBuffer:await blob.arrayBuffer()});
-    if(my===token&&word.isConnected)renderWord(clean(result.value),word);
+    var source=wordSource={path:view.path,blob:blob,box:box};
+    try{
+      var preview=await call({action:"preview",path:view.path});
+      if(!(preview instanceof Blob))throw new Error("Aperçu Dropbox indisponible");
+      await renderPdf(preview,word,my);
+    }catch(error){
+      if(my!==token||!word.isConnected)return;
+      var html=await wordHtml(source);
+      if(my!==token||!word.isConnected)return;
+      renderWord(html,word);
+      var notice=document.createElement("p");
+      notice.textContent="Aperçu Dropbox indisponible. La pagination est adaptée à votre écran.";
+      word.before(notice);
+    }
   }else if(/^(xlsx|xls|csv)$/.test(e)){
     await lib("xlsx");var wb=window.XLSX.read(await blob.arrayBuffer(),{type:"array"});if(my!==token)return;window.__dvWorkbook=wb;
     box.innerHTML=bar+'<div class="auth-tabs" id="dvTabs" style="max-width:none;flex-wrap:wrap">'+wb.SheetNames.map(function(n,k){return '<button type="button" data-sh="'+k+'" class="'+(k?'':'on')+'">'+esc(n)+'</button>'}).join("")+'</div><div class="dv-sheet" id="dvSheet"></div>';
