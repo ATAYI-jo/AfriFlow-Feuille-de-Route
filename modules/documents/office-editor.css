@@ -111,3 +111,14 @@
   #dwApp .dw-page{width:100%!important;min-height:0!important;padding:0!important;box-shadow:none!important}
   #dwApp .dw-rib,#dwApp .dw-tabs,#dwApp .dw-top,#dwApp .dw-status,#dwApp .dw-find,#dwApp .dw-shortcut-strip{display:none!important}
 }
+
+#dvView .af-office-open{display:inline-flex;align-items:center;justify-content:center;min-height:44px;padding:6px 14px;border:1px solid var(--line);border-radius:10px;background:var(--card);color:var(--ink);font-weight:700;text-decoration:none}
+#dvView #dwApp .dw-rib[hidden]{display:none}
+#dwRibbonToggle{margin-inline-start:auto;white-space:nowrap;font-size:.8rem}
+#dvView #dwApp .dw-rib{min-height:0}
+#afExcel .af-cell-tools{display:flex;gap:12px;flex-wrap:wrap;padding:8px 12px;background:#f5fbf5}
+.af-cell-tools label{display:flex;gap:8px;align-items:center;font-weight:600}
+.af-cell-tools label:last-child{flex:1;min-width:min(250px,100%)}
+.af-cell-tools input{background:white;color:#182332;border:1px solid #acbbae;padding:7px;border-radius:6px}
+#afCellAddress{width:7em}
+#afCellFormula{flex:1;min-width:0}

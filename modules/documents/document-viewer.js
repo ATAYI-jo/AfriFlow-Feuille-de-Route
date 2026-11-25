@@ -283,6 +283,12 @@ window.dvWordSource=async function(path){
   var html=await wordHtml(source);
   return source===wordSource&&source.box.isConnected?html:null;
 };
+function officeLink(path,extension){
+  var app={docx:"Word",xlsx:"Excel",pptx:"PowerPoint"}[extension];
+  if(!app||!path.startsWith("/"))return "";
+  var url="https://www.dropbox.com/preview"+path.split("/").map(encodeURIComponent).join("/");
+  return '<a class="af-office-open" href="'+esc(url)+'" target="_blank" rel="noopener noreferrer" title="Dans Dropbox, choisissez Ouvrir avec Microsoft '+app+'">'+app+' via Dropbox ↗</a>';
+}
 async function show(i){
   wordSource=null;
   var my=++token,box=$("dvView");if(!box)return;
@@ -303,13 +309,13 @@ async function show(i){
       l=await call({action:"link",path:replacement});
     }
     if(my!==token||!box.isConnected)return;
-    box.innerHTML='<div class="toolbar"><b>'+name+'</b><div class="toolbar-actions"><button type="button" data-dvp-edit="1">Modifier</button><a href="'+esc(l.link)+'" target="_blank" rel="noopener noreferrer"><button type="button">Télécharger</button></a></div></div><iframe src="https://view.officeapps.live.com/op/embed.aspx?src='+encodeURIComponent(l.link)+'" title="'+name+'"></iframe>';
+    box.innerHTML='<div class="toolbar"><b>'+name+'</b><div class="toolbar-actions"><button type="button" data-dvp-edit="1">Modifier</button>'+officeLink(view.path,e)+'<a href="'+esc(l.link)+'" target="_blank" rel="noopener noreferrer"><button type="button">Télécharger</button></a></div></div><iframe src="https://view.officeapps.live.com/op/embed.aspx?src='+encodeURIComponent(l.link)+'" title="'+name+'"></iframe>';
     return;
   }
   var blob=await getBlob(it.path,view);if(my!==token||!box.isConnected)return;
   var dlu=mkUrl(blob);
   var edBtn=/^(docx|xlsx|pdf)$/.test(e)?'<button type="button" class="p" data-dvp-edit="1">Modifier</button>':'';
-var bar='<div class="toolbar"><b>'+name+'</b><div class="toolbar-actions">'+edBtn+'<a href="'+dlu+'" download="'+fname+'"><button type="button">Télécharger</button></a><button type="button" data-dvp-refresh="1">Actualiser</button></div></div>';
+var bar='<div class="toolbar"><b>'+name+'</b><div class="toolbar-actions">'+edBtn+officeLink(view.path,e)+'<a href="'+dlu+'" download="'+fname+'"><button type="button">Télécharger</button></a><button type="button" data-dvp-refresh="1">Actualiser</button></div></div>';
   if(e==="pdf"){
     box.innerHTML=bar+'<div class="dvp" id="dvpBox"></div>';
     try{await renderPdf(blob,$("dvpBox"),my)}catch(x){if(my===token&&box.querySelector("#dvpBox"))box.querySelector("#dvpBox").innerHTML='<p style="color:#c0392b">Lecture du PDF impossible : '+esc(x.message||x)+'. Utilisez « Télécharger ».</p>'}

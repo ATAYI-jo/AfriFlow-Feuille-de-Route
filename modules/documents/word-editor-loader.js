@@ -5,7 +5,7 @@
 (function () {
   'use strict';
   var promise = null;
-  var url = './modules/documents/word-editor.js?v=20261125-word-preview';
+  var url = './modules/documents/word-editor.js?v=20261125-office-tools';
   function load() {
     if (promise) return promise;
     promise = new Promise(function (resolve, reject) {

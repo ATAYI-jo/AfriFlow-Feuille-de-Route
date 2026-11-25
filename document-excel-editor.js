@@ -10,17 +10,21 @@ window.dvExcelEdit=function(path){
  if(!confirm("Cet éditeur Excel est simplifié. Macros, graphiques, tableaux croisés et certaines mises en forme peuvent être altérés. Une sauvegarde de l'original sera créée dans Dropbox avant chaque enregistrement. Continuer ?"))return;
  if($("afExcel"))$("afExcel").remove();
  var modal=document.createElement("section");modal.id="afExcel";modal.setAttribute("role","dialog");modal.setAttribute("aria-label","Édition Excel");
- modal.innerHTML='<header><strong>Excel · '+txt(path.split("/").pop())+'</strong><button id="afExcelSave" type="button">Enregistrer dans Dropbox</button><button id="afExcelClose" type="button">Fermer</button></header><p>Éditeur simplifié — modifier les cellules, puis enregistrer.</p><nav id="afExcelTabs"></nav><div id="afExcelPaging" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding:8px 12px;background:#f5fbf5"></div><div class="afExcelGrid" id="afExcelGrid"></div><footer id="afExcelStatus">Prêt</footer>';
+ modal.innerHTML='<header><strong>Excel · '+txt(path.split("/").pop())+'</strong><button id="afExcelSave" type="button">Enregistrer dans Dropbox</button><button id="afExcelDownload" type="button">Télécharger</button><button id="afExcelClose" type="button">Fermer</button></header><div class="af-cell-tools"><label>Cellule <input id="afCellAddress" value="A1" maxlength="10" autocomplete="off"></label><label>Valeur ou formule <input id="afCellFormula" autocomplete="off"></label></div><nav id="afExcelTabs"></nav><div id="afExcelPaging" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding:8px 12px;background:#f5fbf5"></div><div class="afExcelGrid" id="afExcelGrid"></div><footer id="afExcelStatus">Prêt</footer>';
  document.body.appendChild(modal);
- var old=document.body.style.overflow;document.body.style.overflow="hidden";var sheetN=0,dirty=false,busy=false,rowStart=0,colStart=0;
+ var old=document.body.style.overflow;document.body.style.overflow="hidden";var sheetN=0,dirty=false,busy=false,rowStart=0,colStart=0,active="A1",revision=0;
  function render(){
    $("afExcelTabs").innerHTML=wb.SheetNames.map(function(n,i){return '<button type="button" data-sheet="'+i+'"'+(i===sheetN?' class="on"':'')+'>'+txt(n)+'</button>'}).join("");
    var sh=wb.Sheets[wb.SheetNames[sheetN]],range=X.utils.decode_range(sh["!ref"]||"A1");
-   var rows=Math.max(30,range.e.r+1),cols=Math.max(10,range.e.c+1);
+   var rows=Math.max(30,range.e.r+1,X.utils.decode_cell(active).r+1),cols=Math.max(10,range.e.c+1,X.utils.decode_cell(active).c+1);
    var rowEnd=Math.max(Math.min(rows,rowStart+100),rowStart+1),colEnd=Math.max(Math.min(cols,colStart+20),colStart+1);
    var pg=$("afExcelPaging");
    pg.innerHTML='<button type="button" data-pg="rp">← 100 lignes</button><button type="button" data-pg="rn">100 lignes →</button><button type="button" data-pg="cp">← 20 colonnes</button><button type="button" data-pg="cn">20 colonnes →</button><span>Lignes '+(rowStart+1)+'–'+rowEnd+' / '+rows+' · Colonnes '+X.utils.encode_col(colStart)+'–'+X.utils.encode_col(colEnd-1)+' / '+cols+'</span>';
-   pg.onclick=function(e){var b=e.target.closest("[data-pg]");if(!b)return;var a=b.dataset.pg;if(a==="rp")rowStart=Math.max(0,rowStart-100);if(a==="rn")rowStart+=100;if(a==="cp")colStart=Math.max(0,colStart-20);if(a==="cn")colStart+=20;render()};
+   pg.querySelector('[data-pg=rp]').disabled=rowStart===0;
+   pg.querySelector('[data-pg=cp]').disabled=colStart===0;
+   pg.querySelector('[data-pg=rn]').disabled=rowEnd>=rows;
+   pg.querySelector('[data-pg=cn]').disabled=colEnd>=cols;
+   pg.onclick=function(e){var b=e.target.closest("[data-pg]");if(!b)return;var a=b.dataset.pg;if(a==="rp")rowStart=Math.max(0,rowStart-100);if(a==="rn")rowStart+=100;if(a==="cp")colStart=Math.max(0,colStart-20);if(a==="cn")colStart+=20;active=X.utils.encode_cell({r:rowStart,c:colStart});render()};
    var out='<table><thead><tr><th></th>';for(var j=colStart;j<colEnd;j++)out+='<th>'+X.utils.encode_col(j)+'</th>';out+='</tr></thead><tbody>';
    for(var r=rowStart;r<rowEnd;r++){
      out+='<tr><th>'+(r+1)+'</th>';
@@ -31,34 +35,64 @@ window.dvExcelEdit=function(path){
      out+='</tr>';
    }
    $("afExcelGrid").innerHTML=out+'</tbody></table>';
-   $("afExcelTabs").onclick=function(e){var b=e.target.closest("[data-sheet]");if(b){sheetN=+b.dataset.sheet;rowStart=0;colStart=0;render()}};
+   $("afExcelTabs").onclick=function(e){var b=e.target.closest("[data-sheet]");if(b){sheetN=+b.dataset.sheet;active="A1";rowStart=0;colStart=0;render()}};
+   var grid=$("afExcelGrid");
+   function sync(input){
+     active=input.dataset.cell;
+     $("afCellAddress").value=active;
+     $("afCellFormula").value=input.value;
+   }
+   sync(grid.querySelector('[data-cell="'+active+'"]'));
+   grid.onfocusin=grid.oninput=function(e){if(e.target.dataset.cell)sync(e.target)};
    $("afExcelGrid").onchange=function(e){
      var input=e.target;if(!input.dataset.cell)return;
      var a=input.dataset.cell,v=input.value,sh=wb.Sheets[wb.SheetNames[sheetN]];
      var cell=sh[a]||{t:"s"};
      if(!v)delete sh[a];
      else if(v.startsWith("=")){cell.t="n";cell.f=v.slice(1);delete cell.v;delete cell.w;sh[a]=cell}
-     else if(/^[-+]?\\d+(\\.\\d+)?$/.test(v)){cell.t="n";cell.v=Number(v);delete cell.f;delete cell.w;sh[a]=cell}
+     else if(/^[-+]?\d+([.,]\d+)?$/.test(v)){cell.t="n";cell.v=Number(v.replace(",","."));delete cell.f;delete cell.w;sh[a]=cell}
      else{cell.t="s";cell.v=v;delete cell.f;delete cell.w;sh[a]=cell}
      var r=X.utils.decode_range(sh["!ref"]||"A1"),pos=X.utils.decode_cell(a);
+     r.s.r=Math.min(r.s.r,pos.r);r.s.c=Math.min(r.s.c,pos.c);
      r.e.r=Math.max(r.e.r,pos.r);r.e.c=Math.max(r.e.c,pos.c);
-     sh["!ref"]=X.utils.encode_range(r);dirty=true;$("afExcelStatus").textContent="Modifications non enregistrées";
+     sh["!ref"]=X.utils.encode_range(r);dirty=true;revision++;$("afExcelStatus").textContent="Modifications non enregistrées";
    };
  }
  render();
+ $("afCellAddress").onkeydown=function(e){
+   if(e.key!=="Enter")return;
+   var address=this.value.trim().toUpperCase();
+   if(!/^[A-Z]{1,3}[1-9][0-9]{0,6}$/.test(address)){this.value=active;return notify("Adresse de cellule invalide.")}
+   var pos=X.utils.decode_cell(address);
+   if(pos.r>=1048576||pos.c>=16384){this.value=active;return notify("Adresse hors de la feuille.")}
+   active=address;rowStart=Math.floor(pos.r/100)*100;colStart=Math.floor(pos.c/20)*20;
+   render();modal.querySelector('[data-cell="'+address+'"]').focus();
+ };
+ $("afCellFormula").onchange=function(){
+   var input=modal.querySelector('[data-cell="'+active+'"]');
+   if(input&&input.value!==this.value){input.value=this.value;input.dispatchEvent(new Event("change",{bubbles:true}))}
+ };
+ $("afCellFormula").onkeydown=function(e){
+   if(e.key==="Enter"){e.preventDefault();modal.querySelector('[data-cell="'+active+'"]').focus()}
+ };
+ $("afExcelDownload").onclick=function(){
+   try{X.writeFile(wb,path.split("/").pop(),{bookType:"xlsx"})}
+   catch(error){notify("Téléchargement impossible : "+error.message)}
+ };
  $("afExcelClose").onclick=function(){
+   if(busy)return;
    if(dirty&&!confirm("Fermer sans enregistrer les modifications ?"))return;
    document.body.style.overflow=old;modal.remove();
    if(window.dvReload)window.dvReload();
  };
  $("afExcelSave").onclick=async function(){
-   if(busy)return;busy=true;this.disabled=true;$("afExcelStatus").textContent="Enregistrement…";
+   if(busy)return;var snapshot=revision;busy=true;this.disabled=true;$("afExcelStatus").textContent="Enregistrement…";
    try{
      var data=X.write(wb,{bookType:"xlsx",type:"array"}),file=new Blob([data],{type:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"});
      var res=await window.__sb.functions.invoke("dropbox-save",{body:{path:path,data:await b64(file)}});
      if(res.error){var msg=res.error.message||"Erreur serveur";try{var j=await res.error.context.json();if(j.error)msg=j.error}catch(x){}throw Error(msg)}
      if(res.data&&res.data.error)throw Error(res.data.error);
-     dirty=false;$("afExcelStatus").textContent="Enregistré (copie précédente conservée)";notify("Document Excel enregistré.");
+     dirty=revision!==snapshot;$("afExcelStatus").textContent=dirty?"Modifications récentes à enregistrer":"Enregistré (copie précédente conservée)";notify("Document Excel enregistré.");
    }catch(e){$("afExcelStatus").textContent="Échec de l'enregistrement";notify("Impossible d'enregistrer : "+(e.message||e))}
    busy=false;$("afExcelSave").disabled=false;
  };

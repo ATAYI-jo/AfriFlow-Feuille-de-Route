@@ -48,8 +48,8 @@ function build(path,orig,html,title){
   app.innerHTML=
    '<div class="dw-top">'+b("save",SV.save,"Enregistrer (Ctrl+S)","dw-q")+b("undo","↶","Annuler","dw-q")+b("redo","↷","Rétablir","dw-q")
     +'<span class="dw-name">'+esc(title)+' — Dropbox</span><span class="dw-st" id="dwSt"></span>'+b("close",SV.close,"Fermer","dw-q")+'</div>'
-   +'<div class="dw-tabs"><span class="dw-tab" data-t="f" role="button" tabindex="0">Fichier</span><span class="dw-tab on" data-t="a" role="button" tabindex="0">Accueil</span><span class="dw-tab" data-t="i" role="button" tabindex="0">Insertion</span><span class="dw-tab" data-t="v" role="button" tabindex="0">Affichage</span><span class="dw-tab" data-t="r" role="button" tabindex="0">Révision</span></div>'
-   +'<div class="dw-shortcut-strip"><strong>⌨ Raccourcis actifs</strong><span>Ctrl+B Gras</span><span>Ctrl+I Italique</span><span>Ctrl+U Souligné</span><span>Ctrl+S Enregistrer</span><span>Ctrl+Z Annuler</span><span>Ctrl+Alt+J Justifier</span><span>Ctrl+F Rechercher</span><button type="button" id="dwHelpBtn">Tous les raccourcis</button></div>'
+   +'<div class="dw-tabs"><span class="dw-tab" data-t="f" role="button" tabindex="0">Fichier</span><span class="dw-tab on" data-t="a" role="button" tabindex="0">Accueil</span><span class="dw-tab" data-t="i" role="button" tabindex="0">Insertion</span><span class="dw-tab" data-t="v" role="button" tabindex="0">Affichage</span><span class="dw-tab" data-t="r" role="button" tabindex="0">Révision</span><button type="button" id="dwRibbonToggle" aria-expanded="true">Réduire les outils</button></div>'
+
    +'<div class="dw-find" id="dwFind" hidden><label>Rechercher <input type="search" id="dwFindText" placeholder="Mot ou expression"></label><button type="button" id="dwFindNext">Suivant</button><label id="dwReplaceBox" hidden>Remplacer par <input id="dwReplaceText" type="text"></label><button type="button" id="dwReplaceBtn" hidden>Remplacer</button><button type="button" id="dwFindClose" aria-label="Fermer la recherche">✕</button></div>'
    +'<div class="dw-rib">'
     +'<div class="dw-pane" data-p="f">'+g("Fichier",row(big("save","save","Enregistrer")+big("dl","dl","Télécharger")+big("close","close","Fermer")))+'</div>'
@@ -65,9 +65,9 @@ function build(path,orig,html,title){
          row(b("insertUnorderedList","•≡","Puces")+b("insertOrderedList","1≡","Numérotation")+b("outdent","⇤","Diminuer le retrait")+b("indent","⇥","Augmenter le retrait")+'<select data-s="lh" aria-label="Interligne" style="width:64px"><option value="">Interl.</option><option>1</option><option>1.15</option><option>1.5</option><option>2</option></select>')
         +row(b("justifyLeft",al("l"),"Aligner à gauche")+b("justifyCenter",al("c"),"Centrer")+b("justifyRight",al("r"),"Aligner à droite")+b("justifyFull",al("j"),"Justifier")))
     +'</div>'
-    +'<div class="dw-pane" data-p="i">'+g("Insertion",row(big("table","table","Tableau")+big("image","image","Image")+big("link","link","Lien")+big("insertHorizontalRule","hr","Ligne")+big("pagebreak","pb","Saut de page")+big("date","date","Date")))+'</div>'
+    +'<div class="dw-pane" data-p="i">'+g("Insertion",row(big("table","table","Tableau")+big("image","image","Image")+big("link","link","Lien")+big("insertHorizontalRule","hr","Ligne")+big("pagebreak","pb","Saut de page")+big("date","date","Date")))+g("Tableau actif",row(b("addRow","Ligne +","Ajouter une ligne après la cellule")+b("addColumn","Colonne +","Ajouter une colonne après la cellule")))+'</div>'
     +'<div class="dw-pane" data-p="v">'+g("Zoom",row(b("zoomout","−","Zoom arrière")+'<select data-s="zoom" aria-label="Zoom" style="width:80px"><option>50</option><option>75</option><option>90</option><option selected>100</option><option>125</option><option>150</option><option>200</option></select>'+b("zoomin","+","Zoom avant")+b("zoom100","100 %","Zoom 100 %")))+'</div>'
-    +'<div class="dw-pane" data-p="r">'+g("Rechercher",row(b("find","🔍 Rechercher","Rechercher dans le document (Ctrl+F)")+b("replace","↔ Remplacer","Rechercher et remplacer")))+g("Document",row(b("selectAll","Tout sélectionner","Sélectionner le document (Ctrl+A)")+b("print","⎙ Imprimer","Imprimer le document")+b("shortcuts","⌨ Raccourcis","Liste des raccourcis")))+'</div>'
+    +'<div class="dw-pane" data-p="r">'+g("Rechercher",row(b("find","Rechercher","Rechercher dans le document (Ctrl+F)")+b("replace","↔ Remplacer","Rechercher et remplacer")))+g("Document",row(b("selectAll","Tout sélectionner","Sélectionner le document (Ctrl+A)")+b("print","⎙ Imprimer","Imprimer le document")+b("shortcuts","Raccourcis","Liste des raccourcis")))+'</div>'
    +'</div>'
    +'<div class="dw-canvas" id="dwCv"><div class="dw-page" id="dwPage" contenteditable="true" spellcheck="true" lang="fr"></div></div>'
    +'<div class="dw-status"><span id="dwPg">Page 1 sur 1</span><span id="dwWc">0 mot</span><span>Français (France)</span><span class="sp"></span><span id="dwZl">100 %</span></div>'
@@ -79,7 +79,7 @@ function build(path,orig,html,title){
   app.scrollIntoView({behavior:"smooth",block:"start"});
   var page=$("dwPage");page.innerHTML=html||"<p><br></p>";
   function setSt(t){var e=$("dwSt");if(e)e.textContent=t||""}
-  function dirty(){st.dirty=true;setSt("Modifié, non enregistré");stats()}
+  function dirty(){st.revision=(st.revision||0)+1;st.dirty=true;setSt("Modifié, non enregistré");stats()}
 
   /* ----- sélection ----- */
   function onSel(){
@@ -107,7 +107,11 @@ function build(path,orig,html,title){
   function stats(){
     var t=(page.innerText||"").trim(),n=t?t.split(/\s+/).length:0;
     $("dwWc").textContent=n+" mot"+(n>1?"s":"");
-    $("dwPg").textContent="Page 1 sur "+Math.max(1,Math.ceil(page.scrollHeight/1123));
+    updatePosition();
+  }
+  function updatePosition(){
+    var canvas=$("dwCv"),distance=canvas.scrollHeight-canvas.clientHeight;
+    $("dwPg").textContent=distance>0?"Position : "+Math.min(100,Math.max(0,Math.round(100*canvas.scrollTop/distance)))+" %":"Document entier";
   }
   function zoom(z){
     z=Math.max(.5,Math.min(2,z));st.zoom=z;page.style.zoom=z;
@@ -134,6 +138,7 @@ function build(path,orig,html,title){
   function toB64(bl){return new Promise(function(ok,ko){var r=new FileReader();r.onload=function(){ok(String(r.result).split(",")[1])};r.onerror=function(){ko(new Error("Lecture impossible"))};r.readAsDataURL(bl)})}
   async function save(){
     if(st.busy)return;
+    var savedRevision=st.revision||0;
     st.busy=true;setSt("Enregistrement dans Dropbox…");
     try{
       var blob=await docBlob(),data=await toB64(blob);
@@ -141,7 +146,8 @@ function build(path,orig,html,title){
       if(r.error){var m=r.error.message||"Erreur";try{var j=await r.error.context.json();if(j&&j.error)m=j.error}catch(x){}throw new Error(m)}
       if(r.data&&r.data.error)throw new Error(r.data.error);
       st.backed=true;
-      st.dirty=false;st.saved=true;
+      st.dirty=(st.revision||0)!==savedRevision;st.saved=true;
+      if(st.dirty){setSt("Modifications récentes à enregistrer");st.busy=false;return}
       var d=new Date();setSt("Enregistré dans Dropbox à "+pad(d.getHours())+":"+pad(d.getMinutes()));toast("Document enregistré dans Dropbox.");
     }catch(e){setSt("Échec de l'enregistrement");toast("Enregistrement impossible : "+(e.message||e))}
     st.busy=false;
@@ -153,6 +159,7 @@ function build(path,orig,html,title){
     }catch(e){toast(e.message||e)}
   }
   function close(){
+    if(st.busy)return toast("Enregistrement en cours.");
     if(st.dirty&&!confirm("Fermer sans enregistrer ? Les modifications seront perdues."))return;
     document.removeEventListener("selectionchange",onSel);document.removeEventListener("keydown",onKey,true);
     app.remove();APP=null;document.body.classList.remove("af-editor-mode");
@@ -188,7 +195,13 @@ function build(path,orig,html,title){
     if(action){e.preventDefault();e.stopImmediatePropagation();action()}
   }
   document.addEventListener("keydown",onKey,true);
-  $("dwHelpBtn").onclick=function(){act("shortcuts")};
+  var ribbonToggle=$("dwRibbonToggle"),ribbon=app.querySelector(".dw-rib");
+  function showRibbon(open){
+    ribbon.hidden=!open;
+    ribbonToggle.setAttribute("aria-expanded",String(open));
+    ribbonToggle.textContent=open?"Réduire les outils":"Afficher les outils";
+  }
+  ribbonToggle.onclick=function(){showRibbon(ribbon.hidden)};
   function searchPanel(replace){
     $("dwFind").hidden=false;
     $("dwReplaceBox").hidden=!replace;
@@ -243,6 +256,21 @@ function build(path,orig,html,title){
         r=Math.min(r,30);k=Math.min(k,12);var t="<table><tbody>";
         for(var i=0;i<r;i++){t+="<tr>";for(var j=0;j<k;j++)t+="<td><br></td>";t+="</tr>"}
         ex("insertHTML",t+"</tbody></table><p><br></p>");return}
+      case "addRow":case "addColumn":{
+        var node=st.rng&&st.rng.startContainer;
+        var cell=node&&(node.nodeType===1?node:node.parentElement).closest("td,th");
+        if(!cell||!page.contains(cell))return toast("Place le curseur dans une cellule du tableau.");
+        var table=cell.closest("table"),rows=Array.from(table.rows),width=cell.parentElement.cells.length;
+        if(rows.some(function(row){return row.cells.length!==width||Array.from(row.cells).some(function(td){return td.colSpan!==1||td.rowSpan!==1})}))
+          return toast("Utilise Word via Dropbox pour modifier les tableaux à cellules fusionnées.");
+        var copy=table.cloneNode(true);
+        if(c==="addRow"){
+          var row=copy.insertRow(cell.parentElement.rowIndex+1);
+          for(var j=0;j<width;j++)row.insertCell().innerHTML="<br>";
+        }else Array.from(copy.rows).forEach(function(row){row.insertCell(cell.cellIndex+1).innerHTML="<br>"});
+        var range=document.createRange();range.selectNode(table);st.rng=range;
+        ex("insertHTML",copy.outerHTML);return;
+      }
       case "image":$("dwImg").click();return;
       case "link":{var u=prompt("Adresse du lien (https://…)");if(u&&/^https?:\/\//i.test(u))ex("createLink",u);return}
       case "pagebreak":ex("insertHTML",'<hr class="dw-pb" style="page-break-after:always"><p><br></p>');return;
@@ -256,7 +284,7 @@ function build(path,orig,html,title){
   app.addEventListener("mousedown",function(e){if(e.target.closest(".dw-b,.dw-q,.dw-tab"))e.preventDefault()});
   app.addEventListener("click",function(e){
     var t=e.target.closest(".dw-tab");
-    if(t){app.querySelectorAll(".dw-tab").forEach(function(x){x.classList.toggle("on",x===t)});app.querySelectorAll(".dw-pane").forEach(function(p){p.classList.toggle("on",p.dataset.p===t.dataset.t)});return}
+    if(t){showRibbon(true);app.querySelectorAll(".dw-tab").forEach(function(x){x.classList.toggle("on",x===t)});app.querySelectorAll(".dw-pane").forEach(function(p){p.classList.toggle("on",p.dataset.p===t.dataset.t)});return}
     var b2=e.target.closest("[data-c]");if(b2)act(b2.dataset.c);
   });
   app.addEventListener("keydown",function(e){
@@ -276,7 +304,7 @@ function build(path,orig,html,title){
     r.onload=function(){var im=new Image();im.onload=function(){
       var k=Math.min(1,900/Math.max(im.width,im.height)),c=document.createElement("canvas");
       c.width=Math.round(im.width*k);c.height=Math.round(im.height*k);c.getContext("2d").drawImage(im,0,0,c.width,c.height);
-      ex("insertImage",c.toDataURL("image/jpeg",.85));
+      ex("insertImage",f.type==="image/jpeg"?c.toDataURL("image/jpeg",.85):c.toDataURL("image/png"));
     };im.src=r.result};r.readAsDataURL(f);
   };
   page.addEventListener("input",dirty);
@@ -284,6 +312,7 @@ function build(path,orig,html,title){
     var h=e.clipboardData&&e.clipboardData.getData("text/html");
     if(h){e.preventDefault();ex("insertHTML",clean(h))}
   });
+  $("dwCv").addEventListener("scroll",updatePosition,{passive:true});
   stats();setSt("Prêt");page.focus();
 }
 

@@ -162,7 +162,7 @@ test('Réunions, feuille de route et décor chargé une seule fois', () => {
 });
 
 test('Éditeur Word chargé à la demande, sans chargement initial du script métier', () => {
-  const tag = '<script src="./modules/documents/word-editor-loader.js?v=20261125-word-preview"></script>';
+  const tag = '<script src="./modules/documents/word-editor-loader.js?v=20261125-office-tools"></script>';
   assert.equal(html.split(tag).length - 1, 1);
   assert.ok(!html.includes('<script src="./modules/documents/word-editor.js?'));
   const source = read('modules/documents/word-editor-loader.js');
