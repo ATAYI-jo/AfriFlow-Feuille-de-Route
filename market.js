@@ -4,7 +4,7 @@
   var DEF_TITLE = "AfriFlow – De l’Afrique vers le monde", HERO_KEY = "pub:markethero", HERO_LS = "afriflow_markethero_v1", EXT = ["jpg", "jpeg", "webp", "png"];
   function readHeroLocal() { try { return JSON.parse(localStorage.getItem(HERO_LS) || "{}") || {}; } catch (error) { return {}; } }
   /* Le bandeau est toujours repris depuis le serveur : aucune ancienne image locale ne réapparaît au rechargement. */
-  var state = { products: [], adminProducts: [], category: "", term: "", catalogOrigin:"", catalogStock:false, catalogSort:"default", context: { kind: "public" }, timers: [], heroTimer: null, rotationTimer: null, rotationStep: 0, heroIdx: 0, imgs: {}, imgErr: {}, hero: {}, aiPolling: {}, partner: null, partnerAdmin: null, disputes: [], disputeFiles: [], disputesAdmin: [], adminDisputeFiles: [], cart: [], favorites: [], currency: { code: "", rates: {}, loading: false } };
+  var state = { products: [], adminProducts: [], category: "", term: "", catalogOrigin:"", catalogStock:false, catalogSort:"default", maxUnitPrice:"", wantedUnits:"", buyingMode:"", context: { kind: "public" }, timers: [], heroTimer: null, rotationTimer: null, rotationStep: 0, heroIdx: 0, imgs: {}, imgErr: {}, hero: {}, aiPolling: {}, partner: null, partnerAdmin: null, disputes: [], disputeFiles: [], disputesAdmin: [], adminDisputeFiles: [], cart: [], favorites: [], currency: { code: "", rates: {}, loading: false } };
 
   function el(id) { return document.getElementById(id); }
   function loadStored(key, fallback) { try { var value = JSON.parse(localStorage.getItem(key) || ""); return Array.isArray(value) ? value : fallback; } catch (error) { return fallback; } }
@@ -151,29 +151,58 @@
   function closeAuth() { var auth = el("auth-screen"); if (auth) auth.classList.add("off"); document.body.classList.remove("af-auth-open"); }
   function categoryList() { var seen = {}; state.products.forEach(function (product) { if (product.category) seen[product.category] = true; }); return Object.keys(seen).sort(); }
   function searchKey(value){return String(value||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLocaleLowerCase("fr").replace(/[^\p{L}\p{N}]+/gu," ").trim();}
-  function clearCatalogFilters(){state.catalogOrigin="";state.catalogStock=false;state.catalogSort="default";}
-  function catalogNarrowed(){return !!(state.favoriteOnly||state.category||state.term.trim()||state.catalogOrigin||state.catalogStock||state.catalogSort!=="default");}
+  function clearCatalogFilters(){state.catalogOrigin="";state.catalogStock=false;state.catalogSort="default";state.maxUnitPrice="";state.wantedUnits="";state.buyingMode="";}
+  function catalogNarrowed(){return !!(state.favoriteOnly||state.category||state.term.trim()||state.catalogOrigin||state.catalogStock||state.catalogSort!=="default"||purchaseFiltered());}
+  function purchaseFiltered(){return !!(state.maxUnitPrice||state.wantedUnits||state.buyingMode);}
+  function hasUnitPrice(product){return Number.isFinite(Number(product.price))&&Number(product.price)>0;}
+  function matchesPurchase(product){
+    if(state.buyingMode==="direct"&&(!hasUnitPrice(product)||!inStock(product)))return false;
+    if(state.buyingMode==="quote"&&(hasUnitPrice(product)||!inStock(product)))return false;
+    if(state.maxUnitPrice){
+      var unit=convertedPrice(product.price,product.currency);
+      if(!hasUnitPrice(product)||!Number.isFinite(unit)||unit>Number(state.maxUnitPrice))return false;
+    }
+    return !state.wantedUnits||Math.max(1,Math.ceil(Number(product.minimum_order_quantity)||1))<=Number(state.wantedUnits);
+  }
   function filteredProducts(){
     var words=searchKey(state.term).split(" ").filter(Boolean);
     var products=state.products.filter(function(p){
-      if(isAnnouncement(p))return !!state.favoriteOnly&&state.favorites.indexOf(p.id)>-1;
+      if(isAnnouncement(p))return !purchaseFiltered()&&!!state.favoriteOnly&&state.favorites.indexOf(p.id)>-1;
       if(state.favoriteOnly&&state.favorites.indexOf(p.id)<0)return false;
       var hay=searchKey([p.name,p.description,p.category,p.origin_country].join(" "));
-      return (!state.category||p.category===state.category)&&(!state.catalogOrigin||p.origin_country===state.catalogOrigin)&&(!state.catalogStock||inStock(p))&&words.every(function(word){return hay.indexOf(word)>-1;});
+      return matchesPurchase(p)&&(!state.category||p.category===state.category)&&(!state.catalogOrigin||p.origin_country===state.catalogOrigin)&&(!state.catalogStock||inStock(p))&&words.every(function(word){return hay.indexOf(word)>-1;});
     });
     if(state.catalogSort==="priceAsc"||state.catalogSort==="priceDesc"){
       var direction=state.catalogSort==="priceAsc"?1:-1;
       products.sort(function(a,b){var x=convertedPrice(a.price,a.currency),y=convertedPrice(b.price,b.currency);return !Number.isFinite(x)?(!Number.isFinite(y)?0:1):!Number.isFinite(y)?-1:direction*(x-y);});
     }else if(state.catalogSort==="available")products.sort(function(a,b){return Number(inStock(b))-Number(inStock(a));});
     else if(state.catalogSort==="newest")products.sort(function(a,b){return String(b.created_at||"").localeCompare(String(a.created_at||""));});
+    else if(words.length){
+      var query=words.join(" ");
+      function relevance(p){
+        var title=searchKey(p.name);
+        if(title===query)return 4;
+        if(title.startsWith(query))return 3;
+        if(title.includes(query))return 2;
+        return words.every(function(word){return title.includes(word)})?1:0;
+      }
+      products.sort(function(a,b){return relevance(b)-relevance(a)});
+    }
     return products;
+  }
+  function purchasingFiltersHtml(){
+    return '<details class="af-buy-filters"'+(purchaseFiltered()?' open':'')+'><summary>Budget et conditions d’achat</summary><form id="afBuyFilters">'+
+      '<label>Prix unitaire maximum ('+esc(currentCurrency())+')<input type="number" name="budget" step="any" min="0" inputmode="decimal" value="'+esc(state.maxUnitPrice)+'"></label>'+
+      '<label>Quantité souhaitée<input type="number" name="units" step="1" min="1" max="1000000" inputmode="numeric" value="'+esc(state.wantedUnits)+'"></label>'+
+      '<label>Mode d’achat<select name="mode"><option value="">Tous</option><option value="direct"'+(state.buyingMode==="direct"?' selected':'')+'>Achat direct</option><option value="quote"'+(state.buyingMode==="quote"?' selected':'')+'>Prix sur devis</option></select></label>'+
+      '<button class="af-market-secondary" type="submit">Appliquer</button></form></details>';
   }
   function catalogFiltersHtml(){
     var commercial=state.products.filter(function(p){return !isAnnouncement(p);});
     function options(values,selected,all){return '<option value="">'+all+'</option>'+values.map(function(v){return '<option value="'+esc(v)+'"'+(v===selected?' selected':'')+'>'+esc(v)+'</option>';}).join("");}
     var origins=Array.from(new Set(commercial.map(function(p){return p.origin_country;}).filter(Boolean))).sort();
     var categories=Array.from(new Set(commercial.map(function(p){return p.category;}).filter(Boolean))).sort();
-    return '<section class="af-catalog-controls" aria-label="Filtrer les produits"><div class="af-catalog-controls-top"><b>Affiner les produits</b><button type="button" id="afCatalogReset" class="af-market-secondary">Réinitialiser</button></div><div class="af-catalog-filter-grid"><label>Catégorie<select id="afCatalogCategory">'+options(categories,state.category,"Toutes les catégories")+'</select></label><label>Origine<select id="afCatalogOrigin">'+options(origins,state.catalogOrigin,"Tous les pays")+'</select></label><label>Trier par<select id="afCatalogSort">'+[["default","Pertinence"],["available","Disponibles en premier"],["newest","Nouveautés"],["priceAsc","Prix croissant"],["priceDesc","Prix décroissant"]].map(function(o){return '<option value="'+o[0]+'"'+(o[0]===state.catalogSort?' selected':'')+'>'+o[1]+'</option>';}).join("")+'</select></label><label class="af-catalog-stock"><input type="checkbox" id="afCatalogStock"'+(state.catalogStock?' checked':'')+'> Disponibles uniquement</label></div></section>';
+    return '<section class="af-catalog-controls" aria-label="Filtrer les produits"><div class="af-catalog-controls-top"><b>Affiner les produits</b><button type="button" id="afCatalogReset" class="af-market-secondary">Réinitialiser</button></div><div class="af-catalog-filter-grid"><label>Catégorie<select id="afCatalogCategory">'+options(categories,state.category,"Toutes les catégories")+'</select></label><label>Origine<select id="afCatalogOrigin">'+options(origins,state.catalogOrigin,"Tous les pays")+'</select></label><label>Trier par<select id="afCatalogSort">'+[["default","Pertinence"],["available","Disponibles en premier"],["newest","Nouveautés"],["priceAsc","Prix croissant"],["priceDesc","Prix décroissant"]].map(function(o){return '<option value="'+o[0]+'"'+(o[0]===state.catalogSort?' selected':'')+'>'+o[1]+'</option>';}).join("")+'</select></label><label class="af-catalog-stock"><input type="checkbox" id="afCatalogStock"'+(state.catalogStock?' checked':'')+'> Disponibles uniquement</label></div>'+purchasingFiltersHtml()+'</section>';
   }
 
   /* ---------- Images : Dropbox (fonction serveur) puis dossier products/ du site ---------- */
@@ -378,17 +407,21 @@
       announcement.querySelector(".af-modal-x").onclick = closeModal; announcement.querySelector("[data-x]").onclick = closeModal; if (p.original_path) scheduleImages(); return;
     }
     var discount = discountPercent(p), facts = salesFacts(p);
-    var available = inStock(p), min=Math.max(1,Math.ceil(Number(p.minimum_order_quantity)||1)), priced=p.price!=null&&p.price!==""&&Number.isFinite(Number(p.price))&&Number(p.price)>0;
-    var m = modal('<button type="button" class="af-modal-x" aria-label="Fermer">×</button><div class="af-detail' + (available ? '' : ' is-out-of-stock') + '"><div class="af-media" data-market-image="' + esc(p.id) + '" data-alt="' + esc(p.name) + '">' + media(p) + (available ? '' : '<span class="af-stock-badge">Rupture de stock</span>') + '</div><div class="af-detail-body">' + (p.promotion_label || discount ? '<span class="af-promo">' + esc(p.promotion_label || "Offre spéciale") + '</span>' : '') + '<div class="af-product-cat">' + esc(p.category) + "</div><h2>" + esc(p.name) + '</h2><div class="af-price-line"><div class="af-product-price">' + esc(formatPrice(p.price, p.currency)) + "</div>" + (discount ? '<span class="af-old-price">' + esc(formatPrice(p.compare_at_price, p.currency)) + '</span><span class="af-discount">-' + discount + '%</span>' : '') + '</div><p>' + esc(p.description || "Produit sélectionné par AfriFlow.") + '</p>' + (facts.length ? '<ul class="af-sales-facts">' + facts.map(function (fact) { return '<li>' + esc(fact) + '</li>'; }).join('') + '</ul>' : '') + (available&&priced?'<div class="af-detail-order"><label for="afDetailQty">Quantité (minimum '+min+')</label><input id="afDetailQty" type="number" min="'+min+'" max="1000000" step="1" value="'+min+'" inputmode="numeric"><p id="afDetailTotal" role="status">Sous-total indicatif : '+esc(formatPrice(Number(p.price)*min,p.currency))+'</p><button type="button" class="af-market-primary" id="afDetailAdd">Ajouter au panier</button></div>':'') + '<div class="af-actions">' + (available ? '<button type="button" class="af-market-secondary" data-q>Demander un devis</button>' : '<span class="af-stock-note">Indisponible pour le moment</span>') + '<button type="button" class="af-market-secondary" data-x>Fermer</button></div></div></div>');
+    var available = inStock(p), min=Math.max(1,Math.ceil(Number(p.minimum_order_quantity)||1)), priced=hasUnitPrice(p);
+    var m = modal('<button type="button" class="af-modal-x" aria-label="Fermer">×</button><div class="af-detail' + (available ? '' : ' is-out-of-stock') + '"><div class="af-media" data-market-image="' + esc(p.id) + '" data-alt="' + esc(p.name) + '">' + media(p) + (available ? '' : '<span class="af-stock-badge">Rupture de stock</span>') + '</div><div class="af-detail-body">' + (p.promotion_label || discount ? '<span class="af-promo">' + esc(p.promotion_label || "Offre spéciale") + '</span>' : '') + '<div class="af-product-cat">' + esc(p.category) + "</div><h2>" + esc(p.name) + '</h2><div class="af-price-line"><div class="af-product-price">' + esc(hasUnitPrice(p)?formatPrice(p.price, p.currency):"Prix sur devis") + "</div>" + (discount ? '<span class="af-old-price">' + esc(formatPrice(p.compare_at_price, p.currency)) + '</span><span class="af-discount">-' + discount + '%</span>' : '') + '</div><p>' + esc(p.description || "Produit sélectionné par AfriFlow.") + '</p>' + (facts.length ? '<ul class="af-sales-facts">' + facts.map(function (fact) { return '<li>' + esc(fact) + '</li>'; }).join('') + '</ul>' : '') + (available&&priced?'<div class="af-detail-order"><label for="afDetailQty">Quantité (minimum '+min+')</label><input id="afDetailQty" type="number" min="'+min+'" max="1000000" step="1" value="'+Math.max(min,Number(state.wantedUnits)||min)+'" inputmode="numeric"><p id="afDetailTotal" role="status">Sous-total indicatif : '+esc(formatPrice(Number(p.price)*Math.max(min,Number(state.wantedUnits)||min),p.currency))+'</p><button type="button" class="af-market-primary" id="afDetailAdd">Ajouter au panier</button></div>':'') + '<div class="af-actions">' + (available ? '<button type="button" class="af-market-secondary" data-q>Demander un devis</button>' : '<span class="af-stock-note">Indisponible pour le moment</span>') + '<button type="button" class="af-market-secondary" data-x>Fermer</button></div></div></div>');
     m.querySelector(".af-modal-x").onclick = closeModal; m.querySelector("[data-x]").onclick = closeModal;
-    var quote = m.querySelector("[data-q]"); if (quote) quote.onclick = function () { closeModal(); openQuote(p); };
+    var quote = m.querySelector("[data-q]"); if (quote) quote.onclick = function () {
+      if(qty&&!qty.reportValidity())return;
+      closeModal();openQuote(p,qty?qty.value:state.wantedUnits);
+    };
     var qty=m.querySelector("#afDetailQty"),add=m.querySelector("#afDetailAdd");if(qty&&add){qty.oninput=function(){var q=Number(qty.value),valid=qty.checkValidity()&&Number.isSafeInteger(q)&&q>=min;add.disabled=!valid;m.querySelector("#afDetailTotal").textContent=valid?"Sous-total indicatif : "+formatPrice(Number(p.price)*q,p.currency):"Quantité minimale : "+min;};add.onclick=function(){if(!qty.reportValidity())return;addToCart(p,Number(qty.value));closeModal();};}
   }
-  function openQuote(p) {
+  function openQuote(p, quantity) {
     if (!inStock(p)) { notice("Ce produit est actuellement en rupture de stock."); return; }
     if (state.context.kind === "public") { notice("Identifiez-vous uniquement pour envoyer votre devis et recevoir la réponse."); openAuth(); return; }
     var m = modal('<button type="button" class="af-modal-x" aria-label="Fermer">×</button><h3>Demander un devis</h3><p class="af-quote-prod">' + esc(p.name) + '</p><label for="afqQ">Quantité souhaitée</label><input id="afqQ" type="text" maxlength="60" placeholder="Ex. 200 sachets"><label for="afqM">Message</label><textarea id="afqM" rows="4" maxlength="1500" placeholder="Pays de livraison, délais, questions…"></textarea><div class="af-actions"><button type="button" class="af-market-primary" id="afqGo">Envoyer ma demande</button><button type="button" class="af-market-secondary" id="afqNo">Annuler</button></div>');
     m.querySelector(".af-modal-x").onclick = closeModal; m.querySelector("#afqNo").onclick = closeModal;
+    m.querySelector("#afqQ").value=quantity||state.wantedUnits||"";
     m.querySelector("#afqGo").onclick = async function () {
       var b = this; b.disabled = true;
       try {
@@ -1269,16 +1302,20 @@
   function productCard(product, i) {
     var discount = discountPercent(product), facts = salesFacts(product), available = inStock(product);
     return '<article class="af-product' + (available ? '' : ' is-out-of-stock') + '" style="--i:' + i + '" tabindex="0" role="button" data-market-detail="' + esc(product.id) + '" aria-label="Voir les détails de ' + esc(product.name) + '"><div class="af-product-media af-media" data-market-image="' + esc(product.id) + '" data-alt="' + esc(product.name) + '">' + media(product) + (product.promotion_label || discount ? '<span class="af-promo">' + esc(product.promotion_label || "Offre spéciale") + '</span>' : '') + favoriteButton(product) + (available ? '' : '<span class="af-stock-badge">Rupture de stock</span>') + "</div>"
-      + '<div class="af-product-body"><div class="af-product-cat">' + esc(product.category) + '</div><h3>' + esc(product.name) + '</h3><div class="af-price-line"><div class="af-product-price">' + esc(formatPrice(product.price, product.currency)) + '</div>' + (discount ? '<span class="af-old-price">' + esc(formatPrice(product.compare_at_price, product.currency)) + '</span><span class="af-discount">-' + discount + '%</span>' : '') + '</div>'
+      + '<div class="af-product-body"><div class="af-product-cat">' + esc(product.category) + '</div><h3>' + esc(product.name) + '</h3><div class="af-price-line"><div class="af-product-price">' + esc(hasUnitPrice(product)?formatPrice(product.price, product.currency):"Prix sur devis") + '</div>' + (discount ? '<span class="af-old-price">' + esc(formatPrice(product.compare_at_price, product.currency)) + '</span><span class="af-discount">-' + discount + '%</span>' : '') + '</div>'
       + '<div class="af-product-meta">' + (product.minimum_order_quantity ? '<span>Min. ' + esc(product.minimum_order_quantity) + ' unité' + (Number(product.minimum_order_quantity) > 1 ? 's' : '') + '</span>' : '<span>Sur demande</span>') + (product.origin_country ? '<span>' + esc(product.origin_country) + '</span>' : '') + '</div><div class="af-verified"><i>✓</i><b>Certifié</b><span>AfriFlow</span></div>'
-      + '<div class="af-card-actions">' + (available ? '<button type="button" class="af-market-primary" data-add-cart="' + esc(product.id) + '">' + icon("bag") + '<span>Ajouter</span></button>' : '<button type="button" class="af-market-unavailable" disabled>Rupture</button>') + '<button type="button" class="af-market-secondary" data-market-detail="' + esc(product.id) + '">Détails</button></div></div></article>';
+      + '<div class="af-card-actions">' + (available ? purchaseButton(product,"Ajouter") : '<button type="button" class="af-market-unavailable" disabled>Rupture</button>') + '<button type="button" class="af-market-secondary" data-market-detail="' + esc(product.id) + '">Détails</button></div></div></article>';
+  }
+  function purchaseButton(p,label){
+    if(!hasUnitPrice(p))return '<button type="button" class="af-market-primary" data-market-quote="'+esc(p.id)+'">Demander un devis</button>';
+    return '<button type="button" class="af-market-primary" data-add-cart="'+esc(p.id)+'">'+icon("bag")+'<span>'+label+'</span></button>';
   }
   function featuredCard(p) {
     var available = inStock(p), discount = discountPercent(p);
     return '<div class="af-feature-wrap"><article class="af-feature' + (available ? '' : ' is-out-of-stock') + '"><div class="af-media af-feature-media" data-market-image="' + esc(p.id) + '" data-alt="' + esc(p.name) + '">' + media(p) + favoriteButton(p) + (available ? '' : '<span class="af-stock-badge">Rupture de stock</span>') + "</div>"
-      + '<div class="af-feature-body"><div class="af-feature-top"><span class="af-chip">' + esc(p.promotion_label || "Produit à la une") + '</span><span class="af-verified"><i>✓</i><b>Certifié</b> <span>AfriFlow</span></span></div><h3>' + esc(p.name) + '</h3><div class="af-feature-pricing"><div class="af-product-price af-big">' + esc(formatPrice(p.price, p.currency)) + '</div>' + (discount ? '<div><span class="af-old-price">' + esc(formatPrice(p.compare_at_price, p.currency)) + '</span><span class="af-discount">-' + discount + '%</span></div>' : '') + '</div><p>' + esc(p.description || "Produit sélectionné par AfriFlow.") + "</p>"
+      + '<div class="af-feature-body"><div class="af-feature-top"><span class="af-chip">' + esc(p.promotion_label || "Produit à la une") + '</span><span class="af-verified"><i>✓</i><b>Certifié</b> <span>AfriFlow</span></span></div><h3>' + esc(p.name) + '</h3><div class="af-feature-pricing"><div class="af-product-price af-big">' + esc(hasUnitPrice(p)?formatPrice(p.price, p.currency):"Prix sur devis") + '</div>' + (discount ? '<div><span class="af-old-price">' + esc(formatPrice(p.compare_at_price, p.currency)) + '</span><span class="af-discount">-' + discount + '%</span></div>' : '') + '</div><p>' + esc(p.description || "Produit sélectionné par AfriFlow.") + "</p>"
       + '<div class="af-feature-meta">' + (p.minimum_order_quantity ? 'Commande minimum : <b>' + esc(p.minimum_order_quantity) + ' unité' + (Number(p.minimum_order_quantity) > 1 ? 's' : '') + '</b>' : 'Quantité sur demande') + (p.origin_country ? ' <span>· Origine : ' + esc(p.origin_country) + '</span>' : '') + '</div><ul class="af-points"><li>Produit contrôlé par AfriFlow</li><li>Devis personnalisé sur demande</li><li>Contact direct avec l’équipe</li></ul>'
-      + '<div class="af-actions">' + (available ? '<button type="button" class="af-market-primary" data-add-cart="' + esc(p.id) + '">' + icon("bag") + '<span>Ajouter au panier</span></button>' : '<button type="button" class="af-market-unavailable" disabled>Rupture de stock</button>') + '<button type="button" class="af-market-secondary" data-market-detail="' + esc(p.id) + '">Voir les détails</button></div></div></article></div>';
+      + '<div class="af-actions">' + (available ? purchaseButton(p,"Ajouter au panier") : '<button type="button" class="af-market-unavailable" disabled>Rupture de stock</button>') + '<button type="button" class="af-market-secondary" data-market-detail="' + esc(p.id) + '">Voir les détails</button></div></div></article></div>';
   }
   function productsHtml(products) {
     if (!products.length) return '<section id="afMarketGrid"><div class="af-market-empty">'+(state.favoriteOnly?"Aucun favori correspondant aux filtres.":"Aucun produit ne correspond à votre recherche pour le moment.")+'</div></section>';
@@ -1305,7 +1342,7 @@
     picks.forEach(function (p) {
       var image = state.imgs[p.id] ? ' style="--slide-img:url(\'' + String(state.imgs[p.id]).replace(/'/g, "%27") + '\')"' : "";
       var discount = discountPercent(p);
-      slides += '<div class="af-slide af-product-slide" data-market-hero="' + esc(p.id) + '"' + image + '><img class="af-hero-watermark" src="logo.svg?v=2" alt=""><div class="af-slide-text"><span class="af-kicker">' + esc(p.promotion_label || "Produit à la une") + '</span><h2>' + esc(p.name) + '</h2><div class="af-slide-price">' + esc(formatPrice(p.price, p.currency)) + '</div>' + (discount ? '<div class="af-slide-deal"><span>' + esc(formatPrice(p.compare_at_price, p.currency)) + '</span><b>−' + discount + '%</b></div>' : '') + '<button type="button" class="af-market-primary" data-market-detail="' + esc(p.id) + '">Découvrir</button></div></div>';
+      slides += '<div class="af-slide af-product-slide" data-market-hero="' + esc(p.id) + '"' + image + '><img class="af-hero-watermark" src="logo.svg?v=2" alt=""><div class="af-slide-text"><span class="af-kicker">' + esc(p.promotion_label || "Produit à la une") + '</span><h2>' + esc(p.name) + '</h2><div class="af-slide-price">' + esc(hasUnitPrice(p)?formatPrice(p.price, p.currency):"Prix sur devis") + '</div>' + (discount ? '<div class="af-slide-deal"><span>' + esc(formatPrice(p.compare_at_price, p.currency)) + '</span><b>−' + discount + '%</b></div>' : '') + '<button type="button" class="af-market-primary" data-market-detail="' + esc(p.id) + '">Découvrir</button></div></div>';
     });
     var dots = picks.length ? '<div class="af-dots">' + [0].concat(picks.map(function (_, i) { return i + 1; })).map(function (i) { return '<button type="button" class="af-dot' + (i === 0 ? " on" : "") + '" data-go="' + i + '" aria-label="Diapositive ' + (i + 1) + '"></button>'; }).join("") + "</div>" : "";
     return '<div class="af-ali-hero" id="afHero"' + bg + ">" + slides + dots + (isAdmin() ? '<button type="button" class="af-hero-pencil" data-act="hero-edit" title="Modifier le texte et l’image du bandeau" aria-label="Modifier le bandeau">✎</button>' : "") + "</div>";
@@ -1821,6 +1858,15 @@
       }
     };
     [["afCatalogCategory","category"],["afCatalogOrigin","catalogOrigin"],["afCatalogSort","catalogSort"],["afCatalogStock","catalogStock"]].forEach(function(pair){var input=el(pair[0]);if(input)input.onchange=function(){state[pair[1]]=input.type==="checkbox"?input.checked:input.value;render();var next=el(pair[0]);if(next)next.focus({preventScroll:true});scrollMarketTo("afProductsTop");};});
+    var buying=el("afBuyFilters");
+    if(buying)buying.onsubmit=function(event){
+      event.preventDefault();
+      state.maxUnitPrice=buying.elements.budget.value;
+      state.wantedUnits=buying.elements.units.value;
+      state.buyingMode=buying.elements.mode.value;
+      render();scrollMarketTo("afProductsTop");
+      var summary=document.querySelector(".af-buy-filters summary");if(summary)summary.focus({preventScroll:true});
+    };
     var reset=el("afCatalogReset");if(reset)reset.onclick=function(){state.category="";state.term="";state.favoriteOnly=false;clearCatalogFilters();render();scrollMarketTo("afProductsTop");};
     var search = el("afMarketSearch"); if (search) search.onsubmit = function (event) { event.preventDefault(); state.favoriteOnly=false; state.term = el("afMarketSearchInput").value; render(); scrollMarketTo("afProductsTop"); };
     document.querySelectorAll("[data-market-category]").forEach(function (button) { button.onclick = function () { state.favoriteOnly=false; state.category = button.dataset.marketCategory || ""; render(); scrollMarketTo("afProductsTop"); }; });
