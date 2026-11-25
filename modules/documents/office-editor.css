@@ -122,3 +122,7 @@
 .af-cell-tools input{background:white;color:#182332;border:1px solid #acbbae;padding:7px;border-radius:6px}
 #afCellAddress{width:7em}
 #afCellFormula{flex:1;min-width:0}
+
+#dwApp .dw-measure {display:grid;gap:3px;font-size:.8rem}
+#dwOutline {max-width:min(18rem,75vw)}
+body.af-editor-mode:has(#dwApp) :is(#afIntroAdminPreviewBtn,#memberHub,#aiBtn) {visibility:hidden!important;pointer-events:none!important}

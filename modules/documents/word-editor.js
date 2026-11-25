@@ -36,6 +36,10 @@ var SV={
 function b(c,h,t,x){return '<span class="dw-b'+(x?" "+x:"")+'" role="button" tabindex="0" data-c="'+c+'" title="'+esc(t||"")+'">'+h+'</span>'}
 function big(c,ic,label){return b(c,SV[ic]+'<span>'+label+'</span>',label,"big")}
 function g(label,inner){return '<div class="dw-g"><div class="dw-gb">'+inner+'</div><div class="dw-gl">'+label+'</div></div>'}
+function measure(label, property, values, unit){
+  return '<label class="dw-measure">'+label+'<select data-s="'+property+'"><option value="">Choisir</option>'+
+    values.map(function(value){return '<option value="'+value+unit+'">'+value+' '+unit+'</option>'}).join("")+'</select></label>';
+}
 function row(h){return '<div class="dw-row">'+h+'</div>'}
 var FONTS=["Calibri","Arial","Times New Roman","Georgia","Courier New","Verdana","Tahoma","Trebuchet MS","Cambria","Garamond"],
     SIZES=[8,9,10,11,12,14,16,18,20,24,28,36,48,72];
@@ -48,7 +52,7 @@ function build(path,orig,html,title){
   app.innerHTML=
    '<div class="dw-top">'+b("save",SV.save,"Enregistrer (Ctrl+S)","dw-q")+b("undo","↶","Annuler","dw-q")+b("redo","↷","Rétablir","dw-q")
     +'<span class="dw-name">'+esc(title)+' — Dropbox</span><span class="dw-st" id="dwSt"></span>'+b("close",SV.close,"Fermer","dw-q")+'</div>'
-   +'<div class="dw-tabs"><span class="dw-tab" data-t="f" role="button" tabindex="0">Fichier</span><span class="dw-tab on" data-t="a" role="button" tabindex="0">Accueil</span><span class="dw-tab" data-t="i" role="button" tabindex="0">Insertion</span><span class="dw-tab" data-t="v" role="button" tabindex="0">Affichage</span><span class="dw-tab" data-t="r" role="button" tabindex="0">Révision</span><button type="button" id="dwRibbonToggle" aria-expanded="true">Réduire les outils</button></div>'
+   +'<div class="dw-tabs"><span class="dw-tab" data-t="f" role="button" tabindex="0">Fichier</span><span class="dw-tab on" data-t="a" role="button" tabindex="0">Accueil</span><span class="dw-tab" data-t="i" role="button" tabindex="0">Insertion</span><span class="dw-tab" data-t="m" role="button" tabindex="0">Mise en page</span><span class="dw-tab" data-t="v" role="button" tabindex="0">Affichage</span><span class="dw-tab" data-t="r" role="button" tabindex="0">Révision</span><button type="button" id="dwRibbonToggle" aria-expanded="true">Réduire les outils</button></div>'
 
    +'<div class="dw-find" id="dwFind" hidden><label>Rechercher <input type="search" id="dwFindText" placeholder="Mot ou expression"></label><button type="button" id="dwFindNext">Suivant</button><label id="dwReplaceBox" hidden>Remplacer par <input id="dwReplaceText" type="text"></label><button type="button" id="dwReplaceBtn" hidden>Remplacer</button><button type="button" id="dwFindClose" aria-label="Fermer la recherche">✕</button></div>'
    +'<div class="dw-rib">'
@@ -66,7 +70,8 @@ function build(path,orig,html,title){
         +row(b("justifyLeft",al("l"),"Aligner à gauche")+b("justifyCenter",al("c"),"Centrer")+b("justifyRight",al("r"),"Aligner à droite")+b("justifyFull",al("j"),"Justifier")))
     +'</div>'
     +'<div class="dw-pane" data-p="i">'+g("Insertion",row(big("table","table","Tableau")+big("image","image","Image")+big("link","link","Lien")+big("insertHorizontalRule","hr","Ligne")+big("pagebreak","pb","Saut de page")+big("date","date","Date")))+g("Tableau actif",row(b("addRow","Ligne +","Ajouter une ligne après la cellule")+b("addColumn","Colonne +","Ajouter une colonne après la cellule")))+'</div>'
-    +'<div class="dw-pane" data-p="v">'+g("Zoom",row(b("zoomout","−","Zoom arrière")+'<select data-s="zoom" aria-label="Zoom" style="width:80px"><option>50</option><option>75</option><option>90</option><option selected>100</option><option>125</option><option>150</option><option>200</option></select>'+b("zoomin","+","Zoom avant")+b("zoom100","100 %","Zoom 100 %")))+'</div>'
+    +'<div class="dw-pane" data-p="m">'+g("Retraits",row(measure("Gauche","marginLeft",[0,.5,1,1.5,2],"cm")+measure("Droite","marginRight",[0,.5,1,1.5,2],"cm")))+g("Espacement des paragraphes",row(measure("Avant","marginTop",[0,3,6,12,18,24],"pt")+measure("Après","marginBottom",[0,3,6,12,18,24],"pt")))+'</div>'
+    +'<div class="dw-pane" data-p="v">'+g("Navigation",row('<select id="dwOutline" aria-label="Accéder à un titre"></select>'))+g("Zoom",row(b("zoomout","−","Zoom arrière")+'<select data-s="zoom" aria-label="Zoom" style="width:80px"><option>50</option><option>75</option><option>90</option><option selected>100</option><option>125</option><option>150</option><option>200</option></select>'+b("zoomin","+","Zoom avant")+b("zoom100","100 %","Zoom 100 %")))+'</div>'
     +'<div class="dw-pane" data-p="r">'+g("Rechercher",row(b("find","Rechercher","Rechercher dans le document (Ctrl+F)")+b("replace","↔ Remplacer","Rechercher et remplacer")))+g("Document",row(b("selectAll","Tout sélectionner","Sélectionner le document (Ctrl+A)")+b("print","⎙ Imprimer","Imprimer le document")+b("shortcuts","Raccourcis","Liste des raccourcis")))+'</div>'
    +'</div>'
    +'<div class="dw-canvas" id="dwCv"><div class="dw-page" id="dwPage" contenteditable="true" spellcheck="true" lang="fr"></div></div>'
@@ -78,6 +83,19 @@ function build(path,orig,html,title){
   document.body.classList.add("af-editor-mode");
   app.scrollIntoView({behavior:"smooth",block:"start"});
   var page=$("dwPage");page.innerHTML=html||"<p><br></p>";
+  var outline=$("dwOutline"),headings=[];
+  function refreshOutline(){
+    headings=Array.from(page.querySelectorAll("h1,h2,h3,h4,h5,h6")).filter(function(el){return el.textContent.trim()});
+    outline.replaceChildren(new Option(headings.length?"Accéder à un titre…":"Aucun titre dans le document",""));
+    headings.forEach(function(el,index){outline.add(new Option(el.textContent.trim(),String(index)))});
+    outline.disabled=!headings.length;
+  }
+  outline.onchange=function(){
+    var heading=headings[this.selectedIndex-1];if(!heading)return;
+    page.focus();var range=document.createRange();range.selectNodeContents(heading);range.collapse(true);
+    var selection=window.getSelection();selection.removeAllRanges();selection.addRange(range);onSel();
+    heading.scrollIntoView({block:"center"});this.selectedIndex=0;
+  };
   function setSt(t){var e=$("dwSt");if(e)e.textContent=t||""}
   function dirty(){st.revision=(st.revision||0)+1;st.dirty=true;setSt("Modifié, non enregistré");stats()}
 
@@ -120,7 +138,7 @@ function build(path,orig,html,title){
   }
   function blocks(){
     var s=window.getSelection(),out=[];if(!s.rangeCount)return out;var r=s.getRangeAt(0);
-    page.querySelectorAll("p,h1,h2,h3,h4,li").forEach(function(x){if(r.intersectsNode(x))out.push(x)});
+    page.querySelectorAll("p,h1,h2,h3,h4,h5,h6,li").forEach(function(x){if(r.intersectsNode(x))out.push(x)});
     return out;
   }
   function setSize(pt){
@@ -284,7 +302,7 @@ function build(path,orig,html,title){
   app.addEventListener("mousedown",function(e){if(e.target.closest(".dw-b,.dw-q,.dw-tab"))e.preventDefault()});
   app.addEventListener("click",function(e){
     var t=e.target.closest(".dw-tab");
-    if(t){showRibbon(true);app.querySelectorAll(".dw-tab").forEach(function(x){x.classList.toggle("on",x===t)});app.querySelectorAll(".dw-pane").forEach(function(p){p.classList.toggle("on",p.dataset.p===t.dataset.t)});return}
+    if(t){if(t.dataset.t==="v")refreshOutline();showRibbon(true);app.querySelectorAll(".dw-tab").forEach(function(x){x.classList.toggle("on",x===t)});app.querySelectorAll(".dw-pane").forEach(function(p){p.classList.toggle("on",p.dataset.p===t.dataset.t)});return}
     var b2=e.target.closest("[data-c]");if(b2)act(b2.dataset.c);
   });
   app.addEventListener("keydown",function(e){
@@ -295,7 +313,15 @@ function build(path,orig,html,title){
     if(s==="style")ex("formatBlock","<"+t.value+">");
     else if(s==="font"&&t.value)ex("fontName",t.value);
     else if(s==="size"&&t.value)setSize(+t.value);
-    else if(s==="lh"&&t.value){page.focus();if(st.rng){var se=window.getSelection();se.removeAllRanges();se.addRange(st.rng)}blocks().forEach(function(x){x.style.lineHeight=t.value});dirty()}
+    else if(["lh","marginLeft","marginRight","marginTop","marginBottom"].includes(s)&&t.value){
+      page.focus();
+      if(st.rng){var selection=window.getSelection();selection.removeAllRanges();selection.addRange(st.rng)}
+      var targets=blocks();
+      if(!targets.length){toast("Sélectionne un paragraphe dans le document.");return}
+      var property=s==="lh"?"lineHeight":s;
+      targets.forEach(function(block){block.style[property]=t.value});dirty();
+      if(s!=="lh")t.selectedIndex=0;
+    }
     else if(s==="zoom")zoom(+t.value/100);
   });
   app.addEventListener("input",function(e){var t=e.target;if(t.dataset&&t.dataset.k)ex(t.dataset.k,t.value)});
