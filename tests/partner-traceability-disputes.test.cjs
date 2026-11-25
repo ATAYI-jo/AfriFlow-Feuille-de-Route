@@ -9,7 +9,7 @@ test('Partner graph uses recorded sales and does not add different currencies',(
 test('Allocation trace exposes missing batch rather than inventing one',()=>{
  assert.match(market,/function partnerTraceHtml\(orders,reports,products\)/);
  assert.match(market,/Numéro de lot : non renseigné/);
- assert.match(market,/Dates détaillées de préparation, transport et livraison/);
+ assert.match(market,/dates détaillées de préparation, transport et livraison/i);
 });
 test('Partner can file a dispute and admin can review it',()=>{
  assert.match(market,/id="afPartnerDisputeForm"/);

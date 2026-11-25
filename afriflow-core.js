@@ -142,7 +142,7 @@ function renderAuthStep(){
   $("authEmailInput").style.display=emailStep ? "" : "none";
   $("authPasswordRow").style.display=passwordStep ? "" : "none";
   $("authPassword2Row").style.display=register && passwordStep ? "" : "none";
-  $("authForgot").style.display=!register && passwordStep ? "" : "none";
+  $("authForgot").style.display=!register && (emailStep || passwordStep) ? "" : "none";
   $("authCaptcha").style.display=""; setTimeout(mountCaptcha,0);
   $("authBtn").style.display=passwordStep ? "" : "none";
   $("authNext").style.display=passwordStep ? "none" : "";
@@ -186,7 +186,7 @@ function passwordSafetyMessage(password){
 }
 async function requestPasswordReset(){
   var email=$("authEmailInput").value.trim().toLowerCase(), err=$("authError"), button=$("authForgot");
-  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){err.style.color="";err.textContent="Indiquez votre adresse email pour recevoir le lien.";$("authEmailInput").focus();return;}
+  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){AUTH_STEP=2;renderAuthStep();err.style.color="";err.textContent="Indiquez votre adresse email pour recevoir le lien.";$("authEmailInput").focus();return;}
   if(!SB()){err.textContent="Service de comptes indisponible.";return;}
   button.disabled=true; err.textContent="";
   try{

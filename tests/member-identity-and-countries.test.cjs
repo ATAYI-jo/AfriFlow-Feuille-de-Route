@@ -30,5 +30,5 @@ test("ISO country selections are separate from market",()=>{
  assert.match(countries,/FR/);
  assert.match(profile,/pf_countryCode/);
  assert.match(profile,/country_code:countryCode/);
- assert.match(admin,/market_name:market,country_code:/);
+ assert.match(admin,/market_name:market,\s*country_code:/);
 });

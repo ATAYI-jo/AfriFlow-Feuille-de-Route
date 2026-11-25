@@ -312,7 +312,7 @@ async function show(i){
 var bar='<div class="toolbar"><b>'+name+'</b><div class="toolbar-actions">'+edBtn+'<a href="'+dlu+'" download="'+fname+'"><button type="button">Télécharger</button></a><button type="button" data-dvp-refresh="1">Actualiser</button></div></div>';
   if(e==="pdf"){
     box.innerHTML=bar+'<div class="dvp" id="dvpBox"></div>';
-    try{await renderPdf(blob,$("dvpBox"),my)}catch(x){if(my===token&&box.isConnected)$("dvpBox").innerHTML='<p style="color:#c0392b">Lecture du PDF impossible : '+esc(x.message||x)+'. Utilisez « Télécharger ».</p>'}
+    try{await renderPdf(blob,$("dvpBox"),my)}catch(x){if(my===token&&box.querySelector("#dvpBox"))box.querySelector("#dvpBox").innerHTML='<p style="color:#c0392b">Lecture du PDF impossible : '+esc(x.message||x)+'. Utilisez « Télécharger ».</p>'}
   }else if(/^(png|jpe?g|gif|webp|svg)$/.test(e))box.innerHTML=bar+'<img src="'+mkUrl(new Blob([blob],{type:MIME[e]}))+'" alt="'+name+'">';
   else if(/^(mp4|webm)$/.test(e))box.innerHTML=bar+'<video src="'+mkUrl(new Blob([blob],{type:MIME[e]}))+'" controls></video>';
   else if(e==="mp3")box.innerHTML=bar+'<audio src="'+mkUrl(new Blob([blob],{type:MIME[e]}))+'" controls style="width:100%"></audio>';
@@ -334,7 +334,7 @@ var bar='<div class="toolbar"><b>'+name+'</b><div class="toolbar-actions">'+edBt
       word.before(notice);
     }
   }else if(/^(xlsx|xls|csv)$/.test(e)){
-    await lib("xlsx");var wb=window.XLSX.read(await blob.arrayBuffer(),{type:"array"});if(my!==token)return;window.__dvWorkbook=wb;
+    await lib("xlsx");var wb=window.XLSX.read(await blob.arrayBuffer(),{type:"array"});if(my!==token||!box.isConnected)return;window.__dvWorkbook=wb;
     box.innerHTML=bar+'<div class="auth-tabs" id="dvTabs" style="max-width:none;flex-wrap:wrap">'+wb.SheetNames.map(function(n,k){return '<button type="button" data-sh="'+k+'" class="'+(k?'':'on')+'">'+esc(n)+'</button>'}).join("")+'</div><div class="dv-sheet" id="dvSheet"></div>';
     var showS=function(k){$("dvSheet").innerHTML=window.XLSX.utils.sheet_to_html(wb.Sheets[wb.SheetNames[k]]);$("dvTabs").querySelectorAll("button").forEach(function(b){b.classList.toggle("on",+b.dataset.sh===k)})};
     showS(0);$("dvTabs").onclick=function(ev){var b=ev.target.closest("[data-sh]");if(b)showS(+b.dataset.sh)};

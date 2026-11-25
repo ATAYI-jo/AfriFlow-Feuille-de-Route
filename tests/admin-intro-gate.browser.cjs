@@ -2,7 +2,8 @@ const http = require('node:http');
 const fs = require('node:fs');
 const path = require('node:path');
 const assert = require('node:assert/strict');
-const puppeteer = require(path.join(process.env.LOCALAPPDATA, 'npm-cache', '_npx', '4b4c857f6efdfb61', 'node_modules', 'puppeteer'));
+const { chromium } = require('playwright');
+const test = require('node:test');
 const root = path.resolve(__dirname, '..');
 const html = '<!doctype html><html><head><meta charset="utf-8"><script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.164.1/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.164.1/examples/jsm/"}}</script></head><body><script>var USER_ROLE="reader",loggedUserEmail="";</script><script defer src="/avatar-3d/admin-intro-preview.js"></script></body></html>';
 const server = http.createServer((req,res)=>{
@@ -11,9 +12,9 @@ const server = http.createServer((req,res)=>{
   if(!file.startsWith(root+path.sep)){res.writeHead(403);res.end();return;}
   fs.readFile(file,(err,data)=>{if(err){res.writeHead(404);res.end();return;}res.setHeader('Content-Type',file.endsWith('.js')?'text/javascript':'application/octet-stream');res.end(data);});
 });
-(async()=>{
+test('3D preview is available only to a signed-in administrator',async()=>{
   await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
-  const browser=await puppeteer.launch({headless:true,args:['--no-sandbox']});
+  const browser=await chromium.launch({headless:true,args:['--no-sandbox']});
   try{
     const page=await browser.newPage();
     await page.goto('http://127.0.0.1:'+server.address().port+'/');
@@ -32,4 +33,4 @@ const server = http.createServer((req,res)=>{
     console.log('PASS: reader denied, unverified event denied, admin shown, logout hidden.');
     await page.close();
   }finally{await browser.close();await new Promise(resolve=>server.close(resolve));}
-})().catch(error=>{console.error(error);process.exitCode=1;server.close();});
+});

@@ -6,8 +6,8 @@ const core=read("afriflow-core.js");
 test("Last route is scoped to the signed-in account and restored after auth",()=>{
   assert.match(workspace,/LAST_VIEW_KEY="afriflow_last_view_v1"/);
   assert.match(workspace,/v\.email===String\(window\.loggedUserEmail\|\|""\)\.toLowerCase\(\)/);
-  assert.match(workspace,/window\.onRole=function\(\)\{buildNav\(\);if\(!viewRestored\)restorePreviousView\(\)/);
-  assert.match(workspace,/if\(saved\.id==="admin"&&!isAdmin\(\)\)return/);
+  assert.match(workspace,/window\.onRole=function\(\)\{\s*buildNav\(\);\s*if\(!viewRestored\)restorePreviousView\(\)/);
+  assert.match(workspace,/if\(\(saved\.id==="admin"\|\|saved\.id==="partners"\)&&!isAdmin\(\)\)return/);
 });
 test("Marketplace, personal register and workspace sections retain their navigation",()=>{
   assert.match(workspace,/rememberView\("market"\)/);

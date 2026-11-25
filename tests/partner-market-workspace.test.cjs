@@ -5,7 +5,7 @@ const sql=read("supabase/migrations/20261122150000_partner_market_assignments.sq
 test("Dedicated Partners page is admin-only and survives reload",()=>{
  assert.match(work,/base\.push\(\{id:"partners",n:"Partenaires"\}\)/);
  assert.match(work,/if\(\(id==="admin"\|\|id==="partners"\)&&!isAdmin\(\)\)/);
- assert.match(work,/if\(id==="admin"\)renAdmin\(\);else if\(id==="partners"\)renPartners\(\)/);
+ assert.match(work,/if\(id==="admin"\)\{adminSection="overview";renAdmin\(\);\}else if\(id==="partners"\)renPartners\(\)/);
  assert.match(work,/saved\.id==="partners"/);
 });
 test("Each commercial partner has a market and traceable requests",()=>{

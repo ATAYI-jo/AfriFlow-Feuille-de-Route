@@ -230,16 +230,16 @@ window.ic=function(n,s){return '<svg class="ic"'+(s?' style="width:'+s+';height:
     <button type="button" class="oauth" data-p="facebook">Continuer avec Facebook</button>
     <button type="button" class="oauth" data-p="apple">Continuer avec Apple</button>
     <div class="or"><span>ou</span></div>
-    <input type="text" id="authName" placeholder="Nom complet" autocomplete="name" style="display:none">
+    <input type="text" id="authName" aria-label="Nom complet" placeholder="Nom complet" autocomplete="name" style="display:none">
     <label id="authMarketRoleLabel" for="authMarketRole" style="display:block;text-align:left;font-size:.85rem;color:var(--muted);margin:0 0 6px">Vous accédez à la Marketplace comme</label>
     <select id="authMarketRole" style="width:100%;padding:12px 16px;margin-bottom:14px;font:inherit"><option value="client">Client</option><option value="shareholder">Actionnaire</option><option value="partner">Partenaire</option></select>
-    <input type="text" id="authEmailInput" placeholder="E-mail ou identifiant AF-000001" autocomplete="username" autocapitalize="off" autocorrect="off" spellcheck="false">
-    <div class="auth-password-row" id="authPasswordRow"><input type="password" id="authPasswordInput" placeholder="Mot de passe" autocomplete="current-password" autocapitalize="off" autocorrect="off" spellcheck="false"><button type="button" class="auth-password-toggle" data-password-toggle="authPasswordInput" aria-label="Afficher le mot de passe" aria-pressed="false"><svg class="ic" aria-hidden="true"><use href="#i-eye"></use></svg></button></div>
-    <div class="auth-password-row" id="authPassword2Row" style="display:none"><input type="password" id="authPassword2" placeholder="Confirmez le mot de passe" autocomplete="new-password" autocapitalize="off" autocorrect="off" spellcheck="false"><button type="button" class="auth-password-toggle" data-password-toggle="authPassword2" aria-label="Afficher le mot de passe de confirmation" aria-pressed="false"><svg class="ic" aria-hidden="true"><use href="#i-eye"></use></svg></button></div>
+    <input type="text" id="authEmailInput" aria-label="E-mail ou identifiant AfriFlow" placeholder="E-mail ou identifiant AF-000001" autocomplete="username" autocapitalize="off" autocorrect="off" spellcheck="false">
+    <div class="auth-password-row" id="authPasswordRow"><input type="password" id="authPasswordInput" aria-label="Mot de passe" placeholder="Mot de passe" autocomplete="current-password" autocapitalize="off" autocorrect="off" spellcheck="false"><button type="button" class="auth-password-toggle" data-password-toggle="authPasswordInput" aria-label="Afficher le mot de passe" aria-pressed="false"><svg class="ic" aria-hidden="true"><use href="#i-eye"></use></svg></button></div>
+    <div class="auth-password-row" id="authPassword2Row" style="display:none"><input type="password" id="authPassword2" aria-label="Confirmation du mot de passe" placeholder="Confirmez le mot de passe" autocomplete="new-password" autocapitalize="off" autocorrect="off" spellcheck="false"><button type="button" class="auth-password-toggle" data-password-toggle="authPassword2" aria-label="Afficher le mot de passe de confirmation" aria-pressed="false"><svg class="ic" aria-hidden="true"><use href="#i-eye"></use></svg></button></div>
     <button type="button" class="auth-forgot" id="authForgot">Mot de passe oublié&nbsp;?</button>
     <div id="authRecoveryFields" style="display:none">
-      <div class="auth-password-row"><input type="password" id="authNewPassword" placeholder="Nouveau mot de passe" autocomplete="new-password" autocapitalize="off" autocorrect="off" spellcheck="false"><button type="button" class="auth-password-toggle" data-password-toggle="authNewPassword" aria-label="Afficher le nouveau mot de passe" aria-pressed="false"><svg class="ic" aria-hidden="true"><use href="#i-eye"></use></svg></button></div>
-      <div class="auth-password-row"><input type="password" id="authNewPassword2" placeholder="Confirmez le nouveau mot de passe" autocomplete="new-password" autocapitalize="off" autocorrect="off" spellcheck="false"><button type="button" class="auth-password-toggle" data-password-toggle="authNewPassword2" aria-label="Afficher la confirmation du nouveau mot de passe" aria-pressed="false"><svg class="ic" aria-hidden="true"><use href="#i-eye"></use></svg></button></div>
+      <div class="auth-password-row"><input type="password" id="authNewPassword" aria-label="Nouveau mot de passe" placeholder="Nouveau mot de passe" autocomplete="new-password" autocapitalize="off" autocorrect="off" spellcheck="false"><button type="button" class="auth-password-toggle" data-password-toggle="authNewPassword" aria-label="Afficher le nouveau mot de passe" aria-pressed="false"><svg class="ic" aria-hidden="true"><use href="#i-eye"></use></svg></button></div>
+      <div class="auth-password-row"><input type="password" id="authNewPassword2" aria-label="Confirmation du nouveau mot de passe" placeholder="Confirmez le nouveau mot de passe" autocomplete="new-password" autocapitalize="off" autocorrect="off" spellcheck="false"><button type="button" class="auth-password-toggle" data-password-toggle="authNewPassword2" aria-label="Afficher la confirmation du nouveau mot de passe" aria-pressed="false"><svg class="ic" aria-hidden="true"><use href="#i-eye"></use></svg></button></div>
       <button type="button" id="authResetBtn">Enregistrer le nouveau mot de passe</button>
     </div>
     <div id="authCaptcha" class="auth-captcha" aria-live="polite"></div>
@@ -396,7 +396,7 @@ window.ic=function(n,s){return '<svg class="ic"'+(s?' style="width:'+s+';height:
   </div>
 </div>
 
-<script src="./afriflow-core.js?v=20261124-auth-compact-v2"></script>
+<script src="./afriflow-core.js?v=20261125-quality-1"></script>
 <script type="importmap">
 {"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.164.1/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.164.1/examples/jsm/"}}
 </script>
@@ -1928,7 +1928,7 @@ sweep(document.body);
 .dv-sheet table{border-collapse:collapse;font-size:.88rem}.dv-sheet td,.dv-sheet th{border:1px solid #ccc;padding:4px 8px;white-space:nowrap}
 .dv-txt{background:#fff;color:#000;border-radius:12px;padding:20px;max-height:72vh;overflow:auto;white-space:pre-wrap;font-size:.9rem}
 </style>
-<script src="./modules/documents/document-viewer.js?v=20261125-mobile-reader"></script>
+<script src="./modules/documents/document-viewer.js?v=20261125-quality-1"></script>
   <style>
 body .border-sign{display:block!important;width:max-content;max-width:94%;padding:0!important;margin:-4px auto!important;background:none!important;border:0!important;box-shadow:none!important;-webkit-backdrop-filter:none!important;backdrop-filter:none!important}
 .bs-wrap{margin-top:18px;padding:0 26px 8px;border-radius:22px;text-align:center;background:color-mix(in srgb,var(--card) 62%,transparent);-webkit-backdrop-filter:blur(22px);backdrop-filter:blur(22px);border:1px solid var(--g-neutral-edge,rgba(255,255,255,.5));box-shadow:0 10px 30px rgba(0,0,0,.12),inset 0 1px 0 rgba(255,255,255,.5)}
@@ -2638,121 +2638,7 @@ if(window.__sb&&window.__sb.functions){
 <script src="document-permissions.js" defer></script>
 <script src="document-urgency.js" defer></script>
 
-<style id="af-embedded-office-style">
-/* Éditeur de documents dans la page AfriFlow, et non fenêtre plein écran */
-#dvView #dwApp{
-  position:relative!important;inset:auto!important;z-index:1!important;
-  width:100%;height:min(84vh,1150px);min-height:600px;
-  margin:16px 0 32px;border-radius:23px;overflow:hidden;
-  background:color-mix(in srgb,var(--card) 82%,transparent)!important;
-  color:var(--ink)!important;
-  border:1px solid color-mix(in srgb,var(--ink) 14%,transparent);
-  box-shadow:0 18px 50px rgba(0,0,0,.15);
-  -webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);
-}
-#dvView #dwApp .dw-top{
-  height:58px;min-height:58px;gap:10px;padding:10px 18px;
-  background:color-mix(in srgb,var(--card) 78%,transparent)!important;
-  color:var(--ink)!important;border-bottom:1px solid var(--line);
-}
-#dvView #dwApp .dw-name{font-weight:800;font-size:1rem;text-align:left}
-#dvView #dwApp .dw-top .dw-st{font-weight:650}
-#dvView #dwApp .dw-top .dw-q{
-  color:var(--ink);background:color-mix(in srgb,var(--card) 90%,transparent);
-  border:1px solid var(--line);border-radius:10px;min-width:36px;height:36px
-}
-#dvView #dwApp .dw-top .dw-q:hover{background:color-mix(in srgb,var(--ink) 12%,var(--card))}
-#dvView #dwApp .dw-top .dw-q svg{stroke:currentColor}
-#dvView #dwApp .dw-tabs{
-  background:transparent!important;color:var(--ink)!important;
-  padding:10px 14px 0;gap:6px;overflow-x:auto;flex-shrink:0;
-}
-#dvView #dwApp .dw-tab{
-  color:var(--ink);font-size:14px;font-weight:700;
-  background:color-mix(in srgb,var(--card) 74%,transparent);
-  border:1px solid var(--line);border-radius:12px 12px 0 0;
-  padding:9px 16px;white-space:nowrap;
-}
-#dvView #dwApp .dw-tab.on{
-  color:var(--ink);background:color-mix(in srgb,var(--card) 94%,transparent);
-  border-bottom-color:transparent;
-}
-#dvView #dwApp .dw-rib{
-  flex-shrink:0;min-height:116px;max-height:184px;
-  background:color-mix(in srgb,var(--card) 88%,transparent)!important;
-  border:1px solid var(--line);margin:0 14px 12px;
-  border-radius:0 15px 15px 15px;padding:9px 11px;overflow:auto;
-}
-#dvView #dwApp .dw-pane{min-width:max-content;gap:6px}
-#dvView #dwApp .dw-g{border-color:var(--line)}
-#dvView #dwApp .dw-gl{color:var(--muted)}
-#dvView #dwApp .dw-row{gap:5px}
-#dvView #dwApp .dw-b{
-  color:var(--ink);border:1px solid var(--line);
-  background:color-mix(in srgb,var(--card) 92%,transparent);
-  padding:4px 9px;border-radius:10px;height:34px;min-width:34px;
-}
-#dvView #dwApp .dw-b:hover{background:color-mix(in srgb,var(--ink) 12%,var(--card))}
-#dvView #dwApp .dw-b.on{background:color-mix(in srgb,var(--green) 28%,var(--card));border-color:var(--green)}
-#dvView #dwApp select,#dvView #dwApp input:not([type="color"]){
-  background:var(--card);color:var(--ink);border:1px solid var(--line);
-  min-height:32px;border-radius:10px;padding:4px 9px;
-}
-#dvView #dwApp .dw-shortcut-strip{
-  display:flex;align-items:center;gap:12px;overflow-x:auto;
-  flex-shrink:0;padding:8px 14px;color:var(--ink);
-  background:color-mix(in srgb,var(--green) 9%,var(--card));
-  border-bottom:1px solid var(--line);white-space:nowrap;font-size:11px
-}
-#dvView #dwApp .dw-shortcut-strip strong{
-  padding:5px 9px;border-radius:8px;
-  background:var(--green);color:#fff;font-size:11px
-}
-#dvView #dwApp .dw-shortcut-strip button{
-  border:1px solid var(--line);border-radius:8px;
-  background:var(--card);color:var(--ink);padding:5px 9px;font-size:11px
-}
-#dvView #dwApp .dw-find{
-  display:flex;align-items:center;gap:8px;flex-wrap:wrap;
-  padding:8px 16px;background:var(--card);
-  border-bottom:1px solid var(--line);flex-shrink:0
-}
-#dvView #dwApp .dw-find[hidden]{display:none!important}
-#dvView #dwApp .dw-find label{display:flex;align-items:center;gap:8px}
-#dvView #dwApp .dw-find button{
-  background:color-mix(in srgb,var(--card) 87%,transparent);
-  border:1px solid var(--line);color:var(--ink);
-  border-radius:8px;padding:7px 10px
-}
-#dvView #dwApp .dw-canvas{
-  flex:1;min-height:220px;background:color-mix(in srgb,var(--bg) 85%,#ddd);
-  padding:28px 18px 55px;overflow:auto
-}
-#dvView #dwApp .dw-page{
-  background:#fff;color:#111;width:min(794px,100%);margin:0 auto;
-  border-radius:3px;min-height:1123px;
-  box-shadow:0 3px 25px rgba(0,0,0,.15)
-}
-#dvView #dwApp .dw-status{
-  flex-shrink:0;height:33px;padding:0 16px;background:var(--card)!important;
-  color:var(--ink)!important;border-top:1px solid var(--line)
-}
-@media(max-width:750px){
-  #dvView #dwApp{height:78vh;min-height:460px}
-  #dvView #dwApp .dw-top{padding:8px 10px;min-height:52px}
-  #dvView #dwApp .dw-rib{margin:0 8px 8px;min-height:105px}
-  #dvView #dwApp .dw-canvas{padding:12px 8px 28px}
-  #dvView #dwApp .dw-page{min-height:650px;padding:30px 20px}
-}
-@media print{
-  body.af-editor-mode *{visibility:hidden!important}
-  #dwApp,#dwApp .dw-canvas,#dwApp .dw-page,#dwApp .dw-page *{visibility:visible!important}
-  #dwApp{position:static!important;border:0!important;box-shadow:none!important;height:auto!important}
-  #dwApp .dw-canvas{position:absolute;left:0;top:0;width:100%;padding:0!important;background:#fff!important;overflow:visible!important}
-  #dwApp .dw-page{width:100%!important;min-height:0!important;padding:0!important;box-shadow:none!important}
-  #dwApp .dw-rib,#dwApp .dw-tabs,#dwApp .dw-top,#dwApp .dw-status,#dwApp .dw-find,#dwApp .dw-shortcut-strip{display:none!important}
-}
-</style>
+<link rel="stylesheet" href="./modules/documents/office-editor.css?v=1">
 
 <style id="afriflow-ux-20261109">
 #aiBox:not(.ai-live){background:#fffdf8!important;color:#193024!important;-webkit-backdrop-filter:none!important;backdrop-filter:none!important;border:1px solid #cbded0!important;box-shadow:0 15px 42px rgba(0,0,0,.26)!important;isolation:isolate;box-sizing:border-box!important}
@@ -3057,7 +2943,7 @@ body.af-profile-open #afCloudSyncBadge{visibility:hidden!important}
 <!-- Public Market catalogue, loaded after the existing authenticated workspace -->
 <script src="./market-country-logo.js?v=20261123-country-fit-v5" defer></script>
 <script src="./afriflow-cod.js?v=20261124-order-alerts-v3" defer></script>
-<script src="./market.js?v=20261124-promote-shareholder" defer></script>
+<script src="./market.js?v=20261125-quality-1" defer></script>
 
 <!-- AfriFlow PWA: registration without request interception -->
 <script>
@@ -3077,8 +2963,8 @@ if ('serviceWorker' in navigator) {
 #view-home .brand>.logo-img{width:min(350px,80vw)!important;height:auto!important;max-height:350px!important;margin:0 auto!important;padding:0!important;border-radius:0!important;background:transparent!important;box-shadow:none!important;filter:drop-shadow(0 4px 12px rgba(0,0,0,.16));mix-blend-mode:normal}
 #auth-screen .auth-wizard-actions #authNext{background:var(--green)!important;color:#fff!important;border-color:var(--green)!important}
 #auth-screen .auth-wizard-actions .auth-wizard-back{background:transparent!important;color:var(--green)!important;border-color:color-mix(in srgb,var(--green) 55%,transparent)!important}
-#auth-screen .auth-password-row input{padding-right:40px!important}
-#auth-screen .auth-password-toggle{right:8px!important;width:26px!important;height:26px!important;opacity:.42!important;color:var(--muted)!important}
+#auth-screen .auth-password-row input{min-height:48px;padding-right:56px!important}
+#auth-screen .auth-password-toggle{right:8px!important;width:44px!important;height:44px!important;opacity:.85!important;color:var(--muted)!important}
 #auth-screen .auth-password-toggle:hover,#auth-screen .auth-password-toggle:focus-visible{opacity:.9!important;color:var(--green)!important}
 #auth-screen .auth-password-toggle .ic{width:15px!important;height:15px!important}
 /* Sur mobile, les outils d'édition restent accessibles mais ne prennent plus la page entière. */

@@ -158,7 +158,7 @@ test('Inbox cards contain their subject, sender and preview while scrolling', as
   } finally { await browser.close(); }
 });
 
-test('Deadline alerts reach only the members selected across search results', async () => {
+test('Deadline form submits only selected members and relaunches the same deadline', async () => {
   const browser = await chromium.launch({headless:true});
   try {
     const page = await browser.newPage({viewport:{width:375,height:812}});
@@ -174,11 +174,16 @@ test('Deadline alerts reach only the members selected across search results', as
             {name:'Admin',email:'admin@example.test'}
           ]
         },
-        __sb:{from:()=>({
-          select:()=>({eq:(_field,key)=>({maybeSingle:async()=>({data:window.records[key]||null})})}),
-          insert:async rows=>{for(const row of rows){window.records[row.key]=row;window.sent.push(row);}return {};},
-          upsert:async row=>{window.records[row.key]=row;return {};}
-        })}
+        __sb:{
+          from:()=>({ select:()=>({eq:()=>({maybeSingle:async()=>({data:null})})}) }),
+          rpc:async (name,{p_action,p_payload})=>{
+            if(name!=='af_deadline_action')throw Error(name);
+            if(p_action==='directory')return {data:await window.AFRI.listUsers()};
+            window.sent.push({action:p_action,payload:p_payload});
+            if(p_action==='create')window.records.item={id:'fixture',title:p_payload.title,due:p_payload.due,author:'admin@example.test'};
+            return {data:{count:2,items:[window.records.item]}};
+          }
+        }
       });
     });
     await page.addScriptTag({path:path.join(root, 'modules/roadmap/timeline.js')});
@@ -195,13 +200,11 @@ test('Deadline alerts reach only the members selected across search results', as
     assert.match(await page.locator('#fdrSelected').innerText(), /^2 membres/);
     await page.locator('#fdrGo').click();
     await page.getByRole('button', {name:'Relancer',exact:true}).click();
-    await page.waitForFunction(() => window.sent.filter(r=>r.key.startsWith('msg:')).length >= 4);
-    const result = await page.evaluate(() => ({
-      recipients:window.sent.filter(r=>r.key.startsWith('msg:')).map(r=>r.value.to).sort(),
-      publicDeadline:JSON.stringify(window.records['pub:deadlines'])
-    }));
-    assert.deepEqual(result.recipients,['elodie@example.test','elodie@example.test','samuel@example.test','samuel@example.test']);
-    assert.doesNotMatch(result.publicDeadline,/elodie@example.test|samuel@example.test/);
+    const calls=await page.evaluate(()=>window.sent);
+    assert.deepEqual(calls.map(call=>call.action),['create','resend']);
+    assert.deepEqual(calls[0].payload.recipients.sort(),['elodie@example.test','samuel@example.test']);
+    assert.equal(calls[0].payload.targeted,true);
+    assert.deepEqual(calls[1].payload,{id:'fixture'});
   } finally { await browser.close(); }
 });
 
@@ -243,4 +246,32 @@ test('Partner removal requires confirmation in Administration and refreshes the 
     await page.getByText('Aucun compte partenaire à configurer.').waitFor();
     assert.deepEqual(await page.evaluate(() => window.removalCalls), ['00000000-0000-4000-8000-000000000002']);
   } finally { await browser.close(); }
+});
+
+require('./admin-intro-gate.browser.cjs');
+
+test('Account recovery accepts an AF login and returns to the email field', async () => {
+  const server=http.createServer(serve);
+  await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
+  let browser;
+  try {
+    browser=await chromium.launch();
+    const page=await browser.newPage({viewport:{width:320,height:750}});
+    await page.addInitScript(()=>localStorage.setItem('afriflow_market_cart_v2_visitor',JSON.stringify([
+      null,{id:'fixture',quantity:'2'},{id:'invalid',quantity:-1}
+    ])));
+    await page.goto('http://127.0.0.1:'+server.address().port,{waitUntil:'domcontentloaded'});
+    await page.evaluate(()=>window.AfriMarket.openPublic());
+    assert.equal(await page.locator('#afMarketCart b').innerText(),'2');
+    await page.evaluate(()=>window.AfriMarket.openAuth('login'));
+    await page.locator('#authNext').evaluate(button=>button.click());
+    await page.locator('#authEmailInput').fill('AF-000001');
+    await page.locator('#authNext').evaluate(button=>button.click());
+    await page.locator('#authForgot').evaluate(button=>button.click());
+    assert.ok(await page.locator('#authEmailInput').isVisible());
+    assert.match(await page.locator('#authError').innerText(),/adresse email/);
+  } finally {
+    if(browser)await browser.close();
+    await new Promise(resolve=>server.close(resolve));
+  }
 });

@@ -5,21 +5,32 @@ const edge=read('supabase/functions/afriflow-certificates/index.ts'),sql=read('s
 const verify=read('verify-certificate.html');
 test('Member profile provides verified PDF and access only to own certificates',()=>{
  assert.match(profile,/function loadCertificatesProfile\(/);
- assert.match(profile,/certificateCall\("mine"\)/);
- assert.match(profile,/certificateCall\("download"/);
+ assert.match(profile,/certificateCall\("profile_summary"\)/);
+ assert.match(profile,/certificateCall\("profile_pdf"/);
  assert.match(edge,/\.eq\("holder_user_id",user\.id\)/);
  assert.match(edge,/row\.holder_user_id!==user\.id&&!isAdmin/);
 });
-test('Partner role and assigned market are checked server-side',()=>{
- assert.match(edge,/profile\.requested_role/);
- assert.match(edge,/market\.data\?\.market_name===row\.market_name/);
- assert.match(edge,/!market\|\|!termsRes\.data\?\.is_enabled/);
+const eligibilitySource=edge.slice(edge.indexOf('async function eligibility('),edge.indexOf('function lines(')).replaceAll(':any','');
+const eligible=require('node:vm').runInNewContext('('+eligibilitySource+')');
+function certificateDb(profile,enabled,market){
+ const tables={afriflow_market_profiles:profile,afriflow_partner_terms:{is_enabled:enabled},afriflow_partner_markets:{market_name:market}};
+ return {from:table=>({select:()=>({eq:()=>({maybeSingle:async()=>({data:tables[table]})})})})};
+}
+test('Partner role, current terms and assigned market are checked server-side',async()=>{
+ const row={certificate_type:'partner',holder_user_id:'fixture',market_name:'Lomé'};
+ const profile={requested_role:'partner',access_mode:'partner_approved'};
+ assert.equal(await eligible(certificateDb(profile,true,'Lomé'),row),true);
+ assert.equal(await eligible(certificateDb(profile,false,'Lomé'),row),false);
+ assert.equal(await eligible(certificateDb(profile,true,'Dakar'),row),false);
+ assert.equal(await eligible(certificateDb({...profile,access_mode:'partner_waiting'},true,'Lomé'),row),false);
  assert.match(sql,/certificate_market_required/);
 });
-test('Shareholder legal documentation and administrative issuance are required',()=>{
- assert.match(edge,/legalEvidenceConfirmed!==true/);
- assert.match(market,/Justificatifs d.actionnariat vérifiés/);
- assert.match(edge,/if\(!isAdmin\)return json/);
+test('Existing shareholder certificates require legal evidence and manual issuance is closed',async()=>{
+ const row={certificate_type:'shareholder',holder_user_id:'fixture',legal_evidence_confirmed:true};
+ const db=certificateDb({requested_role:'shareholder',access_mode:'shareholder_approved'});
+ assert.equal(await eligible(db,row),true);
+ assert.equal(await eligible(db,{...row,legal_evidence_confirmed:false}),false);
+ assert.match(edge,/if\(action==="issue"\)\{return json\(.*?,410\)/);
  assert.match(sql,/certificate_shareholder_evidence/);
 });
 test('PDF contains QR verification and issuance reference, supports revocation',()=>{
@@ -33,5 +44,5 @@ test('Certificate registry excludes direct client reads and keeps token private'
  assert.match(sql,/revoke all on public\.afriflow_certificates from anon,authenticated,public/);
  assert.match(sql,/enable row level security/);
  assert.doesNotMatch(sql,/create policy.*for select to authenticated/i);
- assert.match(workspace,/partnersCertificates/);
+ assert.match(edge,/if\(action==="admin_list"\)\{\s*if\(!isAdmin\)return json/);
 });

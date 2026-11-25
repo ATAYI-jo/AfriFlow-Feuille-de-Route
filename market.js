@@ -10,7 +10,9 @@
   function loadStored(key, fallback) { try { var value = JSON.parse(localStorage.getItem(key) || ""); return Array.isArray(value) ? value : fallback; } catch (error) { return fallback; } }
   function shopScope() { var email = state.context && state.context.kind === "authenticated" && window.loggedUserEmail; return email ? String(email).trim().toLowerCase().replace(/[^a-z0-9]/g, "_") : "visitor"; }
   function shopKey(name) { return "afriflow_market_" + name + "_v2_" + shopScope(); }
-  function loadShop() { state.cart = loadStored(shopKey("cart"), []); state.favorites = loadStored(shopKey("favorites"), []); }
+  function loadShop() { state.cart = loadStored(shopKey("cart"), []).filter(function(row){
+    return row && row.id && Number.isSafeInteger(Number(row.quantity)) && Number(row.quantity)>0 && Number(row.quantity)<=1000000;
+  }).map(function(row){return Object.assign({},row,{quantity:Number(row.quantity)})}); state.favorites = loadStored(shopKey("favorites"), []); }
   function persistShop() {
     var badge = document.querySelector("#afMarketCart b");
     if (badge) badge.textContent = cartCount();
@@ -113,6 +115,7 @@
     var auth = el("auth-screen"); if (auth) auth.classList.add("off");
   }
   function showWorkspace() {
+    catalogRequest++;
     document.body.classList.remove("af-market-mode");
     var box = el("market-view"); if (box) box.innerHTML = "";
   }
@@ -427,7 +430,7 @@
           +'<div class="af-trace-meta"><span>Identifiant allocation : <code>'+esc(o.id)+'</code></span><span>Origine déclarée : '+esc(p.origin_country||"Non renseignée")+'</span><span>Numéro de lot : non renseigné dans le système actuel</span><span>Quantités vendues déclarées (hors rejets) : '+esc(qty)+'</span></div>'
           +'<ol class="af-trace-steps"><li>Demande enregistrée : '+esc(new Date(o.created_at).toLocaleString("fr-FR"))+'</li>'
           +'<li>Statut actuel : '+esc(partnerStatus(o.status).replace(/<[^>]*>/g,""))+' (dernière mise à jour : '+esc(new Date(o.updated_at||o.created_at).toLocaleString("fr-FR"))+')</li>'
-          +sales.map(function(r){return '<li>Vente déclarée le '+esc(new Date(r.created_at).toLocaleString("fr-FR"))+' · '+esc(r.quantity_sold)+' unités · '+esc(disputeStatus(r.status))+'</li>'}).join("")
+          +sales.map(function(r){return '<li>Vente déclarée le '+esc(new Date(r.created_at).toLocaleString("fr-FR"))+' · '+esc(r.quantity_sold)+' unités · '+partnerStatus(r.status)+'</li>'}).join("")
           +'</ol><p><small>Les dates détaillées de préparation, transport et livraison ne sont pas encore renseignées.</small></p></details>';
       }).join(""):'<p>Aucune allocation à tracer.</p>')+'</section>';
   }
@@ -661,12 +664,15 @@
     if (!data.enabled) return '<section class="af-market-wait"><h1>Votre partenariat attend validation</h1><p>AfriFlow doit d’abord définir votre pourcentage commercial et activer votre accès. Vos droits de partenaire ne sont jamais attribués automatiquement.</p><button type="button" class="af-market-secondary" id="afPartnerRefresh">Actualiser</button></section>';
     var terms = data.terms || {}, orders = data.orders || [], reports = data.reports || [], products = data.products || [];
     var pending = reports.filter(function (report) { return report.status === "pending_review"; });
-    var gross = reports.filter(function (report) { return report.status !== "rejected"; }).reduce(function (sum, report) { return sum + Number(report.gross_amount || 0); }, 0);
-    var due = reports.filter(function (report) { return report.status !== "rejected" && report.status !== "settled"; }).reduce(function (sum, report) { return sum + Number(report.afriflow_amount || 0); }, 0);
-    var reportCurrencies={};reports.filter(function(r){return r.status!=="rejected"}).forEach(function(r){reportCurrencies[r.currency||"XOF"]=true});
-    var separateCurrencies=Object.keys(reportCurrencies).length>1;
-    var grossText=separateCurrencies?"Plusieurs devises":partnerMoney(gross,reports[0]&&reports[0].currency||"XOF");
-    var dueText=separateCurrencies?"Plusieurs devises":partnerMoney(due,reports[0]&&reports[0].currency||"XOF");
+    var accepted=reports.filter(function(report){return report.status!=="rejected"});
+    function reportTotal(rows,field){
+      var currencies=new Set(rows.map(function(report){return report.currency||"XOF"}));
+      if(currencies.size>1)return "Plusieurs devises";
+      var total=rows.reduce(function(sum,report){return sum+Number(report[field]||0)},0);
+      return partnerMoney(total,rows.length?rows[0].currency||"XOF":"XOF");
+    }
+    var grossText=reportTotal(accepted,"gross_amount");
+    var dueText=reportTotal(accepted.filter(function(report){return report.status!=="settled"}),"afriflow_amount");
     var sellable = orders.filter(function (order) { return order.status === "approved" || order.status === "supplied"; });
     var productOpts = products.map(function (product) { return '<option value="' + esc(product.id) + '">' + esc(product.name) + ' · ' + esc(partnerFormatEarnings(product.price,product.currency||"XOF")) + '</option>'; }).join("");
     var orderOpts = sellable.map(function (order) { var product = Array.isArray(order.product) ? order.product[0] : order.product; return '<option value="' + esc(order.id) + '">' + esc(product && product.name || "Produit") + ' · allocation ' + esc(order.quantity_requested) + ' unités</option>'; }).join("");
@@ -1852,7 +1858,9 @@
     }, { passive: true });
   }
 
+  var catalogRequest=0;
   async function loadCatalog(refresh) {
+    var request=++catalogRequest, context=state.context;
     if (!sb()) { showCatalogError("Le catalogue sera disponible dès que le service est connecté."); return; }
     var grid = el("afMarketGrid"); if (refresh !== false && grid) grid.innerHTML = '<div class="af-market-empty">Chargement de la Marketplace…</div>';
     try {
@@ -1860,14 +1868,20 @@
       var publicCatalog = sb().from("afriflow_market_products").select(fields).eq("is_active", true).order("created_at", { ascending: false }).limit(100);
       var allCatalog = isAdmin() ? sb().from("afriflow_market_products").select(fields).order("created_at", { ascending: false }).limit(100) : null;
       var result = allCatalog ? await Promise.all([publicCatalog, allCatalog]) : [await publicCatalog, null];
+      if(request!==catalogRequest||context!==state.context)return;
       if (result[0].error) throw result[0].error;
       if (result[1] && result[1].error) throw result[1].error;
       state.products = result[0].data || [];
       state.adminProducts = result[1] ? result[1].data || [] : [];
       render(); scheduleImages(); if (isAdmin()) loadAdminList();
-    } catch (error) { showCatalogError("Le catalogue est momentanément indisponible."); }
+    } catch (error) { if(request===catalogRequest&&context===state.context)showCatalogError("Le catalogue est momentanément indisponible."); }
   }
-  function showCatalogError(message) { var grid = el("afMarketGrid"); if (grid) grid.innerHTML = '<div class="af-market-error">' + esc(message) + "</div>"; }
+  function showCatalogError(message) {
+    var grid=el("afMarketGrid");
+    if(!grid)return;
+    grid.innerHTML='<div class="af-market-error"><p role="status">'+esc(message)+'</p><button type="button" class="af-market-secondary">Réessayer</button></div>';
+    grid.querySelector("button").onclick=function(){loadCatalog()};
+  }
 
   /* ---------- Administration (inchangée) ---------- */
   function toBase64(file) { return new Promise(function (resolve, reject) { var reader = new FileReader(); reader.onload = function () { resolve(String(reader.result).split(",")[1]); }; reader.onerror = reject; reader.readAsDataURL(file); }); }

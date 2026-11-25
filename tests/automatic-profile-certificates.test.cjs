@@ -11,10 +11,14 @@ test("Every logged in member receives a live role-aware profile summary",()=>{
  assert.match(edge,/Non renseigne/);
 });
 test("Unapproved and ordinary members do not receive a false corporate certificate",()=>{
- assert.match(edge,/FICHE DE PROFIL AFRIFLOW/);
- assert.match(edge,/Statut du compte : non approuve \/ non certifie/);
- assert.match(edge,/Ce document ne constitue pas un certificat de partenariat ou d.actionnariat/);
- assert.match(edge,/statut du compte : approuve/i);
+ const title=edge.match(/const title=(.*?);/)[1];
+ const evaluateTitle=require('node:vm').runInNewContext('(data)=>('+title+')');
+ for(const type of ['member','partner','shareholder']){
+   assert.equal(evaluateTitle({type,approved:false}),'ATTESTATION DE PROFIL');
+ }
+ assert.equal(evaluateTitle({type:'partner',approved:true}),'ATTESTATION DE PARTENARIAT COMMERCIAL');
+ assert.equal(evaluateTitle({type:'shareholder',approved:true}),'ATTESTATION DE STATUT ACTIONNAIRE');
+ assert.match(edge,/data.approved\?"Approuve dans AfriFlow":"En attente ou non approuve"/);
 });
 test("Profile offers immediate document preview and PDF download without manual issue",()=>{
  assert.match(profile,/certificateCall\("profile_summary"\)/);

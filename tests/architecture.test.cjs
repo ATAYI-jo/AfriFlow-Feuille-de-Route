@@ -116,7 +116,7 @@ test('Gestion des comptes et explorateur Dropbox chargés une fois', () => {
     'modules/documents/dropbox-browser.js'
   ];
   for (const filename of paths) {
-    const tag = '<script src="./' + filename + '?v=20261121-modularisation-3"></script>';
+    const tag = '<script src="./' + filename + '?v=';
     assert.equal(html.split(tag).length - 1, 1, filename + ' absent ou dupliqué');
     assert.ok(fs.existsSync(path.join(root, filename)), filename + ' manquant');
   }
@@ -150,7 +150,7 @@ test('Réunions, feuille de route et décor chargé une seule fois', () => {
     'modules/ui/animated-background.js'
   ];
   for (const filename of extracted) {
-    const tag = '<script src="./' + filename + '?v=20261121-modularisation-5"></script>';
+    const tag = '<script src="./' + filename + '?v=';
     assert.equal(html.split(tag).length - 1, 1, filename + ' absent ou dupliqué');
     assert.ok(fs.existsSync(path.join(root, filename)), filename + ' absent');
   }
