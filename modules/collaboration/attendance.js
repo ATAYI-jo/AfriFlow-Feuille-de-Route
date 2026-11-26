@@ -4,10 +4,10 @@
   var cache = null, pendingLoad = null, dataRevision = 0, dialog = null, knownMeetings = {}, knownRecords = {};
   var EVENT_TABLE = "afriflow_attendance_events";
   var OUTCOMES = {
-    on_time: { k: "ok", t: "Présence à l’heure confirmée" },
-    late: { k: "late", t: "Retard confirmé" },
-    excused: { k: "ok", t: "Absence excusée" },
-    absent: { k: "abs", t: "Absence confirmée" }
+    on_time: { k: "ok", t: "Présent", category: "present", detail: "Présence confirmée par le censeur" },
+    late: { k: "late", t: "Retard", category: "late", detail: "Retard confirmé par le censeur" },
+    excused: { k: "ok", t: "Excusé", category: "excused", detail: "Absence excusée par le censeur" },
+    absent: { k: "abs", t: "Absent", category: "absent", detail: "Absence confirmée par le censeur" }
   };
   function me() { return String(window.loggedUserEmail || "").trim().toLowerCase(); }
   function sb() { return window.__sb; }
@@ -26,6 +26,26 @@
     var confirmed = decisions.filter(function (decision) { return !!OUTCOMES[decision.outcome]; });
     return { list: list, pending: pending[pending.length - 1] || null, latest: decisions[decisions.length - 1] || null, confirmed: confirmed[confirmed.length - 1] || null };
   }
+  function acceptedJustification(options) {
+    var request = options.justification, decision = options.decision;
+    return !!(request && decision && decision.ok === true && number(decision.at, 0) >= number(request.at, Infinity));
+  }
+  function requestState(options, meeting, record) {
+    options = options || {};
+    var state = eventState(options.events);
+    if (options.unavailable) return { kind: "unavailable", text: "Suivi indisponible. Actualisez les présences." };
+    if (options.permission) return { kind: "resolved", text: "Permission accordée", at: options.permission.at };
+    if (acceptedJustification(options)) return { kind: "resolved", text: "Justificatif accepté", at: options.decision.at };
+    if (state.pending) return { kind: "pending", text: "Vérification en cours", at: state.pending.created_at };
+    if (state.confirmed) return { kind: "resolved", text: "Vérification terminée", at: state.confirmed.created_at };
+    if (options.justification && (!options.decision || number(options.decision.at, 0) < number(options.justification.at, Infinity)))
+      return { kind: "pending", text: "Justificatif en cours d’examen", at: options.justification.at };
+    if (!record && meeting && number(meeting.start, 0) > number(options.now, Date.now()))
+      return { kind: "upcoming", text: "Le suivi sera disponible après le début de la réunion" };
+    if (state.latest && state.latest.outcome === "rejected") return { kind: "available", text: "Demande refusée", rejected: true };
+    return { kind: "available", text: "" };
+  }
+  function canRequest(meeting, record, options) { return requestState(options, meeting, record).kind === "available"; }
 
   function status(meeting, record, options) {
     meeting = meeting || {}; options = options || {};
@@ -36,23 +56,23 @@
     var state = eventState(options.events);
     var base = { rawAt: rawAt, scheduledStart: start, graceMinutes: grace,
       offsetMinutes: rawAt !== null && start !== null ? (rawAt - start) / 60000 : null,
-      pending: state.pending, review: state.confirmed, latestDecision: state.latest, source: "checkin" };
+      pending: state.pending, review: state.confirmed, latestDecision: state.latest, source: "checkin",
+      category: "wait", detail: "", needsVerification: false };
     function result(k, t, extra) { return Object.assign({}, base, { k: k, t: t }, extra || {}); }
     if (options.unavailable) return result("wait", "Présence indisponible", { unavailable: true, source: "unavailable", review: null, pending: null });
     // Exemptions never lose their effect because an original website click was late.
-    if (options.permission) return result("ok", "Excusé — permission accordée", { source: "permission" });
-    var request = options.justification, decision = options.decision;
-    if (request && decision && decision.ok === true && number(decision.at, 0) >= number(request.at, Infinity))
-      return result("ok", "Excusé — justificatif accepté", { source: "justification" });
+    if (options.permission) return result("ok", "Excusé", { source: "permission", category: "excused", detail: "Permission accordée" });
+    if (acceptedJustification(options))
+      return result("ok", "Excusé", { source: "justification", category: "excused", detail: "Justificatif accepté" });
     if (state.confirmed) return result(OUTCOMES[state.confirmed.outcome].k, OUTCOMES[state.confirmed.outcome].t,
-      { source: "review", confirmedAt: stamp(state.confirmed.occurred_at) || null });
-    if (state.pending) return result("wait", "Vérification en cours", { source: "request" });
-    if (state.latest && state.latest.outcome === "rejected") return result("wait", "Présence à confirmer — demande refusée", { source: "request" });
+      { source: "review", category: OUTCOMES[state.confirmed.outcome].category, detail: OUTCOMES[state.confirmed.outcome].detail, confirmedAt: stamp(state.confirmed.occurred_at) || null });
     if (start === null) return result("wait", "Horaire à vérifier");
     if (rawAt !== null) return rawAt <= start + grace * 60000
-      ? result("ok", "Pointage à l’heure") : result("late", "Pointage à vérifier");
+      ? result("ok", "Présent", { category: "present", detail: "Pointage reçu à l’heure" })
+      : result("late", "Retard", { category: "late", detail: "D’après le pointage · à confirmer", needsVerification: true });
     if (record) return result("wait", "Pointage à vérifier");
-    return result("wait", now > start + duration * 60000 ? "Présence à confirmer" : now < start ? "À venir" : "Pointage non reçu");
+    if (now > start + duration * 60000) return result("abs", "Absent", { category: "absent", detail: "Aucun pointage enregistré · à confirmer", needsVerification: true });
+    return result("wait", now < start ? "À venir" : "En attente", { detail: now < start ? "La réunion n’a pas commencé" : "Pointage non reçu" });
   }
 
   // Paginate every collection: an omitted older row must not become an absence.
@@ -133,12 +153,25 @@
       + (value.offsetMinutes !== null ? '<br>' + esc(offsetLabel(value.offsetMinutes)) + ' · tolérance : ' + value.graceMinutes + ' min' : '')
       + '<br>Heure de réception conservée ; la participation à Teams se vérifie séparément.</p>';
   }
+  function statusHTML(value) {
+    return '<span class="mt-pill mt-' + value.k + '">' + esc(value.t) + '</span>'
+      + (value.detail ? '<small class="af-att-status-detail">' + esc(value.detail) + '</small>' : '');
+  }
+  function verificationHTML(meeting, record, options) {
+    var state = requestState(options, meeting, record);
+    if (state.kind === "resolved") return '<p class="af-att-resolved">' + (state.text === "Vérification terminée" ? state.text : "Dossier validé") + '</p>'
+      + (state.at ? '<small>Le ' + esc(dateLabel(state.at)) + '</small>' : '');
+    if (state.kind === "pending") return '<p class="af-att-pending">' + esc(state.text) + '</p><small>Demande reçue le ' + esc(dateLabel(state.at)) + '</small>';
+    if (state.kind === "unavailable" || state.kind === "upcoming") return '<p class="af-att-note">' + esc(state.text) + '.</p>';
+    return (state.rejected ? '<p class="af-att-note">Demande refusée. Vous pouvez apporter de nouveaux éléments.</p>' : '')
+      + '<button type="button" class="af-att-request" data-att-request="' + esc(meeting.id) + '">Demander une vérification</button>';
+  }
   function historyHTML(events) {
     var state = eventState(events);
     if (!state.list.length) return "";
     return '<details class="af-att-history"><summary>Historique des vérifications (' + state.list.length + ')</summary>'
       + state.list.map(function (event) {
-        var title = event.kind === "request" ? "Demande du membre" : event.outcome === "rejected" ? "Demande refusée" : (OUTCOMES[event.outcome] || { t: "Décision" }).t;
+        var title = event.kind === "request" ? "Demande du membre" : event.outcome === "rejected" ? "Demande refusée" : (OUTCOMES[event.outcome] || { detail: "Décision" }).detail;
         return '<article><b>' + esc(title) + '</b><small>' + esc(event.actor_email || event.member_email || "") + ' · ' + esc(dateLabel(event.created_at)) + '</small>'
           + '<p>' + esc(event.reason) + '</p>' + (event.occurred_at ? '<small>' + (event.kind === "request" ? 'Arrivée déclarée (à vérifier)' : 'Heure confirmée par le responsable') + ' : ' + esc(dateLabel(event.occurred_at)) + '</small>' : '') + '</article>';
       }).join("") + '</details>';
@@ -156,17 +189,16 @@
     var account = me(); if (!root || !account) return;
     if (!data || data.unavailable || data.account !== account) { root.innerHTML = '<p role="alert">Présences indisponibles. Aucun statut d’absence n’est déduit de cette erreur. Utilisez Actualiser pour réessayer.</p>'; return; }
     cache = data;
-    root.innerHTML = '<div class="af-att-personal"><p class="af-att-note">Un pointage AfriFlow enregistre la réception de votre clic. Il ne prouve ni votre heure d’entrée ni votre durée de présence dans Teams. Demandez une vérification si le pointage ne reflète pas votre participation.</p>'
-      + '<p class="af-att-zone">Fuseau d’affichage : <b>' + esc(zone()) + '</b>. Les heures de référence et l’historique sont conservés.</p><div class="af-att-table"><table class="t"><thead><tr><th>Réunion</th><th>Pointage et présence</th><th>Vérification</th><th>Justificatifs</th></tr></thead><tbody>'
+    root.innerHTML = '<div class="af-att-personal"><p class="af-att-note">Les statuts tiennent compte du pointage, des justificatifs et des décisions du censeur.</p>'
+      + '<p class="af-att-zone">Horaires locaux : <b>' + esc(zone()) + '</b> · adaptés au fuseau de votre appareil.</p><div class="af-att-table"><table class="t" role="table"><thead><tr><th>Réunion</th><th>Statut</th><th>Suivi</th></tr></thead><tbody>'
       + meetings.map(function (meeting) {
         var key = emailKey(meeting.id, account), record = records[meeting.id] || records["att:" + key] || null;
         knownMeetings[meeting.id] = meeting; knownRecords[key] = record;
         var options = context(data, meeting.id, account), value = status(meeting, record, options);
-        return '<tr><td><b>' + esc(meeting.title) + '</b><small>' + esc(dateLabel(Number(meeting.start))) + '</small></td>'
-          + '<td><span class="mt-pill mt-' + value.k + '">' + esc(value.t) + '</span>' + evidenceHTML(record, value) + '</td>'
-          + '<td>' + (value.pending ? '<p>Demande reçue le ' + esc(dateLabel(value.pending.created_at)) + '. Un responsable doit l’examiner.</p>'
-            : '<button type="button" data-att-request="' + esc(meeting.id) + '">Demander une vérification</button>') + historyHTML(options.events) + '</td>'
-          + '<td>' + justificationHTML(options, meeting.id) + '</td></tr>';
+        return '<tr><td data-label="Réunion"><b>' + esc(meeting.title) + '</b><small>' + esc(dateLabel(Number(meeting.start))) + '</small></td>'
+          + '<td data-label="Statut">' + statusHTML(value) + '<details class="af-att-evidence-details"><summary>Voir le pointage</summary>' + evidenceHTML(record, value) + '</details></td>'
+          + '<td data-label="Suivi">' + verificationHTML(meeting, record, options) + historyHTML(options.events)
+          + (options.justification || options.permission ? '<details class="af-att-justification"><summary>' + (options.permission ? 'Voir la permission' : 'Voir le justificatif') + '</summary>' + justificationHTML(options, meeting.id) + '</details>' : '') + '</td></tr>';
       }).join("") + '</tbody></table></div></div>';
   }
 
@@ -236,12 +268,15 @@
   }
   function request(meetingId) {
     if (!/^m[a-z0-9]{5,35}$/.test(String(meetingId)) || !me()) { announce("Ouvrez une réunion de vos présences après connexion."); return false; }
-    var options = context(cache, meetingId, me()), waiting = eventState(options.events).pending;
-    if (waiting) { announce("Une demande est déjà en cours pour cette réunion."); return false; }
     var meeting = knownMeetings[meetingId] || { id: meetingId }, record = knownRecords[emailKey(meetingId, me())];
+    var options = context(cache, meetingId, me());
+    if (!canRequest(meeting, record, options)) { announce(requestState(options, meeting, record).text + "."); return false; }
     var state = modal("Demander une vérification", '<p><b>' + esc(meeting.title || "Réunion") + '</b></p>' + evidenceHTML(record, status(meeting, record))
       + '<p>Le censeur examinera votre participation. Le pointage original et chaque décision resteront dans l’historique.</p><form>' + fields("request") + '</form>');
-    bindSubmit(state, "af_meeting_attendance_request", function (reason, at) { return { p_meeting_id: meetingId, p_reason: reason, p_claimed_at: at }; }, meetingId, "Demande de vérification envoyée au censeur.");
+    bindSubmit(state, "af_meeting_attendance_request", function (reason, at) {
+      if (!canRequest(meeting, record, context(cache, meetingId, me()))) throw new Error("Ce dossier a changé. Actualisez les présences avant de poursuivre.");
+      return { p_meeting_id: meetingId, p_reason: reason, p_claimed_at: at };
+    }, meetingId, "Demande de vérification envoyée au censeur.");
     return true;
   }
   function review(requestId) {
@@ -294,7 +329,7 @@
             var record = knownRecords[emailKey(meetingId, event.member_email)], value = status(knownMeetings[meetingId], record, options);
             return '<article class="af-att-case"><b>' + esc(event.member_email) + '</b><small>Demande reçue le ' + esc(dateLabel(event.created_at)) + '</small><p>' + esc(event.reason) + '</p>'
               + '<p>Arrivée déclarée par le membre : ' + esc(dateLabel(event.occurred_at)) + ' (à vérifier).</p>' + evidenceHTML(record, value)
-              + (decision ? '<p><b>' + esc(decision.outcome === "rejected" ? "Demande refusée" : (OUTCOMES[decision.outcome] || { t: "Décision enregistrée" }).t) + '</b> · ' + esc(decision.actor_email) + ' · ' + esc(dateLabel(decision.created_at)) + '</p><p>' + esc(decision.reason) + '</p>' + (decision.occurred_at ? '<p>Heure confirmée : ' + esc(dateLabel(decision.occurred_at)) + '</p>' : '')
+              + (decision ? '<p><b>' + esc(decision.outcome === "rejected" ? "Demande refusée" : (OUTCOMES[decision.outcome] || { detail: "Décision enregistrée" }).detail) + '</b> · ' + esc(decision.actor_email) + ' · ' + esc(dateLabel(decision.created_at)) + '</p><p>' + esc(decision.reason) + '</p>' + (decision.occurred_at ? '<p>Heure confirmée : ' + esc(dateLabel(decision.occurred_at)) + '</p>' : '')
                 : String(event.member_email).toLowerCase() === me() ? '<p>Votre demande doit être examinée par un autre responsable.</p>' : '<button type="button" data-att-review="' + esc(event.id) + '">Examiner cette demande</button>') + '</article>';
           }).join("");
       }
@@ -309,5 +344,6 @@
   window.addEventListener("afriflow:navigate", function (event) { if (!event.detail || !["personal", "censor"].includes(event.detail.id)) closeDialog(); });
   window.addEventListener("afriflow:auth-ready", function () { if (dialog && dialog.owner !== me()) closeDialog(); if (cache && cache.account !== me()) { cache = null; knownRecords = {}; } });
   window.AfriAttendance = { status: status, load: load, loadPersonal: loadPersonal, context: context, request: request, review: review,
+    canRequest: canRequest, statusHTML: statusHTML, verificationHTML: verificationHTML,
     renderPersonal: renderPersonal, decorateCensor: decorateCensor, isReviewing: function () { return !!dialog; } };
 })();

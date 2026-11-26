@@ -5,6 +5,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');
 const source = fs.readFileSync(path.join(__dirname, '..', 'modules/collaboration/attendance.js'), 'utf8');
+const meetingsSource = fs.readFileSync(path.join(__dirname, '..', 'modules/collaboration/meetings.js'), 'utf8');
 const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
 const start = Date.parse('2026-11-26T14:00:00Z');
 const meeting = { id: 'mtest01', title: 'Réunion de travail', start, dur: 60, grace: 5 };
@@ -79,6 +80,7 @@ function harness(options = {}) {
   const host = element('section'); host.id = 'viewHost'; document.body.appendChild(host);
   const config = { events: [], records: [], meetings: [meeting], justifications: [], decisions: [], permissions: [], rpcResult: { data: { id: 'inserted-row' } }, ...options };
   function response(query) {
+    if (query.single && query.pattern === 'pub:meetcfg') return { data: { value: { link: '', censeurs: [] } }, error: null };
     const kind = query.table === 'afriflow_attendance_events' ? 'events' : query.pattern?.startsWith('meet:') ? 'meetings'
       : query.pattern?.startsWith('att:jd-') ? 'decisions' : query.pattern?.startsWith('att:j-') ? 'justifications'
         : query.pattern?.startsWith('att:perm-') ? 'permissions' : 'records';
@@ -89,7 +91,7 @@ function harness(options = {}) {
   }
   const api = {
     from(name) {
-      const query = { table: name, select() { return this; }, like(_, pattern) { this.pattern = pattern; return this; }, eq(_, value) { this.pattern = value; return this; }, order() { return this; }, limit() { return this; }, range(from, to) { this.from = from; this.to = to; return this; },
+      const query = { table: name, select() { return this; }, like(_, pattern) { this.pattern = pattern; return this; }, eq(_, value) { this.pattern = value; return this; }, maybeSingle() { this.single = true; return this; }, order() { return this; }, limit() { return this; }, range(from, to) { this.from = from; this.to = to; return this; },
         then(resolve, reject) { queries.push({ table: this.table, pattern: this.pattern, from: this.from, to: this.to }); return Promise.resolve(config.respond ? config.respond(this, response) : response(this)).then(resolve, reject); }
       };
       return query;
@@ -108,6 +110,19 @@ function harness(options = {}) {
     model: window.AfriAttendance, window, document, host, config, calls, queries, events, notifications, context, data,
     input(id, value) { const input = document.getElementById(id); assert.ok(input, 'Missing form control ' + id); input.value = value; },
     async submit() { const form = document.querySelector('form'); assert.ok(form); await form.onsubmit({ preventDefault() {} }); },
+    async censor() {
+      window.USER_ROLE = 'admin'; window.location = { href: 'https://afriflow.example.test/' }; window.scrollTo = () => {};
+      const users = config.users || [{ email: member, name: 'Membre de test' }];
+      window.AFRI = { page() {}, async listUsers() { return users; }, async listMembers() { return users; } };
+      const home = element('section'); home.id = 'view-home'; document.body.appendChild(home);
+      Object.assign(context, { navigator: {}, URL, URLSearchParams, Event: class { constructor(type) { this.type = type; } },
+        MutationObserver: class { observe() {} }, setTimeout() { return 0; }, setInterval() { return 0; } });
+      vm.runInContext(meetingsSource, context, { filename: 'modules/collaboration/meetings.js' });
+      assert.equal(window.AfriOpenCensor({ restore: true }), true);
+      for (let i = 0; i < 100; i++) await Promise.resolve();
+      assert.match(host.innerHTML, /Réunions et présences/, 'The real Censeur page completed rendering');
+    },
+    async refreshCensor() { window.dispatchEvent({ type: 'afriflow:attendance-changed' }); for (let i = 0; i < 100; i++) await Promise.resolve(); },
     async personalWithQueryError(kind) {
       config.errorKind = kind;
       Object.assign(context, { jpActive: true, jpGeneration: 0, vh: host, $: id => document.getElementById(id), me: () => window.loggedUserEmail,
@@ -122,15 +137,19 @@ function harness(options = {}) {
   };
 }
 
-test('Raw clicks describe pointage, with exact grace boundaries and no automatic absence', () => {
-  const { model } = harness();
-  assert.equal(model.status(meeting, { at: start }).t, 'Pointage à l’heure');
+test('Simple attendance labels preserve exact grace boundaries and identify unverified missing pointages', () => {
+  const app = harness(), { model } = app;
+  assert.equal(model.status(meeting, { at: start }).t, 'Présent');
   assert.equal(model.status(meeting, { at: start + 5 * 60000 }).k, 'ok');
   const late = model.status(meeting, { at: start + 5 * 60000 + 1 });
-  assert.equal(late.t, 'Pointage à vérifier');
+  assert.equal(late.t, 'Retard');
   assert.equal(late.rawAt, start + 5 * 60000 + 1);
-  assert.equal(model.status(meeting, null, { now: start + 2 * 3600000 }).t, 'Présence à confirmer');
-  assert.equal(model.status(meeting, null, { now: start + 2 * 3600000 }).k, 'wait');
+  const absent = model.status(meeting, null, { now: start + 2 * 3600000 });
+  assert.equal(absent.t, 'Absent'); assert.equal(absent.category, 'absent'); assert.equal(absent.needsVerification, true);
+  assert.equal(model.status(meeting, null, { now: start - 1 }).t, 'À venir');
+  model.renderPersonal(app.host, [{ ...meeting, start: Date.now() - 7200000 }], {}, app.data());
+  assert.match(app.host.innerHTML, /class="mt-pill mt-abs">Absent<\/span>/);
+  assert.match(app.host.innerHTML, /Aucun pointage enregistré · à confirmer/, 'The simple absence label keeps its evidence qualifier visible');
 });
 
 test('Missing grace defaults to five minutes and saved scheduling evidence remains authoritative', () => {
@@ -146,8 +165,9 @@ test('Accepted excuses and permissions apply even when an original click was ele
   const { model } = harness(); const record = { at: start + 660000 };
   assert.equal(model.status(meeting, record, { permission: { reason: 'Autorisation accordée' } }).k, 'ok');
   const options = { justification: { at: 100 }, decision: { ok: true, at: 101 } };
-  assert.equal(model.status(meeting, record, options).t, 'Excusé — justificatif accepté');
-  assert.equal(model.status(meeting, record, { ...options, decision: { ok: true, at: 99 } }).t, 'Pointage à vérifier', 'An older acceptance does not approve a later resubmission');
+  assert.equal(model.status(meeting, record, options).t, 'Excusé');
+  assert.equal(model.status(meeting, record, options).source, 'justification');
+  assert.equal(model.status(meeting, record, { ...options, decision: { ok: true, at: 99 } }).t, 'Retard', 'An older acceptance does not approve a later resubmission');
 });
 
 test('Reviewed conclusions are distinct from immutable click evidence', () => {
@@ -159,13 +179,141 @@ test('Reviewed conclusions are distinct from immutable click evidence', () => {
   assert.deepEqual(record, { at: start + 660000 });
 });
 
-test('Pending and rejected corrections do not invent a late or absent verdict', () => {
+test('Pending and rejected corrections preserve the main attendance label without confirming raw evidence', () => {
   const { model } = harness();
   const pending = model.status(meeting, { at: start + 660000 }, { events: [requestEvent] });
-  assert.equal(pending.k, 'wait'); assert.equal(pending.t, 'Vérification en cours');
+  assert.equal(pending.k, 'late'); assert.equal(pending.t, 'Retard'); assert.equal(pending.pending.id, requestEvent.id);
   const rejected = model.status(meeting, null, { events: [requestEvent, { id: 'd1', kind: 'decision', request_id: requestEvent.id, outcome: 'rejected', created_at: new Date(start + 3600000).toISOString() }], now: start + 7200000 });
-  assert.equal(rejected.k, 'wait'); assert.equal(rejected.t, 'Présence à confirmer — demande refusée');
-  assert.equal(model.status(meeting, { at: start }, { unavailable: true }).k, 'wait');
+  assert.equal(rejected.t, 'Absent'); assert.equal(rejected.needsVerification, true); assert.equal(rejected.review, null);
+  const unavailable = model.status(meeting, { at: start }, { unavailable: true });
+  assert.equal(unavailable.k, 'wait'); assert.doesNotMatch(unavailable.t, /^Absent$/);
+  assert.equal(model.canRequest(meeting, null, { unavailable: true }), false);
+});
+
+test('Accepted justifications, permissions and confirmed reviews remove the verification action and block its handler', () => {
+  const key = meeting.id + ':' + member;
+  const approvedReview = outcome => ({ events: { [key]: [requestEvent, {
+    id: 'approved-' + outcome, kind: 'decision', request_id: requestEvent.id, outcome,
+    actor_email: reviewer, reason: 'La participation a été vérifiée.', created_at: new Date(start + 3600000).toISOString()
+  }] } });
+  const approvedThenRejected = approvedReview('on_time');
+  approvedThenRejected.events[key].push({ ...requestEvent, id: 'request-2', created_at: new Date(start + 7200000).toISOString() },
+    { id: 'rejected-later', kind: 'decision', request_id: 'request-2', outcome: 'rejected', actor_email: reviewer,
+      reason: 'La décision confirmée reste valable.', created_at: new Date(start + 10800000).toISOString() });
+  const scenarios = [
+    { name: 'current accepted justification', extra: { justifications: { [key]: { at: 100 } }, decisions: { [key]: { ok: true, at: 101 } } }, evidence: /Justificatif accepté/ },
+    { name: 'current permission', extra: { permissions: { [key]: { reason: 'Autorisation accordée', by: reviewer, at: 101 } } }, evidence: /Permission accordée/ },
+    { name: 'reviewed on-time presence', extra: approvedReview('on_time'), evidence: /La participation a été vérifiée/ },
+    { name: 'reviewed excuse', extra: approvedReview('excused'), evidence: /La participation a été vérifiée/ },
+    { name: 'reviewed lateness', extra: approvedReview('late'), evidence: /La participation a été vérifiée/ },
+    { name: 'reviewed absence', extra: approvedReview('absent'), evidence: /La participation a été vérifiée/ },
+    { name: 'confirmed presence followed by a later rejected request', extra: approvedThenRejected, evidence: /La décision confirmée reste valable/ }
+  ];
+  for (const scenario of scenarios) {
+    const app = harness(); const data = app.data(scenario.extra);
+    assert.equal(app.model.canRequest(meeting, { at: start + 660000 }, app.model.context(data, meeting.id, member)), false, scenario.name);
+    app.model.renderPersonal(app.host, [meeting], { [meeting.id]: { at: start + 660000 } }, data);
+    assert.equal(app.host.querySelector('[data-att-request]'), null, scenario.name + ' must not offer another request');
+    assert.match(app.host.innerHTML, scenario.evidence, scenario.name + ' retains its approval evidence');
+    assert.equal(app.model.request(meeting.id), false, scenario.name + ' also protects the direct request handler');
+    assert.equal(app.model.isReviewing(), false); assert.equal(app.calls.length, 0);
+  }
+});
+
+test('A pending verification keeps its receipt text and cannot open a duplicate request', () => {
+  const app = harness(); const data = app.data({ events: { [meeting.id + ':' + member]: [requestEvent] } });
+  assert.equal(app.model.canRequest(meeting, { at: start + 660000 }, app.model.context(data, meeting.id, member)), false);
+  app.model.renderPersonal(app.host, [meeting], { [meeting.id]: { at: start + 660000 } }, data);
+  assert.equal(app.host.querySelector('[data-att-request]'), null);
+  assert.match(app.host.innerHTML, /Demande reçue/);
+  assert.match(app.host.innerHTML, /Vérification en cours/);
+  assert.equal(app.model.request(meeting.id), false);
+  assert.equal(app.model.isReviewing(), false); assert.equal(app.calls.length, 0);
+});
+
+test('An upcoming meeting without a pointage cannot open verification before it begins', () => {
+  const app = harness();
+  assert.equal(app.model.canRequest(meeting, null, { now: start - 1 }), false, 'The explicit reference clock controls eligibility');
+  assert.equal(app.model.canRequest(meeting, null, { now: start }), true, 'Once the meeting starts an unresolved pointage may be checked');
+  assert.equal(app.model.canRequest(meeting, { at: start - 60000 }, { now: start - 1 }), true, 'An existing early pointage retains its normal verification flow');
+  const upcoming = { ...meeting, start: Date.now() + 3600000 };
+  app.model.renderPersonal(app.host, [upcoming], {}, app.data());
+  assert.equal(app.host.querySelector('[data-att-request]'), null);
+  assert.equal(app.model.request(upcoming.id), false, 'The direct handler also refuses an upcoming meeting without a pointage');
+  assert.equal(app.model.isReviewing(), false); assert.equal(app.calls.length, 0);
+});
+
+test('A refused or undecided attendance correction remains requestable', () => {
+  const key = meeting.id + ':' + member;
+  const scenarios = [
+    { name: 'undecided late record', extra: {} },
+    { name: 'refused correction', extra: { events: { [key]: [requestEvent, {
+      id: 'refused-1', kind: 'decision', request_id: requestEvent.id, outcome: 'rejected',
+      reason: 'Informations à compléter.', actor_email: reviewer, created_at: new Date(start + 3600000).toISOString()
+    }] } } },
+    { name: 'refused legacy justification', extra: { justifications: { [key]: { at: 100 } }, decisions: { [key]: { ok: false, at: 101, reason: 'Informations à compléter.' } } } }
+  ];
+  for (const scenario of scenarios) {
+    const app = harness(); const data = app.data(scenario.extra);
+    assert.equal(app.model.canRequest(meeting, { at: start + 660000 }, app.model.context(data, meeting.id, member)), true, scenario.name);
+    app.model.renderPersonal(app.host, [meeting], { [meeting.id]: { at: start + 660000 } }, data);
+    assert.ok(app.host.querySelector('[data-att-request]'), scenario.name + ' can ask for verification');
+    assert.equal(app.model.request(meeting.id), true, scenario.name + ' opens its form');
+    assert.equal(app.calls.length, 0, 'Opening the form never submits a request');
+  }
+});
+
+test('A legacy justification awaiting its current decision does not open a parallel verification request', () => {
+  const key = meeting.id + ':' + member;
+  for (const decision of [undefined, { ok: true, at: 101 }]) {
+    const app = harness();
+    const data = app.data({ justifications: { [key]: { at: 102 } }, decisions: decision ? { [key]: decision } : {} });
+    const options = app.model.context(data, meeting.id, member), record = { at: start + 660000 };
+    assert.equal(app.model.status(meeting, record, options).t, 'Retard', 'A pending or newer justification is not an accepted excuse');
+    assert.equal(app.model.canRequest(meeting, record, options), false);
+    app.model.renderPersonal(app.host, [meeting], { [meeting.id]: record }, data);
+    assert.equal(app.host.querySelector('[data-att-request]'), null);
+    assert.match(app.host.innerHTML, /Justificatif en attente/);
+    assert.equal(app.model.request(meeting.id), false); assert.equal(app.model.isReviewing(), false);
+    assert.equal(app.calls.length, 0);
+  }
+});
+
+test('The real Censeur page applies the same accepted, pending and unresolved request rules to its own attendance row', async () => {
+  const legacy = { mid: meeting.id, email: member, at: 100 };
+  const scenarios = [
+    { name: 'accepted justification', options: { justifications: [legacy], decisions: [{ ...legacy, ok: true, at: 101 }] }, requestable: false, text: /Justificatif accepté/ },
+    { name: 'permission', options: { permissions: [{ ...legacy, reason: 'Permission accordée' }] }, requestable: false, text: /Permission accordée/ },
+    { name: 'confirmed review', options: { events: [requestEvent, { id: 'confirmed-own-row', meeting_id: meeting.id, member_email: member,
+      kind: 'decision', request_id: requestEvent.id, outcome: 'on_time', actor_email: reviewer,
+      reason: 'Le rapport a été vérifié.', created_at: new Date(start + 3600000).toISOString() }] }, requestable: false, text: /Vérification terminée/ },
+    { name: 'pending review', options: { events: [requestEvent] }, requestable: false, text: /Vérification en cours/ },
+    { name: 'pending justification', options: { justifications: [legacy] }, requestable: false, text: /Justificatif en cours d’examen/ },
+    { name: 'unresolved record', options: {}, requestable: true, text: /Demander une vérification/ }
+  ];
+  for (const scenario of scenarios) {
+    const app = harness({ ...scenario.options, meetings: [{ ...meeting, invitees: [member] }],
+      records: [{ key: 'att:' + meeting.id + ':' + member, meet: meeting.id, email: member, at: start + 660000 }] });
+    await app.censor();
+    assert.equal(!!app.host.querySelector('[data-att-request]'), scenario.requestable, scenario.name);
+    assert.match(app.host.innerHTML, scenario.text, scenario.name);
+    if (!scenario.requestable) assert.equal(app.model.request(meeting.id), false, 'A stale control cannot reopen ' + scenario.name);
+    assert.equal(app.calls.length, 0);
+  }
+});
+
+test('The real Censeur page keeps unknown historical rosters and loading errors from inventing absences', async () => {
+  const app = harness({ meetings: [{ ...meeting, start: Date.now() - 7200000 }],
+    users: [{ email: member, name: 'Membre connu' }, { email: 'new@example.test', name: 'Membre arrivé plus tard' }],
+    records: [{ key: 'att:' + meeting.id + ':' + member, meet: meeting.id, email: member, at: start }] });
+  await app.censor();
+  assert.equal(app.host.querySelectorAll('td[data-label="Email"]').length, 1, 'Only the historical record supplies an attendee');
+  assert.doesNotMatch(app.host.innerHTML, /<td data-label="Email">new@example\.test<\/td>/);
+  assert.match(app.host.innerHTML, /Liste des invités non conservée/);
+  app.config.errorKind = 'events'; await app.refreshCensor();
+  assert.match(app.host.innerHTML, /Présence indisponible/);
+  assert.doesNotMatch(app.host.innerHTML, /class="mt-pill mt-abs">Absent<\/span>/);
+  assert.equal(app.host.querySelector('[data-att-request]'), null, 'Failed data cannot authorize a new request');
 });
 
 test('Shared loading paginates histories and scopes ordinary member queries to their account', async () => {
@@ -239,6 +387,7 @@ test('Request forms validate the explanation and send only the member’s declar
 
 test('An account switch or denied RPC cannot silently submit or dismiss a correction', async () => {
   const app = harness({ rpcResult: { error: { message: 'Accès refusé' } } });
+  const data = await app.model.load(); app.model.renderPersonal(app.host, [meeting], { [meeting.id]: { at: start + 660000 } }, data);
   app.model.request(meeting.id); app.input('afAttReason', requestEvent.reason);
   await app.submit(); assert.equal(app.events.length, 0); assert.equal(app.model.isReviewing(), true);
   assert.match(app.document.getElementById('afAttError').textContent, /Accès refusé/);
@@ -269,7 +418,7 @@ test('Personal history shows the reviewer and reason without injecting untrusted
     reason: '<script>unsafe()</script> Rapport Teams contrôlé.', created_at: new Date(start + 3600000).toISOString() };
   const data = app.data({ events: { [meeting.id + ':' + member]: [requestEvent, decision] } });
   app.model.renderPersonal(app.host, [meeting], { [meeting.id]: { at: start + 660000 } }, data);
-  assert.match(app.host.innerHTML, /Présence à l’heure confirmée/);
+  assert.match(app.host.innerHTML, /class="mt-pill mt-ok">Présent<\/span>/);
   assert.match(app.host.innerHTML, /reviewer@example.test/);
   assert.match(app.host.innerHTML, /11 min après/);
   assert.match(app.host.innerHTML, /&lt;script&gt;/);
@@ -277,7 +426,8 @@ test('Personal history shows the reviewer and reason without injecting untrusted
 });
 
 test('Correction dialogs trap focus, close with Escape and restore the invoking control', () => {
-  const app = harness(); const opener = app.document.createElement('button'); app.document.body.appendChild(opener); opener.focus();
+  const app = harness(); app.model.renderPersonal(app.host, [meeting], { [meeting.id]: { at: start + 660000 } }, app.data());
+  const opener = app.document.createElement('button'); app.document.body.appendChild(opener); opener.focus();
   app.model.request(meeting.id);
   const submit = app.document.getElementById('afAttSubmit'); submit.focus(); let prevented = false;
   app.document.dispatchEvent({ type: 'keydown', key: 'Tab', preventDefault() { prevented = true; } });

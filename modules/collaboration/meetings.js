@@ -306,7 +306,7 @@ async function render(){
    +'<div class="full" id="csPeople" hidden><p>Choisissez les personnes invitées. Seuls leurs comptes pourront pointer leur présence.</p>'
    +'<div class="mt-grid" style="max-height:300px;overflow:auto;grid-template-columns:repeat(auto-fit,minmax(min(100%,240px),1fr));gap:10px;padding:4px">'+U.filter(function(u){return u&&u.email}).map(inviteeCard).join("")+'</div></div></div>'
    +'<div class="mt-err" id="csErr" role="alert"></div><button type="button" class="p" id="csGo">Programmer</button>'
-   +'<p style="color:var(--muted);font-size:.85rem;margin:12px 0 0">Fuseau de saisie : <b>'+esc(zone)+'</b>. Le pointage ouvre 15 min avant la réunion. L’heure de réception est enregistrée par le serveur. Un clic tardif ou manquant demande une vérification de la participation dans Teams.</p></div>';
+   +'<p class="af-att-note">Fuseau de votre appareil : <b>'+esc(zone)+'</b>. Saisissez votre heure locale ; chaque participant verra l’horaire dans son propre fuseau. Le pointage ouvre 15 min avant la réunion.</p></div>';
   var L=meets.slice().sort(function(a,b){return b.start-a.start});
   h+='<h3 style="color:var(--green)">Réunions et présences</h3>'+(L.length?L.map(function(m){
     var emails={},names={};U.forEach(function(u){if(u&&u.email)names[String(u.email).toLowerCase()]=u.name||u.display_name||""});
@@ -316,18 +316,14 @@ async function render(){
     Object.keys(atts).forEach(function(k){var v=atts[k];if(v&&v.meet===m.id&&v.email&&!(v.email in emails))emails[v.email]=v.name||""});
     if(attendanceData){["justifications","permissions","events"].forEach(function(group){Object.keys(attendanceData[group]||{}).forEach(function(key){if(key.indexOf(m.id+":")===0){var em=key.slice(m.id.length+1);if(!(em in emails))emails[em]=names[em]||""}})});}
     var rows=Object.keys(emails).sort().map(function(em){var rec=atts[ATT+m.id+":"+em],s=statut(m,rec,em);return {em:em,nm:emails[em],rec:rec,s:s}});
-    var c={pointage:0,review:0,present:0,late:0,excused:0,abs:0,wait:0};rows.forEach(function(r){
-      var s=r.s;if(s.unavailable)c.wait++;else if(s.source==="permission"||s.source==="justification"||s.review&&s.review.outcome==="excused")c.excused++;
-      else if(s.source==="review"){if(s.review.outcome==="on_time")c.present++;else if(s.review.outcome==="late")c.late++;else if(s.review.outcome==="absent")c.abs++;}
-      else if(s.k==="ok")c.pointage++;else if(s.k==="late")c.review++;else c.wait++;
-    });
-    var summary=[[c.pointage,"ok","pointage(s) à l’heure"],[c.review,"wait","pointage(s) à vérifier"],[c.present,"ok","présence(s) confirmée(s)"],[c.late,"late","retard(s) confirmé(s)"],[c.excused,"ok","excusé(s)"],[c.abs,"abs","absence(s) confirmée(s)"],[c.wait,"wait","à confirmer"]].filter(function(x){return x[0]>0}).map(function(x){return '<span class="mt-pill mt-'+x[1]+'">'+x[0]+' '+x[2]+'</span>'}).join("");
+    var c={present:0,late:0,excused:0,absent:0,wait:0};rows.forEach(function(r){var category=r.s.unavailable?"wait":r.s.category||"wait";c[category]=(c[category]||0)+1;});
+    var summary=[[c.present,"ok",c.present>1?"présents":"présent"],[c.late,"late",c.late>1?"retards":"retard"],[c.excused,"ok",c.excused>1?"excusés":"excusé"],[c.absent,"abs",c.absent>1?"absents":"absent"],[c.wait,"wait","en attente"]].filter(function(x){return x[0]>0}).map(function(x){return '<span class="mt-pill mt-'+x[1]+'">'+x[0]+' '+x[2]+'</span>'}).join("");
     return '<details class="mt-m"><summary><b>'+esc(m.title)+'</b><small>'+fdt(m.start)+' · '+m.dur+' min</small>'
      +'<span class="mt-sum">'+summary+'</span></summary>'
-     +'<div class="mt-body"><p class="af-att-note">Tolérance : '+(Number.isFinite(Number(m.grace))?Number(m.grace):5)+' min. Fuseau d’affichage : '+esc(zone)+'. Le pointage ne prouve pas l’entrée ni la durée dans Teams.</p>'
+     +'<div class="mt-body"><p class="af-att-note">Tolérance : '+(Number.isFinite(Number(m.grace))?Number(m.grace):5)+' min · Horaires locaux : '+esc(zone)+'. Les statuts tiennent compte du pointage et des décisions du censeur.</p>'
      +(!Array.isArray(m.invitees)?'<p class="af-att-note">Liste des invités non conservée pour cette ancienne réunion. Seuls les pointages et dossiers connus sont affichés.</p>':'')
-     +'<div class="mt-tw"><table><thead><tr><th>Nom</th><th>Email</th><th>Statut</th><th>Pointage serveur</th></tr></thead><tbody>'
-     +(rows.length?rows.map(function(r){return '<tr><td>'+esc(r.nm||"—")+'</td><td>'+esc(r.em)+'</td><td><span class="mt-pill mt-'+r.s.k+'">'+esc(r.s.t)+'</span>'+(r.em===me()?'<br><button type="button" data-att-request="'+esc(m.id)+'">Demander une vérification</button>':'')+'</td><td>'+(r.rec?esc(new Date(r.rec.at).toLocaleString("fr-FR",{hour:"2-digit",minute:"2-digit",second:"2-digit",timeZoneName:"short"})):"Non reçu")+'</td></tr>'}).join(""):'<tr><td colspan="4" style="color:var(--muted)">Aucun pointage ou dossier à afficher.</td></tr>')
+     +'<div class="mt-tw mt-attendance"><table role="table"><thead><tr><th>Nom</th><th>Email</th><th>Statut</th><th>Pointage serveur</th></tr></thead><tbody>'
+     +(rows.length?rows.map(function(r){var options=window.AfriAttendance.context(attendanceData,m.id,r.em);if(loadError)options.unavailable=true;return '<tr><td data-label="Nom">'+esc(r.nm||"—")+'</td><td data-label="Email">'+esc(r.em)+'</td><td data-label="Statut">'+window.AfriAttendance.statusHTML(r.s)+(r.em===me()?window.AfriAttendance.verificationHTML(m,r.rec,options):'')+'</td><td data-label="Pointage serveur">'+(r.rec?esc(new Date(r.rec.at).toLocaleString("fr-FR",{hour:"2-digit",minute:"2-digit",second:"2-digit",timeZoneName:"short"})):"Non reçu")+'</td></tr>'}).join(""):'<tr><td colspan="4" style="color:var(--muted)">Aucun pointage ou dossier à afficher.</td></tr>')
      +'</tbody></table></div><p style="margin:14px 0 0"><button type="button" class="danger" data-csdel="'+esc(m.id)+'">Supprimer cette réunion</button></p></div></details>';
   }).join(""):'<p style="color:var(--muted)">Aucune réunion programmée.</p>');
   if(memberLoadError||loadError)h='<p role="alert" class="mt-err">'+esc(memberLoadError||loadError)+'</p>'+h;
