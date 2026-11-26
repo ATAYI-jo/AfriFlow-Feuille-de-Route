@@ -8,7 +8,7 @@ function line(value: unknown, limit: number) {
 function escapeHtml(text: string) {
   return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 }
-type Sender = {name:string; fullName?:string; address?:string; photo?:{content:string; contentType:string; filename:string; cid:string; encoding:"base64"}};
+type Sender = {name:string; fullName?:string; address?:string; avatarUrl?:string; photo?:{content:string; contentType:string; filename:string; cid:string; encoding:"base64"}};
 function isPersonal(value: Record<string, unknown>, id:string) {
   return /^[0-9]{10,17}:[a-z0-9]{1,16}$/.test(id) && !value.orderId && !value.quoteKey;
 }
@@ -32,6 +32,37 @@ function publicPhoto(kind:unknown,value:unknown):Sender["photo"] {
   }catch{return undefined;}
   return {content:match[2],contentType:"image/"+format,filename:"portrait."+format,cid:"sender-portrait@afriflow",encoding:"base64"};
 }
+function portraitUrl(value:unknown) {
+  let seed="afriflow", settings;
+  if(typeof value==="string"&&value.length<=4096){
+    try { settings=JSON.parse(value); } catch { seed=value||seed; }
+  }
+  const q=new URLSearchParams({size:"96"});
+  if(settings&&typeof settings.seed==="string"){
+    seed=settings.seed||seed;
+    if(/^variant(?:0[1-9]|[1-3][0-9]|4[0-8])$/.test(settings.hairVariant))q.set("hairVariant",settings.hairVariant);
+    for(const [key,fallback] of Object.entries({hairColor:"2c1b18",skinColor:"f2d3b1",backgroundColor:"e8f2ec"})){
+      q.set(key,/^[0-9a-f]{6}$/i.test(settings[key])?settings[key]:fallback);
+    }
+    if(settings.glasses===true){q.set("glassesProbability","100");q.set("glassesVariant","variant01")}
+    if(settings.earrings===true){q.set("earringsProbability","100");q.set("earringsVariant","variant01")}
+    if(settings.flowers===true){q.set("hairAccessoriesProbability","100");q.set("hairAccessoriesVariant","flowers")}
+    if(settings.flip===true)q.set("flip","horizontal");
+  }
+  q.set("seed",seed);
+  return "https://api.dicebear.com/10.x/lorelei/png?"+q.toString();
+}
+async function embeddedPortrait(url:string):Promise<Sender["photo"]>{
+  try{
+    const response=await fetch(url,{signal:AbortSignal.timeout(3500),redirect:"error"});
+    if(!response.ok||response.headers.get("content-type")?.split(";")[0]!=="image/png")return;
+    const bytes=new Uint8Array(await response.arrayBuffer());
+    if(!bytes.length||bytes.length>120000)return;
+    let raw="";
+    for(let i=0;i<bytes.length;i+=4096)raw+=String.fromCharCode(...bytes.subarray(i,i+4096));
+    return publicPhoto("photo","data:image/png;base64,"+btoa(raw));
+  }catch{return;}
+}
 async function identifySender(db:any,value:Record<string,unknown>,id:string):Promise<Sender> {
   if(!isPersonal(value,id))return systemSender(value);
   const email=validEmail(value.from);
@@ -44,7 +75,9 @@ async function identifySender(db:any,value:Record<string,unknown>,id:string):Pro
   const name = givenNames.split(" ")[0] || "Membre";
   const fullName = [givenNames, String(profile.last_name || "").trim()].filter(Boolean).join(" ") || name;
   const {data:directory}=await db.from("afriflow_member_directory").select("avatar_kind,avatar_value").eq("user_id",profile.user_id).maybeSingle();
-  return {name,fullName,address:email,photo:publicPhoto(directory?.avatar_kind,directory?.avatar_value)};
+  const avatarUrl=directory?.avatar_kind==="photo"?undefined:portraitUrl(directory?.avatar_value);
+  const photo=avatarUrl?await embeddedPortrait(avatarUrl):publicPhoto(directory?.avatar_kind,directory?.avatar_value);
+  return {name,fullName,address:email,avatarUrl,photo};
 }
 export function messageEmail(value: Record<string, unknown>, id: string, identity:Sender = systemSender(value)) {
   const subject = line(value.subject, 120) || "Message sans objet";
@@ -55,8 +88,9 @@ export function messageEmail(value: Record<string, unknown>, id: string, identit
   const excerpt = line(fullBody, 160);
   const sender = identity.fullName || identity.name;
   const initials = sender.split(/\s+/u).slice(0,2).map(word=>Array.from(word)[0]||"").join("").toUpperCase();
-  const senderBadge = identity.address ? (identity.photo
-    ? '<img src="cid:sender-portrait@afriflow" width="46" height="46" alt="" style="display:block;border-radius:50%;object-fit:cover;border:0">'
+  const portrait=identity.photo?"cid:sender-portrait@afriflow":identity.avatarUrl;
+  const senderBadge = identity.address ? (portrait
+    ? '<img src="'+escapeHtml(portrait)+'" width="46" height="46" alt="" style="display:block;border-radius:50%;object-fit:cover;border:0">'
     : '<span style="display:block;width:46px;height:46px;line-height:46px;text-align:center;border-radius:50%;background:#e4efe7;color:#205e3d;font-size:17px;font-weight:bold">'+escapeHtml(initials)+'</span>') : "";
   const senderEmail = identity.address ? '<div style="font-size:12px;color:#516657;overflow-wrap:anywhere">'+escapeHtml(identity.address)+'</div>' : "";
   const url = new URL("https://afriflow.pages.dev/");
@@ -127,3 +161,4 @@ Deno.serve(async (req) => {
   });
   return new Response("sent");
 });
+
