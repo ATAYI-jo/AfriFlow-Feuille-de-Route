@@ -1,5 +1,7 @@
 import webpush from "npm:web-push@3.6.7";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { SITE_URL, canReceiveMeeting, canReceiveNews, canReceiveScheduled, loadRecipientDirectory, meetingNotification, normalizeEmail, notificationTtl } from "../_shared/meeting-notifications.ts";
+import type { NotificationEnvelope } from "../_shared/meeting-notifications.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -11,7 +13,7 @@ const ALLOWED_ORIGINS = new Set([
   "https://afriflow-africa.onrender.com",
   "https://atayi-jo.github.io",
 ]);
-const ownSite = "https://afriflow.pages.dev/";
+const ownSite = SITE_URL;
 const clean = (x: unknown) => String(x ?? "").slice(0, 260);
 function headers(req: Request) {
   const origin = req.headers.get("Origin") || "";
@@ -45,19 +47,9 @@ async function vapid() {
   if(!config?.publicKey || !config?.privateKey) throw Error("VAPID initialization failed");
   return config;
 }
-function teamsUrl(input: unknown): string | null {
-  try {
-    const u = new URL(String(input || ""));
-    if(u.protocol === "https:" && (
-      u.hostname === "teams.microsoft.com" ||
-      u.hostname === "teams.live.com" ||
-      u.hostname === "teams.microsoft.us"
-    )) return u.toString();
-  } catch (_e) {}
-  return null;
-}
 type Subscription = {endpoint:string;user_email:string;p256dh:string;auth_key:string};
-async function deliver(eventKey: string, dest: Subscription, payload: unknown, keys: {publicKey:string;privateKey:string}) {
+async function deliver(eventKey: string, dest: Subscription, payload: NotificationEnvelope, keys: {publicKey:string;privateKey:string}) {
+  if(notificationTtl(payload,Date.now())<=0)return "expired";
   const {error:claimError} = await sb.from("afriflow_push_deliveries")
     .insert({event_key:eventKey,endpoint:dest.endpoint});
   if(claimError) {
@@ -65,6 +57,8 @@ async function deliver(eventKey: string, dest: Subscription, payload: unknown, k
     throw claimError;
   }
   try {
+    const ttl=notificationTtl(payload,Date.now());
+    if(ttl<=0)return "expired";
     await webpush.sendNotification(
       {endpoint:dest.endpoint,keys:{p256dh:dest.p256dh,auth:dest.auth_key}},
       JSON.stringify(payload),
@@ -72,7 +66,7 @@ async function deliver(eventKey: string, dest: Subscription, payload: unknown, k
         subject:ownSite,
         publicKey:keys.publicKey,
         privateKey:keys.privateKey,
-      },TTL:3600,urgency:"high"},
+      },TTL:ttl,urgency:"high"},
     );
     return "sent";
   } catch(error) {
@@ -94,12 +88,13 @@ async function dispatch() {
   if(subErr) throw subErr;
   const subs = (subscriptions || []) as Subscription[];
   if(!subs.length)return {subscribers:0,sent:0,failed:0};
+  const recipients=await loadRecipientDirectory(sb);
   const byEmail = new Map<string,Subscription[]>();
   for (const sub of subs) {
-    const e=sub.user_email.toLowerCase();
+    const e=normalizeEmail(sub.user_email);
     byEmail.set(e,[...(byEmail.get(e)||[]),sub]);
   }
-  const pending:{key:string;dest:Subscription;payload:unknown}[]=[];
+  const pending:{key:string;dest:Subscription;payload:NotificationEnvelope}[]=[];
   const {data:messages,error:msgError} = await sb.from("afriflow_state")
     .select("key,value,updated_at")
     .like("key","msg:%")
@@ -122,23 +117,14 @@ async function dispatch() {
   const {data:meetings,error:meetError}=await sb.from("afriflow_state")
     .select("key,value").like("key","meet:%").limit(500);
   if(meetError)throw meetError;
-  const {data:cfg}=await sb.from("afriflow_state").select("value").eq("key","pub:meetcfg").maybeSingle();
   for(const m of meetings||[]) {
     const v=m.value || {};
-    const start=Number(v.start);
-    if(!Number.isFinite(start)||!v.id)continue;
-    const delta=start-now;
-    const atStart=delta<=0&&delta>=-120000;
-    const beforehand=delta>0&&delta<=15*60000&&delta>=13*60000;
-    if(!atStart&&!beforehand)continue;
-    const key="meeting:"+v.id+":"+start+":"+(atStart?"start":"soon");
-    const link=teamsUrl(v.link || cfg?.value?.link);
+    if(m.key!=="meet:"+v.id)continue;
+    const notification=meetingNotification(v,now);
+    if(!notification)continue;
     for(const dest of subs) {
-      pending.push({key,dest,payload:{
-        title:atStart?"AfriFlow · Réunion maintenant":"AfriFlow · Réunion dans 15 min",
-        body:clean(v.title || "Réunion programmée"),
-        tag:key,kind:"meeting",url:ownSite,teamsUrl:link,
-      }});
+      if(!canReceiveMeeting(recipients,dest,v))continue;
+      pending.push({key:notification.eventKey,dest,payload:notification.payload});
     }
   }
   const {data:deadlines}=await sb.from("afriflow_state").select("value").eq("key","pub:deadlines").maybeSingle();
@@ -148,22 +134,13 @@ async function dispatch() {
     const localHour=new Date(now).getUTCHours();
     if(localHour!==8)continue;
     for(const dest of subs){
+      if(!canReceiveScheduled(recipients,dest))continue;
       pending.push({key:"deadline:"+today+":"+due.id,dest,payload:{
         title:"AfriFlow · Échéance aujourd’hui",body:clean(due.title),
         tag:"deadline-"+due.id,kind:"reminder",url:ownSite,
       }});
     }
   }
- const [{data:members,error:memberError},{data:profiles,error:profileError},{data:admins,error:adminError}] = await Promise.all([
-   sb.from("afriflow_market_profiles").select("user_id").limit(2000),
-   sb.from("afriflow_profiles").select("user_id,email").limit(2000),
-   sb.from("afriflow_admins").select("email").limit(2000)
- ]);
- if(memberError || profileError || adminError) throw (memberError || profileError || adminError);
- const ids = new Set((members||[]).map((m:any)=>String(m.user_id)));
- const authorizedNewsEmails = new Set((profiles||[]).filter((p:any)=>ids.has(String(p.user_id)))
-   .map((p:any)=>String(p.email||"").toLowerCase()));
- (admins||[]).forEach((a:any)=>authorizedNewsEmails.add(String(a.email||"").toLowerCase()));
  const {data:news,error:newsError} = await sb.from("afriflow_market_products")
    .select("id,name,created_at").eq("is_active",true)
    .eq("listing_type","announcement").in("category",["Veille agroalimentaire","Actualités mondiales"])
@@ -173,7 +150,7 @@ async function dispatch() {
  if(newsError) throw newsError;
  for(const article of news||[]) {
    for(const dest of subs) {
-     if(!authorizedNewsEmails.has(dest.user_email.toLowerCase())) continue;
+     if(!canReceiveNews(recipients,dest)) continue;
      const key="agro-news:"+article.id;
      pending.push({key,dest,payload:{title:"Actualité AfriFlow",
        body:clean(article.name),tag:key,kind:"news",url:ownSite}});

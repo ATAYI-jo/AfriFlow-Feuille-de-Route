@@ -1,12 +1,14 @@
-/* AfriFlow notifications: active sessions only.
-   No push in a closed app, no surprise permission requests.
+/* AfriFlow notifications and meeting invitations for active sessions.
+   Closed-app delivery is handled separately by Web Push / native notifications.
    Original short tones synthesized locally (no third-party audio). */
 (function () {
   'use strict';
   var sb = null, account = '', firstMessages = true, known = new Set();
   var knownMeetings = new Set(), firstMeetings = true;
   var knownDecisions = new Map(), firstDecisions = true;
-  var audio = null, ringTimer = null, activeMeeting = null, lastToast = 0, busy = false;
+  var audio = null, ringTimer = null, ringStopTimer = null, expiryTimer = null, playing = [];
+  var activeMeeting = null, previousFocus = null, previousOverflow = '', inertElements = [], joining = false;
+  var lastToast = 0, busy = false;
   var ring = null, toast = null;
   var settingsKey = 'afriflow_alerts_enabled_v1';
   var enabled = false;
@@ -21,6 +23,13 @@
     if (parent) parent.appendChild(n);
     return n;
   }
+  function currentAccount() { return String(window.loggedUserEmail || '').toLowerCase().trim(); }
+  function monotonicNow() { return typeof performance !== 'undefined' && performance.now ? performance.now() : Date.now(); }
+  function meetingNow(m) { return m.clockEpoch + Math.max(0,monotonicNow()-m.clockStart); }
+  function meetingId(value) { return /^m[a-z0-9]{5,35}$/.test(String(value || '')) ? String(value) : ''; }
+  function invited(m, email) {
+    return !Array.isArray(m.invitees) || m.invitees.some(function(value) { return String(value).toLowerCase().trim() === email; });
+  }
   function callActionIcon(kind) {
     var ns='http://www.w3.org/2000/svg';
     var icon=document.createElementNS(ns,'svg');
@@ -34,9 +43,9 @@
     path.setAttribute('stroke-width','2.25');
     path.setAttribute('stroke-linecap','round');
     path.setAttribute('stroke-linejoin','round');
-    path.setAttribute('d',kind==='answer'
-      ? 'M7.2 3.8 4.8 6.2c-.5.5-.6 1.2-.3 1.8 1.8 3.9 4.9 7 8.8 8.8.6.3 1.3.2 1.8-.3l2.4-2.4-3.3-3.3-1.9 1.4c-1.2-.6-2.2-1.6-2.8-2.8l1.4-1.9z'
-      : 'M7 7l10 10M17 7 7 17');
+    path.setAttribute('d',kind==='join'
+      ? 'M4 6h10a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2Zm12 4 6-3v10l-6-3'
+      : kind==='later' ? 'M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0ZM12 7v5l3 2' : 'M6 6l12 12M18 6 6 18');
     icon.appendChild(path);
     return icon;
   }
@@ -44,28 +53,27 @@
     if (ring) return;
     // No floating alert toggle. Notification preference is collected during first use.
     toast = element('div',{id:'af-alert-toast',role:'status','aria-live':'polite'},document.body);
-    ring = element('div',{id:'af-meet-call',role:'alertdialog','aria-modal':'true','aria-labelledby':'af-meet-title',hidden:''},document.body);
-    var panel=element('div',{id:'af-meet-panel'},ring);
-    element('div',{id:'af-meet-incoming',text:'Appel entrant'},panel);
-    element('img',{src:'./logo.svg?v=2',alt:'AfriFlow'},panel);
-    element('h2',{id:'af-meet-title',text:'Appel Teams entrant'},panel);
-    element('p',{id:'af-meet-source',text:'AfriFlow · via Teams'},panel);
-    element('p',{id:'af-meet-info'},panel);
+    ring = element('div',{id:'af-meet-call',role:'dialog','aria-modal':'true','aria-labelledby':'af-meet-title','aria-describedby':'af-meet-info af-meet-time af-meet-duration',hidden:''},document.body);
+    var panel=element('div',{id:'af-meet-panel',tabindex:'-1'},ring);
+    var close=element('button',{type:'button',id:'af-meet-close','aria-label':'Fermer l’invitation'},panel);
+    close.appendChild(callActionIcon('close'));
+    element('div',{id:'af-meet-incoming',text:'Réunion à rejoindre'},panel);
+    element('img',{src:'./logo.svg?v=2',alt:'AfriFlow',width:'96',height:'96'},panel);
+    element('p',{id:'af-meet-source',text:'AfriFlow · Microsoft Teams'},panel);
+    element('h2',{id:'af-meet-title',text:'Réunion en ligne'},panel);
+    element('p',{id:'af-meet-info',text:'Retrouvez les participants dans votre espace de réunion.'},panel);
     element('p',{id:'af-meet-time'},panel);
+    element('p',{id:'af-meet-duration'},panel);
+    element('p',{id:'af-meet-status',role:'status','aria-live':'polite',hidden:''},panel);
     var actions=element('div',{id:'af-meet-actions'},panel);
-    var decline=element('button',{type:'button',id:'af-meet-reject','aria-label':'Refuser l’appel Teams',text:'Refuser'},actions);
-    var accept=element('button',{type:'button',id:'af-meet-accept','aria-label':'Répondre et ouvrir Teams',text:'Répondre'},actions);
-    decline.insertBefore(callActionIcon('decline'),decline.firstChild);
-    accept.insertBefore(callActionIcon('answer'),accept.firstChild);
-    element('small',{text:'Répondre ouvre Teams. Sonnerie et alertes disponibles lorsque AfriFlow est actif.'},panel);
+    var decline=element('button',{type:'button',id:'af-meet-reject'},actions);
+    decline.appendChild(callActionIcon('later')); element('span',{text:'Plus tard'},decline);
+    var accept=element('button',{type:'button',id:'af-meet-accept'},actions);
+    accept.appendChild(callActionIcon('join')); element('span',{id:'af-meet-join-label',text:'Rejoindre Teams'},accept);
+    element('small',{text:'Teams s’ouvre uniquement lorsque vous choisissez de rejoindre la réunion.'},panel);
     decline.addEventListener('click',endCall);
-    accept.addEventListener('click',function(){
-      var m=activeMeeting;endCall();
-      if (!m || !m.url) return;
-      // Open directly from user click, never from a background timer.
-      if (!/^https:\/\//i.test(m.url)) return;
-      window.open(m.url,'_blank','noopener,noreferrer');
-    });
+    close.addEventListener('click',endCall);
+    accept.addEventListener('click',joinMeeting);
     updateButton();
   }
   function unlockAudio() {
@@ -86,9 +94,10 @@
   function disableAlerts() {
     enabled = false;
     try { localStorage.setItem(settingsKey,'no'); } catch(e) {}
+    stopRinging();
   }
   window.AfriFlowAlerts = { enable: enableAlerts, disable: disableAlerts,
-    enabled: function(){return enabled} };
+    enabled: function(){return enabled}, showMeeting: showMeeting };
   function updateButton() { /* Preference is managed in first-use consent. */ }
   function tone(type) {
     if (!enabled || !audio) return;
@@ -109,24 +118,33 @@
         gain.gain.exponentialRampToValueAtTime(call?.16:.07,t+offset+.035);
         gain.gain.exponentialRampToValueAtTime(.0001,t+offset+length);
         osc.connect(gain).connect(audio.destination);
+        playing.push(osc);
+        osc.onended=function(){playing=playing.filter(function(node){return node!==osc;});};
         osc.start(t+offset);
         osc.stop(t+offset+length+.02);
       });
       if(call && navigator.vibrate)navigator.vibrate([220,110,220,110,220]);
     } catch(e) {}
   }
-  function notifyNative(title,body,teamsUrl,meetingTitle) {
+  function notifyNative(title,body) {
     if(!window.AfriFlowNative || !window.AfriFlowNative.isBackground || !window.AfriFlowNative.isBackground()) return false;
     try {
-      window.AfriFlowNative.notify({title:title,body:body,teamsUrl:teamsUrl||'',meetingTitle:meetingTitle||''});
+      window.AfriFlowNative.notify({title:title,body:body});
       return true;
     }catch(e) { return false; }
   }
-  function presentNativeMeeting(meetingTitle,teamsUrl) {
+  function presentNativeMeeting(m) {
     if(!window.AfriFlowNative || !window.AfriFlowNative.isBackground || !window.AfriFlowNative.isBackground()) return false;
     if(typeof window.AfriFlowNative.presentIncomingMeeting!=='function') return false;
+    if(Number(window.AfriFlowNative.meetingInvitationsVersion)<1){
+      // An older desktop wrapper does not understand meeting identifiers.
+      // Keep its existing generic notification useful until it is updated.
+      if(!seen('native_meet_'+m.id+'_'+m.start))notifyNative('AfriFlow · Réunion à rejoindre',m.title||'Ouvrez AfriFlow pour rejoindre Teams.');
+      return false;
+    }
     try {
-      window.AfriFlowNative.presentIncomingMeeting({meetingTitle:meetingTitle||'',teamsUrl:teamsUrl||''});
+      window.AfriFlowNative.presentIncomingMeeting({meetingId:m.id,meetingTitle:m.title||'',start:+m.start,dur:+m.dur,
+        end:+m.start+(+m.dur)*60000,stage:'start',expiresAt:Math.min(+m.start+(+m.dur)*60000,+m.start+120000)});
       return true;
     }catch(e) { return false; }
   }
@@ -138,57 +156,151 @@
       toast.style.display='block';
       setTimeout(function(){if(toast)toast.style.display='none'},7500);
     }
-    if(notifyNative(title,body,''))return;
+    if(notifyNative(title,body))return;
     tone('notification');
     if ('Notification' in window && Notification.permission==='granted') {
       try {new Notification(title,{body:body,icon:'./logo.png',tag:tag||title});}catch(e){}
     }
   }
   function seen(key) {
-    var k='afriflow_alert_seen_'+account+'_'+key;
+    var k='afriflow_alert_seen_'+currentAccount()+'_'+key;
     try {if(localStorage.getItem(k))return true;localStorage.setItem(k,String(Date.now()));}catch(e){}
     return false;
   }
+  function stopRinging(){
+    clearInterval(ringTimer);clearTimeout(ringStopTimer);ringTimer=null;ringStopTimer=null;
+    playing.forEach(function(node){try{node.stop();}catch(e){}});playing=[];
+    try{if(navigator.vibrate)navigator.vibrate(0);}catch(e){}
+  }
   function endCall(){
+    var wasOpen=!!(ring&&!ring.hidden);
     if (ring) ring.hidden=true;
     activeMeeting=null;
-    clearInterval(ringTimer);
-    ringTimer=null;
-  }
-  function showMeetingCall(m,url) {
-    if (!ring || !ring.hidden || !/^https:\/\//i.test(url)) return;
-    activeMeeting={url:url};
-    document.getElementById('af-meet-info').textContent=m.title||'Réunion en ligne';
-    document.getElementById('af-meet-time').textContent=m.start
-      ? new Date(+m.start).toLocaleString('fr-FR',{dateStyle:'long',timeStyle:'short'})
-      : 'Prête à rejoindre maintenant';
-    ring.hidden=false;
-    document.getElementById('af-meet-accept').focus();
-    tone('call');
-    ringTimer=setInterval(function(){if(!ring.hidden)tone('call')},2400);
-    setTimeout(function(){if(!ring.hidden)endCall()},120000);
-    if('Notification' in window && Notification.permission==='granted'){
-      try {new Notification('Appel Teams entrant',{body:(m.title||'Réunion AfriFlow')+' · Ouvrez AfriFlow pour répondre.',icon:'./logo.png',tag:'af-meeting-'+(m.id||'now')})}catch(e){}
+    joining=false;
+    stopRinging();clearTimeout(expiryTimer);expiryTimer=null;
+    inertElements.forEach(function(item){item.node.inert=item.value;});inertElements=[];
+    if(wasOpen){
+      document.body.style.overflow=previousOverflow;
+      if(previousFocus&&previousFocus.isConnected){try{previousFocus.focus({preventScroll:true});}catch(e){previousFocus.focus();}}
     }
+    previousFocus=null;
   }
-  function callMeeting(m,url) {
-    if (!enabled || !ring || !ring.hidden) return;
-    if(seen('meet_'+m.id))return;
-    if(presentNativeMeeting(m.title||'',url))return;
-    showMeetingCall(m,url);
+  function meetingSource(){return window.AfriFlowAndroid?'android':window.AfriFlowNative?'desktop':'alert';}
+  function joinState(pending,message){
+    joining=pending;
+    document.getElementById('af-meet-accept').disabled=pending;
+    document.getElementById('af-meet-join-label').textContent=pending?'Ouverture…':'Rejoindre Teams';
+    var status=document.getElementById('af-meet-status');status.textContent=message||'';status.hidden=!message;
+    ring.setAttribute('aria-busy',pending?'true':'false');
+  }
+  function joinMeeting(){
+    var m=activeMeeting;if(!m||joining)return;
+    if(m.owner!==currentAccount()||meetingNow(m)>=m.expiresAt){endCall();return;}
+    stopRinging();
+    if(!window.AfriMeetings||typeof window.AfriMeetings.join!=='function'){
+      joinState(false,'La réunion est en cours de chargement. Réessayez dans un instant.');return;
+    }
+    joinState(true,'Ouverture de votre réunion…');
+    function failed(error){
+      if(activeMeeting!==m)return;
+      joinState(false,String(error&&error.message||error||'Impossible de rejoindre la réunion. Réessayez.').slice(0,300));
+    }
+    try{
+      // Invoke synchronously inside the click: the shared flow owns authentication,
+      // first check-in, and opening Teams without popup blocking.
+      var result=window.AfriMeetings.join(m.id,{source:m.source});
+      Promise.resolve(result).then(function(value){
+        if(activeMeeting!==m)return;
+        if(value&&value.ok)endCall();else failed(value&&value.error);
+      }).catch(failed);
+    }catch(error){failed(error);}
+  }
+  function showMeeting(m,options) {
+    options=options||{};
+    var owner=currentAccount(),id=meetingId(m&&m.id),start=Number(m&&m.start),duration=Number(m&&m.dur);
+    var serverNow=Number(m&&m.serverNow),verified=Number.isFinite(serverNow)&&serverNow>0;
+    var end=start+duration*60000,now=verified?serverNow:Date.now();
+    if(!owner||!id||!Number.isFinite(start)||!Number.isFinite(duration)||duration<=0||end<=now)return false;
+    if(options.automatic&&(!enabled||!invited(m,owner)||document.hidden))return false;
+    if(!ring)build();
+    if(activeMeeting){
+      if(activeMeeting.id===id&&activeMeeting.start===start&&(!verified||activeMeeting.verified))return true;
+      if(options.automatic)return false;
+      endCall();
+    }
+    var seenKey='meet_'+id+'_'+start;
+    if(options.automatic){
+      try{if(localStorage.getItem('afriflow_alert_seen_'+owner+'_'+seenKey))return false;}catch(e){}
+    }
+    var expires=options.automatic?Math.min(end,now+120000):end;
+    if(Number(m.expiresAt)>0)expires=Math.min(expires,Number(m.expiresAt));
+    if(expires<=now)return false;
+    var source=['alert','desktop','android','push','home'].indexOf(options.source)>-1?options.source:meetingSource();
+    var record={id:id,start:start,owner:owner,source:source,expiresAt:expires,clockEpoch:now,clockStart:monotonicNow(),verified:verified};activeMeeting=record;
+    previousFocus=document.activeElement;previousOverflow=document.body.style.overflow;
+    document.body.style.overflow='hidden';
+    Array.from(document.body.children).forEach(function(node){
+      if(node!==ring&&'inert' in node){inertElements.push({node:node,value:node.inert});node.inert=true;}
+    });
+    document.getElementById('af-meet-incoming').textContent=start>now?'Réunion à venir':'Réunion à rejoindre';
+    document.getElementById('af-meet-title').textContent=String(m.title||'Réunion AfriFlow').slice(0,160);
+    document.getElementById('af-meet-time').textContent=new Date(start).toLocaleString('fr-FR',{dateStyle:'long',timeStyle:'short'});
+    document.getElementById('af-meet-duration').textContent='Durée prévue : '+duration+' min';
+    document.getElementById('af-meet-info').textContent=start>now?'Votre réunion est programmée. Retrouvez ici son accès Teams.':'Votre réunion peut être rejointe dans Microsoft Teams.';
+    joinState(false,'');
+    ring.hidden=false;
+    if(options.automatic)seen(seenKey);
+    document.getElementById('af-meet-accept').focus({preventScroll:true});
+    expiryTimer=setTimeout(function(){if(activeMeeting===record)endCall();},Math.min(expires-now,2147483647));
+    if(options.automatic&&start<=now){
+      tone('call');
+      ringTimer=setInterval(function(){
+        if(activeMeeting!==record||record.owner!==currentAccount()||meetingNow(record)>=record.expiresAt){endCall();return;}
+        if(document.hidden){stopRinging();return;}
+        tone('call');
+      },2400);
+      ringStopTimer=setTimeout(stopRinging,30000);
+    }
+    return true;
+  }
+  function callMeeting(m) {
+    if(!enabled||!meetingId(m.id)||!invited(m,currentAccount())||activeMeeting)return;
+    var key='meet_'+m.id+'_'+m.start,k='afriflow_alert_seen_'+currentAccount()+'_'+key;
+    try{if(localStorage.getItem(k))return;}catch(e){}
+    if(presentNativeMeeting(m))seen(key);else showMeeting(m,{automatic:true});
   }
   if(window.AfriFlowNative && typeof window.AfriFlowNative.onIncomingMeeting==='function'){
     window.AfriFlowNative.onIncomingMeeting(function(details){
-      if(!details || !/^https:\/\//i.test(String(details.teamsUrl||'')))return;
-      showMeetingCall({title:String(details.title||'Réunion AfriFlow'),id:'windows-'+Date.now()},String(details.teamsUrl));
+      var id=meetingId(details&&details.meetingId);if(!id)return;
+      // A deliberate tap is resolved again by the server; a wrong device clock
+      // must not discard the request before the authorized preview can load.
+      window.dispatchEvent(new CustomEvent('afriflow:meeting-request',{detail:{meetingId:id,source:'desktop'}}));
     });
   }
+  document.addEventListener('keydown',function(event){
+    if(!activeMeeting||!ring||ring.hidden)return;
+    if(event.key==='Escape'){event.preventDefault();endCall();return;}
+    if(event.key!=='Tab')return;
+    var buttons=Array.from(ring.querySelectorAll('button')).filter(function(button){return !button.disabled;});
+    if(!buttons.length)return;
+    var first=buttons[0],last=buttons[buttons.length-1],focused=document.activeElement;
+    if(event.shiftKey&&(focused===first||!ring.contains(focused))){event.preventDefault();last.focus();}
+    else if(!event.shiftKey&&(focused===last||!ring.contains(focused))){event.preventDefault();first.focus();}
+  },true);
+  document.addEventListener('focusin',function(){
+    if(activeMeeting&&ring&&!ring.hidden&&!ring.contains(document.activeElement))document.getElementById('af-meet-panel').focus({preventScroll:true});
+  });
+  function sessionChanged(){if(activeMeeting&&activeMeeting.owner!==currentAccount())endCall();}
+  window.addEventListener('afriflow:verified-role',sessionChanged);
+  window.addEventListener('afriflow:auth-ready',sessionChanged);
+  window.addEventListener('pagehide',endCall);
   async function poll() {
-    if (busy) return;
-    var user=String(window.loggedUserEmail||'').toLowerCase();
+    sessionChanged();
+    var user=currentAccount();
     if (!user || !window.__sb) {
       account='';firstMessages=true;known.clear();firstMeetings=true;knownMeetings.clear();firstDecisions=true;knownDecisions.clear();endCall();updateButton();return;
     }
+    if (busy) return;
     if (account!==user){account=user;known.clear();knownMeetings.clear();knownDecisions.clear();firstMessages=true;firstMeetings=true;firstDecisions=true;updateButton();}
     if (!navigator.onLine) return;
     busy=true;
@@ -202,6 +314,7 @@
         sb.from(window.__TABLE||'afriflow_state').select('key,value').like('key','att:jd-%:'+account).limit(200),
         sb.from(window.__TABLE||'afriflow_state').select('key,value').like('key','att:j-%:'+account).limit(200)
       ]);
+      if(user!==currentAccount()||account!==user)return;
       var messages=queries[0].status==='fulfilled' && !queries[0].value.error ? (queries[0].value.data||[]) : null;
       if(messages){
         var unread=messages.filter(function(x){return x.value&&!x.value.read&&x.value.to===account});
@@ -212,7 +325,8 @@
         }
         known=current;firstMessages=false;
       }
-      var meets=queries[1].status==='fulfilled'&&!queries[1].value.error?(queries[1].value.data||[]):[];
+      var meets=(queries[1].status==='fulfilled'&&!queries[1].value.error?(queries[1].value.data||[]):[])
+        .filter(function(row){return row.value&&invited(row.value,user);});
       var conf=queries[2].status==='fulfilled'&&!queries[2].value.error?queries[2].value.data?.value||{}:{};
       var n=Date.now();
       var currentMeetings=new Set(meets.filter(function(row){return row.value&&row.value.id}).map(function(row){return row.value.id}));
@@ -231,10 +345,9 @@
         if(!m || !Number.isFinite(+m.start)||!m.id)return;
         var delta=n-(+m.start);
         if(delta>=0&&delta<=120000) {
-          var link=m.link||conf.link||'';
-          if(/^https:\/\//i.test(link)) callMeeting(m,link);
+          if(/^https:\/\//i.test(m.link||conf.link||''))callMeeting(m);
         }
-        else if(delta<0&&delta>=-900000 && enabled&&!seen('soon_'+m.id)) {
+        else if(delta<0&&delta>=-900000 && enabled&&!seen('soon_'+m.id+'_'+m.start)) {
           notice('Réunion bientôt', (m.title||'Réunion')+' commence dans moins de 15 minutes.','af-meet-soon-'+m.id);
         }
       });
@@ -271,6 +384,7 @@
   }
   function start(){
     build();
+    window.dispatchEvent(new Event('afriflow:alerts-ready'));
     setInterval(poll,60000);
     document.addEventListener('visibilitychange',function(){if(!document.hidden)poll()});
     window.addEventListener('online',poll);

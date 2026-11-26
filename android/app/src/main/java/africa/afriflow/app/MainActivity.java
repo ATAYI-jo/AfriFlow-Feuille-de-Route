@@ -31,6 +31,8 @@ import java.util.concurrent.Executors;
 
 public class MainActivity extends Activity {
   private WebView web;
+  private boolean webReady;
+  private String pendingMeetingId;
   private ValueCallback<Uri[]> fileCallback;
   private static final int PICK_FILE = 818;
   private static final int NOTIFICATION_PERMISSION = 740;
@@ -149,9 +151,39 @@ public class MainActivity extends Activity {
       return Uri.parse(HOME).buildUpon().appendQueryParameter("message",id).build().toString();
     }catch(Exception ignored){return null;}
   }
+  private String linkedMeeting(Intent intent) {
+    if(intent==null||!Intent.ACTION_VIEW.equals(intent.getAction()))return null;
+    try{
+      Uri uri=intent.getData();if(uri==null)return null;
+      boolean nativeLink="afriflow".equals(uri.getScheme())&&"meeting".equals(uri.getHost());
+      boolean webLink="https".equals(uri.getScheme())&&"afriflow.pages.dev".equals(uri.getHost())
+        &&(uri.getPort()==-1||uri.getPort()==443)&&uri.getUserInfo()==null
+        &&("/".equals(uri.getPath())||"".equals(uri.getPath()));
+      if(!nativeLink&&!webLink)return null;
+      String id=uri.getQueryParameter("meeting");
+      return AfriMessagingService.validMeetingId(id)?id:null;
+    }catch(Exception ignored){return null;}
+  }
+  private String meetingUrl(String id) {
+    return Uri.parse(HOME).buildUpon().appendQueryParameter("meeting",id).build().toString();
+  }
+  private void deliverPendingMeeting() {
+    if(pendingMeetingId==null||web==null||!webReady||!allowed(web.getUrl()))return;
+    String id=pendingMeetingId;pendingMeetingId=null;
+    // Pass only a validated identifier; the web application resolves current
+    // permissions and displays a preview without changing the current page.
+    web.evaluateJavascript("window.dispatchEvent(new CustomEvent('afriflow:meeting-request',{detail:{meetingId:"
+      +JSONObject.quote(id)+",source:'android'}}));",null);
+  }
   @Override protected void onNewIntent(Intent intent) {
     super.onNewIntent(intent);
     setIntent(intent);
+    String meeting=linkedMeeting(intent);
+    if(meeting!=null&&web!=null){
+      if(allowed(web.getUrl())){pendingMeetingId=meeting;deliverPendingMeeting();}
+      else web.loadUrl(meetingUrl(meeting));
+      return;
+    }
     String url=linkedMessage(intent);
     if(url!=null && web!=null)web.loadUrl(url);
   }
@@ -182,6 +214,12 @@ public class MainActivity extends Activity {
         });
     }
     web.setWebViewClient(new WebViewClient() {
+      @Override public void onPageStarted(WebView view,String url,android.graphics.Bitmap favicon) {
+        webReady=false;
+      }
+      @Override public void onPageFinished(WebView view,String url) {
+        webReady=true;deliverPendingMeeting();
+      }
       @Override public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
         Uri uri = request.getUrl();
         String host = uri.getHost();
@@ -200,7 +238,8 @@ public class MainActivity extends Activity {
         catch (Exception e) { fileCallback = null; return false; }
       }
     });
-    String linked=linkedMessage(getIntent());
+    String meeting=linkedMeeting(getIntent());
+    String linked=meeting!=null?meetingUrl(meeting):linkedMessage(getIntent());
     web.loadUrl(linked==null?HOME:linked);
     checkForAppUpdate();
   }

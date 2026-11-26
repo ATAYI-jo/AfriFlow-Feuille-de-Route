@@ -5,25 +5,34 @@ import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.content.Intent;
 import android.content.Context;
+import android.content.BroadcastReceiver;
 import android.graphics.BitmapFactory;
+import android.net.Uri;
 import android.os.Build;
 import androidx.core.app.NotificationCompat;
 import com.google.firebase.messaging.FirebaseMessagingService;
 import com.google.firebase.messaging.RemoteMessage;
-import java.net.URI;
+import java.text.DateFormat;
+import java.util.Date;
+import java.util.Locale;
 import java.util.Map;
 
 public class AfriMessagingService extends FirebaseMessagingService {
   static final String CHANNEL = "afriflow_meetings";
-  public static boolean safeTeamsUrl(String candidate) {
-    try {
-      URI url = new URI(candidate);
-      String host = url.getHost();
-      return "https".equalsIgnoreCase(url.getScheme()) &&
-        ("teams.microsoft.com".equalsIgnoreCase(host) ||
-         "teams.live.com".equalsIgnoreCase(host) ||
-         "teams.microsoft.us".equalsIgnoreCase(host));
-    } catch (Exception ignored) { return false; }
+  static boolean validMeetingId(String id) {
+    return id != null && id.matches("m[a-z0-9]{5,35}");
+  }
+  private static long number(Map<String,String> data,String key) {
+    try { return Long.parseLong(data.getOrDefault(key,"0")); }
+    catch (NumberFormatException ignored) { return 0; }
+  }
+  public static class DismissReceiver extends BroadcastReceiver {
+    @Override public void onReceive(Context context,Intent intent) {
+      String tag=intent.getStringExtra("notificationTag");
+      if(tag==null || !tag.matches("meeting:m[a-z0-9]{5,35}:[0-9]{10,17}:(soon|start)"))return;
+      NotificationManager manager=(NotificationManager)context.getSystemService(Context.NOTIFICATION_SERVICE);
+      if(manager!=null)manager.cancel(tag,0);
+    }
   }
   @Override public void onNewToken(String token) {
     super.onNewToken(token);
@@ -37,8 +46,21 @@ public class AfriMessagingService extends FirebaseMessagingService {
     if(data == null || data.isEmpty()) return;
     String title = data.getOrDefault("title", "AfriFlow");
     String body = data.getOrDefault("body", "Nouvelle notification");
-    String teams = data.getOrDefault("teamsUrl", "");
     boolean meeting = "meeting".equals(data.get("kind"));
+    String meetingId=data.getOrDefault("meetingId","");
+    String stage="soon".equals(data.get("stage"))?"soon":"start";
+    long start=number(data,"start"),end=number(data,"end"),expiresAt=number(data,"expiresAt");
+    long now=System.currentTimeMillis();
+    if(meeting && (!validMeetingId(meetingId)||start<=0||end<=start||expiresAt<=now))return;
+    String tag=meeting?"meeting:"+meetingId+":"+start+":"+stage:"";
+    if(meeting){
+      expiresAt=Math.min(expiresAt,end);
+      if(expiresAt<=now)return;
+      title="soon".equals(stage)?"AfriFlow · Réunion à venir":"AfriFlow · Réunion à rejoindre";
+      String meetingTitle=data.getOrDefault("meetingTitle",body);
+      String when=DateFormat.getDateTimeInstance(DateFormat.MEDIUM,DateFormat.SHORT,Locale.FRANCE).format(new Date(start));
+      body=meetingTitle+" · "+when+" · "+((end-start)/60000)+" min";
+    }
     NotificationManager mgr = (NotificationManager)getSystemService(Context.NOTIFICATION_SERVICE);
     if(mgr == null) return;
     if(Build.VERSION.SDK_INT >= 26) {
@@ -49,7 +71,14 @@ public class AfriMessagingService extends FirebaseMessagingService {
     }
     Intent open = new Intent(this,MainActivity.class);
     open.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP|Intent.FLAG_ACTIVITY_SINGLE_TOP);
-    PendingIntent openPi = PendingIntent.getActivity(this,1,open,
+    if(meeting){
+      // The tap opens the authenticated AfriFlow preview. Only its Join button
+      // checks attendance and opens Teams; a push is never a check-in.
+      Uri url=Uri.parse("https://afriflow.pages.dev/").buildUpon().appendQueryParameter("meeting",meetingId).build();
+      open.setAction(Intent.ACTION_VIEW).setData(url);
+    }
+    int requestId=meeting?(tag.hashCode()&0x7FFFFFFF):1;
+    PendingIntent openPi = PendingIntent.getActivity(this,requestId,open,
       PendingIntent.FLAG_UPDATE_CURRENT|PendingIntent.FLAG_IMMUTABLE);
     NotificationCompat.Builder notification = new NotificationCompat.Builder(this,CHANNEL)
       .setSmallIcon(R.mipmap.ic_launcher)
@@ -61,14 +90,18 @@ public class AfriMessagingService extends FirebaseMessagingService {
       .setPriority(NotificationCompat.PRIORITY_HIGH)
       .setDefaults(NotificationCompat.DEFAULT_ALL)
       .setCategory(meeting?NotificationCompat.CATEGORY_REMINDER:NotificationCompat.CATEGORY_MESSAGE);
-    if(meeting && safeTeamsUrl(teams)){
-      Intent join = new Intent(Intent.ACTION_VIEW,android.net.Uri.parse(teams));
-      join.addCategory(Intent.CATEGORY_BROWSABLE);
-      PendingIntent joinPi = PendingIntent.getActivity(this,2,join,
+    if(meeting){
+      Intent later=new Intent(this,DismissReceiver.class).setAction("africa.afriflow.DISMISS_MEETING")
+        .setData(open.getData()).putExtra("notificationTag",tag);
+      PendingIntent laterPi=PendingIntent.getBroadcast(this,requestId,later,
         PendingIntent.FLAG_UPDATE_CURRENT|PendingIntent.FLAG_IMMUTABLE);
-      notification.addAction(0,"Rejoindre Teams",joinPi);
+      notification.setTimeoutAfter(expiresAt-now).setOnlyAlertOnce(true)
+        .addAction(0,"Plus tard",laterPi).addAction(0,"Rejoindre",openPi);
     }
     // This is a meeting reminder, not a VoIP call. No restricted full-screen call intent.
-    mgr.notify((int)(System.currentTimeMillis()&0x7FFFFFFF),notification.build());
+    try{
+      if(meeting)mgr.notify(tag,0,notification.build());
+      else mgr.notify((int)(now&0x7FFFFFFF),notification.build());
+    }catch(SecurityException denied){android.util.Log.w("AfriFlow","Notification permission is unavailable");}
   }
 }

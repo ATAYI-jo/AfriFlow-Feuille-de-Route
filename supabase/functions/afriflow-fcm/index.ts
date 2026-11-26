@@ -1,4 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { SITE_URL, canReceiveMeeting, canReceiveNews, canReceiveScheduled, fcmData, loadRecipientDirectory, meetingNotification, normalizeEmail, notificationTtl } from "../_shared/meeting-notifications.ts";
+import type { NotificationEnvelope } from "../_shared/meeting-notifications.ts";
 const sb=createClient(Deno.env.get("SUPABASE_URL")!,Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,{auth:{persistSession:false,autoRefreshToken:false}});
 const CORS=["https://afriflow.pages.dev","https://afriflow-africa.onrender.com","https://atayi-jo.github.io"];
 const json=(req:Request,body:unknown,status=200)=>new Response(JSON.stringify(body),{status,headers:{
@@ -8,10 +10,6 @@ const json=(req:Request,body:unknown,status=200)=>new Response(JSON.stringify(bo
  "Access-Control-Allow-Methods":"OPTIONS,POST"
 }});
 const clean=(v:unknown)=>String(v||"").slice(0,240);
-function validTeams(value:unknown){
- try{const u=new URL(String(value||""));return u.protocol==="https:"&&["teams.microsoft.com","teams.live.com","teams.microsoft.us"].includes(u.hostname)?u.href:"";}
- catch{return "";}
-}
 function base64url(data:Uint8Array){return btoa(String.fromCharCode(...data)).replace(/\+/g,"-").replace(/\//g,"_").replace(/=/g,"");}
 const utf=(s:string)=>new TextEncoder().encode(s);
 function pemDecode(pem:string){return Uint8Array.from(atob(pem.replace(/-----BEGIN PRIVATE KEY-----|-----END PRIVATE KEY-----|\s/g,"")),c=>c.charCodeAt(0));}
@@ -34,16 +32,17 @@ async function googleToken(){
  const data=await response.json();
  return {accessToken:String(data.access_token),project:String(account.project_id)};
 }
-type Device={token:string,user_email:string};
-async function send(eventKey:string,device:Device,content:{title:string;body:string;kind:string;teamsUrl?:string},oauth:{accessToken:string;project:string}){
+type Device={token:string,user_email:string,user_id:string};
+async function send(eventKey:string,device:Device,content:NotificationEnvelope,oauth:{accessToken:string;project:string}){
+ if(notificationTtl(content,Date.now())<=0)return "expired";
  const {error:claim}=await sb.from("afriflow_fcm_deliveries").insert({event_key:eventKey,token:device.token});
  if(claim){if(claim.code==="23505")return "already";throw claim;}
  try{
+   const ttl=notificationTtl(content,Date.now());
+   if(ttl<=0)return "expired";
    const response=await fetch("https://fcm.googleapis.com/v1/projects/"+encodeURIComponent(oauth.project)+"/messages:send",{
      method:"POST",headers:{"Content-Type":"application/json",Authorization:"Bearer "+oauth.accessToken},
-     body:JSON.stringify({message:{token:device.token,data:{
-       title:content.title,body:content.body,kind:content.kind,teamsUrl:content.teamsUrl||"",
-     },android:{priority:"HIGH",ttl:"3600s"}}})
+     body:JSON.stringify({message:{token:device.token,data:fcmData(content),android:{priority:"HIGH",ttl:ttl+"s"}}})
    });
    if(response.ok)return "sent";
    const data=await response.text();
@@ -62,13 +61,14 @@ async function send(eventKey:string,device:Device,content:{title:string;body:str
 }
 async function dispatch(){
  if(!Deno.env.get("AFRIFLOW_FIREBASE_SERVICE_ACCOUNT_JSON"))return {configured:false,sent:0};
- const {data:devices,error:err}=await sb.from("afriflow_fcm_devices").select("token,user_email").limit(2000);
+ const {data:devices,error:err}=await sb.from("afriflow_fcm_devices").select("token,user_email,user_id").limit(2000);
  if(err)throw err;
  if(!(devices||[]).length)return {configured:true,devices:0,sent:0};
+ const recipients=await loadRecipientDirectory(sb);
  const oauth=await googleToken();
  const byEmail=new Map<string,Device[]>();
- for(const d of devices as Device[]){const k=d.user_email.toLowerCase();byEmail.set(k,[...(byEmail.get(k)||[]),d]);}
- const now=Date.now(),pending:{key:string;device:Device;content:{title:string;body:string;kind:string;teamsUrl?:string}}[]=[];
+ for(const d of devices as Device[]){const k=normalizeEmail(d.user_email);byEmail.set(k,[...(byEmail.get(k)||[]),d]);}
+ const now=Date.now(),pending:{key:string;device:Device;content:NotificationEnvelope}[]=[];
  const {data:messages,error:messageErr}=await sb.from("afriflow_state").select("key,value,updated_at")
    .like("key","msg:%").gte("updated_at",new Date(now-3*60000).toISOString()).limit(500);
  if(messageErr)throw messageErr;
@@ -76,38 +76,30 @@ async function dispatch(){
    const m=row.value||{},to=String(m.to||"").trim().toLowerCase();
    if(!to||m.read||!String(row.key).startsWith("msg:"+to+":"))continue;
    for(const device of byEmail.get(to)||[])pending.push({key:"msg:"+row.key,device,content:{
-     title:"AfriFlow · Nouveau message",body:clean(m.subject||"Vous avez reçu un message"),kind:"message"}});
+     title:"AfriFlow · Nouveau message",body:clean(m.subject||"Vous avez reçu un message"),kind:"message",url:SITE_URL}});
  }
- const {data:meetings,error:meetErr}=await sb.from("afriflow_state").select("value").like("key","meet:%").limit(500);
+ const {data:meetings,error:meetErr}=await sb.from("afriflow_state").select("key,value").like("key","meet:%").limit(500);
  if(meetErr)throw meetErr;
- const {data:config}=await sb.from("afriflow_state").select("value").eq("key","pub:meetcfg").maybeSingle();
  for(const row of meetings||[]){
-   const m=row.value||{},start=Number(m.start);
-   if(!m.id||!Number.isFinite(start))continue;
-   const delta=start-now,starting=delta<=0&&delta>=-120000,soon=delta>0&&delta<=15*60000&&delta>=13*60000;
-   if(!starting&&!soon)continue;
-   const key="meeting:"+m.id+":"+start+":"+(starting?"start":"soon");
-   const content={title:starting?"AfriFlow · Réunion maintenant":"AfriFlow · Réunion dans 15 min",
-     body:clean(m.title||"Réunion programmée"),kind:"meeting",teamsUrl:validTeams(m.link||config?.value?.link)};
-   for(const device of devices as Device[])pending.push({key,device,content});
+   const m=row.value||{};
+   if(row.key!=="meet:"+m.id)continue;
+   const notification=meetingNotification(m,now);
+   if(!notification)continue;
+   for(const device of devices as Device[]){
+     if(!canReceiveMeeting(recipients,device,m))continue;
+     pending.push({key:notification.eventKey,device,content:notification.payload});
+   }
  }
  const {data:reminders}=await sb.from("afriflow_state").select("value").eq("key","pub:deadlines").maybeSingle();
  const today=new Date(now).toISOString().slice(0,10);
  if(new Date(now).getUTCHours()===8)for(const task of reminders?.value?.items||[]){
    if(task.done||task.due!==today||!task.id)continue;
-   for(const device of devices as Device[])pending.push({key:"deadline:"+today+":"+task.id,device,content:{
-     title:"AfriFlow · Échéance aujourd’hui",body:clean(task.title),kind:"reminder"}});
+   for(const device of devices as Device[]){
+     if(!canReceiveScheduled(recipients,device))continue;
+     pending.push({key:"deadline:"+today+":"+task.id,device,content:{
+       title:"AfriFlow · Échéance aujourd’hui",body:clean(task.title),kind:"reminder",url:SITE_URL}});
+   }
  }
- const [{data:members,error:memberError},{data:profiles,error:profileError},{data:admins,error:adminError}] = await Promise.all([
-   sb.from("afriflow_market_profiles").select("user_id").limit(2000),
-   sb.from("afriflow_profiles").select("user_id,email").limit(2000),
-   sb.from("afriflow_admins").select("email").limit(2000)
- ]);
- if(memberError || profileError || adminError) throw (memberError || profileError || adminError);
- const ids = new Set((members||[]).map((m:any)=>String(m.user_id)));
- const authorizedNewsEmails = new Set((profiles||[]).filter((p:any)=>ids.has(String(p.user_id)))
-   .map((p:any)=>String(p.email||"").toLowerCase()));
- (admins||[]).forEach((a:any)=>authorizedNewsEmails.add(String(a.email||"").toLowerCase()));
  const {data:news,error:newsError} = await sb.from("afriflow_market_products")
    .select("id,name,created_at").eq("is_active",true)
    .eq("listing_type","announcement").in("category",["Veille agroalimentaire","Actualités mondiales"])
@@ -117,9 +109,9 @@ async function dispatch(){
  if(newsError) throw newsError;
  for(const article of news||[]) {
    for(const device of devices as Device[]) {
-     if(!authorizedNewsEmails.has(device.user_email.toLowerCase())) continue;
+     if(!canReceiveNews(recipients,device)) continue;
      pending.push({key:"agro-news:"+article.id,device,content:{
-       title:"Actualité AfriFlow",body:clean(article.name),kind:"news"}});
+       title:"Actualité AfriFlow",body:clean(article.name),kind:"news",url:SITE_URL}});
    }
  }
 

@@ -107,7 +107,7 @@ html #intro #introVideo{position:relative!important;z-index:2!important;box-sizi
 #afDownloadPanel .af-platform[hidden]{display:none!important}
 </style>\n
 <!-- AfriFlow enhanced brand colors and active-session alerts -->
-<link rel="stylesheet" href="./afriflow-alerts.css">
+<link rel="stylesheet" href="./afriflow-alerts.css?v=20261126-meeting-reliability">
 <style id="afri-download-brand-2026">
 /* Floating installation glyph: keep a 48px accessible hit target, without a visible tile. */
 #afPwaInstallArea #afPwaInstallBtn{
@@ -989,7 +989,9 @@ collect();sched();
 .mt-m th,.mt-m td{padding:10px 12px;border-bottom:1px solid var(--line);text-align:left;font-size:.9rem}
 </style>
 
-<script src="./modules/collaboration/meetings.js?v=20261126-startup-stability"></script>
+<link rel="stylesheet" href="./modules/collaboration/attendance.css?v=20261126-attendance-fairness">
+<script src="./modules/collaboration/attendance.js?v=20261126-attendance-fairness"></script>
+<script src="./modules/collaboration/meetings.js?v=20261126-meeting-reliability"></script>
 
 
 
@@ -1308,6 +1310,7 @@ async function decorate(){
   var r1=await SB().from(TB()).select("key,value").like("key","att:j-%").limit(1000);
   var r2=await SB().from(TB()).select("key,value").like("key","att:jd-%").limit(1000);
   var r3=await SB().from(TB()).select("key,value").like("key","att:perm-%").limit(1000);
+  if(r1.error||r2.error||r3.error)return;
   var J={},D={},P={},members={};
   try{(await window.AFRI.listMembers()).forEach(function(m){if(m.email)members[String(m.email).toLowerCase()]=m})}catch(e){}
   function portrait(m){var seed=encodeURIComponent((m&&m.avatar_value)||((m&&m.name)||"afriflow"));return '<img src="https://api.dicebear.com/10.x/lorelei/svg?seed='+seed+'&backgroundColor=e8f2ec" alt="" referrerpolicy="no-referrer">'}
@@ -1318,20 +1321,6 @@ async function decorate(){
     if(!d.isConnected||d.dataset.jf)return;d.dataset.jf="1";
     var del=d.querySelector("[data-csdel]");if(!del)return;
     var id=del.dataset.csdel,L=J[id]||[];
-    var exc=0;
-    d.querySelectorAll("tbody tr").forEach(function(tr){
-      var td=tr.children;if(td.length<4)return;
-      var em=td[1].textContent.trim().toLowerCase(),j=L.filter(function(x){return x.email===em})[0];
-      var perm=P[id+":"+em],s=D[id+":"+em],pill=td[2].querySelector(".mt-pill");
-      var decided=j&&s&&Number(s.at)>=Number(j.at);
-      if(perm){
-        if(pill&&pill.classList.contains("mt-abs")){pill.className="mt-pill mt-ok";pill.textContent="Excusé — permission";exc++}
-        else td[2].insertAdjacentHTML("beforeend",' <span class="mt-pill mt-ok">Permission accordée</span>');
-      }else if(decided&&s.ok){if(pill&&pill.classList.contains("mt-abs")){pill.className="mt-pill mt-ok";pill.textContent="Excusé";exc++}}
-      else if(j&&!decided)td[2].insertAdjacentHTML("beforeend"," <span class=\"mt-pill mt-wait\">Justificatif reçu</span>");
-    });
-    var sum=d.querySelector(".mt-sum");
-    if(exc&&sum){var ab=sum.querySelector(".mt-abs");if(ab)ab.textContent=Math.max(0,(parseInt(ab.textContent)||0)-exc)+" absent(s)";sum.insertAdjacentHTML("beforeend",'<span class="mt-pill mt-ok">'+exc+' excusé(s)</span>')}
     var permissions=Object.keys(P).filter(function(k){return k.indexOf(id+":")===0}).map(function(k){return P[k]});
     if(!L.length&&!permissions.length)return;
     var blk=document.createElement("div");blk.className="jf-blk";
@@ -1679,7 +1668,8 @@ async function openCensorPermission(){
       var key="att:perm-"+mid+":"+email,existing=await SB().from(TB()).select("value").eq("key",key).maybeSingle();
       if(existing.error)throw existing.error;
       if(existing.data){error.textContent="Une permission existe déjà pour cette réunion et ce collaborateur.";submit.disabled=false;return}
-      await put(key,{mid:mid,email:email,reason:text,by:me(),at:Date.now(),type:"censeur_permission"});
+      var savedPermission=await SB().from(TB()).insert({key:key,value:{mid:mid,email:email,reason:text,by:me(),at:Date.now(),type:"censeur_permission"},updated_at:new Date().toISOString()});
+      if(savedPermission.error)throw savedPermission.error;
       close();toast("Permission accordée au collaborateur.");
       var rf=$("csRef");if(rf)rf.click();
     }catch(e){error.textContent="Permission impossible : "+(e.message||e);submit.disabled=false}
@@ -1715,59 +1705,38 @@ window.AfriOpenPersonal=openPersonal;
 window.addEventListener("afriflow:navigate",function(event){
   if(!event.detail||event.detail.id!=="personal"){jpActive=false;jpGeneration++;}
 });
-function statut(m,rec,exc){
-  var n=Date.now(),end=m.start+m.dur*6e4;
-  if(rec)return rec.at<=m.start+m.grace*6e4?["ok","Présent"]:["late","Retard (+"+Math.max(1,Math.round((rec.at-m.start)/6e4))+" min)"];
-  if(exc)return ["ok","Excusé"];
-  if(n>end)return ["abs","Absent"];
-  return ["wait",n<m.start?"À venir":"En attente"];
-}
 async function renderPersonal(){
   if(!jpActive)return;
   var generation=++jpGeneration;
-  vh.innerHTML='<div class="toolbar"><b>Mes présences</b><div class="toolbar-actions"><button type="button" id="jpRef">Actualiser</button><button type="button" class="p" id="jpNew">📎 Envoyer un justificatif</button></div></div><div id="jpRoot"><p style="color:var(--muted)">Chargement…</p></div>';
-  var meets=[],A={},J={},D={},P={},q=me(),err="";
+  vh.innerHTML='<div class="toolbar"><b>Mes présences</b><div class="toolbar-actions"><button type="button" id="jpRef">Actualiser</button><button type="button" class="p" id="jpNew">Envoyer un justificatif</button></div></div><div id="jpRoot"><p style="color:var(--muted)">Chargement…</p></div>';
+  var meets=[],A={},J={},D={},q=me(),err="",attendance;
   try{
-    var r=await SB().from(TB()).select("value").like("key","meet:%").limit(300);
-    meets=(r.data||[]).map(function(x){return x.value}).filter(function(v){
+    var results=await window.AfriAttendance.loadPersonal();attendance=results.attendance;
+    meets=results.meetings.map(function(x){return x.value}).filter(function(v){
       if(!v||!v.start)return false;
-      // Legacy meetings invite all members. New meetings may target specific people.
       return !Array.isArray(v.invitees)||v.invitees.some(function(email){return String(email).toLowerCase()===q});
     });
-    var a=await SB().from(TB()).select("value").like("key","att:m%:"+q).limit(300);
-    var j=await SB().from(TB()).select("value").like("key","att:j-%:"+q).limit(300);
-    var d=await SB().from(TB()).select("value").like("key","att:jd-%:"+q).limit(300);
-    var p=await SB().from(TB()).select("value").like("key","att:perm-%:"+q).limit(300);
-    if(p.error)throw p.error;
-    (p.data||[]).forEach(function(x){if(x.value&&x.value.email===q&&x.value.mid)P[x.value.mid]=x.value});
-    (a.data||[]).forEach(function(x){if(x.value&&x.value.email===q&&x.value.meet)A[x.value.meet]=x.value});
-    (j.data||[]).forEach(function(x){if(x.value&&x.value.email===q&&x.value.mid)J[x.value.mid]=x.value});
-    (d.data||[]).forEach(function(x){if(x.value&&x.value.email===q&&x.value.mid)D[x.value.mid]=x.value});
+    results.records.forEach(function(x){if(x.value&&String(x.value.email).toLowerCase()===q&&x.value.meet)A[x.value.meet]=x.value});
+    Object.keys(attendance.justifications).forEach(function(key){var v=attendance.justifications[key];if(String(v.email).toLowerCase()===q)J[v.mid]=v});
+    Object.keys(attendance.decisions).forEach(function(key){var v=attendance.decisions[key];if(String(v.email).toLowerCase()===q)D[v.mid]=v});
   }catch(e){err=String((e&&e.message)||e)}
   var root=$("jpRoot");if(!root||!jpActive||generation!==jpGeneration||q!==me())return;
-  if(err){root.innerHTML='<p style="color:#c0392b">Lecture impossible : '+esc(err)+'</p>';return}
+  if(err){root.innerHTML='<p role="alert">Lecture des présences impossible : '+esc(err)+'. Aucun statut d’absence n’est déduit de cette erreur. Utilisez Actualiser pour réessayer.</p>';return}
   meets.sort(function(x,y){return y.start-x.start});
   if(!meets.length){root.innerHTML='<p style="color:var(--muted)">Aucune réunion programmée pour le moment.</p>';return}
-  // Notify locally once when a new decision is seen after opening/refreshing this page.
   Object.keys(D).forEach(function(id){
     var decision=D[id],request=J[id];if(!request||!decision||Number(decision.at)<Number(request.at))return;
     var key="afriflow_justification_decision_"+q+"_"+id,seen="";
     try{seen=localStorage.getItem(key)||""}catch(ignore){}
     if(seen!==String(decision.at)){
       try{localStorage.setItem(key,String(decision.at))}catch(ignore){}
-      toast(decision.ok?"Votre justificatif a été accepté.":"Votre justificatif a été refusé. Consultez le motif dans Mes présences.");
+      toast(decision.ok?"Votre justificatif a été accepté.":"Votre justificatif a été refusé. Consultez le motif du refus dans Mes présences.");
     }
   });
-  root.innerHTML='<div class="journal-article" style="padding:22px"><div style="overflow-x:auto"><table class="t"><thead><tr><th>Réunion</th><th>Date</th><th>Ma présence</th><th>Mon justificatif</th></tr></thead><tbody>'
-   +meets.map(function(m){
-     var jf=J[m.id],jd=D[m.id],decided=!!(jf&&jd&&Number(jd.at)>=Number(jf.at));
-     var perm=P[m.id],ex=!!(perm||(decided&&jd.ok)),s=statut(m,A[m.id],ex);
-     if(perm&&!A[m.id])s=["ok","Excusé — permission accordée"];
-     var jt=perm?'<span class="mt-pill mt-ok">Permission accordée</span><details><summary>Voir le motif</summary><p>'+esc(perm.reason||"")+' — '+esc(perm.by||"")+' · '+fdt(perm.at)+'</p></details>':!jf?'—':(decided?(jd.ok?'<span class="mt-pill mt-ok">Accepté</span>':'<span class="mt-pill mt-abs">Refusé</span>'+(jd.reason?'<details><summary>Voir le motif</summary><p>'+esc(jd.reason)+'</p></details>':'')+' <button type="button" data-jp-resend="'+esc(m.id)+'">Corriger et renvoyer</button>'):'<span class="mt-pill mt-wait">En attente du censeur</span>');
-     if(jd&&Array.isArray(jd.history)&&jd.history.length)jt+='<details><summary>Historique</summary>'+jd.history.map(function(h){return '<p>'+esc(h.ok?"Accepté":"Refusé")+' · '+fdt(h.at)+(h.reason?" — "+esc(h.reason):"")+'</p>'}).join("")+'</details>';
-     return '<tr><td><b>'+esc(m.title)+'</b></td><td>'+fdt(m.start)+'</td><td><span class="mt-pill mt-'+s[0]+'">'+esc(s[1])+'</span></td><td>'+jt+'</td></tr>';
-   }).join("")+'</tbody></table></div><p style="color:var(--muted);font-size:.85rem;margin:14px 0 0">Seules les réunions auxquelles vous êtes invité et vos propres données sont affichées. Le premier clic sur « Rejoindre » constitue un pointage, pas une preuve de durée sur Teams. En cas d’absence, vous pouvez envoyer un justificatif au Censeur.</p></div>';
+  window.AfriAttendance.renderPersonal(root,meets,A,attendance);
 }
+window.addEventListener("afriflow:attendance-changed",function(){if(jpActive)renderPersonal()});
+
 document.addEventListener("click",function(e){
   var button=e.target.closest("button[data-jp-resend]");
   if(button){window.afriflowJustificationMeetingId=button.getAttribute("data-jp-resend");var jf=document.getElementById("jfBtn");if(jf)jf.click();}
@@ -2940,7 +2909,7 @@ body.af-profile-open #afCloudSyncBadge{visibility:hidden!important}
 <script src="./afriflow-first-use.js" defer></script>
 
 <!-- Notifications and meeting-calls for active AfriFlow sessions -->
-<script src="./afriflow-alerts.js" defer></script>
+<script src="./afriflow-alerts.js?v=20261126-meeting-reliability" defer></script>
 
 <!-- AfriFlow: notify about published updates; refresh only on explicit user action -->
 <script src="./updates.js?v=20261126-navigation-stability" defer></script>

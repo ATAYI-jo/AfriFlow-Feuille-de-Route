@@ -15,10 +15,12 @@ function messageTarget(args) {
     if (typeof arg !== 'string' || !arg.startsWith('afriflow://')) continue;
     try {
       const url = new URL(arg);
-      const id = url.searchParams.get('message');
-      if (url.protocol !== 'afriflow:' || url.host !== 'message' || !id || !/^[0-9]{10,17}:[a-z0-9]{1,16}$/.test(id)) continue;
+      if (url.protocol !== 'afriflow:') continue;
+      const kind = url.host === 'meeting' ? 'meeting' : url.host === 'message' ? 'message' : '';
+      const id = kind && url.searchParams.get(kind);
+      if (!id || !(kind === 'meeting' ? /^m[a-z0-9]{5,35}$/ : /^[0-9]{10,17}:[a-z0-9]{1,16}$/).test(id)) continue;
       const dest = new URL(HOME);
-      dest.searchParams.set('message', id);
+      dest.searchParams.set(kind, id);
       return dest.href;
     } catch (_) {}
   }
@@ -29,8 +31,9 @@ function openLinkedMessage(args) {
   const target = messageTarget(args);
   if (!target) return false;
   if (win && !win.isDestroyed()) {
-    win.loadURL(target).catch(err => console.warn('AfriFlow linked message:', err.message));
-    reveal();
+    const id = new URL(target).searchParams.get('meeting');
+    if (id) previewMeeting({meetingId:id});
+    else { win.loadURL(target).catch(err => console.warn('AfriFlow linked message:', err.message)); reveal(); }
   } else {
     pendingMessageUrl = target;
     if (app.isReady()) reveal();
@@ -112,39 +115,64 @@ function reveal() {
   if (win.isMinimized()) win.restore();
   win.focus();
 }
+function meetingDetails(details) {
+  if (!details || !/^m[a-z0-9]{5,35}$/.test(String(details.meetingId || ''))) return null;
+  const start = Number(details.start), duration = Number(details.dur), end = Number(details.end) || start + duration * 60000;
+  const expiresAt = Math.min(Number(details.expiresAt) || end, end);
+  if (!Number.isFinite(start) || !Number.isFinite(end) || end <= start || !Number.isFinite(expiresAt) || expiresAt <= Date.now()) return null;
+  return {meetingId:String(details.meetingId),meetingTitle:String(details.meetingTitle || 'Réunion AfriFlow').slice(0,160),
+    start,dur:(end-start)/60000,end,stage:details.stage==='soon'?'soon':'start',expiresAt};
+}
+function previewMeeting(details) {
+  if (!details || !/^m[a-z0-9]{5,35}$/.test(String(details.meetingId || ''))) return;
+  // The user's tap goes through the authenticated server preview, which uses
+  // server time even if this device clock changed after notification delivery.
+  reveal();
+  const target = win;
+  function deliver() {
+    if (!target || target.isDestroyed() || !parseSafeUrl(target.webContents.getURL())) return;
+    target.webContents.send('afriflow:incoming-meeting', details);
+  }
+  if (target && target.webContents.isLoading()) target.webContents.once('did-finish-load',deliver);
+  else deliver();
+}
+const meetingNotices = new Map();
+function notifyMeeting(details) {
+  const meeting = meetingDetails(details); if (!meeting) return;
+  const key = meeting.meetingId + ':' + meeting.start + ':' + meeting.stage;
+  if (meetingNotices.has(key)) return;
+  const notification = new Notification({
+    title:meeting.stage==='soon'?'AfriFlow · Réunion à venir':'AfriFlow · Réunion à rejoindre',
+    body:meeting.meetingTitle + ' · ' + new Date(meeting.start).toLocaleString('fr-FR',{dateStyle:'short',timeStyle:'short'}),
+    icon:path.join(__dirname,'assets','icon.png'),silent:false
+  });
+  meetingNotices.set(key,notification);
+  notification.on('click',()=>{ notification.close(); previewMeeting(meeting); });
+  const timer=setTimeout(()=>{notification.close();meetingNotices.delete(key);},Math.min(meeting.expiresAt-Date.now(),2147483647));
+  if (timer.unref) timer.unref();
+  notification.show();
+}
 function notifyFromRenderer(event, details) {
   // A compromised website outside AfriFlow must never invoke privileged APIs.
   if (!event.sender || !parseSafeUrl(event.sender.getURL())) return;
   if (!details || typeof details !== 'object') return;
+  if (details.meetingId) { notifyMeeting(details); return; }
   const title = String(details.title || 'AfriFlow').slice(0, 120);
   const body = String(details.body || '').slice(0, 350);
-  const teams = teamsUrl(String(details.teamsUrl || ''));
-  const meetingTitle = String(details.meetingTitle || '').slice(0, 160);
   const notification = new Notification({
     title, body, icon: path.join(__dirname,'assets','icon.png'),
     silent: false
   });
   notification.on('click', () => {
     reveal();
-    // Keep the decision visible: the user can answer or decline before Teams opens.
-    if (teams && win && !win.isDestroyed()) {
-      win.webContents.send('afriflow:incoming-meeting', { title: meetingTitle || title, teamsUrl: teams });
-    }
   });
   notification.show();
 }
 ipcMain.on('afriflow:notify',notifyFromRenderer);
 function presentIncomingMeeting(event, details) {
-  // Only the trusted AfriFlow renderer can ask the desktop app to present a call.
+  // A scheduled invitation is a notification, never an automatic Teams launch.
   if (!event.sender || !parseSafeUrl(event.sender.getURL())) return;
-  if (!details || typeof details !== 'object') return;
-  const teams = teamsUrl(String(details.teamsUrl || ''));
-  if (!teams) return;
-  const title = String(details.meetingTitle || 'Réunion AfriFlow').slice(0, 160);
-  reveal();
-  if (win && !win.isDestroyed()) {
-    win.webContents.send('afriflow:incoming-meeting', { title, teamsUrl: teams });
-  }
+  notifyMeeting(details);
 }
 ipcMain.on('afriflow:present-incoming-meeting',presentIncomingMeeting);
 // A first-party, validated Teams link can be opened after the server check-in.
