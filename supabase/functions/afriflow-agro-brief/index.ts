@@ -70,7 +70,7 @@ function stripHtml(value: string) {
 
 async function googleNewsArticles() {
   const url = new URL("https://news.google.com/rss/search");
-  url.searchParams.set("q", 'actualités internationales économie diplomatie technologie climat');
+  url.searchParams.set("q", 'Afrique (économie OR innovation OR entrepreneuriat OR diplomatie OR climat) when:2d');
   url.searchParams.set("hl", "fr");
   url.searchParams.set("gl", "FR");
   url.searchParams.set("ceid", "FR:fr");
@@ -176,7 +176,7 @@ async function writeBrief(apiKey: string, sources: Array<{ title: string; url: s
   const model = clean(Deno.env.get("GEMINI_AGRO_MODEL") || "gemini-3.8-flash", 80);
   const prompt = [
     "Tu es journaliste de synthèse pour AfriFlow. Rédige un texte informatif approfondi en français fondé exclusivement sur le contenu vérifié ci-dessous, sans prétendre avoir lu ce qui manque.",
-    "Explique les faits, le contexte, les acteurs et les enjeux selon le texte. Attribue les prises de position, conserve la nuance et le point d’interrogation éventuel; ne transforme jamais une accusation ou un débat en fait établi. Aucun fait ou chiffre inventé.",
+    "Priorité à l’actualité des pays africains, à leur économie, leurs entreprises, leurs innovations, leurs échanges et leurs enjeux régionaux lorsque les sources le documentent. Explique les faits, le contexte et les acteurs sans ajouter de liens avec l’Afrique non attestés. Attribue les prises de position et ne transforme jamais une accusation ou un débat en fait établi. Aucun fait ou chiffre inventé.",
     "Réponds strictement en JSON valide : {\"title\":\"...\",\"description\":\"...\"}. title: 45 à 140 caractères. description: 750 à 2200 caractères, 3 à 5 paragraphes informatifs et structurés en texte simple.",
     JSON.stringify(sources.slice(0,2)),
     "Contenu vérifiable de l’article principal : "+articleText.slice(0,6500)
@@ -201,7 +201,7 @@ async function writeBrief(apiKey: string, sources: Array<{ title: string; url: s
 
 function sourceBrief(sources: Array<{ title: string; url: string; domain: string; date: string }>) {
   const lead = sources[0];
-  const title=clean(lead?.title || "Actualité mondiale : consulter la source",160);
+  const title=clean(lead?.title || "Actualité africaine : consulter la source",160);
   const domain=clean(lead?.domain || "une source journalistique",100);
   return {
     title,
@@ -217,7 +217,7 @@ async function frenchBriefFallback(sources: Array<{ title: string; url: string; 
     const model = "@cf/meta/llama-3.1-8b-instruct";
     const prompt = [
       "Rédige en français un titre (max 160 caractères) et une synthèse journalistique détaillée (entre 650 et 1600 caractères) de cette actualité pour AfriFlow.",
-      "Utilise STRICTEMENT le contenu vérifiable fourni. Explique faits, contexte, acteurs et enjeux. Attribue les propos. Ne transforme aucune question en affirmation et n’invente rien.",
+      "Utilise STRICTEMENT le contenu vérifiable fourni sur l’Afrique. Explique faits, contexte, acteurs et enjeux ; privilégie les dimensions économiques, entrepreneuriales et régionales uniquement si elles sont documentées. Attribue les propos. Ne transforme aucune question en affirmation et n’invente rien.",
       "Réponds uniquement avec un objet JSON valide ayant les deux propriétés title et description. N'inclus aucun Markdown.",
       JSON.stringify(sources.slice(0, 2)),
       "Contenu vérifiable : "+articleText.slice(0,6000)
@@ -363,34 +363,27 @@ async function attachBriefIllustration(service: ReturnType<typeof createClient>,
 const slots = ["morning","afternoon","evening"] as const;
 type NewsSlot = typeof slots[number];
 const queries: Record<NewsSlot,string> = {
-  morning: "(international OR monde) (diplomatie OR économie OR géopolitique)",
-  afternoon: "(monde OR international) (technologie OR climat OR santé OR science)",
-  evening: "(international OR monde) (commerce OR transports OR énergie OR Afrique)"
+  morning: "Afrique économie commerce régional investissements coopération",
+  afternoon: "Afrique innovation numérique climat santé recherche",
+  evening: "Afrique industrie entrepreneuriat logistique agriculture énergie"
 };
+// Broad African coverage across francophone and anglophone regions.
+// General-purpose feeds are eligible only when a headline explicitly concerns Africa.
+const africaTitle = /afri(c|qu)|maghreb|sahel|c[eé]d[eé]ao|uemoa|[ée]gypte|maroc|alg[eé]rie|tunisie|libye|soudan|[ée]thiop|[ée]rythr[eé]e|somal|djibouti|s[eé]n[eé]gal|mauritan|mali|niger|burkina|guin[eé]e|c[oô]te d.ivoire|ivoirien|ghana|togo|b[eé]nin|nig[eé]ria|cameroun|tchad|gabon|congo|rdc|r[eé]publique centrafricaine|rwanda|burundi|ouganda|uganda|kenya|tanzanie|mozamb|zambie|zimbabwe|angola|namibie|botswana|eswatini|malawi|madagascar|seychelles|maurice|cap.vert|gambie|liberia|sierra leone|afcon|can 2027/i;
 function relevantToAfriFlow(title:string) {
-  const text = title.toLocaleLowerCase("fr");
-  return /togo|bénin|burkina|c[eé]d[eé]ao|commerce|export|import|douane|logist|transport|portuaire|fret|agric|alimentaire|approvisionnement|cha[iî]ne d.approvisionnement|cajou|mangue|march[eé] mondial|inflation|taux de change|investissement|entreprise|pme/.test(text);
+  return /commerce|export|import|douane|logist|transport|portuaire|fret|agric|alimentaire|approvisionnement|cajou|mangue|march[eé]|inflation|change|invest|entreprise|pme|startup|start.up|num[eé]ri|finance|banque|[ée]nerg|industrie|emploi|innovation/i.test(title);
 }
 async function worldArticles(slot: NewsSlot) {
+  // African desk sources first. The other feeds only supplement with articles
+  // explicitly identified as African by their title, never generic world news.
+  const africa = [
+    {url:"https://www.rfi.fr/fr/afrique/rss",domain:"RFI Afrique"},
+    {url:"https://feeds.bbci.co.uk/news/world/africa/rss.xml",domain:"BBC Afrique"}
+  ];
   const feeds:Record<NewsSlot,Array<{url:string;domain:string}>> = {
-    morning:[
-      {url:"https://feeds.bbci.co.uk/news/world/rss.xml",domain:"BBC News"},
-      {url:"https://www.france24.com/fr/rss",domain:"France 24"},
-      {url:"https://www.theguardian.com/world/rss",domain:"The Guardian"},
-      {url:"https://news.un.org/feed/subscribe/en/news/all/rss.xml",domain:"ONU"}
-    ],
-    afternoon:[
-      {url:"https://feeds.bbci.co.uk/news/technology/rss.xml",domain:"BBC News"},
-      {url:"https://feeds.bbci.co.uk/news/science_and_environment/rss.xml",domain:"BBC News"},
-      {url:"https://www.france24.com/fr/rss",domain:"France 24"},
-      {url:"https://www.theguardian.com/environment/rss",domain:"The Guardian"}
-    ],
-    evening:[
-      {url:"https://feeds.bbci.co.uk/news/business/rss.xml",domain:"BBC News"},
-      {url:"https://www.theguardian.com/business/rss",domain:"The Guardian"},
-      {url:"https://www.france24.com/fr/rss",domain:"France 24"},
-      {url:"https://www.theguardian.com/world/rss",domain:"The Guardian"}
-    ]
+    morning:[...africa,{url:"https://www.france24.com/fr/rss",domain:"France 24"}],
+    afternoon:[...africa,{url:"https://feeds.bbci.co.uk/news/technology/rss.xml",domain:"BBC News"}],
+    evening:[...africa,{url:"https://feeds.bbci.co.uk/news/business/rss.xml",domain:"BBC News"}]
   };
   const results=await Promise.allSettled(feeds[slot].map(async(feed)=>{
     const response=await fetch(feed.url,{signal:AbortSignal.timeout(8500),
@@ -415,14 +408,21 @@ async function worldArticles(slot: NewsSlot) {
     if(!Number.isFinite(date)||Date.now()-date>72*60*60*1000||date>Date.now()+15*60*1000)return false;
     seen.add(article.url);return true;
   });
-  if(!recent.length)throw new Error("Aucune actualité récente provenant des sources RSS vérifiées");
+  // Only Africa-focused dispatches: do not fill an empty slot with unrelated
+  // European, American or global headlines.
+  const african = recent.filter(article =>
+    article.domain === "RFI Afrique" || article.domain === "BBC Afrique" || africaTitle.test(article.title));
+  if(!african.length)throw new Error("Aucune actualité africaine récente provenant des sources vérifiées");
   const patterns:Record<NewsSlot,RegExp>={
     morning:/diplomat|économ|gover|politic|politique|international|sommet|conflit|accord|peace|minister|présiden|presiden|economy|trade|world|guerre/i,
     afternoon:/tech|science|climat|climate|environnement|environment|santé|health|recherch|innovation|numéri|digital|intelligenc|énerg|space|spatial/i,
     evening:/business|entreprise|marché|market|inflation|commerce|trade|transport|logist|industrie|économ|econom|invest|banque|bank|afrique|africa|energy|énergie/i
   };
-  return recent.sort((a,b)=>{
-    const score=(x:typeof a)=> (patterns[slot].test(x.title)?100:0)+(x.domain==="France 24"?20:0)+(Number.isFinite(Date.parse(x.date))?Date.parse(x.date)/1e13:0);
+  return african.sort((a,b)=>{
+    const score=(x:typeof a)=>
+      (patterns[slot].test(x.title)?100:0)+(relevantToAfriFlow(x.title)?75:0)
+      +(x.domain==="RFI Afrique"||x.domain==="BBC Afrique"?40:0)
+      +(Number.isFinite(Date.parse(x.date))?Date.parse(x.date)/1e13:0);
     return score(b)-score(a);
   }).slice(0,20);
 }
@@ -448,10 +448,14 @@ async function publishDailyBrief(service: ReturnType<typeof createClient>, day:s
     const sources=Array.isArray(raw)?raw:Array.isArray(raw?.articles)?raw.articles:[];
     if(sources[0]?.url)already.add(String(sources[0].url));
   }
-  const lead=candidates.find(a=>!already.has(a.url));
-  if(!lead)throw new Error("Aucun nouvel article distinct : pas de doublon publié");
-  const bodyText=await fetchSourceArticle(lead);
-  if(bodyText.length<350)throw new Error("Article sans texte vérifiable suffisant : aucune publication automatique");
+  // RSS alone is not enough to assert the facts. Try distinct headlines until
+  // an actual article provides sufficient verifiable content.
+  let lead:typeof candidates[number]|undefined, bodyText="";
+  for(const candidate of candidates.filter(a=>!already.has(a.url)).slice(0,8)) {
+    const article=await fetchSourceArticle(candidate);
+    if(article.length>=350){lead=candidate;bodyText=article;break;}
+  }
+  if(!lead)throw new Error("Aucun nouvel article africain avec texte vérifiable suffisant : publication suspendue");
   const sources=[lead,...candidates.filter(a=>a.url!==lead.url).slice(0,3)];
   const sourceContext=bodyText.slice(0,6500);
   let brief:{title:string;description:string};

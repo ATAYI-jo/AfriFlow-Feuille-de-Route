@@ -9,6 +9,13 @@
     excused: { k: "ok", t: "Excusé", category: "excused", detail: "Absence excusée par le censeur" },
     absent: { k: "abs", t: "Absent", category: "absent", detail: "Absence confirmée par le censeur" }
   };
+  // Compute elapsed time from absolute server timestamps, never a device clock or UTC offset.
+  function lateDuration(at, start) {
+    if (!Number.isFinite(at) || !Number.isFinite(start) || at < start) return "";
+    var seconds = Math.floor((at - start) / 1000);
+    var minutes = Math.floor(seconds / 60), remain = seconds % 60;
+    return minutes + " min" + (remain ? " " + String(remain).padStart(2, "0") + " s" : "");
+  }
   function me() { return String(window.loggedUserEmail || "").trim().toLowerCase(); }
   function sb() { return window.__sb; }
   function table() { return window.__TABLE || "afriflow_state"; }
@@ -64,12 +71,22 @@
     if (options.permission) return result("ok", "Excusé", { source: "permission", category: "excused", detail: "Permission accordée" });
     if (acceptedJustification(options))
       return result("ok", "Excusé", { source: "justification", category: "excused", detail: "Justificatif accepté" });
-    if (state.confirmed) return result(OUTCOMES[state.confirmed.outcome].k, OUTCOMES[state.confirmed.outcome].t,
-      { source: "review", category: OUTCOMES[state.confirmed.outcome].category, detail: OUTCOMES[state.confirmed.outcome].detail, confirmedAt: stamp(state.confirmed.occurred_at) || null });
+    if (state.confirmed) {
+      var reviewed = OUTCOMES[state.confirmed.outcome], confirmedAt = stamp(state.confirmed.occurred_at) || null;
+      var lateAt = confirmedAt || rawAt, reviewedDetail = reviewed.detail;
+      if (state.confirmed.outcome === "late" && lateAt !== null && start !== null) {
+        reviewedDetail += " · " + lateDuration(lateAt, start);
+        if (!confirmedAt) reviewedDetail += " selon le pointage";
+      }
+      return result(reviewed.k, reviewed.t, { source: "review", category: reviewed.category,
+        detail: reviewedDetail, confirmedAt: confirmedAt });
+    }
     if (start === null) return result("wait", "Horaire à vérifier");
     if (rawAt !== null) return rawAt <= start + grace * 60000
       ? result("ok", "Présent", { category: "present", detail: "Pointage reçu à l’heure" })
-      : result("late", "Retard", { category: "late", detail: "D’après le pointage · à confirmer", needsVerification: true });
+      : result("late", "Retard", { category: "late",
+          detail: "Retard de " + lateDuration(rawAt, start) + " · selon le pointage, à confirmer",
+          needsVerification: true });
     if (record) return result("wait", "Pointage à vérifier");
     if (now > start + duration * 60000) return result("abs", "Absent", { category: "absent", detail: "Aucun pointage enregistré · à confirmer", needsVerification: true });
     return result("wait", now < start ? "À venir" : "En attente", { detail: now < start ? "La réunion n’a pas commencé" : "Pointage non reçu" });

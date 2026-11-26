@@ -9,3 +9,62 @@ body:has(> .af-att-overlay){overflow:hidden}
 .af-att-dialog{box-sizing:border-box;width:min(620px,100%);max-height:calc(100dvh - 32px);overflow:auto;border-radius:20px;padding:22px;background:var(--card,#fff);color:var(--ink,#193024);box-shadow:0 18px 54px rgba(0,0,0,.28)}
 .af-att-dialog header{display:flex;align-items:flex-start;justify-content:space-between;gap:14px}.af-att-dialog h2{margin:0;font-size:1.25rem}.af-att-dialog header button{flex:none}.af-att-dialog form{display:grid;gap:9px}.af-att-dialog label{font-size:.91rem;font-weight:700;margin-top:8px}.af-att-dialog input,.af-att-dialog textarea,.af-att-dialog select{box-sizing:border-box;width:100%;min-height:44px;max-width:100%;font:inherit;padding:10px;border:1px solid var(--line,#ccdace);border-radius:9px;background:var(--card,#fff);color:inherit}.af-att-dialog textarea{resize:vertical}.af-att-dialog button{min-height:44px}.af-att-dialog #afAttError{color:#a32222;margin:0;min-height:1.4em}.af-att-dialog #afAttError:empty{min-height:0}.af-att-actions{display:flex;justify-content:flex-end;gap:10px;flex-wrap:wrap}.af-att-claim{padding:12px;border-radius:10px;border:1px solid var(--line,#d8e1db)}
 @media(max-width:560px){.af-att-overlay{padding:8px}.af-att-dialog{padding:16px;max-height:calc(100dvh - 16px)}.af-att-dialog header{flex-wrap:wrap}.af-att-dialog form .af-att-actions{display:grid;grid-template-columns:1fr 1fr}.af-att-table table{min-width:670px}.af-att-review{padding:12px}}
+
+/* Restore the original translucent landscape: enough tint to keep attendance legible,
+   never the opaque white panels of the discarded redesign. */
+.af-att-personal {
+  color:#163629;
+  background:rgba(232,249,236,.43);
+  border:1px solid rgba(244,255,246,.35);
+  border-radius:16px;
+  padding:18px;
+  box-shadow:0 7px 24px rgba(18,62,35,.07);
+  -webkit-backdrop-filter:blur(12px) saturate(1.1);
+  backdrop-filter:blur(12px) saturate(1.1);
+}
+.af-att-personal .af-att-zone {
+  background:rgba(240,252,241,.27);
+  color:#22432f;
+  border-left-color:#176344;
+  border-radius:0 7px 7px 0;
+  margin:12px 0 14px;
+}
+.af-att-personal .af-att-note,
+.af-att-personal .af-att-evidence,
+.af-att-personal .af-att-table small,
+.af-att-personal .af-att-status-detail,
+.af-att-personal .af-att-resolved,
+.af-att-personal .af-att-pending { color:#254833; }
+.af-att-personal :is(th,td) { color:#143624; }
+.af-att-personal .af-att-table thead th { background:rgba(242,255,242,.20); }
+.af-att-personal .af-att-table tbody tr { border-bottom:1px solid rgba(246,255,246,.40); }
+.af-att-personal :is(summary,button) { color:#123e2b; }
+.af-att-personal .mt-pill,
+.mt-m .mt-attendance .mt-pill {
+  animation:af-att-status-arrive .52s cubic-bezier(.2,.8,.2,1) both;
+  transform-origin:left center;
+  transition:box-shadow .2s ease,filter .2s ease;
+}
+@keyframes af-att-status-arrive {
+  from { opacity:.55;transform:translateY(4px) scale(.96); }
+  to { opacity:1;transform:translateY(0) scale(1); }
+}
+@media (hover:hover) and (pointer:fine) {
+  .af-att-personal .mt-pill:hover,.mt-m .mt-attendance .mt-pill:hover {
+    filter:brightness(1.07);
+    box-shadow:0 3px 10px rgba(20,77,44,.14);
+  }
+}
+@media(max-width:760px) {
+  .af-att-personal { padding:12px; border-radius:13px; }
+  .af-att-personal .af-att-table table { min-width:650px; }
+  .af-att-personal .af-att-table { overflow-x:auto; -webkit-overflow-scrolling:touch; }
+}
+@media(prefers-reduced-motion:reduce) {
+  .af-att-personal .mt-pill,.mt-m .mt-attendance .mt-pill {
+    animation:none;transition:none;
+  }
+}
+@supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))) {
+  .af-att-personal { background:rgba(232,249,236,.82); }
+}

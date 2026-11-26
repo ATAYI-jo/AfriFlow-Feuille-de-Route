@@ -28,12 +28,15 @@
       + (kind === "browser" ? '<div><dt>Autorisation du navigateur</dt><dd>' + esc(labels[permission()] || permission()) + '</dd></div><div><dt>Abonnement de ce navigateur</dt><dd>' + esc(state.subscription || "Non vérifié") + '</dd></div>'
         : '<div><dt>Autorisation du système</dt><dd>À vérifier dans les paramètres de l’appareil</dd></div>');
     state.node.querySelector("#afNotifGuide").textContent = guidance(kind);
-    var activate = state.node.querySelector("#afNotifActivate"), verify = state.node.querySelector("#afNotifVerify");
+    var activate = state.node.querySelector("#afNotifActivate"), verify = state.node.querySelector("#afNotifVerify"),
+      test = state.node.querySelector("#afNotifTest");
     activate.disabled = state.busy || !alerts || typeof alerts.enable !== "function"
       || kind === "browser" && (!supported() || permission() === "denied")
       || kind === "android" && (!push || typeof push.registerAndroidNative !== "function");
     verify.hidden = kind !== "browser";
     verify.disabled = state.busy || !supported() || !push || typeof push.diagnostics !== "function";
+    test.hidden = kind !== "browser";
+    test.disabled = state.busy || !enabled || permission() !== "granted" || !supported() || !push || typeof push.test !== "function";
     state.node.querySelector("#afNotifMessage").textContent = state.message || "";
     state.node.querySelector("section").setAttribute("aria-busy", state.busy ? "true" : "false");
   }
@@ -80,6 +83,26 @@
     } catch (error) { if (current(state)) state.message = "Vérification impossible : " + (error.message || error); }
     finally { state.busy = false; if (current(state)) update(state); else if (panel === state) state.close(); }
   }
+  async function testNotification(state) {
+    if (!current(state) || state.busy || device() !== "browser" || !window.AfriFlowPush || typeof window.AfriFlowPush.test !== "function") return;
+    if (!window.AfriFlowAlerts || !window.AfriFlowAlerts.enabled() || permission() !== "granted") {
+      state.message = "Activez et autorisez d’abord les notifications sur cet appareil."; update(state); return;
+    }
+    state.busy = true; state.message = "Envoi de la notification de test à votre propre compte…"; update(state);
+    try {
+      var result = await window.AfriFlowPush.test();
+      if (!current(state)) return;
+      if (!result || !result.ok) {
+        state.message = "Test non confirmé : " + (result && (result.reason || result.error) || "aucun appareil joignable") + ".";
+      } else {
+        state.message = result.sent > 0
+          ? "Notification envoyée. Vérifiez la bannière ou le centre de notifications de cet appareil ; l’envoi ne garantit pas l’affichage."
+          : "Test déjà envoyé récemment. Vérifiez le centre de notifications ; réessayez plus tard si nécessaire.";
+      }
+    } catch (error) {
+      if (current(state)) state.message = "Test impossible : " + (error.message || error);
+    } finally { state.busy = false; if (current(state)) update(state); else if (panel === state) state.close(); }
+  }
   function open() {
     var owner = account(); if (!owner) return false;
     close();
@@ -87,7 +110,7 @@
     node.className = "af-att-overlay af-notif-overlay";
     node.innerHTML = '<section class="af-att-dialog af-notif-dialog" role="dialog" aria-modal="true" aria-labelledby="afNotifTitle"><header><h2 id="afNotifTitle" tabindex="-1">Notifications sur cet appareil</h2><button type="button" id="afNotifClose">Fermer</button></header>'
       + '<p class="af-notif-account">Compte : ' + esc(owner) + '<br><b id="afNotifDevice"></b></p><dl id="afNotifStatus"></dl><p id="afNotifGuide"></p><p id="afNotifMessage" role="status" aria-live="polite"></p>'
-      + '<div class="af-att-actions"><button type="button" id="afNotifVerify">Vérifier</button><button type="button" class="p" id="afNotifActivate">Activer les notifications</button></div></section>';
+      + '<div class="af-att-actions"><button type="button" id="afNotifVerify">Vérifier</button><button type="button" id="afNotifTest">Tester une notification</button><button type="button" class="p" id="afNotifActivate">Activer les notifications</button></div></section>';
     document.body.appendChild(node);
     var state = { node: node, owner: owner, busy: false, message: "", subscription: "", close: function () {
       document.removeEventListener("keydown", keys, true); node.remove(); if (panel === state) panel = null;
@@ -108,6 +131,7 @@
     node.querySelector("#afNotifClose").onclick = state.close;
     node.querySelector("#afNotifActivate").onclick = function () { return activate(state); };
     node.querySelector("#afNotifVerify").onclick = function () { return verify(state); };
+    node.querySelector("#afNotifTest").onclick = function () { return testNotification(state); };
     node.addEventListener("click", function (event) { if (event.target === node && !state.busy) state.close(); });
     document.addEventListener("keydown", keys, true); update(state);
     node.querySelector("#afNotifTitle").focus({ preventScroll: true });
