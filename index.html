@@ -1420,12 +1420,6 @@ document.addEventListener("click",async function(e){
 });
 
 /* ================= Page Marketing (Feuille de route) vidée ================= */
-function clean(html){
-  var t=document.createElement("template");t.innerHTML=html;
-  t.content.querySelectorAll("script,iframe,object,embed,link,meta,style,form,base").forEach(function(n){n.remove()});
-  t.content.querySelectorAll("*").forEach(function(el){[].slice.call(el.attributes).forEach(function(a){if(/^on/i.test(a.name)||(/^(href|src|xlink:href)$/i.test(a.name)&&/^\s*javascript:/i.test(a.value)))el.removeAttribute(a.name)})});
-  return t.innerHTML;
-}
 async function marketing(){
   var f=vh.querySelector(".fdr");if(!f||f.dataset.free)return;f.dataset.free="1";
   [].slice.call(f.children).forEach(function(c){
@@ -1433,27 +1427,12 @@ async function marketing(){
     if(c.tagName==="H3"&&c.nextElementSibling&&c.nextElementSibling.id==="b-dl")return;
     c.remove();
   });
-  var can=adm(),nb=document.querySelector("#navList [data-fdr-nav]"),lbl=nb?nb.textContent.replace(/\s\(\d+\)$/,""):"Marketing";
+  var nb=document.querySelector("#navList [data-fdr-nav]"),lbl=nb?nb.textContent.replace(/\s\(\d+\)$/,""):"Marketing";
   var z=document.createElement("div");
   z.innerHTML='<div class="toolbar"><b>'+esc(lbl)+'</b></div>'
-    +(can?'<div class="ed-bar" id="mkBar"><button type="button" data-mk="h2">Titre</button><button type="button" data-mk="bold"><b>G</b></button><button type="button" data-mk="italic"><i>I</i></button><button type="button" data-mk="insertUnorderedList">Puces</button><button type="button" data-mk="insertOrderedList">Numéros</button><button type="button" class="p" id="mkSave">Enregistrer</button></div>':'')
-    +'<div class="journal-article" style="margin-bottom:34px"><div id="mkDoc" data-ph="'+(can?'Cliquez ici et rédigez votre contenu…':'Cette page est en cours de rédaction.')+'"'+(can?' contenteditable="true"':'')+'></div></div>';
+    +'<div class="journal-article" style="margin-bottom:34px"><div id="mkDoc" contenteditable="false" aria-busy="true"><p role="status">Chargement du contenu Marketing…</p></div></div>';
   f.prepend(z);
-  try{
-    var r=await SB().from(TB()).select("value").eq("key","pub:marketing").maybeSingle();
-    if(r.data&&r.data.value&&r.data.value.html&&$("mkDoc"))$("mkDoc").innerHTML=clean(r.data.value.html);
-  }catch(e){}
-  if(!can)return;
-  var bar=$("mkBar");
-  bar.addEventListener("mousedown",function(e){if(e.target.closest("button"))e.preventDefault()});
-  bar.addEventListener("click",async function(e){
-    var b=e.target.closest("button");if(!b)return;
-    if(b.dataset.mk){var c=b.dataset.mk;$("mkDoc").focus();if(c==="h2")document.execCommand("formatBlock",false,"<h2>");else document.execCommand(c)}
-    else if(b.id==="mkSave"){
-      var r2=await SB().from(TB()).upsert({key:"pub:marketing",value:{html:clean($("mkDoc").innerHTML),at:Date.now(),by:me()},updated_at:new Date().toISOString()});
-      toast(r2.error?"Enregistrement impossible : "+r2.error.message:"Page enregistrée pour tous les utilisateurs.");
-    }
-  });
+  // Content and the editor toolbar are loaded once by mk() below.
 }
 
 new MutationObserver(function(){
@@ -1602,14 +1581,31 @@ function buildBar(d){
 }
 async function mk(){
   var d=$("mkDoc");if(!d||d.dataset.v2)return;d.dataset.v2="1";
-  var saved=null;
+  var saved=null,email=me(),initial=d.innerHTML,edited=false;
+  function dirty(){edited=true;}
+  function current(){return d.isConnected&&$("mkDoc")===d&&me()===email&&(!window.AfriNav||window.AfriNav.current()==="marketing");}
+  function untouched(){return current()&&!edited&&d.innerHTML===initial;}
+  d.addEventListener("input",dirty);
   try{
     var r=await SB().from(TB()).select("value").eq("key","pub:marketing").maybeSingle();
+    if(r.error)throw r.error;
     if(r.data&&r.data.value&&r.data.value.html&&String(r.data.value.html).trim())saved=r.data.value.html;
-  }catch(e){}
-  if(!d.isConnected)return;
+  }catch(e){
+    if(untouched()){
+      d.setAttribute("aria-busy","false");
+      d.innerHTML='<p role="status">Le contenu Marketing n’a pas pu être chargé.</p><button type="button" data-mk-retry>Réessayer</button>';
+      d.querySelector("[data-mk-retry]").onclick=function(){
+        if(!current())return;
+        d.setAttribute("aria-busy","true");
+        d.innerHTML='<p role="status">Chargement du contenu Marketing…</p>';
+        delete d.dataset.v2;mk();
+      };
+    }
+    return;
+  }finally{d.removeEventListener("input",dirty);}
+  if(!untouched())return;
   d.innerHTML=cleanHtml(saved||DEF);
-  var old=$("mkBar");if(old)old.remove();
+  d.setAttribute("aria-busy","false");
   var can=canMk();
   d.setAttribute("contenteditable",can?"true":"false");
   if(!can)return;
@@ -2952,7 +2948,7 @@ body.af-profile-open #afCloudSyncBadge{visibility:hidden!important}
 <!-- Public Market catalogue, loaded after the existing authenticated workspace -->
 <script src="./market-country-logo.js?v=20261123-country-fit-v5" defer></script>
 <script src="./afriflow-cod.js?v=20261124-order-alerts-v3" defer></script>
-<script src="./market.js?v=20261126-startup-stability" defer></script>
+<script src="./market.js?v=20261126-content-stability" defer></script>
 
 <!-- AfriFlow PWA: registration without request interception -->
 <script>

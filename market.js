@@ -267,6 +267,7 @@
     });
   }
   function loadInitialImages() {
+    var request = catalogRequest, context = state.context;
     /* Only load the first visible cards. Loading every Dropbox link repeatedly
        made a large catalogue perform needless requests on every ten-second turn. */
     // Include all visible welcome-panel headlines, even when they fall beyond
@@ -288,7 +289,17 @@
     });
     batch.forEach(function (p) {
       if (state.imgs[p.id]) return;
-      resolveImage(p, 0).then(function (url) { if (url) applyImage(p.id, url); else { var b = document.querySelector('[data-market-image="' + p.id + '"] .af-fb-hint'); if (!b && isAdmin()) render(); } });
+      resolveImage(p, 0).then(function (url) {
+        if (request !== catalogRequest || context !== state.context) return;
+        if (url) { applyImage(p.id, url); return; }
+        if (!isAdmin() || !state.imgErr[p.id]) return;
+        // A missing photo must not replace the catalogue or reset an open form.
+        document.querySelectorAll('[data-market-image="' + p.id + '"] .af-market-fallback').forEach(function (fallback) {
+          var hint = fallback.querySelector(".af-fb-hint");
+          if (!hint) { hint = document.createElement("small"); hint.className = "af-fb-hint"; fallback.appendChild(hint); }
+          hint.textContent = "Photo non chargée (visible par vous seul) : " + state.imgErr[p.id];
+        });
+      });
     });
   }
   function rotateVisibleHero() {
