@@ -106,7 +106,15 @@ Deno.serve(async (req) => {
   const db = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
   const {data,error} = await db.from("afriflow_state").select("key").eq("key", "user:" + to).maybeSingle();
   if (error) return new Response("recipient lookup unavailable", {status:503});
-  if (!data) return new Response("unknown recipient");
+  if (!data) {
+    const profile = await db.from("afriflow_profiles").select("user_id").eq("email", to).maybeSingle();
+    if (profile.error) return new Response("recipient lookup unavailable", {status:503});
+    if (!profile.data) return new Response("unknown recipient");
+    const account = await db.auth.admin.getUserById(profile.data.user_id);
+    if (account.error && account.error.status !== 404) return new Response("recipient lookup unavailable", {status:503});
+    const user = account.data?.user;
+    if (!user?.email_confirmed_at || user.email?.toLowerCase() !== to) return new Response("unknown recipient");
+  }
   const gmail = Deno.env.get("GMAIL_USER")!;
   const mailer = nodemailer.createTransport({host:"smtp.gmail.com", port:465, secure:true, auth:{user:gmail, pass:Deno.env.get("GMAIL_APP_PASSWORD")}});
   const identity=await identifySender(db,record.value,id);
