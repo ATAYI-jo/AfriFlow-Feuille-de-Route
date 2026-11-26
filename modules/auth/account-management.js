@@ -18,6 +18,19 @@ async function listRows(prefix,lim){var r=await SB().from(TB()).select("key,valu
 function ukey(e){return "user:"+String(e).toLowerCase()}
 function fail(e){var m=String((e&&e.message)||e);return /fetch|network|Failed/i.test(m)?"Connexion au serveur impossible. Vérifiez votre réseau.":m}
 function fdt(t){return new Date(t).toLocaleString("fr-FR",{dateStyle:"short",timeStyle:"short"})}
+function startupDom(fn){return window.AfriStartup?window.AfriStartup.whenDomReady(fn):Promise.resolve().then(fn)}
+function startupAuth(mode){if(window.AfriStartup)window.AfriStartup.resolveAuth(mode)}
+function startupRoute(){if(window.AfriStartup)window.AfriStartup.routeReady()}
+function startupFailure(error){
+  var message="Impossible de rétablir votre session pour le moment. "+fail(error);
+  if(window.AfriStartup)window.AfriStartup.fail(message);else oauthError(message);
+}
+function invalidSession(error){
+  if(!error)return false;
+  return error.status===401||error.name==="AuthSessionMissingError"||
+    /^(session_not_found|user_not_found|refresh_token_not_found|refresh_token_already_used|bad_jwt|invalid_jwt|session_expired)$/.test(String(error.code||""));
+}
+function clearSessionMarker(){try{localStorage.removeItem("afriflow_session_v1")}catch(ignore){}}
 
 /* --- Comptes (Supabase Auth : mots de passe gérés et hachés par le serveur) --- */
 function nameOf(us){var md=us.user_metadata||{};return md.full_name||md.name||String(us.email).split("@")[0]}
@@ -43,7 +56,10 @@ async function ensureMemberProfile(us){
 }
 async function finish(us,intent){
   var email=String(us.email).toLowerCase(),isA=false;
-  try{var a=await SB().rpc("af_is_admin");isA=a.data===true}catch(e){}
+  var a=await SB().rpc("af_is_admin");
+  if(a.error)throw new Error("Impossible de vérifier les autorisations du compte : "+fail(a.error));
+  if(typeof a.data!=="boolean")throw new Error("Le serveur n’a pas confirmé les autorisations du compte. Réessayez.");
+  isA=a.data===true;
   var market=await ensureMarketProfile(us,intent);
   var allowed=isA||["shareholder_approved","collaborator"].includes(market.access_mode);
   var u={email:email,name:nameOf(us),grants:[]};
@@ -89,16 +105,18 @@ async function ensureMarketProfile(us,intent){
  * Pas de droits jusqu'à l'insertion et la vérification du profil côté Supabase.
  */
 AFRI.promptRoleChoice=async function(){
-  if(!SB())return false;
+  if(!SB())throw new Error("Service de comptes indisponible.");
   var response=await SB().auth.getUser(),user=response.data&&response.data.user;
-  if(response.error||!user)return false;
+  if(response.error)throw response.error;
+  if(!user)throw new Error("Votre session a expiré. Reconnectez-vous.");
   var current=await SB().from("afriflow_market_profiles")
     .select("requested_role,access_mode,selection_confirmed_at").eq("user_id",user.id).maybeSingle();
   if(current.error)throw current.error;
   var unconfirmedClient=Boolean(current.data && current.data.access_mode==="client" && !current.data.selection_confirmed_at);
   if(current.data && !unconfirmedClient){
     var existing=await finish(user);
-    enterApp(existing.email,existing.role,existing.name,existing.grants,existing.market);
+    await enterApp(existing.email,existing.role,existing.name,existing.grants,existing.market);
+    startupAuth("authenticated");
     return true;
   }
   var overlay=document.getElementById("afRoleChooser");
@@ -134,9 +152,10 @@ AFRI.promptRoleChoice=async function(){
             data=await ensureMarketProfile(user,button.dataset.afRole);
           }
           if(!data||data.access_mode==="onboarding_required")throw new Error("Profil non enregistré");
-          overlay.remove();
           var info=await finish(user);
-          enterApp(info.email,info.role,info.name,info.grants,info.market);
+          await enterApp(info.email,info.role,info.name,info.grants,info.market);
+          overlay.remove();
+          startupAuth("authenticated");
         }catch(e){
           msg.textContent="Erreur : "+fail(e);
           overlay.querySelectorAll("button").forEach(function(b){b.disabled=false});
@@ -145,10 +164,13 @@ AFRI.promptRoleChoice=async function(){
     });
     overlay.querySelector("#afRoleSignout").onclick=async function(){
       await SB().auth.signOut({scope:"local"});
-      overlay.remove();if(window.AfriMarket)window.AfriMarket.openPublic();
+      overlay.remove();
+      if(window.logout)window.logout();else if(window.AfriMarket)window.AfriMarket.openPublic();
+      startupAuth("guest");startupRoute();
     };
   }
   overlay.style.display="grid";
+  startupAuth("onboarding");startupRoute();
   overlay.querySelector("[data-af-role]").focus();
   return true;
 };
@@ -190,23 +212,31 @@ AFRI.register=async function(email,name,pwd,intent,captchaToken){
   }catch(e){return {ok:false,error:fail(e)}}
 };
 AFRI.resume=async function(){
-  try{
-    // getUser validates the identity with Supabase Auth; getSession alone can
-    // return a cached session left behind after administrative account deletion.
-    var session=await SB().auth.getSession();
-    if(!session.data||!session.data.session)return false;
-    var verified=await SB().auth.getUser();
-    var us=verified.data&&verified.data.user;
-    if(verified.error&&(/fetch|network|timeout|failed to fetch/i.test(verified.error.message||"")))return false;
-    if(verified.error||!us||!us.id||!us.email){
-      await SB().auth.signOut({scope:"local"});
-      try{localStorage.removeItem("afriflow_session_v1")}catch(ignore){}
-      return false;
-    }
-    var x=await finish(us);
-    if(x.market&&x.market.access_mode==="onboarding_required"){await AFRI.promptRoleChoice();return true;}
-    enterApp(x.email,x.role,x.name,x.grants,x.market);return true;
-  }catch(e){return false}
+  if(!SB())throw new Error("Service de comptes indisponible.");
+  // A verified absence/invalid session is a guest. Network and profile errors
+  // leave the stored session intact and are handled by the startup retry screen.
+  var session=await SB().auth.getSession();
+  if(session.error){
+    if(!invalidSession(session.error))throw session.error;
+    await SB().auth.signOut({scope:"local"});clearSessionMarker();startupAuth("guest");return false;
+  }
+  if(!session.data||!session.data.session){clearSessionMarker();startupAuth("guest");return false;}
+  // getUser validates the identity with Supabase Auth; a cached session alone
+  // must never restore permissions after administrative account deletion.
+  var verified=await SB().auth.getUser();
+  var us=verified.data&&verified.data.user;
+  if(verified.error&&!invalidSession(verified.error))throw verified.error;
+  if(verified.error||!us||!us.id||!us.email){
+    await SB().auth.signOut({scope:"local"});clearSessionMarker();startupAuth("guest");return false;
+  }
+  var x=await finish(us);
+  if(x.market&&x.market.access_mode==="onboarding_required"){
+    var opened=await startupDom(function(){return AFRI.promptRoleChoice()});
+    if(!opened)throw new Error("Impossible de vérifier votre profil. Réessayez.");
+    return true;
+  }
+  await enterApp(x.email,x.role,x.name,x.grants,x.market);
+  startupAuth("authenticated");return true;
 };
 AFRI.signOut=function(){try{if(SB())SB().auth.signOut({scope:"local"})}catch(e){}};
 AFRI.listUsers=async function(){return (await listRows("user:",500)).map(function(r){return r.value})};
@@ -331,7 +361,7 @@ var oauthReturning = /(?:^|[?#&])(?:code|access_token|error|error_description)=/
   (window.__oauthQuery || '') + '&' + (window.__oauthReturn || '')
 );
 var passwordRecoveryReturning = /(?:^|[?#&])type=recovery(?:[&#]|$)/.test(
-  location.search + '&' + location.hash
+  (window.__oauthQuery || location.search) + '&' + (window.__oauthReturn || location.hash)
 );
 var oauthPending = false;
 try { oauthPending = sessionStorage.getItem('afriflow_oauth_pending') === '1'; } catch (error) {}
@@ -371,85 +401,128 @@ window.afriOAuthLogin = loginOAuth;
 document.querySelectorAll('.oauth').forEach(function(button) {
   button.onclick = function() { loginOAuth(button.dataset.p); };
 });
-var oauthHandled = false;
-async function finishOAuthUser(user) {
-  if (oauthHandled || !user || !user.email) return;
-  oauthHandled = true;
-  try {
-    // Confirm the OAuth identity against Auth before restoring any permissions.
-    var verified=await SB().auth.getUser();
-    if(verified.error||!verified.data?.user||verified.data.user.id!==user.id)
-      throw new Error("Votre ancienne session a expiré. Reconnectez-vous.");
-    var info = await finish(verified.data.user);
-    if(info.market && info.market.access_mode==="onboarding_required"){
-      await AFRI.promptRoleChoice();
-    } else {
-      enterApp(info.email, info.role, info.name, info.grants, info.market);
-    }
-    recordUserAction('Connexion via ' + ((user.app_metadata && user.app_metadata.provider) || 'fournisseur externe'));
-    try { sessionStorage.removeItem('afriflow_oauth_pending'); } catch (error) {}
-    if (oauthReturning) history.replaceState(null, '', location.pathname);
-  } catch (error) {
-    oauthHandled = false;
-    oauthError('Compte connecté, mais ouverture AfriFlow impossible : ' + fail(error));
-  }
+var oauthHandled = false, oauthFinishPromise = null, oauthFinishFailed = false, recoveryPromise = null;
+function clearOAuthPending(){
+  oauthPending=false;
+  try{sessionStorage.removeItem('afriflow_oauth_pending')}catch(ignore){}
 }
+async function showStartupLoginError(message){
+  oauthFinishFailed=true;clearOAuthPending();
+  await startupDom(function(){
+    // Both views are prepared while the startup screen still covers them.
+    if(!window.AfriMarket)throw new Error("Le module de connexion n’est pas disponible.");
+    window.AfriMarket.openPublic();window.AfriMarket.openAuth("login");
+    oauthError(message);startupAuth("login");startupRoute();
+  });
+}
+function finishPasswordRecovery(){
+  if(!recoveryPromise)recoveryPromise=startupDom(function(){
+    clearOAuthPending();showPasswordRecovery();startupAuth("recovery");startupRoute();
+  });
+  return recoveryPromise;
+}
+function finishOAuthUser(user) {
+  if(oauthFinishPromise)return oauthFinishPromise;
+  if(oauthHandled)return Promise.resolve(true);
+  if(oauthFinishFailed||!user||!user.email)return Promise.resolve(false);
+  // Auth callbacks and the initial URL recovery must share the completed work,
+  // not a flag that becomes true before identity verification has finished.
+  oauthFinishPromise=(async function(){
+    try {
+      var verified=await SB().auth.getUser();
+      if(verified.error)throw verified.error;
+      if(!verified.data?.user||verified.data.user.id!==user.id)
+        throw new Error("Votre ancienne session a expiré. Reconnectez-vous.");
+      var info = await finish(verified.data.user);
+      if(info.market && info.market.access_mode==="onboarding_required"){
+        var opened=await startupDom(function(){return AFRI.promptRoleChoice()});
+        if(!opened)throw new Error("Impossible de vérifier votre profil. Réessayez.");
+      } else {
+        await enterApp(info.email, info.role, info.name, info.grants, info.market);
+        startupAuth("authenticated");
+      }
+      oauthHandled=true;clearOAuthPending();
+      // A logging failure must not send an already-open session back to Login.
+      try{recordUserAction('Connexion via '+((user.app_metadata&&user.app_metadata.provider)||'fournisseur externe'))}catch(ignore){}
+      if(oauthReturning)history.replaceState(null,'',location.pathname);
+      return true;
+    } catch (error) {
+      await showStartupLoginError('Compte connecté, mais ouverture AfriFlow impossible : '+fail(error));
+      return false;
+    } finally {oauthFinishPromise=null;}
+  })();
+  return oauthFinishPromise;
+}
+window.AFRI=AFRI;
 (async function oauthResume() {
-  if (!SB()) return;
+  if (!SB()) throw new Error('Service de connexion indisponible.');
   var params = new URLSearchParams((window.__oauthReturn || '').replace(/^#/, ''));
   var query = new URLSearchParams((window.__oauthQuery || '').replace(/^\?/, ''));
   var oauthFailure = params.get('error_description') || query.get('error_description') ||
                      params.get('error') || query.get('error');
   if (oauthFailure) {
-    try { sessionStorage.removeItem('afriflow_oauth_pending'); } catch (error) {}
-    oauthError(oauthFriendlyError(oauthFailure));
+    await showStartupLoginError(oauthFriendlyError(oauthFailure));
     return;
   }
   // OAuth session recovery may finish after the callback's URL has been cleaned.
   // onAuthStateChange catches it without treating regular email/password sign-ins as OAuth.
   SB().auth.onAuthStateChange(function (event, session) {
-    if (event === 'PASSWORD_RECOVERY' && session) { setTimeout(showPasswordRecovery, 0); return; }
-    if (event !== 'SIGNED_IN' || !(oauthReturning || oauthPending) || !session || !session.user) return;
-    setTimeout(function () { finishOAuthUser(session.user); }, 0);
+    if(event==='PASSWORD_RECOVERY'&&session){
+      passwordRecoveryReturning=true;
+      setTimeout(function(){finishPasswordRecovery().catch(startupFailure)},0);return;
+    }
+    if(event!=='SIGNED_IN'||passwordRecoveryReturning||oauthFinishFailed||!(oauthReturning||oauthPending)||!session||!session.user)return;
+    setTimeout(function(){finishOAuthUser(session.user).catch(startupFailure)},0);
   });
   if (passwordRecoveryReturning) {
     for (var recoveryAttempt = 0; recoveryAttempt < 16; recoveryAttempt++) {
+      if(recoveryPromise){await recoveryPromise;return;}
       var recoverySession = await SB().auth.getSession();
-      if (recoverySession.data && recoverySession.data.session) { showPasswordRecovery(); return; }
+      if(recoverySession.error){
+        if(invalidSession(recoverySession.error)){await showStartupLoginError('Le lien de réinitialisation est invalide ou a expiré. Demandez-en un nouveau.');return;}
+        throw recoverySession.error;
+      }
+      if (recoverySession.data && recoverySession.data.session) { await finishPasswordRecovery(); return; }
       await new Promise(function(resolve) { setTimeout(resolve, 350); });
     }
-    oauthError('Le lien de réinitialisation est invalide ou a expiré. Demandez-en un nouveau.');
+    await showStartupLoginError('Le lien de réinitialisation est invalide ou a expiré. Demandez-en un nouveau.');
   } else if (oauthReturning || oauthPending) {
     // En retour PKCE, on échange explicitement le code si la récupération automatique
     // n'a pas encore écrit la session : cela évite le faux « session introuvable ».
     var oauthCode = query.get('code');
     var initialSession = await SB().auth.getSession();
+    if(oauthFinishPromise){await oauthFinishPromise;return;}
+    if(oauthHandled||oauthFinishFailed)return;
+    if(initialSession.error&&!oauthCode){await showStartupLoginError('Session OAuth : '+fail(initialSession.error));return;}
     if (initialSession.data && initialSession.data.session && initialSession.data.session.user) {
-      await finishOAuthUser(initialSession.data.session.user);
+      await finishOAuthUser(initialSession.data.session.user);return;
     } else if (oauthCode) {
       var exchanged = await SB().auth.exchangeCodeForSession(oauthCode);
+      if(oauthFinishPromise){await oauthFinishPromise;return;}
+      if(oauthHandled||oauthFinishFailed)return;
       if (exchanged.error) {
-        oauthError('La connexion Google a expiré ou a été interrompue. Recommencez depuis le bouton Google dans ce même navigateur.');
+        await showStartupLoginError('La connexion Google a expiré ou a été interrompue. Recommencez depuis le bouton Google dans ce même navigateur.');return;
       } else if (exchanged.data && exchanged.data.session && exchanged.data.session.user) {
-        await finishOAuthUser(exchanged.data.session.user);
+        await finishOAuthUser(exchanged.data.session.user);return;
       }
     }
     // Supabase peut aussi récupérer une session OAuth depuis le fragment ou un code PKCE.
-    for (var attempt = 0; attempt < 16 && !oauthHandled; attempt++) {
+    for (var attempt = 0; attempt < 16 && !oauthHandled && !oauthFinishFailed; attempt++) {
+      if(oauthFinishPromise){await oauthFinishPromise;return;}
       var result = await SB().auth.getSession();
-      if (result.error) { oauthError('Session OAuth : ' + fail(result.error)); break; }
+      if(oauthFinishPromise){await oauthFinishPromise;return;}
+      if(oauthHandled||oauthFinishFailed)return;
+      if (result.error) { await showStartupLoginError('Session OAuth : '+fail(result.error));return; }
       var user = result.data && result.data.session && result.data.session.user;
-      if (user) { await finishOAuthUser(user); break; }
+      if (user) { await finishOAuthUser(user);return; }
       await new Promise(function(resolve) { setTimeout(resolve, 350); });
     }
-    if (!oauthHandled && !document.getElementById('authError').textContent) {
-      oauthError('Authentification Google terminée mais session introuvable sur ce navigateur. Vérifiez le retour OAuth et les URL de redirection.');
+    if(oauthFinishPromise){await oauthFinishPromise;return;}
+    if (!oauthHandled && !oauthFinishFailed) {
+      await showStartupLoginError('Authentification Google terminée mais session introuvable sur ce navigateur. Vérifiez le retour OAuth et les URL de redirection.');
     }
   } else {
-    AFRI.resume().then(function(ok) {
-      if (!ok) { try { localStorage.removeItem(SESSION_KEY); } catch (e) {} }
-    });
+    await AFRI.resume();
   }
-})();
-window.AFRI = AFRI;
+})().catch(startupFailure);
 })();

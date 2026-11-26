@@ -1,0 +1,20 @@
+/* Keep layout available for route/scroll restoration while hiding every intermediate view. */
+html.af-startup-pending,html.af-startup-pending body{background:#fff!important}
+html.af-startup-pending{overflow:hidden}
+html.af-startup-pending body > :not(#afStartup):not(#intro),
+html.af-startup-pending body > :not(#afStartup):not(#intro) *,
+html.af-startup-pending body::before,html.af-startup-pending body::after{visibility:hidden!important}
+#afStartup{position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;box-sizing:border-box;padding:28px;background:#fff;color:#183d2b;text-align:center;font:16px/1.6 system-ui,-apple-system,"Segoe UI",sans-serif}
+#afStartup > div{max-width:420px}
+#afStartup img{display:block;width:72px;height:72px;margin:0 auto 14px;object-fit:contain}
+#afStartup strong{font-size:22px}
+#afStartupMessage{margin:12px 0;color:#4b6255}
+#afStartupRetry{min-height:44px;padding:11px 22px;border:0;border-radius:12px;background:#1f5d3a;color:#fff;font:600 15px system-ui;cursor:pointer}
+#afStartupRetry:focus-visible{outline:3px solid #d98a1b;outline-offset:3px}
+#afStartup[hidden],#afStartupRetry[hidden],html:not(.af-startup-pending) #afStartup{display:none!important}
+
+/* Avoid flashing shareholder-only content before validated routing. */
+html.af-role-checking #view-home,
+html.af-role-checking #viewHost,
+html.af-role-checking #side,
+html.af-role-checking #memberHub { visibility:hidden!important; }

@@ -2,13 +2,14 @@
 (function(){
 "use strict";
 var CFG="pub:meetcfg", PRE="meet:", ATT="att:", OPEN_BEFORE=15*6e4;
-var cfg={link:"",censeurs:[]}, meets=[], atts={}, active=false,pageGeneration=0;
+var cfg={link:"",censeurs:[]},cfgFor="", meets=[], atts={}, active=false,pageGeneration=0;
 
 function $(i){return document.getElementById(i)}
 function SB(){return window.__sb} function TB(){return window.__TABLE||"afriflow_state"}
 function me(){return String(window.loggedUserEmail||"").toLowerCase()}
 function isAdmin(){return window.USER_ROLE==="admin"}
 function isCens(){return isAdmin()||(cfg.censeurs||[]).indexOf(me())>-1}
+window.AfriCensorAccess=function(){return isAdmin()?true:(me()&&cfgFor===me()?isCens():null)};
 function invited(m,email){
   if(!m||!Array.isArray(m.invitees))return true; // Older/all-member meetings.
   return m.invitees.some(function(v){return String(v).trim().toLowerCase()===String(email).trim().toLowerCase()});
@@ -55,8 +56,10 @@ function pad(n){return ("0"+n).slice(-2)}
 /* ---------- Lecture des données ---------- */
 async function load(){
   if(!SB()||!me())return;
+  var email=me();
   var a=await SB().from(TB()).select("value").eq("key",CFG).maybeSingle();
-  if(!a.error&&a.data&&a.data.value){cfg=a.data.value;cfg.censeurs=(cfg.censeurs||[]).map(function(x){return String(x).toLowerCase()})}
+  if(email!==me())return;
+  if(!a.error){cfg=a.data&&a.data.value||{link:"",censeurs:[]};cfg.censeurs=(cfg.censeurs||[]).map(function(x){return String(x).toLowerCase()});cfgFor=email;}
   var r=await SB().from(TB()).select("key,value").like("key",PRE+"%").limit(300);
   if(!r.error)meets=(r.data||[]).map(function(x){return x.value}).filter(function(v){return v&&v.start&&visibleMeeting(v)}).sort(function(x,y){return x.start-y.start});
   var q=SB().from(TB()).select("key,value").like("key",isCens()?ATT+"m%":ATT+"m%:"+me()).limit(5000);

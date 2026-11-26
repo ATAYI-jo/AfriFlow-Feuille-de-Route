@@ -12,14 +12,10 @@
       location.replace(afTarget.href);
     }
   </script>
-  <script>document.documentElement.classList.add("af-role-checking");</script>
-  <style id="af-role-guard">
-    /* Avoid flashing shareholder-only content before validated routing. */
-    html.af-role-checking #view-home,
-    html.af-role-checking #viewHost,
-    html.af-role-checking #side,
-    html.af-role-checking #memberHub { visibility:hidden!important; }
-  </style>
+  <script>document.documentElement.classList.add("af-role-checking","af-startup-pending");</script>
+  <link rel="stylesheet" href="./modules/ui/startup.css?v=20261126-startup-stability">
+  <script src="./modules/ui/startup.js?v=20261126-startup-stability"></script>
+
   <script>
       window.__oauthReturn = location.hash;
       window.__oauthQuery = location.search;
@@ -157,6 +153,12 @@ html #intro #introVideo{position:relative!important;z-index:2!important;box-sizi
 </style>
 </head>
 <body class="ro">
+<div id="afStartup" role="status" aria-live="polite" aria-atomic="true">
+  <div><img src="./logo.svg?v=2" alt="" width="72" height="72"><strong>AfriFlow</strong>
+    <p id="afStartupMessage">Chargement de votre espace…</p>
+    <button id="afStartupRetry" type="button" hidden>Réessayer</button>
+  </div>
+</div>
   
 <style>
 .ic{width:1.15em;height:1.15em;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;vertical-align:-.2em;flex:none}
@@ -396,7 +398,7 @@ window.ic=function(n,s){return '<svg class="ic"'+(s?' style="width:'+s+';height:
   </div>
 </div>
 
-<script src="./afriflow-core.js?v=20261125-quality-1"></script>
+<script src="./afriflow-core.js?v=20261126-startup-stability"></script>
 <script type="importmap">
 {"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.164.1/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.164.1/examples/jsm/"}}
 </script>
@@ -423,7 +425,7 @@ window.ic=function(n,s){return '<svg class="ic"'+(s?' style="width:'+s+';height:
 </style>
 
 <script src="./afriflow-payment-simulation.js?v=1"></script>
-<script src="./afriflow-workspace.js?v=20261126-navigation-stability"></script>
+<script src="./afriflow-workspace.js?v=20261126-startup-stability"></script>
 
 <!-- Synchronisation cloud (Supabase) : table afriflow_state -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -481,6 +483,7 @@ window.ic=function(n,s){return '<svg class="ic"'+(s?' style="width:'+s+';height:
       if(!have.extra && window.hasExtra && window.hasExtra()) cloudSave('extra');
     }
     setBadge(true, 'Synchronisé');
+    window.dispatchEvent(new Event('afriflow:workspace-ready'));
     } finally {
       cloudLoading=false;
       if(cloudAgain){cloudAgain=false;setTimeout(cloudLoad,900)}
@@ -520,7 +523,7 @@ window.ic=function(n,s){return '<svg class="ic"'+(s?' style="width:'+s+';height:
   document.addEventListener('visibilitychange', function(){ if(!document.hidden) cloudLoad(); });
 })();
 </script>
-<script src="./modules/auth/account-management.js?v=20261123-canonical-auth"></script>
+<script src="./modules/auth/account-management.js?v=20261126-startup-stability"></script>
 
 <script src="./modules/messaging/app-link.js?v=20261124-app-first"></script>
 <script src="./modules/messaging/internal-messaging.js?v=20261124-mail-folders"></script>
@@ -986,7 +989,7 @@ collect();sched();
 .mt-m th,.mt-m td{padding:10px 12px;border-bottom:1px solid var(--line);text-align:left;font-size:.9rem}
 </style>
 
-<script src="./modules/collaboration/meetings.js?v=20261126-navigation-stability"></script>
+<script src="./modules/collaboration/meetings.js?v=20261126-startup-stability"></script>
 
 
 
@@ -2949,7 +2952,7 @@ body.af-profile-open #afCloudSyncBadge{visibility:hidden!important}
 <!-- Public Market catalogue, loaded after the existing authenticated workspace -->
 <script src="./market-country-logo.js?v=20261123-country-fit-v5" defer></script>
 <script src="./afriflow-cod.js?v=20261124-order-alerts-v3" defer></script>
-<script src="./market.js?v=20261126-navigation-stability" defer></script>
+<script src="./market.js?v=20261126-startup-stability" defer></script>
 
 <!-- AfriFlow PWA: registration without request interception -->
 <script>

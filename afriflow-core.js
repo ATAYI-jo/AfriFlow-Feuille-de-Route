@@ -226,7 +226,7 @@ async function verifyGlobalAuth(){
       if(!pwd){ err.textContent = "Entrez votre mot de passe."; return; }
       var r = await AFRI.login(email, pwd, intent, turnstileToken);
       if(!r.ok){ err.textContent = r.error; return; }
-      enterApp(r.email, r.role, r.name, r.grants, r.market); recordUserAction(r.role === "admin" ? "Connexion administrateur" : "Connexion réussie");
+      await enterApp(r.email, r.role, r.name, r.grants, r.market); recordUserAction(r.role === "admin" ? "Connexion administrateur" : "Connexion réussie");
     } else {
       var name = $("authName").value.trim(), p2 = $("authPassword2").value;
       if(name.length < 2){ err.textContent = "Indiquez votre nom complet."; return; }
@@ -235,8 +235,12 @@ async function verifyGlobalAuth(){
       var r2 = await AFRI.register(email, name, pwd, intent, turnstileToken);
       if(!r2.ok){ err.textContent = r2.error; return; }
       if(r2.confirm){ setAuthMode("login"); err.style.color = "#1f5d3a"; err.textContent = "Compte créé. Cliquez sur le lien reçu par email pour le confirmer, puis connectez-vous."; return; }
-      enterApp(r2.email, r2.role, r2.name, r2.grants, r2.market); recordUserAction("Inscription et première connexion");
+      await enterApp(r2.email, r2.role, r2.name, r2.grants, r2.market); recordUserAction("Inscription et première connexion");
     }
+  } catch(error) {
+    err.textContent = error.message || "Impossible d’ouvrir votre espace. Veuillez réessayer.";
+    $("auth-screen").classList.remove("off");
+    document.body.classList.add("af-auth-open");
   } finally { btn.disabled = false; resetCaptcha(); }
 }
 
@@ -1113,6 +1117,8 @@ function saveSession(force){
 }
 function touch(){ lastAct = Date.now(); saveSession(false); }
 function enterApp(email, role, name, grants, market){
+  var ready=window.AfriStartup?window.AfriStartup.whenDomReady:function(fn){return Promise.resolve().then(fn)};
+  return ready(function(){
   document.body.classList.remove("af-auth-open");
   loggedUserEmail = email; USER_ROLE = role === "admin" ? "admin" : (role === "editor" ? "editor" : "reader");
   USER_NAME = name || ""; USER_GRANTS = Array.isArray(grants) ? grants : [];
@@ -1121,15 +1127,15 @@ function enterApp(email, role, name, grants, market){
   var accessMode=market&&market.access_mode;
   if(accessMode==="onboarding_required"){
     if(window.AfriMarket)window.AfriMarket.openPublic();
-    if(window.AFRI&&window.AFRI.promptRoleChoice)window.AFRI.promptRoleChoice().catch(function(e){console.error("Onboarding:",e)});
-    return;
+    if(window.AFRI&&window.AFRI.promptRoleChoice)return window.AFRI.promptRoleChoice();
+    throw new Error("Le choix du profil n’a pas pu être chargé. Veuillez réessayer.");
   }
   // Seul un actionnaire approuvé ou un administrateur reconnu peut ouvrir le workspace.
   if(USER_ROLE!=="admin" && !["shareholder_approved","collaborator"].includes(accessMode)){
-    if(window.AfriMarket)window.AfriMarket.open({kind:"authenticated",market:market||{access_mode:"client"}});
+    if(!window.AfriMarket)throw new Error("La Marketplace n’a pas pu être chargée. Veuillez réessayer.");
+    window.AfriMarket.open({kind:"authenticated",market:market||{access_mode:"client"}});
     return;
   }
-  document.documentElement.classList.remove("af-role-checking");
   document.body.classList.remove("af-market-mode");
   document.body.classList.toggle("ro", !canEdit());
   $("auth-screen").classList.add("off");
@@ -1137,7 +1143,9 @@ function enterApp(email, role, name, grants, market){
  $("editStatusIndicator").innerHTML = USER_ROLE === "admin" ? ic("unlock") + " Connecté : " + esc(email) + " — administrateur" : (canEdit() ? ic("unlock") + " Connecté : " + esc(email) + " — modification active" : ic("lock") + " Connecté : " + esc(email) + " — lecture seule");
   renderRoadmap();
   if(window.onRole) window.onRole();
+  document.documentElement.classList.remove("af-role-checking");
   window.dispatchEvent(new CustomEvent('afriflow:verified-role',{detail:{role:USER_ROLE}}));
+  });
 }
 function logout(msg){
   if(window.AFRI){ AFRI.stop(); AFRI.signOut(); }
@@ -1186,7 +1194,6 @@ function initIntro(){
     try { sessionStorage.setItem(INTRO_KEY, "1"); } catch(e){}
     box.classList.add("out"); v.pause(); if(bg)bg.pause(); document.documentElement.classList.add("af-intro-finished");
     setTimeout(function(){ box.style.display = "none"; }, 700);
-    if(window.afriMarketInitial)window.afriMarketInitial();
   }
   $("introSkip").onclick = function(e){ e.preventDefault(); e.stopPropagation(); toggleIntroSound(); };
   snd.onclick = toggleIntroSound;

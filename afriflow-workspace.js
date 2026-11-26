@@ -77,7 +77,7 @@ function ask(title,fields,ok){
 /* ---------- Navigation ---------- */
 /* Conserver la dernière rubrique dans cet onglet, uniquement pour ce compte. */
 var LAST_VIEW_KEY="afriflow_last_view_v1",viewRestored=false;
-var navigationReady=document.readyState!=="loading",restoringView=false;
+var navigationReady=document.readyState!=="loading",restoringView=false,workspaceLoaded=false;
 var activeView="home",navigationVersion=0,scrollInteraction=0;
 // A user's navigation always takes priority over delayed session/cloud restoration.
 ["pointerdown","touchstart","wheel","keydown"].forEach(function(event){
@@ -103,12 +103,14 @@ function previousView(){
     return v&&v.email===String(window.loggedUserEmail||"").toLowerCase()?v:null;
   }catch(ignore){return null}
 }
+function startupViewReady(){if(window.AfriStartup)window.AfriStartup.routeReady();}
+function restoreHome(){show("home",{restore:true});viewRestored=true;startupViewReady();}
 function restorePreviousView(){
   if(viewRestored||restoringView||!navigationReady||!window.loggedUserEmail)return;
   var access=window.afriMarketSession&&window.afriMarketSession.access_mode;
   if(!isAdmin()&&access!=="shareholder_approved"&&access!=="collaborator")return;
   var saved=previousView();
-  if(!saved||saved.id==="home"){viewRestored=true;return;}
+  if(!saved||saved.id==="home"){viewRestored=true;startupViewReady();return;}
   function restoreScroll(){
     if(activeView!==saved.id)return;
     var version=navigationVersion,interaction=scrollInteraction;
@@ -128,19 +130,25 @@ function restorePreviousView(){
     if(typeof open!=="function")return;
     restoringView=true;
     try{
-      if(open({restore:true})===false)return;
-      viewRestored=true;restoreScroll();
+      if(open({restore:true})===false){
+        if(saved.id==="censor"&&window.AfriCensorAccess&&window.AfriCensorAccess()===false)restoreHome();
+        return;
+      }
+      viewRestored=true;restoreScroll();startupViewReady();
     }finally{
       restoringView=false;
     }
     return;
   }
   var ids=BASE.concat(X.nav,[{id:"messages"},{id:"partners"},{id:"admin"}]).map(function(x){return x.id});
-  if(ids.indexOf(saved.id)===-1)return;
-  if((saved.id==="admin"||saved.id==="partners")&&!isAdmin())return;
+  if(ids.indexOf(saved.id)===-1){if(workspaceLoaded)restoreHome();return;}
+  if((saved.id==="admin"||saved.id==="partners")&&!isAdmin()){
+    // Permissions were verified: a formerly privileged route is no longer available.
+    restoreHome();return;
+  }
   if(saved.id==="market"&&!window.AfriMarket)return;
   restoringView=true;
-  try{show(saved.id,{restore:true,scrollY:saved.y});viewRestored=true;restoreScroll();}
+  try{show(saved.id,{restore:true,scrollY:saved.y});viewRestored=true;restoreScroll();startupViewReady();}
   finally{restoringView=false;}
 }
 window.AfriNav={
@@ -151,6 +159,7 @@ window.AfriNav={
 };
 document.addEventListener("DOMContentLoaded",function(){navigationReady=true;restorePreviousView();},{once:true});
 window.addEventListener("afriflow:navigation-ready",restorePreviousView);
+window.addEventListener("afriflow:workspace-ready",function(){workspaceLoaded=true;restorePreviousView();});
 function saveScrollPosition(){
   var v=previousView();
   if(!v||v.id!==activeView)return;

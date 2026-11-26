@@ -127,6 +127,7 @@
       if (state.context.kind === "public") openAuth("login");
       if (state.context.kind === "authenticated") window.AfriOpenLinkedMessage();
     }
+    if (window.AfriStartup) window.AfriStartup.routeReady();
     if (roleMode(state.context.market) === "partner_approved") { loadPartnerPortal(); loadCatalog(); return; }
     if (roleMode(state.context.market) === "partner_waiting") { loadCatalog(); return; }
     loadHero(); loadCatalog();
@@ -2010,6 +2011,19 @@
 
   window.AfriMarket = { open: open, openPublic: openPublic, closeToWorkspace: closeToWorkspace, openAuth: openAuth, closeAuth: closeAuth, shouldUseMarket: shouldUseMarket, renderAccessAdmin: loadAccessAdmin, renderPartnerTermsAdmin: loadPartnerTermsAdmin, renderDisputesAdmin: loadAdminDisputes, renderPartnerManagement: loadPartnerManagement, renderMarketAssignmentsAdmin: loadPartnerAssignmentsAdmin, renderCertificatesAdmin: loadCertificateAdmin };
   window.afriMarketInitial = function () {
+    var initial = window.afriMarketInitial;
+    if (initial.done) return;
+    if (window.AfriStartup) {
+      // Absence of a profile while session restoration is pending does not mean guest.
+      if (window.AfriStartup.state() !== "guest") return;
+      window.AfriStartup.whenDomReady(function () {
+        if (initial.done || window.AfriStartup.state() !== "guest") return;
+        initial.done = true;
+        openPublic();
+      }).catch(function (error) { window.AfriStartup.fail(error.message); });
+      return;
+    }
+    initial.done = true;
     if (window.afriMarketSession) {
       if (!isAdmin() && shouldUseMarket(window.afriMarketSession)) open({ kind: "authenticated", market: window.afriMarketSession });
       return;
@@ -2017,4 +2031,5 @@
     openPublic();
   };
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", window.afriMarketInitial); else window.afriMarketInitial();
+  window.addEventListener("afriflow:auth-ready", window.afriMarketInitial);
 })();
