@@ -54,6 +54,16 @@ function uid(){return "m"+Date.now().toString(36)+Math.floor(Math.random()*1e4).
 function fdt(ms){return new Date(ms).toLocaleString("fr-FR",{weekday:"long",day:"numeric",month:"long",hour:"2-digit",minute:"2-digit"})}
 function fh(ms){return new Date(ms).toLocaleTimeString("fr-FR",{hour:"2-digit",minute:"2-digit"})}
 function pad(n){return ("0"+n).slice(-2)}
+// Suggest a future five-minute boundary in the scheduler's local timezone.
+function suggestedMeetingStart(now){
+  var d=new Date(now+20*60000);
+  d.setSeconds(0,0);
+  d.setMinutes(Math.ceil(d.getMinutes()/5)*5);
+  return d;
+}
+function isFutureMeetingStart(start,now){
+  return Number.isFinite(start)&&start>=now+2*60000;
+}
 
 /* ---------- Lecture des données ---------- */
 async function load(){
@@ -294,18 +304,20 @@ async function render(){
   if(!active||generation!==pageGeneration||email!==me()||!isCens())return;
   roster=memberLoadError?[]:U.map(function(u){return String(u.email||"").trim().toLowerCase()}).filter(Boolean);
   var zone=Intl.DateTimeFormat().resolvedOptions().timeZone||"fuseau de votre appareil";
-  var d=new Date(),dd=d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate());
+  var d=suggestedMeetingStart(Date.now()),dd=d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate());
+  var startHour=pad(d.getHours())+":"+pad(d.getMinutes());
   var h='<div class="toolbar"><b>Censeur</b><div class="toolbar-actions"><button type="button" id="csRef">Actualiser</button></div></div>'
    +'<div class="mt-box"><h3>Programmer une réunion</h3><div class="mt-grid">'
    +'<label class="full">Intitulé<input id="csT" maxlength="100" placeholder="Ex. Point hebdomadaire" autocomplete="off"></label>'
-   +'<label>Date<input type="date" id="csD" value="'+dd+'"></label><label>Heure de début<input type="time" id="csH" value="14:00"></label>'
+   +'<label>Date<input type="date" id="csD" min="'+dd+'" value="'+dd+'"></label><label>Heure de début<input type="time" id="csH" value="'+startHour+'"></label>'
    +'<label>Durée (min)<input type="number" id="csU" value="60" min="5" max="600"></label>'
    +'<label>Tolérance de pointage (min)<input type="number" id="csG" value="5" min="0" max="120"></label>'
    +'<label class="full">Lien propre à cette réunion (facultatif, sinon lien général)<input id="csL" placeholder="https://…" autocomplete="off"></label>'
    +'<label class="full">Destinataires<select id="csAudience"><option value="all">Tous les membres du Journal de Bord</option><option value="selected">Membres sélectionnés uniquement</option></select></label>'
-   +'<div class="full" id="csPeople" hidden><p>Choisissez les personnes invitées. Seuls leurs comptes pourront pointer leur présence.</p>'
+   +'<div class="full" id="csPeople" hidden><p>Cocher les personnes à inviter. Seuls leurs comptes pourront pointer leur présence. <strong id="csInviteCount" role="status" aria-live="polite">0 personne sélectionnée</strong>.</p>'
    +'<div class="mt-grid" style="max-height:300px;overflow:auto;grid-template-columns:repeat(auto-fit,minmax(min(100%,240px),1fr));gap:10px;padding:4px">'+U.filter(function(u){return u&&u.email}).map(inviteeCard).join("")+'</div></div></div>'
-   +'<div class="mt-err" id="csErr" role="alert"></div><button type="button" class="p" id="csGo">Programmer</button>'
+   +'<p class="af-att-note">Sélectionner des membres ne les appelle pas immédiatement. Après programmation, une notification peut être envoyée avant puis au début de la réunion, sur les appareils autorisés.</p>'
+    +'<div class="mt-err" id="csErr" role="alert"></div><button type="button" class="p" id="csGo">Programmer les invitations</button>'
    +'<p class="af-att-note">Fuseau de votre appareil : <b>'+esc(zone)+'</b>. Saisissez votre heure locale ; chaque participant verra l’horaire dans son propre fuseau. Le pointage ouvre 15 min avant la réunion.</p></div>';
   var L=meets.slice().sort(function(a,b){return b.start-a.start});
   h+='<h3 style="color:var(--green)">Réunions et présences</h3>'+(L.length?L.map(function(m){
@@ -338,7 +350,15 @@ async function render(){
   delete host.dataset.meetingDraft;
   var createButton=$("csGo");if(createButton&&memberLoadError)createButton.disabled=true;
   var audience=$("csAudience"),people=$("csPeople");
-  if(audience&&people)audience.onchange=function(){people.hidden=audience.value!=="selected"};
+  function updateInviteCount(){
+     if(!people)return;
+     var count=people.querySelectorAll("[data-cs-invite]:checked").length;
+     var label=$("csInviteCount");
+     if(label)label.textContent=count+" personne"+(count>1?"s":"")+" sélectionnée"+(count>1?"s":"");
+   }
+   if(audience&&people)audience.onchange=function(){people.hidden=audience.value!=="selected";updateInviteCount()};
+   host.onchange=function(event){if(event.target.matches&&event.target.matches("[data-cs-invite]"))updateInviteCount()};
+   updateInviteCount();
 }
 async function onClick(e){
   var b=e.target.closest("button");if(!b)return;
@@ -351,10 +371,10 @@ async function onClick(e){
       if(!(Number.isInteger(g)&&g>=0&&g<=120)){er.textContent="Indiquez une tolérance entre 0 et 120 minutes.";return}
       if(l&&!okUrl(l)){er.textContent="Indiquez un lien de réunion Teams valide (https).";return}
       var st=new Date(d+"T"+hh).getTime();if(isNaN(st)){er.textContent="Date ou heure invalide.";return}
-      if(st+du*6e4<Date.now()){er.textContent="Cette réunion est déjà terminée.";return}
+      if(!isFutureMeetingStart(st,Date.now())){er.textContent="Choisissez une heure de début au moins 2 minutes dans le futur. La sélection d’invités ne déclenche pas d’appel immédiat.";return}
       er.textContent="";
       var selected=$("csAudience")&&$("csAudience").value==="selected";
-      var invitees=selected?Array.from(document.querySelectorAll("[data-cs-invite]:checked")).map(function(x){return x.dataset.csInvite}):roster.slice();
+      var invitees=selected?Array.from($("csPeople").querySelectorAll("[data-cs-invite]:checked")).map(function(x){return x.dataset.csInvite}):roster.slice();
       if(selected&&!invitees.length){er.textContent="Sélectionnez au moins une personne invitée.";return}
       if(!invitees.length){er.textContent="Aucun membre vérifié à inviter. Actualisez les comptes.";return}
       b.disabled=true;
@@ -362,7 +382,7 @@ async function onClick(e){
       var r=await SB().from(TB()).upsert({key:PRE+m.id,value:m,updated_at:new Date().toISOString()});
       b.disabled=false;
       if(r.error){er.textContent="Enregistrement impossible : "+(r.error.message||r.error);return}
-      meets.push(m);meets.sort(function(x,y){return x.start-y.start});delete $("viewHost").dataset.meetingDraft;toast("Réunion programmée.");drawCard();render();return;
+      meets.push(m);meets.sort(function(x,y){return x.start-y.start});delete $("viewHost").dataset.meetingDraft;toast("Réunion programmée pour "+fdt(st)+" · "+invitees.length+" invité"+(invitees.length>1?"s":"")+". Les alertes ne sont pas envoyées immédiatement.");drawCard();render();return;
     }
     if(b.dataset.csdel&&confirm("Supprimer cette réunion et ses présences ?")){
       var id=b.dataset.csdel;
