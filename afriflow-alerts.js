@@ -10,9 +10,8 @@
   var activeMeeting = null, previousFocus = null, previousOverflow = '', inertElements = [], joining = false;
   var lastToast = 0, busy = false;
   var ring = null, toast = null;
-  var settingsKey = 'afriflow_alerts_enabled_v1';
+  var settingsKey = '';
   var enabled = false;
-  try { enabled = localStorage.getItem(settingsKey) === 'yes'; } catch (e) {}
   function element(tag, attrs, parent) {
     var n = document.createElement(tag);
     Object.keys(attrs || {}).forEach(function(k) {
@@ -24,6 +23,26 @@
     return n;
   }
   function currentAccount() { return String(window.loggedUserEmail || '').toLowerCase().trim(); }
+  function installationContext() {
+    // Match first-use consent: origin storage may be shared by browser and PWA.
+    if(window.matchMedia && window.matchMedia('(display-mode: standalone)').matches)return 'installed';
+    if(navigator.standalone===true)return 'installed';
+    if(String(navigator.userAgent).includes('Electron/'))return 'electron';
+    if(String(navigator.userAgent).includes('; wv)'))return 'android-webview';
+    return 'browser';
+  }
+  function syncConsent() {
+    var owner=currentAccount();
+    var key=owner?'afriflow_alerts_enabled_v2_'+installationContext()+'_'+owner:'';
+    if(settingsKey!==key){
+      settingsKey=key;enabled=false;
+      // A device-global legacy approval cannot establish this account's consent.
+      try{enabled=!!key&&localStorage.getItem(key)==='yes';}catch(e){}
+      if(activeMeeting&&activeMeeting.owner!==owner)endCall();
+      else if(!enabled)stopRinging();
+    }
+    return enabled;
+  }
   function monotonicNow() { return typeof performance !== 'undefined' && performance.now ? performance.now() : Date.now(); }
   function meetingNow(m) { return m.clockEpoch + Math.max(0,monotonicNow()-m.clockStart); }
   function meetingId(value) { return /^m[a-z0-9]{5,35}$/.test(String(value || '')) ? String(value) : ''; }
@@ -77,7 +96,7 @@
     updateButton();
   }
   function unlockAudio() {
-    if (!enabled || audio) return;
+    if (!syncConsent() || audio) return;
     try {
       var C=window.AudioContext || window.webkitAudioContext;
       if (C) {audio=new C();audio.resume().catch(function(){});}
@@ -87,20 +106,22 @@
   document.addEventListener('pointerdown',unlockAudio,{passive:true});
   document.addEventListener('keydown',unlockAudio);
   function enableAlerts() {
+    syncConsent();if(!settingsKey)return;
     enabled = true;
     try { localStorage.setItem(settingsKey,'yes'); } catch(e) {}
     unlockAudio();
   }
   function disableAlerts() {
+    syncConsent();
     enabled = false;
-    try { localStorage.setItem(settingsKey,'no'); } catch(e) {}
+    try { if(settingsKey)localStorage.setItem(settingsKey,'no'); } catch(e) {}
     stopRinging();
   }
   window.AfriFlowAlerts = { enable: enableAlerts, disable: disableAlerts,
-    enabled: function(){return enabled}, showMeeting: showMeeting };
+    enabled: syncConsent, showMeeting: showMeeting };
   function updateButton() { /* Preference is managed in first-use consent. */ }
   function tone(type) {
-    if (!enabled || !audio) return;
+    if (!syncConsent() || !audio) return;
     try {
       if (audio.state === 'suspended') return;
       var t=audio.currentTime;
@@ -149,7 +170,7 @@
     }catch(e) { return false; }
   }
   function notice(title,body,tag) {
-    if (!enabled || !account) return;
+    if (!syncConsent() || !account || account!==currentAccount()) return;
     if (Date.now()-lastToast>1800 && toast) {
       lastToast=Date.now();
       toast.textContent=title+' — '+body;
@@ -217,6 +238,7 @@
   }
   function showMeeting(m,options) {
     options=options||{};
+    syncConsent();
     var owner=currentAccount(),id=meetingId(m&&m.id),start=Number(m&&m.start),duration=Number(m&&m.dur);
     var serverNow=Number(m&&m.serverNow),verified=Number.isFinite(serverNow)&&serverNow>0;
     var end=start+duration*60000,now=verified?serverNow:Date.now();
@@ -264,7 +286,7 @@
     return true;
   }
   function callMeeting(m) {
-    if(!enabled||!meetingId(m.id)||!invited(m,currentAccount())||activeMeeting)return;
+    if(!syncConsent()||!meetingId(m.id)||!invited(m,currentAccount())||activeMeeting)return;
     var key='meet_'+m.id+'_'+m.start,k='afriflow_alert_seen_'+currentAccount()+'_'+key;
     try{if(localStorage.getItem(k))return;}catch(e){}
     if(presentNativeMeeting(m))seen(key);else showMeeting(m,{automatic:true});
@@ -290,7 +312,7 @@
   document.addEventListener('focusin',function(){
     if(activeMeeting&&ring&&!ring.hidden&&!ring.contains(document.activeElement))document.getElementById('af-meet-panel').focus({preventScroll:true});
   });
-  function sessionChanged(){if(activeMeeting&&activeMeeting.owner!==currentAccount())endCall();}
+  function sessionChanged(){syncConsent();if(activeMeeting&&activeMeeting.owner!==currentAccount())endCall();}
   window.addEventListener('afriflow:verified-role',sessionChanged);
   window.addEventListener('afriflow:auth-ready',sessionChanged);
   window.addEventListener('pagehide',endCall);
@@ -315,6 +337,7 @@
         sb.from(window.__TABLE||'afriflow_state').select('key,value').like('key','att:j-%:'+account).limit(200)
       ]);
       if(user!==currentAccount()||account!==user)return;
+      syncConsent();
       var messages=queries[0].status==='fulfilled' && !queries[0].value.error ? (queries[0].value.data||[]) : null;
       if(messages){
         var unread=messages.filter(function(x){return x.value&&!x.value.read&&x.value.to===account});

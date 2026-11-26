@@ -3,12 +3,12 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');
-const source = fs.readFileSync(path.join(__dirname, '..', 'afriflow-alerts.js'), 'utf8');
+const source = fs.readFileSync(process.env.AFRIFLOW_ALERTS_TEST_SOURCE || path.join(__dirname, '..', 'afriflow-alerts.js'), 'utf8');
 
 function harness(options = {}) {
   let now = options.now || 1800000000000, monotonic = 0, nextTimer = 0, document;
   const timers = new Map(), joins = [], notifications = [], nativeNotices = [], requests = [], vibrations = [];
-  const storage = new Map(options.enabled ? [['afriflow_alerts_enabled_v1', 'yes']] : []);
+  const storage = new Map(options.legacyChoice ? [['afriflow_alerts_enabled_v1', options.legacyChoice]] : []);
   const owner = 'member@example.test';
   function events() {
     const handlers = new Map();
@@ -85,9 +85,10 @@ function harness(options = {}) {
     Notification: class { constructor(title, details) { notifications.push({ title, details }); } }, console
   };
   vm.runInNewContext(source, context, { filename: 'afriflow-alerts.js' });
+  if(options.enabled)window.AfriFlowAlerts.enable();
   async function settle() { for (let i = 0; i < 25; i++) await Promise.resolve(); }
   return {
-    window, document, original, joins, notifications, nativeNotices, requests, vibrations, timers, meeting, settle,
+    window, document, navigator: context.navigator, storage, original, joins, notifications, nativeNotices, requests, vibrations, timers, meeting, settle,
     get(id) { return document.getElementById(id); },
     show(value = meeting(), settings) { return window.AfriFlowAlerts.showMeeting(value, settings); },
     setMeetings(value) { meetings = value; },
@@ -236,4 +237,41 @@ test('Polling and a delayed foreground push share deduplication, while an explic
   assert.equal(app.show(meeting, { source: 'push' }), true);
   app.get('af-meet-accept').click();
   assert.equal(app.joins[0].settings.source, 'push');
+});
+
+test('An account’s alert approval never overrides another account’s refusal or inherits legacy global consent', async () => {
+  const app = harness({ legacyChoice: 'yes' }); await app.settle();
+  const alerts = app.window.AfriFlowAlerts;
+  assert.equal(alerts.enabled(), false, 'The old device-global yes is not attributable to this account');
+  alerts.enable(); assert.equal(alerts.enabled(), true);
+  app.window.loggedUserEmail = 'other@example.test';
+  assert.equal(alerts.enabled(), false, 'Consent changes immediately, even before an authentication event');
+  alerts.disable();
+  app.window.loggedUserEmail = ' MEMBER@EXAMPLE.TEST ';
+  assert.equal(alerts.enabled(), true, 'The first account retains its own normalized approval');
+  assert.equal(app.show(app.meeting(), { automatic: true }), true);
+  app.window.loggedUserEmail = 'other@example.test';
+  assert.equal(alerts.enabled(), false, 'The second account’s explicit refusal remains in force');
+  assert.equal(app.get('af-meet-call').hidden, true, 'The previous account’s ringing invitation is dismissed');
+  app.setMeetings([app.meeting({ invitees: ['other@example.test'] })]); await app.poll();
+  assert.equal(app.get('af-meet-call').hidden, true);
+  app.window.loggedUserEmail = ''; alerts.enable();
+  assert.equal(alerts.enabled(), false, 'Anonymous sessions cannot establish alert consent');
+});
+
+test('Alert approval is separate for browser, installed PWA, Electron and Android WebView contexts', async () => {
+  const app = harness(); await app.settle(); const alerts = app.window.AfriFlowAlerts;
+  alerts.enable();
+  app.window.matchMedia = () => ({ matches: true });
+  assert.equal(alerts.enabled(), false); alerts.enable();
+  app.window.matchMedia = () => ({ matches: false });
+  assert.equal(alerts.enabled(), true, 'Returning to the browser restores only its own approval');
+  app.navigator.userAgent = 'AfriFlow Electron/40';
+  assert.equal(alerts.enabled(), false); alerts.enable();
+  app.navigator.userAgent = 'Mozilla Android; wv)';
+  assert.equal(alerts.enabled(), false); alerts.disable();
+  app.navigator.standalone = true;
+  assert.equal(alerts.enabled(), true, 'iOS standalone uses the same installed context as first-use');
+  app.navigator.standalone = false;
+  assert.equal(alerts.enabled(), false, 'The Android WebView refusal is preserved independently');
 });

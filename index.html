@@ -991,6 +991,8 @@ collect();sched();
 
 <link rel="stylesheet" href="./modules/collaboration/attendance.css?v=20261126-attendance-fairness">
 <script src="./modules/collaboration/attendance.js?v=20261126-attendance-fairness"></script>
+<link rel="stylesheet" href="./modules/collaboration/notification-settings.css?v=20261126-notifications">
+<script src="./modules/collaboration/notification-settings.js?v=20261126-notifications"></script>
 <script src="./modules/collaboration/meetings.js?v=20261126-meeting-reliability"></script>
 
 
@@ -1708,7 +1710,7 @@ window.addEventListener("afriflow:navigate",function(event){
 async function renderPersonal(){
   if(!jpActive)return;
   var generation=++jpGeneration;
-  vh.innerHTML='<div class="toolbar"><b>Mes présences</b><div class="toolbar-actions"><button type="button" id="jpRef">Actualiser</button><button type="button" class="p" id="jpNew">Envoyer un justificatif</button></div></div><div id="jpRoot"><p style="color:var(--muted)">Chargement…</p></div>';
+  vh.innerHTML='<div class="toolbar"><b>Mes présences</b><div class="toolbar-actions"><button type="button" data-notification-settings>Notifications</button><button type="button" id="jpRef">Actualiser</button><button type="button" class="p" id="jpNew">Envoyer un justificatif</button></div></div><div id="jpRoot"><p style="color:var(--muted)">Chargement…</p></div>';
   var meets=[],A={},J={},D={},q=me(),err="",attendance;
   try{
     var results=await window.AfriAttendance.loadPersonal();attendance=results.attendance;
@@ -2900,7 +2902,7 @@ body.af-profile-open #afCloudSyncBadge{visibility:hidden!important}
 </script>
 
 <!-- Installed PWA device subscription for system notifications -->
-<script src="./afriflow-push.js" defer></script>
+<script src="./afriflow-push.js?v=20261126-notification-consent" defer></script>
 <link rel="stylesheet" href="./afriflow-contrast-fix.css?v=20261124-deadline-footer">
 
 <!-- First-use terms and optional notification consent -->
@@ -2909,7 +2911,7 @@ body.af-profile-open #afCloudSyncBadge{visibility:hidden!important}
 <script src="./afriflow-first-use.js" defer></script>
 
 <!-- Notifications and meeting-calls for active AfriFlow sessions -->
-<script src="./afriflow-alerts.js?v=20261126-meeting-reliability" defer></script>
+<script src="./afriflow-alerts.js?v=20261126-notification-consent" defer></script>
 
 <!-- AfriFlow: notify about published updates; refresh only on explicit user action -->
 <script src="./updates.js?v=20261126-navigation-stability" defer></script>

@@ -7,6 +7,13 @@
   var URL='https://jgvwdpzevghfavmpjbqp.supabase.co/functions/v1/afriflow-push';
   var inflight=null, lastCheck=0;
   function account(){return String(window.loggedUserEmail||'').toLowerCase().trim()}
+  function optedIn(){return !!(window.AfriFlowAlerts&&window.AfriFlowAlerts.enabled())}
+  function registrationIssue(email,client){
+    if(!optedIn())return 'alerts_disabled';
+    if(account()!==email || window.__sb!==client)return 'account_changed';
+    if(Notification.permission!=='granted')return 'permission';
+    return '';
+  }
   function supported(){
     return !!(window.isSecureContext &&
       'serviceWorker' in navigator &&
@@ -34,28 +41,47 @@
   async function register() {
     if(inflight)return inflight;
     inflight=(async function(){
+      if(!optedIn())return {ok:false,reason:'alerts_disabled'};
       if(!supported())return {ok:false,reason:'non_supported'};
       if(Notification.permission!=='granted')return {ok:false,reason:'permission'};
-      var email=account();
-      if(!email || !window.__sb)return {ok:false,reason:'not_authenticated'};
-      var session=await window.__sb.auth.getUser();
+      var email=account(), client=window.__sb;
+      if(!email || !client)return {ok:false,reason:'not_authenticated'};
+      var session=await client.auth.getUser();
       var user=session.data&&session.data.user;
       if(!user || String(user.email||'').toLowerCase()!==email)return {ok:false,reason:'not_authenticated'};
       var worker=await navigator.serviceWorker.ready;
+      var issue=registrationIssue(email,client);
+      if(issue)return {ok:false,reason:issue};
       if(!worker.pushManager)return {ok:false,reason:'no_push_manager'};
       var subscription=await worker.pushManager.getSubscription();
+      issue=registrationIssue(email,client);
+      if(issue)return {ok:false,reason:issue};
+      var created=false;
       if(!subscription){
         var publicKey=await getKey();
+        issue=registrationIssue(email,client);
+        if(issue)return {ok:false,reason:issue};
         subscription=await worker.pushManager.subscribe({
           userVisibleOnly:true,
           applicationServerKey:decodeKey(publicKey),
         });
+        created=true;
+      }
+      issue=registrationIssue(email,client);
+      if(issue){
+        if(created)try{await subscription.unsubscribe()}catch(e){}
+        return {ok:false,reason:issue};
       }
       var p=subscription.toJSON();
       if(!p.keys || !p.keys.p256dh || !p.keys.auth)throw new Error('Abonnement incomplet');
       var payload={endpoint:p.endpoint,p256dh:p.keys.p256dh,auth_key:p.keys.auth,user_email:email,updated_at:new Date().toISOString()};
-      var result=await window.__sb.from('afriflow_push_subscriptions').upsert(payload,{onConflict:'endpoint'});
+      var result=await client.from('afriflow_push_subscriptions').upsert(payload,{onConflict:'endpoint'});
       if(result.error)throw result.error;
+      issue=registrationIssue(email,client);
+      if(issue){
+        try{await subscription.unsubscribe()}catch(e){}
+        return {ok:false,reason:issue};
+      }
       try{localStorage.setItem(KEY,email)}catch(e){}
       status('appareil inscrit');
       return {ok:true};
@@ -91,10 +117,12 @@
       var data=await window.__sb.auth.getSession();
       var session=data.data?.session;
       if(!session?.access_token||String(session.user?.email||'').toLowerCase()!==who)return;
+      if(!optedIn()||account()!==who)return;
       window.AfriFlowAndroid.postMessage(JSON.stringify({action:'enablePush',accessToken:session.access_token}));
     }catch(e){status('Inscription Android indisponible : '+e.message);}
   }
   async function autoRegister(){
+    if(!optedIn())return;
     if(window.AfriFlowAndroid) {await registerAndroidNative();return;}
     if(!supported() || Notification.permission!=='granted')return;
     var email=account();
@@ -134,10 +162,9 @@
   async function notifyMessage(messageKey) {
     var email=account();
     if(!email || !window.__sb)return {ok:false,reason:'not_authenticated'};
-    // A granted system permission is enough to keep this device enrolled; it does not
-    // re-open the permission prompt or change the user's alert preference.
-    var enrolled=await register();
-    if(!enrolled.ok)return enrolled;
+    // Sending a message does not opt its author into receiving notifications.
+    // Recipient delivery remains authenticated independently of this device.
+    if(optedIn())await register();
     var session=await window.__sb.auth.getSession();
     var jwt=session.data&&session.data.session&&session.data.session.access_token;
     if(!jwt)return {ok:false,reason:'not_authenticated'};
