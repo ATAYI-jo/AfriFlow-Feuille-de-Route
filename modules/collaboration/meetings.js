@@ -2,7 +2,7 @@
 (function(){
 "use strict";
 var CFG="pub:meetcfg", PRE="meet:", ATT="att:", OPEN_BEFORE=15*6e4;
-var cfg={link:"",censeurs:[]}, meets=[], atts={}, active=false;
+var cfg={link:"",censeurs:[]}, meets=[], atts={}, active=false,pageGeneration=0;
 
 function $(i){return document.getElementById(i)}
 function SB(){return window.__sb} function TB(){return window.__TABLE||"afriflow_state"}
@@ -185,17 +185,29 @@ window.afRelinkDropbox=async function(index){
  browse("");
  setTimeout(function(){var b=$("dvBrowser");if(b)b.scrollIntoView({behavior:"smooth",block:"start"})},300);
 };
-async function openPage(){
+async function openPage(options){
+  options=options||{};
+  if(!isCens())return;
   var home=document.querySelector('#navList .nv[data-id="home"]');if(home)home.click();
+  var generation=++pageGeneration,email=me();
   active=true;$("view-home").style.display="none";$("viewHost").style.display="";
   var sc=$("scrim");if(sc&&sc.classList.contains("on"))sc.click();
   $("viewHost").innerHTML='<div class="toolbar"><b>Censeur</b></div><p style="color:var(--muted)">Chargement…</p>';
-  mark2();window.scrollTo(0,0);if(window.AFRI)window.AFRI.page("Censeur");
+  mark2();if(!options.restore)window.scrollTo(0,0);if(window.AFRI)window.AFRI.page("Censeur");
+  if(window.AfriNav)window.AfriNav.remember("censor");
   try{await load()}catch(e){}
-  if(active)render();
+  if(active&&generation===pageGeneration&&email===me()&&isCens())render();
 }
+window.AfriOpenCensor=function(options){
+  if(!me()||!isCens())return false;
+  openPage(options);return true;
+};
+window.addEventListener("afriflow:navigate",function(event){
+  if(!event.detail||event.detail.id!=="censor"){active=false;pageGeneration++}
+});
 async function render(){
   var host=$("viewHost");if(!active||!host)return;
+  var generation=pageGeneration,email=me();
   var U=[],memberLoadError="";
   try{
     // Directory records can outlive membership. Use current registrations
@@ -218,7 +230,7 @@ async function render(){
   }catch(e){
     memberLoadError="Impossible de vérifier les comptes inscrits. Actualisez avant de programmer une réunion.";
   }
-  if(!active)return;
+  if(!active||generation!==pageGeneration||email!==me()||!isCens())return;
   var d=new Date(),dd=d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate());
   var h='<div class="toolbar"><b>Censeur</b><div class="toolbar-actions"><button type="button" id="csRef">Actualiser</button></div></div>'
    +'<div class="mt-box"><h3>Programmer une réunion</h3><div class="mt-grid">'
@@ -297,13 +309,13 @@ if(nl0){
   new MutationObserver(inject).observe(nl0,{childList:true});
   nl0.addEventListener("click",function(e){
     var b=e.target.closest("button");if(!b)return;
-    if(b.hasAttribute("data-cs-nav"))openPage();else if(!b.hasAttribute("data-fdr-ren"))active=false;
+    if(b.hasAttribute("data-cs-nav"))openPage();else if(!b.hasAttribute("data-fdr-ren")&&b.dataset.id!=="messages")active=false;
   });
 }
 var vh=$("viewHost");if(vh)new MutationObserver(injectAdmin).observe(vh,{childList:true});
 
 /* ---------- Démarrage ---------- */
-function refresh(){if(!me()){drawCard();return}load().then(function(){inject();drawCard();injectAdmin();if(active)render()}).catch(function(){})}
+function refresh(){if(!me()){drawCard();return}load().then(function(){inject();drawCard();injectAdmin();if(active)render();window.dispatchEvent(new Event("afriflow:navigation-ready"))}).catch(function(){})}
 var prev=window.onRole;
 window.onRole=function(){if(prev)prev();setTimeout(refresh,1300)};
 setInterval(function(){if(me())refresh();else drawCard()},60000);

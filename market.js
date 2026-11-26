@@ -2011,7 +2011,7 @@
   window.AfriMarket = { open: open, openPublic: openPublic, closeToWorkspace: closeToWorkspace, openAuth: openAuth, closeAuth: closeAuth, shouldUseMarket: shouldUseMarket, renderAccessAdmin: loadAccessAdmin, renderPartnerTermsAdmin: loadPartnerTermsAdmin, renderDisputesAdmin: loadAdminDisputes, renderPartnerManagement: loadPartnerManagement, renderMarketAssignmentsAdmin: loadPartnerAssignmentsAdmin, renderCertificatesAdmin: loadCertificateAdmin };
   window.afriMarketInitial = function () {
     if (window.afriMarketSession) {
-      if (shouldUseMarket(window.afriMarketSession)) open({ kind: "authenticated", market: window.afriMarketSession });
+      if (!isAdmin() && shouldUseMarket(window.afriMarketSession)) open({ kind: "authenticated", market: window.afriMarketSession });
       return;
     }
     openPublic();

@@ -423,7 +423,7 @@ window.ic=function(n,s){return '<svg class="ic"'+(s?' style="width:'+s+';height:
 </style>
 
 <script src="./afriflow-payment-simulation.js?v=1"></script>
-<script src="./afriflow-workspace.js?v=20261124-deadline-footer"></script>
+<script src="./afriflow-workspace.js?v=20261126-navigation-stability"></script>
 
 <!-- Synchronisation cloud (Supabase) : table afriflow_state -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -825,7 +825,7 @@ if(window.loggedUserEmail)setTimeout(pull,1500);
 .fdr-ban b{color:var(--c,var(--amber))}
 </style>
 
-<script src="./modules/roadmap/timeline.js?v=20261124-mobile-deadlines-v2"></script>
+<script src="./modules/roadmap/timeline.js?v=20261126-navigation-stability"></script>
   
 <style>
 #afBg{--n:0;--aT:rgb(90,169,230);--aB:rgb(207,233,255);position:fixed;inset:0;z-index:-3;pointer-events:none;overflow:hidden}
@@ -986,7 +986,7 @@ collect();sched();
 .mt-m th,.mt-m td{padding:10px 12px;border-bottom:1px solid var(--line);text-align:left;font-size:.9rem}
 </style>
 
-<script src="./modules/collaboration/meetings.js?v=20261121-modularisation-5"></script>
+<script src="./modules/collaboration/meetings.js?v=20261126-navigation-stability"></script>
 
 
 
@@ -1686,7 +1686,7 @@ async function openCensorPermission(){
     }catch(e){error.textContent="Permission impossible : "+(e.message||e);submit.disabled=false}
   };
 }
-var cfg2=null,jpActive=false;
+var cfg2=null,jpActive=false,jpGeneration=0;
 async function loadCfg(){
   try{var r=await SB().from(TB()).select("value").eq("key","pub:meetcfg").maybeSingle();cfg2=(r.data&&r.data.value)||{censeurs:[]}}catch(e){}
 }
@@ -1702,15 +1702,20 @@ function injectNav(){
   var f=nl.querySelector("[data-fdr-nav]");(f?f.parentNode:nl.firstElementChild).after(row);
   markJp();
 }
-async function openPersonal(){
+async function openPersonal(options){
+  options=options||{};
+  if(!me())return false;
   var home=document.querySelector('#navList .nv[data-id="home"]');if(home)home.click();
   jpActive=true;$("view-home").style.display="none";vh.style.display="";
   var sc=$("scrim");if(sc&&sc.classList.contains("on"))sc.click();
-  window.scrollTo(0,0);if(window.AFRI)window.AFRI.page("Mes présences");
+  if(!options.restore)window.scrollTo(0,0);if(window.AFRI)window.AFRI.page("Mes présences");
   if(window.AfriNav)window.AfriNav.remember("personal");
   renderPersonal();
 }
 window.AfriOpenPersonal=openPersonal;
+window.addEventListener("afriflow:navigate",function(event){
+  if(!event.detail||event.detail.id!=="personal"){jpActive=false;jpGeneration++;}
+});
 function statut(m,rec,exc){
   var n=Date.now(),end=m.start+m.dur*6e4;
   if(rec)return rec.at<=m.start+m.grace*6e4?["ok","Présent"]:["late","Retard (+"+Math.max(1,Math.round((rec.at-m.start)/6e4))+" min)"];
@@ -1720,6 +1725,7 @@ function statut(m,rec,exc){
 }
 async function renderPersonal(){
   if(!jpActive)return;
+  var generation=++jpGeneration;
   vh.innerHTML='<div class="toolbar"><b>Mes présences</b><div class="toolbar-actions"><button type="button" id="jpRef">Actualiser</button><button type="button" class="p" id="jpNew">📎 Envoyer un justificatif</button></div></div><div id="jpRoot"><p style="color:var(--muted)">Chargement…</p></div>';
   var meets=[],A={},J={},D={},P={},q=me(),err="";
   try{
@@ -1739,7 +1745,7 @@ async function renderPersonal(){
     (j.data||[]).forEach(function(x){if(x.value&&x.value.email===q&&x.value.mid)J[x.value.mid]=x.value});
     (d.data||[]).forEach(function(x){if(x.value&&x.value.email===q&&x.value.mid)D[x.value.mid]=x.value});
   }catch(e){err=String((e&&e.message)||e)}
-  var root=$("jpRoot");if(!root||!jpActive)return;
+  var root=$("jpRoot");if(!root||!jpActive||generation!==jpGeneration||q!==me())return;
   if(err){root.innerHTML='<p style="color:#c0392b">Lecture impossible : '+esc(err)+'</p>';return}
   meets.sort(function(x,y){return y.start-x.start});
   if(!meets.length){root.innerHTML='<p style="color:var(--muted)">Aucune réunion programmée pour le moment.</p>';return}
@@ -1814,7 +1820,7 @@ if(me())setTimeout(refresh,1600);
 .dv-view img,.dv-view video{max-width:100%;border-radius:16px}
 .dv-row{display:flex;gap:10px;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--line);flex-wrap:wrap}
 </style>
-<script src="./modules/documents/dropbox-browser.js?v=20261121-modularisation-3"></script>
+<script src="./modules/documents/dropbox-browser.js?v=20261126-navigation-stability"></script>
   <style>
 .border-sign{display:flex;align-items:center;gap:16px;padding:10px 22px!important;margin:-14px auto!important}
 .bs-f{display:flex;flex-direction:column;align-items:center;gap:3px;font-size:.72rem;font-weight:700}
@@ -2937,13 +2943,13 @@ body.af-profile-open #afCloudSyncBadge{visibility:hidden!important}
 <!-- Notifications and meeting-calls for active AfriFlow sessions -->
 <script src="./afriflow-alerts.js" defer></script>
 
-<!-- AfriFlow: detect new published versions and refresh only when idle -->
-<script src="./updates.js" defer></script>
+<!-- AfriFlow: notify about published updates; refresh only on explicit user action -->
+<script src="./updates.js?v=20261126-navigation-stability" defer></script>
 
 <!-- Public Market catalogue, loaded after the existing authenticated workspace -->
 <script src="./market-country-logo.js?v=20261123-country-fit-v5" defer></script>
 <script src="./afriflow-cod.js?v=20261124-order-alerts-v3" defer></script>
-<script src="./market.js?v=20261126-news-cards" defer></script>
+<script src="./market.js?v=20261126-navigation-stability" defer></script>
 
 <!-- AfriFlow PWA: registration without request interception -->
 <script>

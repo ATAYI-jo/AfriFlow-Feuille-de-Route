@@ -13,7 +13,7 @@ test("Marketplace, personal register and workspace sections retain their navigat
   assert.match(workspace,/rememberView\("market"\)/);
   assert.match(workspace,/rememberView\(id\)/);
   assert.match(html,/window\.AfriNav\.remember\("personal"\)/);
-  assert.match(workspace,/window\.AfriOpenPersonal\(\)/);
+  assert.match(workspace,/personal:"AfriOpenPersonal"/);
   assert.match(workspace,/window\.addEventListener\("pagehide"/);
 });
 test("Logout clears saved navigation without granting access",()=>{
@@ -25,7 +25,7 @@ test("Refresh and cloud updates preserve scroll without navigation loops",()=>{
   const workspace=read("afriflow-workspace.js");
   assert.match(workspace,/function show\(id,options\)/);
   assert.match(workspace,/if\(!preserving\)window\.scrollTo\(0,0\)/);
-  assert.match(workspace,/show\(saved\.id,\{restore:true\}\)/);
+  assert.match(workspace,/show\(saved\.id,\{restore:true,scrollY:saved\.y\}\)/);
   assert.match(workspace,/window\.addEventListener\("scroll",function\(\)/);
   assert.match(workspace,/if\(!viewRestored\)restorePreviousView\(\)/);
   assert.match(workspace,/cur==="treasury"\|\|cur==="direction"/);

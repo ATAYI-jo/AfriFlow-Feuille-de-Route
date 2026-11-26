@@ -320,7 +320,8 @@ function renderDeadlinePage(){
   setupRecipientPicker();
   drawBanner(cache);drawList();tick();
 }
-function openPage(onlyDeadlines){
+function openPage(onlyDeadlines,options){
+  options=options||{};
   var home=document.querySelector('#navList .nv[data-id="home"]');
   if(home)home.click();            /* laisse le site nettoyer la vue précédente */
   active=true;
@@ -328,13 +329,23 @@ function openPage(onlyDeadlines){
   if(deadlineOnly)openSet.dl=true;
   $("view-home").style.display="none";$("viewHost").style.display="";
   var sc=$("scrim");if(sc&&sc.classList.contains("on"))sc.click();
-  renderDeadlinePage();window.scrollTo(0,0);markNav();
+  renderDeadlinePage();if(!options.restore)window.scrollTo(0,0);markNav();
+  if(window.AfriNav)window.AfriNav.remember(deadlineOnly?"deadlines":"marketing");
   if(window.AFRI)window.AFRI.page(deadlineOnly?"Échéances et alertes":"Marketing");
   refreshBanner();
 }
-window.AfriOpenDeadlines=function(){
-  if(me())openPage(true);
+window.AfriOpenDeadlines=function(options){
+  if(!me())return false;
+  openPage(true,options);return true;
 };
+window.AfriOpenMarketing=function(options){
+  if(!me())return false;
+  openPage(false,options);return true;
+};
+window.addEventListener("afriflow:navigate",function(event){
+  var id=event.detail&&event.detail.id;
+  if(id!=="marketing"&&id!=="deadlines"){active=false;markNav()}
+});
 function markNav(){
   var footer=$("fdrFooter");
   if(footer){

@@ -35,7 +35,7 @@ function merge(s){
 }
 try{ var s0=JSON.parse(localStorage.getItem(KEY)||"null"); if(s0)merge(s0);restoreLocalNavBackup();backupNav(); }catch(e){}
 function esc(s){return String(s==null?"":s).replace(/[&<>"']/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]})}
-function editing(){var a=document.activeElement;return !!(a&&a.isContentEditable)}
+function editing(){var a=document.activeElement;return !!(a&&(a.isContentEditable||/^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName)))}
 function save(){
   backupNav();
   try{localStorage.setItem(KEY,JSON.stringify(X))}catch(e){alert("Stockage du navigateur plein : image trop lourde ? Supprimez-en ou utilisez des images plus petites.")}
@@ -47,13 +47,15 @@ window.applyExtra=function(v){
   merge(v);setTimeout(syncPending,800);
   try{localStorage.setItem(KEY,JSON.stringify(X))}catch(e){}
   buildNav();
+  if(!viewRestored){restorePreviousView();if(viewRestored)return true;}
   // Cloud synchronization must not unexpectedly send the user back to top.
   // Only refresh data-backed pages while keeping their current scroll position.
   if(cur==="treasury"||cur==="direction"||X.nav.some(function(n){return n.id===cur})){
-    var y=window.scrollY||0;
+    var y=window.scrollY||0,id=cur;
     show(cur,{restore:true});
+    var version=navigationVersion,interaction=scrollInteraction;
     [100,500].forEach(function(ms){setTimeout(function(){
-      if(cur!=="home")window.scrollTo(0,y);
+      if(cur===id&&activeView===id&&version===navigationVersion&&interaction===scrollInteraction)window.scrollTo(0,y);
     },ms)});
   }
   return true;
@@ -75,7 +77,17 @@ function ask(title,fields,ok){
 /* ---------- Navigation ---------- */
 /* Conserver la dernière rubrique dans cet onglet, uniquement pour ce compte. */
 var LAST_VIEW_KEY="afriflow_last_view_v1",viewRestored=false;
+var navigationReady=document.readyState!=="loading",restoringView=false;
+var activeView="home",navigationVersion=0,scrollInteraction=0;
+// A user's navigation always takes priority over delayed session/cloud restoration.
+["pointerdown","touchstart","wheel","keydown"].forEach(function(event){
+  window.addEventListener(event,function(){scrollInteraction++},{passive:true});
+});
 function rememberView(id){
+  var previous=activeView;
+  activeView=id;navigationVersion++;
+  if(!restoringView)viewRestored=true;
+  if(previous!==id)window.dispatchEvent(new CustomEvent("afriflow:navigate",{detail:{id:id,previous:previous}}));
   if(!window.loggedUserEmail)return;
   try{
     var old=previousView(),same=old&&old.id===id;
@@ -92,22 +104,34 @@ function previousView(){
   }catch(ignore){return null}
 }
 function restorePreviousView(){
-  if(viewRestored||!window.loggedUserEmail)return;
-  viewRestored=true;
+  if(viewRestored||restoringView||!navigationReady||!window.loggedUserEmail)return;
+  var access=window.afriMarketSession&&window.afriMarketSession.access_mode;
+  if(!isAdmin()&&access!=="shareholder_approved"&&access!=="collaborator")return;
   var saved=previousView();
-  if(!saved||saved.id==="home")return;
+  if(!saved||saved.id==="home"){viewRestored=true;return;}
   function restoreScroll(){
+    if(activeView!==saved.id)return;
+    var version=navigationVersion,interaction=scrollInteraction;
+    // Auxiliary views clean up through Home before opening their own route.
+    // Keep the original scroll snapshot rather than the temporary Home position.
+    try{sessionStorage.setItem(LAST_VIEW_KEY,JSON.stringify(saved))}catch(ignore){}
     if(saved.y>0){
       [350,1000].forEach(function(ms){setTimeout(function(){
         var current=previousView();
-        if(current&&current.id===saved.id)window.scrollTo(0,saved.y);
+        if(current&&current.email===saved.email&&current.id===saved.id&&version===navigationVersion&&interaction===scrollInteraction)window.scrollTo(0,saved.y);
       },ms)});
     }
   }
-  if(saved.id==="personal"){
-    if(typeof window.AfriOpenPersonal==="function"){
-      window.AfriOpenPersonal();
-      restoreScroll();
+  var auxiliary={personal:"AfriOpenPersonal",marketing:"AfriOpenMarketing",deadlines:"AfriOpenDeadlines",documents:"AfriOpenDocuments",censor:"AfriOpenCensor"};
+  if(Object.prototype.hasOwnProperty.call(auxiliary,saved.id)){
+    var open=window[auxiliary[saved.id]];
+    if(typeof open!=="function")return;
+    restoringView=true;
+    try{
+      if(open({restore:true})===false)return;
+      viewRestored=true;restoreScroll();
+    }finally{
+      restoringView=false;
     }
     return;
   }
@@ -115,17 +139,21 @@ function restorePreviousView(){
   if(ids.indexOf(saved.id)===-1)return;
   if((saved.id==="admin"||saved.id==="partners")&&!isAdmin())return;
   if(saved.id==="market"&&!window.AfriMarket)return;
-  show(saved.id,{restore:true});
-  restoreScroll();
+  restoringView=true;
+  try{show(saved.id,{restore:true,scrollY:saved.y});viewRestored=true;restoreScroll();}
+  finally{restoringView=false;}
 }
 window.AfriNav={
   remember:rememberView,
-  clear:function(){try{sessionStorage.removeItem(LAST_VIEW_KEY)}catch(ignore){}},
-  saved:previousView
+  clear:function(){viewRestored=false;navigationVersion++;try{sessionStorage.removeItem(LAST_VIEW_KEY)}catch(ignore){}},
+  saved:previousView,
+  current:function(){return activeView;}
 };
+document.addEventListener("DOMContentLoaded",function(){navigationReady=true;restorePreviousView();},{once:true});
+window.addEventListener("afriflow:navigation-ready",restorePreviousView);
 function saveScrollPosition(){
   var v=previousView();
-  if(!v)return;
+  if(!v||v.id!==activeView)return;
   v.y=Math.max(0,Math.floor(window.scrollY||0));
   try{sessionStorage.setItem(LAST_VIEW_KEY,JSON.stringify(v))}catch(ignore){}
 }
@@ -200,6 +228,7 @@ function closeNav(){$("side").classList.remove("on");$("scrim").classList.remove
 function show(id,options){
   options=options||{};
   var preserving=!!options.restore;
+  var y=options.scrollY==null?(window.scrollY||0):Math.max(0,Number(options.scrollY)||0),interaction=scrollInteraction;
   // Messaging is a modal, not a workspace page. Keep the current page intact.
   if(id==="messages"){
     closeNav();
@@ -212,11 +241,16 @@ function show(id,options){
   if(id==="market"&&window.AfriMarket){rememberView("market");window.AfriMarket.open({kind:"workspace",market:{access_mode:"collaborator"}});buildNav();closeNav();return}
   if((id==="admin"||id==="partners")&&!isAdmin())cur=id="home";
   rememberView(id);
+  var version=navigationVersion;
   $("view-home").style.display=id==="home"?"":"none";
   $("viewHost").style.display=id==="home"?"none":"";
   if(id==="admin"){adminSection="overview";renAdmin();}else if(id==="partners")renPartners();
   else if(id!=="home"){
-    var run=function(){ if(id==="treasury")renTre(); else renEd(id) };
+    var run=function(){
+      if(cur!==id||version!==navigationVersion)return;
+      if(id==="treasury")renTre();else renEd(id);
+      if(preserving&&interaction===scrollInteraction)window.scrollTo(0,y);
+    };
     if(cep(id))run(); else viewPub(id,function(p){ W.tvAt=p.at; if(id==="treasury")W.tv=p.tre; else W.pv=p; run() });
   }
   buildNav(); closeNav();
@@ -635,9 +669,9 @@ async function pushExtra(){
 function inProg(){return '<div class="wip" role="status"><div class="spin"></div><h2>En cours...</h2><div class="bar"><i></i></div><p>Cette page est en cours de préparation. Elle sera visible dès sa publication.</p></div>'}
 async function fetchPub(id){var s=window.__sb;if(!s)return null;var r=await s.from(window.__TABLE).select("value").eq("key","pub:"+id).maybeSingle();if(r.error)throw r.error;return r.data?r.data.value:null}
 function viewPub(id,fn){
-  var host=$("viewHost"),t='<div class="toolbar"><b>'+esc(pageName(id))+'</b></div>';
+  var host=$("viewHost"),version=navigationVersion,t='<div class="toolbar"><b>'+esc(pageName(id))+'</b></div>';
   host.innerHTML=t+'<div class="wip"><div class="spin"></div><h2>Chargement…</h2></div>';
-  fetchPub(id).then(function(p){if(cur!==id)return;if(p)fn(p);else host.innerHTML=t+inProg()}).catch(function(){if(cur===id)host.innerHTML=t+inProg()});
+  fetchPub(id).then(function(p){if(cur!==id||version!==navigationVersion)return;if(p)fn(p);else host.innerHTML=t+inProg()}).catch(function(){if(cur===id&&version===navigationVersion)host.innerHTML=t+inProg()});
 }
 function pubBar(id){
   if(!cep(id)||id==="home")return "";
@@ -661,8 +695,14 @@ async function unpublish(id){
   X.pubAt[id]=-Date.now(); save(); show(id);
 }
 setInterval(function(){
-  if(cur==="home"||cur==="admin"||cep(cur)||W.open)return;
-  fetchPub(cur).then(function(p){var at=p?p.at:0,have=cur==="treasury"?(W.tvAt||0):(W.pv?W.pv.at:0);if(at!==have)show(cur)}).catch(function(){});
+  var id=cur,version=navigationVersion;
+  var published=id==="treasury"||id==="direction"||X.nav.some(function(n){return n.id===id});
+  if(!published||activeView!==id||document.hidden||!window.loggedUserEmail||cep(id)||W.open||editing())return;
+  fetchPub(id).then(function(p){
+    if(cur!==id||activeView!==id||version!==navigationVersion||document.hidden||W.open||editing())return;
+    var at=p?p.at:0,have=id==="treasury"?(W.tvAt||0):(W.pv?W.pv.at:0);
+    if(at!==have)show(id,{restore:true});
+  }).catch(function(){});
 },30000);
 
 /* ---------- Envoi Dropbox différé (fichiers enregistrés par un éditeur) ---------- */

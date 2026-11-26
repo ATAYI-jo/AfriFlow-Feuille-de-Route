@@ -1,7 +1,7 @@
 
 (function(){
 "use strict";
-var KEY="pub:dbxshow",$=function(i){return document.getElementById(i)},vh=$("viewHost"),items=[],active=false,cwd="";
+var KEY="pub:dbxshow",$=function(i){return document.getElementById(i)},vh=$("viewHost"),items=[],active=false,cwd="",pageGeneration=0;
 function SB(){return window.__sb} function TB(){return window.__TABLE||"afriflow_state"}
 function adm(){return window.USER_ROLE==="admin"}
 function toast(m){(window.toast||alert)(m)}
@@ -14,9 +14,11 @@ async function call(body){
   if(r.data&&r.data.error)throw new Error(r.data.error);
   return r.data;
 }
-async function loadItems(){
+async function loadItems(generation,email){
   var r=await SB().from(TB()).select("value").eq("key",KEY).maybeSingle();
+  if(!active||generation!==pageGeneration||email!==window.loggedUserEmail)return false;
   items=(r.data&&r.data.value&&Array.isArray(r.data.value.items))?r.data.value.items:[];
+  return true;
 }
 async function saveItems(){
   var r=await SB().from(TB()).upsert({key:KEY,value:{items:items,at:Date.now(),by:String(window.loggedUserEmail||"")},updated_at:new Date().toISOString()});
@@ -90,15 +92,26 @@ async function onClick(e){
     }
   }catch(x){toast("Action impossible : "+(x.message||x))}
 }
-async function openPage(){
+async function openPage(options){
+  options=options||{};
   var home=document.querySelector('#navList .nv[data-id="home"]');if(home)home.click();
+  var generation=++pageGeneration,email=window.loggedUserEmail;
   active=true;$("view-home").style.display="none";vh.style.display="";
   var sc=$("scrim");if(sc&&sc.classList.contains("on"))sc.click();
   vh.innerHTML='<div class="toolbar"><b>Documents</b></div><p style="color:var(--muted)">Chargement…</p>';
-  mark();window.scrollTo(0,0);if(window.AFRI)window.AFRI.page("Documents");
-  try{await loadItems()}catch(e){}
+  mark();if(!options.restore)window.scrollTo(0,0);if(window.AFRI)window.AFRI.page("Documents");
+  if(window.AfriNav)window.AfriNav.remember("documents");
+  try{await loadItems(generation,email)}catch(e){}
+  if(!active||generation!==pageGeneration||email!==window.loggedUserEmail)return;
   render();
 }
+window.AfriOpenDocuments=function(options){
+  if(!window.loggedUserEmail)return false;
+  openPage(options);return true;
+};
+window.addEventListener("afriflow:navigate",function(event){
+  if(!event.detail||event.detail.id!=="documents"){active=false;pageGeneration++}
+});
 function mark(){var nl=$("navList");if(nl)nl.querySelectorAll(".nv").forEach(function(b){b.classList.toggle("on",active&&b.hasAttribute("data-dv-nav"))})}
 function inject(){
   var nl=$("navList");if(!nl||!nl.firstElementChild||nl.querySelector("[data-dv-nav]")||!window.loggedUserEmail)return;
@@ -109,7 +122,7 @@ function inject(){
 var nl0=$("navList");
 if(nl0){
   new MutationObserver(inject).observe(nl0,{childList:true});
-  nl0.addEventListener("click",function(e){var b=e.target.closest("button");if(!b)return;if(b.hasAttribute("data-dv-nav"))openPage();else if(!b.hasAttribute("data-fdr-ren"))active=false});
+  nl0.addEventListener("click",function(e){var b=e.target.closest("button");if(!b)return;if(b.hasAttribute("data-dv-nav"))openPage();else if(!b.hasAttribute("data-fdr-ren")&&b.dataset.id!=="messages")active=false});
 }
 var prev=window.onRole;window.onRole=function(){if(prev)prev();setTimeout(inject,600)};
 inject();
