@@ -110,7 +110,7 @@ function harness(options = {}) {
   return { window, document, state, card, events, tabs, invocations, nativeOpens, assigned, shown, notices, reads,
     async refresh() { window.dispatchEvent({ type: 'afriflow:attendance-changed' }); await settle(); },
     async fire(type) { window.dispatchEvent({ type }); await settle(); },
-    draw() { intervals.find(item => item.ms === 30000).fn(); },
+    draw() { intervals.find(item => item.ms === 1000).fn(); },
     hold(kind) { const value = deferred(); held.set(kind, value); return value; },
   };
 }
@@ -269,4 +269,16 @@ test('an unrecognized tap falls back to preview without checking in',async()=>{
   await h.fire('load');
   assert.equal(h.invocations.length,0);
   assert.equal(h.shown.length,1);
+});
+
+test('home counts down to the start, then allows joining until the end', async () => {
+  const options={now:NOW-3661000},h=harness(options);
+  await h.refresh();
+  for(const id of [0,1,2])assert.match(h.card.innerHTML,new RegExp('id="mtDigit'+id+'">01'));
+  assert.doesNotMatch(h.card.innerHTML,/meetGo|Rejoindre/);
+  options.now=NOW;h.draw();
+  assert.match(h.card.innerHTML,/id="meetGo"/);
+  options.now=NOW+MEETING.dur*60000;h.draw();
+  assert.match(h.card.innerHTML,/Aucune réunion programmée/);
+  assert.doesNotMatch(h.card.innerHTML,/meetGo|Rejoindre|role="timer"/);
 });
