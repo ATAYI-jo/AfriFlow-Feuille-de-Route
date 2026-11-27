@@ -23,7 +23,7 @@ self.addEventListener('push', function(event){
     }
     var title=meeting?(data.stage==='soon'?'Réunion dans 15 minutes':'Votre réunion commence'):String(data.title).slice(0,100);
     await self.registration.showNotification(title,{
-      body:body,
+      body:meeting && data.stage==='start' ? 'Touchez pour accepter et rejoindre Teams. '+body : body,
       icon:new URL('logo.png',self.registration.scope).href,
       badge:new URL('logo.png',self.registration.scope).href,
       tag:meeting?'afriflow-meeting-'+id+'-'+String(data.start):String(data.tag||'afriflow').slice(0,150),
@@ -31,8 +31,8 @@ self.addEventListener('push', function(event){
       silent:!!visible.length && !(meeting && data.stage==='start'),
       requireInteraction:meeting&&data.stage==='start',
       timestamp:meeting?Number(data.start):Date.now(),
-      data:{url:url,meetingId:meeting?id:'',expiresAt:meeting?Number(data.expiresAt):0,kind:data.kind||''},
-      actions:meeting?[{action:'join',title:'Voir la réunion'},{action:'dismiss',title:'Plus tard'}]:[],
+      data:{url:url,meetingId:meeting?id:'',expiresAt:meeting?Number(data.expiresAt):0,kind:data.kind||'',stage:meeting?data.stage:''},
+      actions:meeting?[data.stage==='start'?{action:'accept',title:'Accepter'}:{action:'join',title:'Voir la réunion'},{action:'dismiss',title:'Plus tard'}]:[],
     });
   })());
 });
@@ -66,6 +66,24 @@ self.addEventListener('notificationclick',function(event){
   var dest=new URL('./',self.registration.scope);
   if(id)dest.searchParams.set('meeting',id);
   event.waitUntil((async function(){
+    if(id && info.kind==='meeting' && info.stage==='start' && Number(info.expiresAt)>Date.now() && (!event.action || event.action==='accept')){
+      // Bind the explicit tap to one short-lived launch, including cold starts.
+      try{
+        var until=Math.min(Number(info.expiresAt),Date.now()+120000);
+        var token=crypto.randomUUID();
+        var cache=await caches.open('afriflow-meeting-taps-v1');
+        for(var previous of await cache.keys()){
+          if(Number(new URL(previous.url).searchParams.get('until'))<=Date.now())await cache.delete(previous);
+        }
+        var receipt=new URL(dest.href);
+        receipt.searchParams.set('until',String(until));
+        receipt.searchParams.set('tap',token);
+        await cache.put(receipt.href,new Response('1'));
+        dest.hash='accept='+token+'&until='+until;
+        await self.clients.openWindow(dest.href);
+        return;
+      }catch(ignore){dest.hash='';}
+    }
     var windows=await self.clients.matchAll({type:'window',includeUncontrolled:true});
     for(var c of windows){
       if(c.url.startsWith(self.registration.scope)){
