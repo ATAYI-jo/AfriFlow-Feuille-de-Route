@@ -17,7 +17,9 @@ self.addEventListener('push', function(event){
     if(meeting&&(!/^m[a-z0-9]{5,35}$/.test(id)||!Number.isFinite(Number(data.expiresAt))||Number(data.expiresAt)<=Date.now()))return;
     if(meeting){
       var linked=new URL(url);linked.searchParams.set('meeting',id);url=linked.href;
-      visible.forEach(function(c){c.postMessage({type:'afriflow:meeting-push',meetingId:id,stage:data.stage,expiresAt:Number(data.expiresAt)});});
+      visible.forEach(function(c){
+        try{c.postMessage({type:'afriflow:meeting-push',meetingId:id,stage:data.stage,expiresAt:Number(data.expiresAt)});}catch(ignore){}
+      });
     }
     var title=meeting?(data.stage==='soon'?'Réunion dans 15 minutes':'Votre réunion commence'):String(data.title).slice(0,100);
     await self.registration.showNotification(title,{
@@ -25,8 +27,8 @@ self.addEventListener('push', function(event){
       icon:new URL('logo.png',self.registration.scope).href,
       badge:new URL('logo.png',self.registration.scope).href,
       tag:meeting?'afriflow-meeting-'+id+'-'+String(data.start):String(data.tag||'afriflow').slice(0,150),
-      renotify:!visible.length,
-      silent:!!visible.length,
+      renotify:!visible.length || (meeting && data.stage==='start'),
+      silent:!!visible.length && !(meeting && data.stage==='start'),
       requireInteraction:meeting&&data.stage==='start',
       timestamp:meeting?Number(data.start):Date.now(),
       data:{url:url,meetingId:meeting?id:'',expiresAt:meeting?Number(data.expiresAt):0,kind:data.kind||''},
