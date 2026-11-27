@@ -1388,7 +1388,7 @@
         }).join("") + '</ul>'
       : '<p class="af-side-news-empty">Les nouvelles actualités apparaîtront ici après publication.</p>';
     return '<aside class="af-ali-side af-welcome-member" aria-label="Actualités réservées aux membres">' +
-      headline + body + '<p class="af-side-news-footnote">Cliquez sur une actualité pour lire l’article et ses sources.</p></aside>';
+      headline + body + '<h2 class="af-side-news-footnote" aria-label="Bienvenue"><span class="af-welcome-animated" lang="fr" aria-hidden="true">Bienvenue</span></h2></aside>';
   }
   function marketCategoryIcon(category) {
     var text = String(category || "").toLocaleLowerCase("fr");

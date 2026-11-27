@@ -260,7 +260,7 @@ body.af-market-mode #market-view{display:block}
 #market-view .af-side-news-item:hover,#market-view .af-side-news-item:focus-visible{background:#fff;border-color:#db9d38;outline-offset:2px}
 #market-view .af-side-news-bell{flex:none}
 #market-view .af-side-news-empty,#market-view .af-side-news-footnote{margin:0;font-size:.82rem;color:#496657;line-height:1.55}
-#market-view .af-side-news-footnote{margin-top:auto}
+#market-view .af-side-news-footnote{margin-top:auto;flex:none;min-height:1.4em;text-align:center;font-size:clamp(1.05rem,1.6vw,1.45rem);font-weight:800;line-height:1.4;color:var(--af-glass-accent,var(--green));overflow-wrap:anywhere;unicode-bidi:plaintext}
 @media(max-width:800px){
   #market-view .af-ali{display:grid;grid-template-columns:minmax(0,1fr);gap:12px}
   #market-view .af-ali-cats{display:none}
