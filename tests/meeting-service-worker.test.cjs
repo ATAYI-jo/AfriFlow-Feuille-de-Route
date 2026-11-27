@@ -10,6 +10,7 @@ const ID = 'mabc123';
 async function settle() { for (let i = 0; i < 15; i++) await Promise.resolve(); }
 function worker(options = {}) {
   const listeners = new Map(), opened = [], posted = [], timers = [], channels = [];
+  const notifications=[];
   let focused = 0, closed = 0;
   const client = {
     url: ORIGIN + '?draft=unsaved', visibilityState: 'visible',
@@ -36,14 +37,15 @@ function worker(options = {}) {
     clearTimeout(timer) { if (timer) timer.active = false; },
     self: {
       addEventListener: (name, fn) => listeners.set(name, fn),
-      registration: { scope: ORIGIN },
-      clients: { matchAll: async () => options.noClient ? [] : [client],
+      registration: { scope: ORIGIN, showNotification:async(title,settings)=>notifications.push({title,settings}) },
+      clients: { matchAll: async () => {if(options.lookupFails)throw Error('window closed');return options.noClient ? [] : [client];},
         openWindow: async url => { opened.push(url); return {}; } },
     },
   };
   vm.runInNewContext(source, context, { filename: 'sw.js' });
   return {
-    opened, posted, timers, channels, client,
+    opened, posted, timers, channels, client, notifications,
+    push(data){let done;listeners.get('push')({data:{json:()=>data},waitUntil(p){done=p}});return done;},
     get focused() { return focused; }, get closed() { return closed; },
     click(data = { meetingId: ID }, action = 'join') {
       let task = Promise.resolve();
@@ -109,5 +111,17 @@ test('a start notification tap opens a one-use acceptance link even without acti
     assert.equal(opened.searchParams.get('meeting'),ID);
     assert.equal(new URLSearchParams(opened.hash.slice(1)).get('accept'),receipt.searchParams.get('tap'));
     assert.equal(receipt.searchParams.get('meeting'),ID);
+  }
+});
+
+test('a closed PWA presents an audible start notification separately from its reminder',async()=>{
+  for(const options of [{noClient:true},{lookupFails:true}]){
+    const h=worker(options), data={title:'Réunion',kind:'meeting',meetingId:ID,start:Date.now(),expiresAt:Date.now()+60000};
+    await h.push({...data,stage:'soon'});await h.push({...data,stage:'start'});
+    const [reminder,start]=h.notifications;
+    assert.notEqual(reminder.settings.tag,start.settings.tag);
+    assert.equal(start.settings.silent,false);
+    assert.equal(start.settings.actions[0].action,'accept');
+    assert.equal(h.opened.length,0);
   }
 });
