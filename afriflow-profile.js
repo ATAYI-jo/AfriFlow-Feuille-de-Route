@@ -31,7 +31,7 @@ function shareholderProfileRequired(){var market=window.afriMarketSession||{};re
 function updateHeader(p,d){
   var first=(p&&p.first_name)||localName(),g=$("sideGreeting"),a=$("sideAvatar"),b=$("profileOpen");
   if(g)g.textContent=first?"Hey "+first:"Hey";
-  if(a)a.innerHTML=avatar((d&&d.avatar_kind)||"dicebear",(d&&d.avatar_value)||"afriflow",first);
+  if(a){a.dataset.profileOwner=String(current&&current.user&&current.user.email||"").trim().toLowerCase();a.innerHTML=avatar((d&&d.avatar_kind)||"dicebear",(d&&d.avatar_value)||"afriflow",first);}
   var incomplete=shareholderProfileRequired()&&!(p&&p.profile_completed_at);if(b)b.classList.toggle("needs-profile",!!window.loggedUserEmail&&incomplete);
   updateReminder(incomplete,p&&p.profile_due_at);
 }
