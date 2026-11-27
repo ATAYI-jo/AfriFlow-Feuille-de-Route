@@ -79,9 +79,11 @@ body:has(> .af-att-overlay){overflow:hidden}
 
 .af-pointage-screen{position:fixed;inset:0;z-index:2147483647;display:grid;place-items:center;padding:20px;background:rgba(12,34,24,.85);font-family:system-ui,sans-serif}
 .af-pointage-card{box-sizing:border-box;width:min(100%,300px);padding:32px 20px 24px;border-radius:24px;background:#f5faf6;color:#17462e;text-align:center;box-shadow:0 16px 60px #061c1740}
-.af-pointage-card img{display:block;margin:auto;object-fit:cover;object-position:center 30%;border-radius:50%}
+.af-pointage-portrait{display:grid;place-items:center;width:112px;height:112px;margin:auto;overflow:hidden;border-radius:50%;background:#dceee1;color:#17462e;font-size:2rem;font-weight:650}
+.af-pointage-portrait canvas{width:100%;height:100%}
+.af-pointage-card time:not([hidden]){display:block;margin-top:6px;font-size:.9rem;color:#486251;font-variant-numeric:tabular-nums}
 .af-pointage-card p{margin:16px 0 0;font-size:1.12rem;font-weight:650}
 @media(prefers-reduced-motion:no-preference){
-  .af-pointage-screen.confirmed img{animation:af-pointage-nod .75s ease-in-out}
+  .af-pointage-screen.confirmed .af-pointage-portrait{animation:af-pointage-nod .75s ease-in-out}
   @keyframes af-pointage-nod{0%,100%{transform:none}35%{transform:translateY(-6px) rotate(-5deg)}70%{transform:translateY(-2px) rotate(3deg)}}
 }
