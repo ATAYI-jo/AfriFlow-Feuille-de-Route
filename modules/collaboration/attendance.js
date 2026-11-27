@@ -73,18 +73,19 @@
       return result("ok", "Excusé", { source: "justification", category: "excused", detail: "Justificatif accepté" });
     if (state.confirmed) {
       var reviewed = OUTCOMES[state.confirmed.outcome], confirmedAt = stamp(state.confirmed.occurred_at) || null;
-      var lateAt = confirmedAt || rawAt, reviewedDetail = reviewed.detail;
+      var lateAt = confirmedAt || rawAt, reviewedDetail = reviewed.detail, delay = '';
       if (state.confirmed.outcome === "late" && lateAt !== null && start !== null) {
-        reviewedDetail += " · " + lateDuration(lateAt, start);
+        delay = lateDuration(lateAt, start);
+        reviewedDetail += " · " + delay;
         if (!confirmedAt) reviewedDetail += " selon le pointage";
       }
       return result(reviewed.k, reviewed.t, { source: "review", category: reviewed.category,
-        detail: reviewedDetail, confirmedAt: confirmedAt });
+        detail: reviewedDetail, delay: delay, confirmedAt: confirmedAt });
     }
     if (start === null) return result("wait", "Horaire à vérifier");
     if (rawAt !== null) return rawAt <= start + grace * 60000
       ? result("ok", "Présent", { category: "present", detail: "Pointage reçu à l’heure" })
-      : result("late", "Retard", { category: "late",
+      : result("late", "Retard", { category: "late", delay: lateDuration(rawAt, start),
           detail: "Retard de " + lateDuration(rawAt, start) + " · selon le pointage, à confirmer",
           needsVerification: true });
     if (record) return result("wait", "Pointage à vérifier");
@@ -170,7 +171,11 @@
       + (value.offsetMinutes !== null ? '<br>' + esc(offsetLabel(value.offsetMinutes)) + ' · tolérance : ' + value.graceMinutes + ' min' : '')
       + '<br>Heure de réception conservée ; la participation à Teams se vérifie séparément.</p>';
   }
-  function statusHTML(value) {
+  function statusHTML(value, compact) {
+    if (compact && value.category === "late") {
+      var label = "Retard" + (value.delay ? " +" + value.delay : "");
+      return '<span class="mt-pill mt-late" title="' + esc(value.detail || label) + '">' + esc(label) + '</span>';
+    }
     return '<span class="mt-pill mt-' + value.k + '">' + esc(value.t) + '</span>'
       + (value.detail ? '<small class="af-att-status-detail">' + esc(value.detail) + '</small>' : '');
   }
