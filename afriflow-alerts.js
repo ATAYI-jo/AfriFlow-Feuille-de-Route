@@ -96,13 +96,16 @@
     updateButton();
   }
   function unlockAudio() {
-    if (!syncConsent() || audio) return;
+    if (!syncConsent()) return;
     try {
       var C=window.AudioContext || window.webkitAudioContext;
-      if (C) {audio=new C();audio.resume().catch(function(){});}
+      if (!C) return;
+      if (!audio || audio.state === 'closed') audio=new C();
+      if (audio.state !== 'running') audio.resume().catch(function(){});
     } catch (e) {}
   }
   // Browser audio requires a user gesture, even when alert preference is remembered.
+  document.addEventListener('click',unlockAudio,{passive:true});
   document.addEventListener('pointerdown',unlockAudio,{passive:true});
   document.addEventListener('keydown',unlockAudio);
   function enableAlerts() {
