@@ -167,6 +167,9 @@ function paintPointageAvatar(screen,account){
 function pointageScreen(tab,account){
   var doc=tab?tab.document:document;
   if(tab){
+    var viewport=doc.createElement("meta");
+    viewport.name="viewport";viewport.content="width=device-width, initial-scale=1, viewport-fit=cover";
+    doc.head.appendChild(viewport);
     var style=doc.createElement("link");
     style.rel="stylesheet";style.href=new URL("./modules/collaboration/attendance.css?v=pointage-portrait-2",window.location.href).href;
     doc.head.appendChild(style);
@@ -187,7 +190,11 @@ async function joinMeeting(id,options){
   var account=me(),tab=null,nativeOpen=window.AfriFlowNative&&typeof window.AfriFlowNative.openTeams==="function";
   var android=window.AfriFlowAndroid&&typeof window.AfriFlowAndroid.postMessage==="function";
   // Browser popup must be created in the direct click, before asynchronous auth.
-  if(!nativeOpen&&!android&&!options.sameWindow){
+  var mobile=/Android|iPhone|iPad|iPod/i.test(navigator.userAgent||"")
+    || (navigator.platform==="MacIntel"&&navigator.maxTouchPoints>1)
+    || !!(window.matchMedia&&window.matchMedia("(pointer: coarse) and (max-width: 900px)").matches);
+  var sameWindow=android||options.sameWindow||mobile;
+  if(!nativeOpen&&!sameWindow){
     tab=window.open("about:blank","_blank");
     if(!tab)return {ok:false,error:"Autorisez l’ouverture d’un onglet pour rejoindre Teams, puis réessayez."};
     try{tab.opener=null}catch(ignore){}
@@ -216,8 +223,8 @@ async function joinMeeting(id,options){
     if(nativeOpen){
       var opened=await window.AfriFlowNative.openTeams(target);
       if(!opened||!opened.ok)throw new Error("Pointage conservé, mais Teams n’a pas pu s’ouvrir. Réessayez.");
-    }else if(android||options.sameWindow){
-      // The Android WebView intercepts this external URL and launches Teams.
+    }else if(sameWindow){
+      // Keep the confirmation in the mobile viewport until the Teams handoff.
       window.location.assign(target);
     }else{tab.location.replace(target);}
     toast("Pointage enregistré à "+fh(result.record.at)+". La participation à Teams reste à vérifier séparément.");
