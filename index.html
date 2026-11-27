@@ -27,16 +27,7 @@
 <title>AfriFlow – Accueil</title>
 <link rel="icon" type="image/png" sizes="192x192" href="./icons/icon-192-v2.png">
 <link rel="icon" type="image/svg+xml" href="./logo.svg?v=2">
-<style id="af-intro-first-paint">
-/* The opening screen must be white from first paint, even while scripts load. */
-html #intro{position:fixed;inset:0;z-index:10000;isolation:isolate;display:flex;align-items:center;justify-content:center;overflow:hidden;background:#fff!important}
-html.no-intro #intro{display:none!important}
-html:has(#intro:not(.out)):not(.no-intro):not(.af-intro-finished){overflow:hidden}
-html #intro .intro-video-backdrop{display:none!important;opacity:0!important;filter:none!important}
-html #intro::before,html #intro::after{display:none!important;content:none!important;background:none!important;-webkit-backdrop-filter:none!important;backdrop-filter:none!important}
-html #intro #introVideo{position:relative!important;z-index:2!important;box-sizing:border-box!important;width:min(100%,1200px)!important;height:100%!important;max-width:100%!important;max-height:100%!important;padding:clamp(12px,4vw,42px)!important;object-fit:contain!important;object-position:center!important;background:#fff!important;border:0!important;border-radius:0!important;box-shadow:none!important;mix-blend-mode:normal!important;filter:none!important;-webkit-backdrop-filter:none!important;backdrop-filter:none!important}
-@media(max-width:640px){html #intro #introVideo{width:100%!important;height:100%!important;padding:max(12px,env(safe-area-inset-top,0px)) max(14px,env(safe-area-inset-right,0px)) max(12px,env(safe-area-inset-bottom,0px)) max(14px,env(safe-area-inset-left,0px))!important}}
-</style>
+<link rel="stylesheet" id="af-intro-first-paint" href="./modules/ui/intro-transition.css?v=1">
 <link rel="stylesheet" href="./market.css?v=20261127-welcome-members">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="AfriFlow">
@@ -210,12 +201,14 @@ window.ic=function(n,s){return '<svg class="ic"'+(s?' style="width:'+s+';height:
 
 <div id="bgLayer" aria-hidden="true"></div>
 <div id="intro" aria-label="Animation d'ouverture AfriFlow">
+  <img id="afIntroPoster" src="./afriflow-intro-transition.avif" alt="" aria-hidden="true" fetchpriority="high" decoding="async">
   <video id="introBackdropVideo" class="intro-video-backdrop" muted playsinline webkit-playsinline preload="none" aria-hidden="true" tabindex="-1">
     <source src="./afriflow-intro-white.mp4" type="video/mp4">
   </video>
   <video id="introVideo" playsinline webkit-playsinline preload="auto" disablepictureinpicture disableremoteplayback controlslist="nodownload noplaybackrate noremoteplayback" aria-label="Animation d'introduction AfriFlow">
     <source src="./afriflow-intro-white.mp4" type="video/mp4">
   </video>
+  <script id="af-intro-transition" src="./modules/ui/intro-transition.js?v=1"></script>
   <button type="button" id="introSnd" title="Couper le son" aria-label="Couper le son">🔊</button>
   <button type="button" id="introSkip">Passer ›</button>
 </div>
