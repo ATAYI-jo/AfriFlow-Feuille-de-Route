@@ -312,3 +312,15 @@ test('A cancelled invitation stays silent at its former start', async () => {
   await app.advance(15000);
   assert.equal(app.get('af-meet-call').hidden, true);
 });
+
+test('an upcoming preview switches to a ringing invitation at the scheduled start', async () => {
+  const start = 1800000004000;
+  const app = harness({ enabled:true, meetings:m=>[m({start})] });
+  await app.settle();
+  app.show(app.meeting({start}), {source:'push'});
+  assert.equal(app.get('af-meet-incoming').textContent, 'Réunion à venir');
+  await app.advance(4000);
+  assert.equal(app.get('af-meet-incoming').textContent, 'Réunion à rejoindre');
+  assert.ok([...app.timers.values()].some(timer=>timer.ms===2400));
+  assert.equal(app.joins.length,0);
+});
