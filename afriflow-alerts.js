@@ -101,12 +101,12 @@
       var C=window.AudioContext || window.webkitAudioContext;
       if (!C) return;
       if (!audio || audio.state === 'closed') audio=new C();
-      if (audio.state !== 'running') audio.resume().catch(function(){});
+      if (audio.state !== 'running') return audio.resume().catch(function(){});
     } catch (e) {}
   }
   // Browser audio requires a user gesture, even when alert preference is remembered.
-  document.addEventListener('click',unlockAudio,{passive:true});
-  document.addEventListener('pointerdown',unlockAudio,{passive:true});
+  document.addEventListener('click',unlockAudio,{passive:true,capture:true});
+  document.addEventListener('pointerdown',unlockAudio,{passive:true,capture:true});
   document.addEventListener('keydown',unlockAudio);
   function enableAlerts() {
     syncConsent();if(!settingsKey)return;
@@ -121,12 +121,13 @@
     stopRinging();
   }
   window.AfriFlowAlerts = { enable: enableAlerts, disable: disableAlerts,
-    enabled: syncConsent, showMeeting: showMeeting };
+    enabled: syncConsent, showMeeting: showMeeting,
+    testSound: async function(){await unlockAudio();return tone('call')===true;} };
   function updateButton() { /* Preference is managed in first-use consent. */ }
   function tone(type) {
     if (!syncConsent() || !audio) return;
     try {
-      if (audio.state === 'suspended') return;
+      if (audio.state !== 'running') return;
       var t=audio.currentTime;
       var call=type==='call';
       // A clear two-burst call pattern: audible without mimicking a telephone brand.
@@ -148,6 +149,7 @@
         osc.stop(t+offset+length+.02);
       });
       if(call && navigator.vibrate)navigator.vibrate([220,110,220,110,220]);
+      return true;
     } catch(e) {}
   }
   function notifyNative(title,body) {
@@ -249,8 +251,10 @@
     if(options.automatic&&(!enabled||!invited(m,owner)||document.hidden))return false;
     if(!ring)build();
     if(activeMeeting){
-      if(activeMeeting.id===id&&activeMeeting.start===start&&(!verified||activeMeeting.verified))return true;
-      if(options.automatic)return false;
+      var same=activeMeeting.id===id&&activeMeeting.start===start;
+      var promote=same&&options.automatic&&activeMeeting.upcoming&&start<=now&&!joining;
+      if(same&&!promote&&(!verified||activeMeeting.verified||joining))return true;
+      if(options.automatic&&!promote)return false;
       endCall();
     }
     var seenKey='meet_'+id+'_'+start;
@@ -261,7 +265,7 @@
     if(Number(m.expiresAt)>0)expires=Math.min(expires,Number(m.expiresAt));
     if(expires<=now)return false;
     var source=['alert','desktop','android','push','home'].indexOf(options.source)>-1?options.source:meetingSource();
-    var record={id:id,start:start,owner:owner,source:source,expiresAt:expires,clockEpoch:now,clockStart:monotonicNow(),verified:verified};activeMeeting=record;
+    var record={id:id,start:start,upcoming:start>now,owner:owner,source:source,expiresAt:expires,clockEpoch:now,clockStart:monotonicNow(),verified:verified};activeMeeting=record;
     previousFocus=document.activeElement;previousOverflow=document.body.style.overflow;
     document.body.style.overflow='hidden';
     Array.from(document.body.children).forEach(function(node){
@@ -289,7 +293,8 @@
     return true;
   }
   function callMeeting(m) {
-    if(!syncConsent()||!meetingId(m.id)||!invited(m,currentAccount())||activeMeeting)return;
+    if(!syncConsent()||!meetingId(m.id)||!invited(m,currentAccount()))return;
+    if(activeMeeting){showMeeting(m,{automatic:true});return;}
     var key='meet_'+m.id+'_'+m.start,k='afriflow_alert_seen_'+currentAccount()+'_'+key;
     try{if(localStorage.getItem(k))return;}catch(e){}
     if(presentNativeMeeting(m))seen(key);else showMeeting(m,{automatic:true});
