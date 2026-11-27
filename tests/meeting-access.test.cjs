@@ -31,11 +31,14 @@ function harness(options = {}) {
   const timers = [], intervals = [], reads = [], held = new Map();
   const card = { id: 'meetCard', innerHTML: '', dataset: {}, style: {} };
   const state = { meetings: [{ ...MEETING }], pointages: [], fail: '', nativeResult: { ok: true }, showResult: true };
+  const statuses=[];
+  function element(){const label={};Object.defineProperty(label,'textContent',{set:value=>statuses.push(value)});return {classList:{add(){}},querySelector:name=>name==='p'?label:{},remove(){}}}
+  const surface={createElement:element,head:{appendChild(){}},body:{appendChild(){}}};
   const document = Object.assign(target(), {
     hidden: false,
     getElementById(id) { return id === 'meetCard' ? card : null; },
     querySelector() { return null; }, querySelectorAll() { return []; },
-    createElement() { throw new Error('Unexpected DOM mutation outside fixture'); },
+    ...surface,
   });
   const location = { href: 'https://afriflow.pages.dev/' + (options.deepLink ? '?meeting=' + ID : ''),
     assign(url) { events.push('assign'); assigned.push(url); } };
@@ -47,7 +50,7 @@ function harness(options = {}) {
       events.push('blank');
       assert.equal(url, 'about:blank'); assert.equal(name, '_blank');
       if (options.blockPopup) return null;
-      const tab = { opener: window, document: { title: '', body: { textContent: '' } }, closed: false, destinations: [],
+      const tab = { opener: window, document: { ...surface }, closed: false, destinations: [],
         location: { replace(target) { events.push('replace'); tab.destinations.push(target); } },
         close() { events.push('close'); tab.closed = true; } };
       tabs.push(tab); return tab;
@@ -103,11 +106,11 @@ function harness(options = {}) {
   vm.runInNewContext(source, { window, document, navigator: { serviceWorker }, URL, URLSearchParams,
     Date: DeviceDate, Intl, console, Event: class { constructor(type) { this.type = type; } },
     alert: message => notices.push(message), confirm: () => false,
-    setTimeout(fn, ms) { timers.push({ fn, ms }); return timers.length; },
+    setTimeout(fn, ms) { if(ms===1400){Promise.resolve().then(fn);return 0;} timers.push({ fn, ms }); return timers.length; },
     setInterval(fn, ms) { intervals.push({ fn, ms }); return intervals.length; },
     MutationObserver: class { observe() {} },
   }, { filename: 'modules/collaboration/meetings.js' });
-  return { window, document, state, card, events, tabs, invocations, nativeOpens, assigned, shown, notices, reads,
+  return { window, document, state, card, statuses, events, tabs, invocations, nativeOpens, assigned, shown, notices, reads,
     async refresh() { window.dispatchEvent({ type: 'afriflow:attendance-changed' }); await settle(); },
     async fire(type) { window.dispatchEvent({ type }); await settle(); },
     draw() { intervals.find(item => item.ms === 1000).fn(); },
@@ -121,9 +124,11 @@ test('browser opens its blank tab synchronously, then uses only the server-confi
   assert.deepEqual(h.events, ['blank', 'invoke']);
   assert.equal(h.tabs[0].opener, null);
   assert.equal(h.tabs[0].destinations.length, 0);
+  assert.deepEqual(h.statuses, []);
   assert.equal(h.invocations[0].payload.body.meetingId, ID);
   h.invocations[0].resolve(reply());
   assert.equal((await joined).ok, true);
+  assert.deepEqual(h.statuses,['Vous êtes connecté']);
   assert.deepEqual(h.tabs[0].destinations, [SERVER_LINK]);
 });
 
