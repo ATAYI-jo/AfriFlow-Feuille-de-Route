@@ -32,7 +32,7 @@ function harness(options = {}) {
   const card = { id: 'meetCard', innerHTML: '', dataset: {}, style: {} };
   const state = { meetings: [{ ...MEETING }], pointages: [], fail: '', nativeResult: { ok: true }, showResult: true };
   const statuses=[],times=[],drawn=[];
-  function element(){const label={};Object.defineProperty(label,'textContent',{set:value=>statuses.push(value)});return {classList:{add(){}},querySelector:name=>name==='p'?label:name==='canvas'?{getContext:()=>({drawImage:image=>drawn.push(image)})}:name==='time'?{set dateTime(value){times.push(value)}}:{},remove(){}}}
+  function element(){const label={};Object.defineProperty(label,'textContent',{set:value=>statuses.push(value)});return {classList:{add(){}},querySelector:name=>name==='p'?label:name==='.af-pointage-photo'?{getAttribute:()=>null,set src(value){drawn.push(value)}}:name==='time'?{set dateTime(value){times.push(value)}}:{},remove(){}}}
   const surface={createElement:element,head:{appendChild(){}},body:{appendChild(){}}};
   const document = Object.assign(target(), {
     hidden: false,
@@ -106,7 +106,7 @@ function harness(options = {}) {
   vm.runInNewContext(source, { window, document, navigator: { serviceWorker }, URL, URLSearchParams,
     Date: DeviceDate, Intl, console, Event: class { constructor(type) { this.type = type; } },
     alert: message => notices.push(message), confirm: () => false,
-    setTimeout(fn, ms) { if(ms===1400){Promise.resolve().then(fn);return 0;} timers.push({ fn, ms }); return timers.length; },
+    setTimeout(fn, ms) { if(ms===2100){Promise.resolve().then(fn);return 0;} timers.push({ fn, ms }); return timers.length; },
     setInterval(fn, ms) { intervals.push({ fn, ms }); return intervals.length; },
     MutationObserver: class { observe() {} },
   }, { filename: 'modules/collaboration/meetings.js' });
@@ -289,13 +289,13 @@ test('home counts down to the start, then allows joining until the end', async (
 });
 
 test('check-in uses the active profile portrait and the server pointage timestamp',async()=>{
-  const image={complete:true,naturalWidth:240,naturalHeight:320};
+  const image={currentSrc:'data:image/png;base64,AA==',complete:true,naturalWidth:240,naturalHeight:320};
   for(const owner of [EMAIL,'other@example.test']){
     const h=harness({header:{dataset:{profileOwner:owner},querySelector:()=>image}});
     const joined=h.window.AfriMeetings.join(ID);
     h.invocations[0].resolve(reply());
     assert.equal((await joined).ok,true);
-    assert.equal(h.drawn.includes(image),owner===EMAIL);
+    assert.equal(h.drawn.includes(image.currentSrc),owner===EMAIL);
     assert.deepEqual(h.times,[new Date(RECORD.at).toISOString()]);
   }
 });
