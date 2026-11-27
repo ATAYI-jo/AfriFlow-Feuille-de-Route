@@ -1,0 +1,23 @@
+﻿/* Marketplace welcome banner only: preserve product slides and carousel behavior. */
+#market-view #afHero{border-radius:24px;box-shadow:0 14px 36px rgba(17,66,35,.15),inset 0 1px 0 rgba(255,255,255,.72)}
+#market-view #afHero::after{display:none}
+#market-view #afHero>.af-slide:not(.af-product-slide){isolation:isolate;display:grid;grid-template-columns:minmax(0,1.45fr) minmax(0,1fr);align-items:center;gap:clamp(12px,2vw,28px);padding:40px clamp(22px,4vw,48px) 52px;background:linear-gradient(105deg,rgba(251,255,246,.92),rgba(237,250,226,.74) 55%,rgba(222,246,207,.26));}
+#market-view #afHero>.af-slide:not(.af-product-slide)::before{content:"";position:absolute;inset:0;z-index:-1;pointer-events:none;background:radial-gradient(ellipse at 95% 95%,rgba(255,170,30,.26),transparent 48%),radial-gradient(ellipse at 85% 30%,rgba(109,188,50,.17),transparent 55%)}
+#market-view #afHero>.af-slide:not(.af-product-slide) .af-slide-text{grid-column:1;grid-row:1;min-width:0;max-width:100%;text-align:left;text-shadow:none}
+#market-view #afHero>.af-slide:not(.af-product-slide) h1{color:#174b28!important;font-size:clamp(1.65rem,3.05vw,3rem);font-weight:800;letter-spacing:-.045em;line-height:1.12;text-shadow:none;margin:0 0 22px;overflow-wrap:anywhere}
+#market-view #afHero>.af-slide:not(.af-product-slide) h1 span{color:#b85800!important}
+#market-view #afHero>.af-slide:not(.af-product-slide) .af-hero-watermark{grid-column:2;grid-row:1;position:relative;inset:auto;justify-self:center;width:100%;max-width:230px;height:auto;max-height:220px;opacity:1;filter:drop-shadow(0 8px 12px rgba(32,110,31,.14));z-index:1}
+#market-view #afHero>.af-slide:not(.af-product-slide) .af-actions{display:flex;justify-content:flex-start;align-items:stretch;flex-wrap:wrap;gap:9px}
+#market-view #afHero>.af-slide:not(.af-product-slide) .af-actions button{min-height:44px;padding:11px 15px;border-radius:12px;font-size:.88rem;line-height:1.25;white-space:normal;text-align:center}
+#market-view #afHero>.af-slide:not(.af-product-slide) .af-market-primary{background:linear-gradient(115deg,#1b542a,#277924)!important;color:#fff!important;border:1px solid #277924!important;box-shadow:0 5px 12px rgba(29,91,43,.18)}
+#market-view #afHero>.af-slide:not(.af-product-slide) .af-ghost{background:rgba(255,255,255,.83)!important;color:#20532c!important;border:1px solid #d88a27!important}
+#market-view #afHero .af-hero-pencil{width:38px;height:38px;top:12px;right:12px}
+#market-view #afHero .af-dots{bottom:18px;gap:8px}
+#market-view #afHero .af-dot{background:#a3bd9c!important}
+#market-view #afHero .af-dot.on{background:#f58200!important}
+#market-view .af-ali>.af-scroll-cue{bottom:-25px;width:48px;height:48px;border-color:#d3e3cc!important;box-shadow:0 4px 14px rgba(23,76,40,.16);animation:none}
+#market-view .af-ali>.af-scroll-cue .af-icon{width:22px;height:22px}
+@media(max-width:800px){#market-view #afHero>.af-slide:not(.af-product-slide){grid-template-columns:minmax(0,1.55fr) minmax(0,.8fr);padding:32px 18px 45px;gap:12px}#market-view #afHero>.af-slide:not(.af-product-slide) h1{font-size:clamp(1.4rem,4vw,2rem);margin-bottom:15px}#market-view #afHero>.af-slide:not(.af-product-slide) .af-hero-watermark{max-width:135px}#market-view #afHero>.af-slide:not(.af-product-slide) .af-actions button{padding:9px 12px;font-size:.79rem}}
+@media(max-width:520px){#market-view #afHero{min-height:310px;height:310px;max-height:none}#market-view #afHero>.af-slide:not(.af-product-slide){grid-template-columns:minmax(0,1fr);grid-template-rows:minmax(0,1fr) auto;gap:7px;padding:28px 16px 42px}#market-view #afHero>.af-slide:not(.af-product-slide) .af-hero-watermark{grid-column:1;grid-row:1;align-self:start;width:78px;max-height:65px}#market-view #afHero>.af-slide:not(.af-product-slide) .af-slide-text{grid-row:2;text-align:center}#market-view #afHero>.af-slide:not(.af-product-slide) h1{font-size:clamp(1.35rem,5.4vw,1.85rem);margin-bottom:13px}#market-view #afHero>.af-slide:not(.af-product-slide) .af-actions{justify-content:center;gap:7px}#market-view #afHero>.af-slide:not(.af-product-slide) .af-actions button{flex:1 1 115px;max-width:190px}}
+@media(prefers-reduced-motion:no-preference){#market-view #afHero>.af-slide.on:not(.af-product-slide) .af-hero-watermark{animation:afWelcomeLogoIn .65s ease-out both}@keyframes afWelcomeLogoIn{from{opacity:0;transform:translateY(7px)}to{opacity:1;transform:translateY(0)}}}
+@media(prefers-reduced-transparency:reduce){#market-view #afHero>.af-slide:not(.af-product-slide){background:#f0f8eb}}
