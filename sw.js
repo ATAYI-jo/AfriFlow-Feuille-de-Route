@@ -9,7 +9,8 @@ self.addEventListener('push', function(event){
     if(!data||!data.title)return;
     // Web Push must remain visible to the user (including installed iOS apps).
     // Forward to an open app too, without losing the structured meeting ID.
-    var active=await self.clients.matchAll({type:'window',includeUncontrolled:true});
+    var active=[];
+    try{active=await self.clients.matchAll({type:'window',includeUncontrolled:true});}catch(ignore){}
     var visible=active.filter(function(c){return c.visibilityState==='visible' && c.url.startsWith(self.registration.scope)});
     var body=String(data.body||'').slice(0,240);
     var url=new URL('./',self.registration.scope).href;
@@ -26,7 +27,7 @@ self.addEventListener('push', function(event){
       body:meeting && data.stage==='start' ? 'Touchez pour accepter et rejoindre Teams. '+body : body,
       icon:new URL('logo.png',self.registration.scope).href,
       badge:new URL('logo.png',self.registration.scope).href,
-      tag:meeting?'afriflow-meeting-'+id+'-'+String(data.start):String(data.tag||'afriflow').slice(0,150),
+      tag:meeting?'afriflow-meeting-'+id+'-'+String(data.start)+'-'+(data.stage==='soon'?'soon':'start'):String(data.tag||'afriflow').slice(0,150),
       renotify:!visible.length || (meeting && data.stage==='start'),
       silent:!!visible.length && !(meeting && data.stage==='start'),
       requireInteraction:meeting&&data.stage==='start',
