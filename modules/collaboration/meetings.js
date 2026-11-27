@@ -137,7 +137,7 @@ async function joinMeeting(id,options){
   var account=me(),tab=null,nativeOpen=window.AfriFlowNative&&typeof window.AfriFlowNative.openTeams==="function";
   var android=window.AfriFlowAndroid&&typeof window.AfriFlowAndroid.postMessage==="function";
   // Browser popup must be created in the direct click, before asynchronous auth.
-  if(!nativeOpen&&!android){
+  if(!nativeOpen&&!android&&!options.sameWindow){
     tab=window.open("about:blank","_blank");
     if(!tab)return {ok:false,error:"Autorisez l’ouverture d’un onglet pour rejoindre Teams, puis réessayez."};
     try{tab.opener=null;tab.document.title="Ouverture de la réunion";tab.document.body.textContent="Enregistrement du pointage AfriFlow…"}catch(ignore){}
@@ -151,7 +151,7 @@ async function joinMeeting(id,options){
     if(nativeOpen){
       var opened=await window.AfriFlowNative.openTeams(target);
       if(!opened||!opened.ok)throw new Error("Pointage conservé, mais Teams n’a pas pu s’ouvrir. Réessayez.");
-    }else if(android){
+    }else if(android||options.sameWindow){
       // The Android WebView intercepts this external URL and launches Teams.
       window.location.assign(target);
     }else{tab.location.replace(target);}
@@ -200,10 +200,33 @@ async function previewMeeting(id,options){
   var meeting=await resolveMeeting(id);
   return window.AfriFlowAlerts.showMeeting(meeting,options||{})!==false;
 }
+async function consumeMeetingTap(id){
+  var url=new URL(window.location.href),fragment=new URLSearchParams(url.hash.slice(1));
+  var tap=fragment.get("accept"),until=Number(fragment.get("until"));
+  if(url.searchParams.get("meeting")!==id || !tap || !/^[a-f0-9-]{36}$/i.test(tap))return false;
+  url.hash="";
+  window.history.replaceState(window.history.state,"",url.href);
+  if(!window.caches || !Number.isFinite(until) || until<=Date.now())return false;
+  try{
+    var receipt=new URL("./",url);
+    receipt.searchParams.set("meeting",id);
+    receipt.searchParams.set("until",String(until));
+    receipt.searchParams.set("tap",tap);
+    var cache=await window.caches.open("afriflow-meeting-taps-v1");
+    return await cache.delete(receipt.href);
+  }catch(ignore){return false;}
+}
 async function flushPending(){
   if(!pendingMeeting||previewBusy||!me()||!SB()||!window.AfriFlowAlerts||!window.AfriFlowAlerts.showMeeting)return;
   var id=pendingMeeting;previewBusy=true;
-  try{if(await previewMeeting(id,{source:pendingSource})&&pendingMeeting===id){pendingMeeting="";
+  try{
+    var owner=me();
+    if(await consumeMeetingTap(id) && owner===me() && id===pendingMeeting){
+      var joined=await joinMeeting(id,{source:"push",sameWindow:true});
+      if(joined.ok){pendingMeeting="";return;}
+      toast(joined.error);
+    }
+    if(await previewMeeting(id,{source:pendingSource})&&pendingMeeting===id){pendingMeeting="";
     var url=new URL(window.location.href);if(url.searchParams.get("meeting")===id){url.searchParams.delete("meeting");window.history.replaceState(window.history.state,"",url.href);}
   }}catch(error){pendingMeeting="";toast(error.message||"Invitation indisponible.");}
   finally{previewBusy=false;}
