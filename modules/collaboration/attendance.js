@@ -172,9 +172,9 @@
       + '<br>Heure de réception conservée ; la participation à Teams se vérifie séparément.</p>';
   }
   function statusHTML(value, compact) {
-    if (compact && value.category === "late") {
-      var label = "Retard" + (value.delay ? " +" + value.delay : "");
-      return '<span class="mt-pill mt-late" title="' + esc(value.detail || label) + '">' + esc(label) + '</span>';
+    if (compact) {
+      var label = value.t + (value.category === "late" && value.delay ? " +" + value.delay : "");
+      return '<span class="mt-pill mt-' + esc(value.k) + '">' + esc(label) + '</span>';
     }
     return '<span class="mt-pill mt-' + value.k + '">' + esc(value.t) + '</span>'
       + (value.detail ? '<small class="af-att-status-detail">' + esc(value.detail) + '</small>' : '');
