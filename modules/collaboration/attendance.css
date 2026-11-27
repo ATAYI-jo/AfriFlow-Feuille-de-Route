@@ -92,9 +92,3 @@ body:has(> .af-att-overlay){overflow:hidden}
   .af-pointage-screen.confirmed .af-pointage-stamp{animation:af-pointage-enter .2s ease-out both}
   @keyframes af-pointage-enter{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
 }
-
-.mt-attendance details.mt-status-actions{display:inline-block;margin-inline-start:.35rem;vertical-align:middle}
-.mt-attendance details.mt-status-actions[open]{display:block;margin:.25rem 0}
-.mt-attendance .mt-status-actions>summary{display:inline-grid;place-items:center;min-width:32px;min-height:32px;padding:0;border:0;border-radius:50%;background:transparent;color:var(--muted);cursor:pointer;list-style:none}
-.mt-status-actions>summary::-webkit-details-marker{display:none}
-.mt-status-actions>summary:is(:hover,:focus-visible){background:rgba(40,106,76,.1);color:var(--green)}
