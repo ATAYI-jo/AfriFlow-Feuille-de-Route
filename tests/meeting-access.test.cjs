@@ -31,12 +31,12 @@ function harness(options = {}) {
   const timers = [], intervals = [], reads = [], held = new Map();
   const card = { id: 'meetCard', innerHTML: '', dataset: {}, style: {} };
   const state = { meetings: [{ ...MEETING }], pointages: [], fail: '', nativeResult: { ok: true }, showResult: true };
-  const statuses=[];
-  function element(){const label={};Object.defineProperty(label,'textContent',{set:value=>statuses.push(value)});return {classList:{add(){}},querySelector:name=>name==='p'?label:{},remove(){}}}
+  const statuses=[],times=[],drawn=[];
+  function element(){const label={};Object.defineProperty(label,'textContent',{set:value=>statuses.push(value)});return {classList:{add(){}},querySelector:name=>name==='p'?label:name==='canvas'?{getContext:()=>({drawImage:image=>drawn.push(image)})}:name==='time'?{set dateTime(value){times.push(value)}}:{},remove(){}}}
   const surface={createElement:element,head:{appendChild(){}},body:{appendChild(){}}};
   const document = Object.assign(target(), {
     hidden: false,
-    getElementById(id) { return id === 'meetCard' ? card : null; },
+    getElementById(id) { return id === 'meetCard' ? card : id==='sideAvatar'?options.header:null; },
     querySelector() { return null; }, querySelectorAll() { return []; },
     ...surface,
   });
@@ -110,7 +110,7 @@ function harness(options = {}) {
     setInterval(fn, ms) { intervals.push({ fn, ms }); return intervals.length; },
     MutationObserver: class { observe() {} },
   }, { filename: 'modules/collaboration/meetings.js' });
-  return { window, document, state, card, statuses, events, tabs, invocations, nativeOpens, assigned, shown, notices, reads,
+  return { window, document, state, card, statuses, times, drawn, events, tabs, invocations, nativeOpens, assigned, shown, notices, reads,
     async refresh() { window.dispatchEvent({ type: 'afriflow:attendance-changed' }); await settle(); },
     async fire(type) { window.dispatchEvent({ type }); await settle(); },
     draw() { intervals.find(item => item.ms === 1000).fn(); },
@@ -286,4 +286,16 @@ test('home counts down to the start, then allows joining until the end', async (
   options.now=NOW+MEETING.dur*60000;h.draw();
   assert.match(h.card.innerHTML,/Aucune réunion programmée/);
   assert.doesNotMatch(h.card.innerHTML,/meetGo|Rejoindre|role="timer"/);
+});
+
+test('check-in uses the active profile portrait and the server pointage timestamp',async()=>{
+  const image={complete:true,naturalWidth:240,naturalHeight:320};
+  for(const owner of [EMAIL,'other@example.test']){
+    const h=harness({header:{dataset:{profileOwner:owner},querySelector:()=>image}});
+    const joined=h.window.AfriMeetings.join(ID);
+    h.invocations[0].resolve(reply());
+    assert.equal((await joined).ok,true);
+    assert.equal(h.drawn.includes(image),owner===EMAIL);
+    assert.deepEqual(h.times,[new Date(RECORD.at).toISOString()]);
+  }
 });
