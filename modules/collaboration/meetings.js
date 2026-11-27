@@ -164,45 +164,24 @@ function paintPointageAvatar(screen,account){
   portrait.src=src;
   if(portrait.complete)reveal();
 }
-function pointageScreen(tab,account){
-  var doc=tab?tab.document:document;
-  if(tab){
-    var viewport=doc.createElement("meta");
-    viewport.name="viewport";viewport.content="width=device-width, initial-scale=1, viewport-fit=cover";
-    doc.head.appendChild(viewport);
-    var style=doc.createElement("link");
-    style.rel="stylesheet";style.href=new URL("./modules/collaboration/attendance.css?v=pointage-portrait-2",window.location.href).href;
-    doc.head.appendChild(style);
-    doc.title="Pointage AfriFlow";
-  }
-  var screen=doc.createElement("div");
+function pointageScreen(account){
+  var screen=document.createElement("div");
   screen.className="af-pointage-screen";
   screen.innerHTML='<div class="af-pointage-card"><div class="af-pointage-portrait" aria-hidden="true"><span class="af-pointage-initials"></span><img class="af-pointage-photo" hidden alt="" referrerpolicy="no-referrer"></div><p role="status">Pointage en cours…</p><div class="af-pointage-stamp" hidden><span>Heure du pointage</span><time></time></div></div>';
   screen.querySelector(".af-pointage-initials").textContent=(String(window.USER_NAME||account).trim().match(/\S+/g)||[]).slice(0,2).map(function(part){return part[0]}).join("").toUpperCase();
   paintPointageAvatar(screen,account);
-  doc.body.appendChild(screen);
+  document.body.appendChild(screen);
   return screen;
 }
 async function joinMeeting(id,options){
   options=options||{};
   if(!validId(id)||!me()||!SB())return {ok:false,error:"Connectez-vous pour rejoindre cette réunion."};
   if(joining.has(id))return {ok:false,error:"Le pointage est déjà en cours. Patientez un instant."};
-  var account=me(),tab=null,nativeOpen=window.AfriFlowNative&&typeof window.AfriFlowNative.openTeams==="function";
-  var android=window.AfriFlowAndroid&&typeof window.AfriFlowAndroid.postMessage==="function";
-  // Browser popup must be created in the direct click, before asynchronous auth.
-  var mobile=/Android|iPhone|iPad|iPod/i.test(navigator.userAgent||"")
-    || (navigator.platform==="MacIntel"&&navigator.maxTouchPoints>1)
-    || !!(window.matchMedia&&window.matchMedia("(pointer: coarse) and (max-width: 900px)").matches);
-  var sameWindow=android||options.sameWindow||mobile;
-  if(!nativeOpen&&!sameWindow){
-    tab=window.open("about:blank","_blank");
-    if(!tab)return {ok:false,error:"Autorisez l’ouverture d’un onglet pour rejoindre Teams, puis réessayez."};
-    try{tab.opener=null}catch(ignore){}
-  }
+  var account=me(),nativeOpen=window.AfriFlowNative&&typeof window.AfriFlowNative.openTeams==="function";
   joining.add(id);
   var screen;
   try{
-    screen=pointageScreen(tab,account);
+    screen=pointageScreen(account);
     var result=await mark(id,options.source||"home");
     if(account!==me())throw new Error("La session a changé. Reconnectez-vous avant de rejoindre la réunion.");
     drawCard();
@@ -219,20 +198,15 @@ async function joinMeeting(id,options){
     screen.classList.add("confirmed");
     await new Promise(function(resolve){setTimeout(resolve,2100)});
     if(account!==me())throw new Error("La session a changé. Reconnectez-vous avant de rejoindre la réunion.");
-    if(tab&&tab.closed)throw new Error("L’onglet de la réunion a été fermé.");
     if(nativeOpen){
       var opened=await window.AfriFlowNative.openTeams(target);
       if(!opened||!opened.ok)throw new Error("Pointage conservé, mais Teams n’a pas pu s’ouvrir. Réessayez.");
-    }else if(sameWindow){
-      // Keep the confirmation in the mobile viewport until the Teams handoff.
-      window.location.assign(target);
-    }else{tab.location.replace(target);}
+    }else{window.location.assign(target);}
     toast("Pointage enregistré à "+fh(result.record.at)+". La participation à Teams reste à vérifier séparément.");
     return {ok:true,record:result.record};
   }catch(error){
-    if(tab)try{tab.close()}catch(ignore){}
     return {ok:false,error:error.message||"Pointage indisponible. Réessayez."};
-  }finally{if(screen&&(!tab||!tab.closed))screen.remove();joining.delete(id);}
+  }finally{if(screen)screen.remove();joining.delete(id);}
 }
 async function mark(id,source){
   var email=me();
@@ -294,7 +268,7 @@ async function flushPending(){
   try{
     var owner=me();
     if(await consumeMeetingTap(id) && owner===me() && id===pendingMeeting){
-      var joined=await joinMeeting(id,{source:"push",sameWindow:true});
+      var joined=await joinMeeting(id,{source:"push"});
       if(joined.ok){pendingMeeting="";return;}
       toast(joined.error);
     }
