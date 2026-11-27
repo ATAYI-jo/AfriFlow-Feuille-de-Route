@@ -289,3 +289,26 @@ test('A touch click resumes interrupted audio without creating another context',
   assert.equal(created, 1);
   assert.equal(resumed, 2);
 });
+
+test('A foreground invitation rings at its scheduled start and Accept joins once', async () => {
+  const start = 1800000015000;
+  const app = harness({enabled:true, meetings:m=>[m({start})]});
+  await app.settle();
+  await app.advance(14999);
+  assert.equal(app.get('af-meet-call').hidden, true);
+  await app.advance(1);
+  assert.equal(app.get('af-meet-call').hidden, false);
+  assert.equal(app.get('af-meet-join-label').textContent, 'Accepter');
+  assert.ok([...app.timers.values()].some(timer=>timer.ms===2400));
+  assert.equal(app.joins.length, 0);
+  app.get('af-meet-accept').click();
+  assert.equal(app.joins.length, 1);
+});
+
+test('A cancelled invitation stays silent at its former start', async () => {
+  const app = harness({enabled:true, meetings:m=>[m({start:1800000015000})]});
+  await app.settle();
+  app.setMeetings([]);
+  await app.advance(15000);
+  assert.equal(app.get('af-meet-call').hidden, true);
+});
