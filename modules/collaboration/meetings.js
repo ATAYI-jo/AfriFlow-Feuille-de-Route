@@ -21,9 +21,20 @@ function inviteeAvatar(u){
   var value=String(u.avatar_value||""),src="";
   if(u.avatar_kind==="photo"&&/^data:image\/(png|jpe?g|webp);base64,[a-z0-9+/=]+$/i.test(value))src=value;
   else{
-    var label=String(u.name||u.display_name||u.first_name||u.email||"").trim();
-    var initials=label.split(/\s+/).slice(0,2).map(function(part){return part.charAt(0)}).join("").toUpperCase();
-    return '<span aria-hidden="true" style="width:48px;height:48px;border-radius:50%;display:grid;place-items:center;flex:none;background:#e8f2ec;color:#17462e;font-weight:700">'+esc(initials)+'</span>';
+    var c={seed:value||u.user_id||u.email||"afriflow"};
+    try{var obj=JSON.parse(value);if(obj&&typeof obj.seed==="string")c=obj}catch(e){}
+    var q=new URLSearchParams();q.set("seed",String(c.seed||"afriflow"));
+    if(c.v===1){
+      if(/^variant\d{2}$/.test(c.hairVariant||""))q.set("hairVariant",c.hairVariant);
+      ["hairColor","skinColor","backgroundColor"].forEach(function(k){
+        if(/^[0-9a-f]{6}$/i.test(String(c[k]||"")))q.set(k,c[k]);
+      });
+      if(c.glasses){q.set("glassesProbability","100");q.set("glassesVariant","variant01")}
+      if(c.earrings){q.set("earringsProbability","100");q.set("earringsVariant","variant01")}
+      if(c.flowers){q.set("hairAccessoriesProbability","100");q.set("hairAccessoriesVariant","flowers")}
+      if(c.flip)q.set("flip","horizontal");
+    }
+    src="https://api.dicebear.com/10.x/lorelei/svg?"+q.toString();
   }
   return '<img src="'+esc(src)+'" alt="" loading="lazy" referrerpolicy="no-referrer" style="width:48px;height:48px;border-radius:50%;object-fit:cover;flex:none;background:#e8f2ec;border:1px solid rgba(20,75,51,.18)">';
 }
