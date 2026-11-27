@@ -103,7 +103,7 @@ function harness(options = {}) {
     const pending = deferred(); invocations.push({ ...pending, payload }); return pending.promise;
   } } };
   class DeviceDate extends Date { constructor(...args) { super(...(args.length ? args : [options.now ?? NOW])); } static now() { return options.now ?? NOW; } }
-  vm.runInNewContext(source, { window, document, navigator: { serviceWorker }, URL, URLSearchParams,
+  vm.runInNewContext(source, { window, document, navigator: { serviceWorker, ...options.device }, URL, URLSearchParams,
     Date: DeviceDate, Intl, console, Event: class { constructor(type) { this.type = type; } },
     alert: message => notices.push(message), confirm: () => false,
     setTimeout(fn, ms) { if(ms===2100){Promise.resolve().then(fn);return 0;} timers.push({ fn, ms }); return timers.length; },
@@ -297,5 +297,18 @@ test('check-in uses the active profile portrait and the server pointage timestam
     assert.equal((await joined).ok,true);
     assert.equal(h.drawn.includes(image.currentSrc),owner===EMAIL);
     assert.deepEqual(h.times,[new Date(RECORD.at).toISOString()]);
+  }
+});
+
+test('mobile web check-in stays inside AfriFlow until Teams opens',async()=>{
+  for(const device of [{userAgent:'iPhone'}, {userAgent:'Android'}, {platform:'MacIntel',maxTouchPoints:5}]){
+    const h=harness({device});
+    const joined=h.window.AfriMeetings.join(ID);
+    assert.equal(h.tabs.length,0);
+    assert.deepEqual(h.assigned,[]);
+    h.invocations[0].resolve(reply());
+    assert.equal((await joined).ok,true);
+    assert.deepEqual(h.statuses,['Vous êtes connecté']);
+    assert.deepEqual(h.assigned,[SERVER_LINK]);
   }
 });
