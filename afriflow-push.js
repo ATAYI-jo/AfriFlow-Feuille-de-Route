@@ -130,7 +130,10 @@
     var last='';
     try{last=localStorage.getItem(KEY)||''}catch(e){}
     // On another browser/new installation, re-register even when consent exists elsewhere.
-    if(last!==email || Date.now()-lastCheck>5*60*1000){lastCheck=Date.now();await register();}
+    if(last!==email || Date.now()-lastCheck>5*60*1000){
+      var result=await register();
+      if(result.ok && email===account())lastCheck=Date.now();
+    }
   }
   async function diagnostics() {
     var out={secure:window.isSecureContext,supported:supported(),
@@ -174,7 +177,10 @@
   }
   function start(){
     // Registration after system permission was expressly approved, not silently at page load.
-    var timer=setInterval(autoRegister,60000);
+    setInterval(autoRegister,60000);
+    window.addEventListener('afriflow:alerts-ready',autoRegister);
+    window.addEventListener('afriflow:auth-ready',autoRegister);
+    window.addEventListener('afriflow:verified-role',autoRegister);
     window.addEventListener('online',autoRegister);
     window.addEventListener('focus',autoRegister);
     document.addEventListener('visibilitychange',function(){if(!document.hidden)autoRegister()});
