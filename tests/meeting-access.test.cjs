@@ -118,49 +118,46 @@ function harness(options = {}) {
   };
 }
 
-test('browser opens its blank tab synchronously, then uses only the server-confirmed Teams link', async () => {
+test('browser confirms in AfriFlow and navigates only to the server-confirmed Teams link', async () => {
   const h = harness();
   const joined = h.window.AfriMeetings.join(ID, { source: 'home' });
-  assert.deepEqual(h.events, ['blank', 'invoke']);
-  assert.equal(h.tabs[0].opener, null);
-  assert.equal(h.tabs[0].destinations.length, 0);
+  assert.deepEqual(h.events, ['invoke']);
+  assert.equal(h.tabs.length, 0);
+  assert.equal(h.assigned.length, 0);
   assert.deepEqual(h.statuses, []);
   assert.equal(h.invocations[0].payload.body.meetingId, ID);
   h.invocations[0].resolve(reply());
   assert.equal((await joined).ok, true);
   assert.deepEqual(h.statuses,['Vous êtes connecté']);
-  assert.deepEqual(h.tabs[0].destinations, [SERVER_LINK]);
+  assert.deepEqual(h.assigned, [SERVER_LINK]);
 });
 
 test('a duplicate join while check-in is pending creates neither another tab nor another request', async () => {
   const h = harness(); const first = h.window.AfriMeetings.join(ID);
   assert.equal((await h.window.AfriMeetings.join(ID)).ok, false);
-  assert.equal(h.tabs.length, 1); assert.equal(h.invocations.length, 1);
+  assert.equal(h.tabs.length, 0); assert.equal(h.invocations.length, 1);
   h.invocations[0].resolve(reply()); await first;
 });
 
-test('rejected and uninvited check-ins close the placeholder and never open Teams', async () => {
+test('rejected and uninvited check-ins stay in AfriFlow', async () => {
   for (const reason of ['Vous ne faites pas partie des personnes invitées', 'Session invalide']) {
     const h = harness(); const joined = h.window.AfriMeetings.join(ID);
     h.invocations[0].resolve({ data: null, error: { message: 'Edge error', context: { json: async () => ({ error: reason }) } } });
     const result = await joined;
     assert.equal(result.ok, false); assert.equal(result.error, reason);
-    assert.equal(h.tabs[0].closed, true); assert.equal(h.tabs[0].destinations.length, 0);
+    assert.equal(h.tabs.length, 0); assert.equal(h.assigned.length, 0);
     const retry = h.window.AfriMeetings.join(ID);
     assert.equal(h.invocations.length, 2, 'failure must release the in-flight guard');
     h.invocations[1].resolve(reply()); await retry;
   }
 });
 
-test('blocked popups do not start a check-in, and malformed server URLs cannot navigate', async () => {
-  const blocked = harness({ blockPopup: true });
-  assert.equal((await blocked.window.AfriMeetings.join(ID)).ok, false);
-  assert.equal(blocked.invocations.length, 0);
-  const h = harness(); const joined = h.window.AfriMeetings.join(ID);
+test('malformed server URLs cannot navigate even with popups blocked', async () => {
+  const h = harness({blockPopup:true}); const joined = h.window.AfriMeetings.join(ID);
   const response = reply(); response.data.meeting.link = 'https://teams.microsoft.com.evil.test/';
   h.invocations[0].resolve(response);
   assert.equal((await joined).ok, false);
-  assert.equal(h.tabs[0].closed, true); assert.equal(h.tabs[0].destinations.length, 0);
+  assert.equal(h.tabs.length, 0); assert.equal(h.assigned.length, 0);
 });
 
 test('an incorrect device clock never suppresses the authoritative check-in request', async () => {
@@ -169,7 +166,7 @@ test('an incorrect device clock never suppresses the authoritative check-in requ
   assert.equal(h.invocations.length, 1);
   h.invocations[0].resolve(reply());
   assert.equal((await joined).record.at, RECORD.at);
-  assert.deepEqual(h.tabs[0].destinations, [SERVER_LINK]);
+  assert.deepEqual(h.assigned, [SERVER_LINK]);
 });
 
 test('Android hands off the server URL only after a successful check-in', async () => {
@@ -203,7 +200,7 @@ test('a successful response for a departed account cannot open Teams or mark the
   h.window.loggedUserEmail = 'other@example.test';
   h.invocations[0].resolve(reply());
   assert.equal((await joined).ok, false);
-  assert.equal(h.tabs[0].closed, true); assert.equal(h.tabs[0].destinations.length, 0);
+  assert.equal(h.tabs.length, 0); assert.equal(h.assigned.length, 0);
   h.state.meetings = [{ ...MEETING, invitees: ['other@example.test'] }];
   await h.refresh(); assert.doesNotMatch(h.card.innerHTML, /pointage enregistré/);
 });
