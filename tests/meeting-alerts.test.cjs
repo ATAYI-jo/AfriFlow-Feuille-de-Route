@@ -324,3 +324,26 @@ test('an upcoming preview switches to a ringing invitation at the scheduled star
   assert.ok([...app.timers.values()].some(timer=>timer.ms===2400));
   assert.equal(app.joins.length,0);
 });
+
+test('a foreground ringtone survives 30 seconds and a temporary background switch',async()=>{
+  const app=harness({enabled:true});
+  await app.settle();
+  let bursts=0;
+  app.window.AudioContext=class {
+    constructor(){this.state='running';this.currentTime=0;}
+    createOscillator(){return {frequency:{setValueAtTime(){}},connect(){return {connect(){}}},start(){bursts++},stop(){}};}
+    createGain(){return {gain:{setValueAtTime(){},exponentialRampToValueAtTime(){}}};}
+  };
+  app.document.dispatchEvent({type:'click'});
+  app.show(app.meeting(),{automatic:true});
+  assert.equal(bursts,4);
+  await app.advance(31000);
+  const before=bursts;
+  assert.ok(before>4);
+  app.document.hidden=true;await app.advance(2400);
+  assert.equal(bursts,before);
+  app.document.hidden=false;await app.advance(2400);
+  assert.equal(bursts,before+4);
+  app.get('af-meet-reject').click();await app.advance(2400);
+  assert.equal(bursts,before+4);
+});
