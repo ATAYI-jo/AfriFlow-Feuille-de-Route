@@ -8,7 +8,7 @@
   var knownDecisions = new Map(), firstDecisions = true;
   var audio = null, ringTimer = null, ringStopTimer = null, expiryTimer = null, playing = [];
   var activeMeeting = null, previousFocus = null, previousOverflow = '', inertElements = [], joining = false;
-  var lastToast = 0, busy = false;
+  var lastToast = 0, busy = false, nextMeetingTimer = null;
   var ring = null, toast = null;
   var settingsKey = '';
   var enabled = false;
@@ -88,8 +88,8 @@
     var decline=element('button',{type:'button',id:'af-meet-reject'},actions);
     decline.appendChild(callActionIcon('later')); element('span',{text:'Plus tard'},decline);
     var accept=element('button',{type:'button',id:'af-meet-accept'},actions);
-    accept.appendChild(callActionIcon('join')); element('span',{id:'af-meet-join-label',text:'Rejoindre Teams'},accept);
-    element('small',{text:'Teams s’ouvre uniquement lorsque vous choisissez de rejoindre la réunion.'},panel);
+    accept.appendChild(callActionIcon('join')); element('span',{id:'af-meet-join-label',text:'Accepter'},accept);
+    element('small',{text:'Acceptez pour ouvrir la réunion dans Teams.'},panel);
     decline.addEventListener('click',endCall);
     close.addEventListener('click',endCall);
     accept.addEventListener('click',joinMeeting);
@@ -213,7 +213,7 @@
   function joinState(pending,message){
     joining=pending;
     document.getElementById('af-meet-accept').disabled=pending;
-    document.getElementById('af-meet-join-label').textContent=pending?'Ouverture…':'Rejoindre Teams';
+    document.getElementById('af-meet-join-label').textContent=pending?'Ouverture…':'Accepter';
     var status=document.getElementById('af-meet-status');status.textContent=message||'';status.hidden=!message;
     ring.setAttribute('aria-busy',pending?'true':'false');
   }
@@ -366,10 +366,12 @@
       }
       knownMeetings=currentMeetings;
       firstMeetings=false;
+      var nextStart=Infinity;
       meets.forEach(function(row) {
         var m=row.value;
         if(!m || !Number.isFinite(+m.start)||!m.id)return;
         var delta=n-(+m.start);
+        if(delta<0)nextStart=Math.min(nextStart,+m.start);
         if(delta>=0&&delta<=120000) {
           if(/^https:\/\//i.test(m.link||conf.link||''))callMeeting(m);
         }
@@ -377,6 +379,9 @@
           notice('Réunion bientôt', (m.title||'Réunion')+' commence dans moins de 15 minutes.','af-meet-soon-'+m.id);
         }
       });
+      clearTimeout(nextMeetingTimer);
+      // Re-read the invitation at its start in case it was moved or cancelled.
+      if(nextStart-n<=60000)nextMeetingTimer=setTimeout(poll,Math.max(0,nextStart-Date.now()));
       // Alert only on decisions about the latest submitted version of a request.
       var decisionRows=queries[4].status==='fulfilled'&&!queries[4].value.error?(queries[4].value.data||[]):[];
       var justifications=queries[5].status==='fulfilled'&&!queries[5].value.error?(queries[5].value.data||[]):[];
