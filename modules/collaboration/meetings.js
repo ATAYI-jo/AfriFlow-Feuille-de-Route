@@ -155,26 +155,26 @@ function paintPointageAvatar(screen,account){
   var header=$("sideAvatar");
   if(!header||header.dataset.profileOwner!==account||me()!==account)return;
   var image=header.querySelector("img");
-  if(!image)return;
-  if(!image.complete){image.addEventListener("load",function(){if(screen.isConnected)paintPointageAvatar(screen,account)},{once:true});return;}
-  var w=image.naturalWidth,h=image.naturalHeight;
-  if(!w||!h)return;
-  var canvas=screen.querySelector("canvas"),ctx=canvas.getContext("2d"),size=Math.min(w,h);
-  if(!ctx)return;
-  ctx.drawImage(image,(w-size)/2,(h-size)/2,size,size,0,0,canvas.width,canvas.height);
-  canvas.hidden=false;screen.querySelector(".af-pointage-initials").hidden=true;
+  var portrait=screen.querySelector(".af-pointage-photo"),initials=screen.querySelector(".af-pointage-initials");
+  var src=image&&(image.currentSrc||image.src);
+  if(!src||portrait.getAttribute("src")===src)return;
+  function reveal(){if(portrait.naturalWidth){portrait.hidden=false;initials.hidden=true;}}
+  portrait.onload=reveal;
+  portrait.onerror=function(){portrait.hidden=true;initials.hidden=false;};
+  portrait.src=src;
+  if(portrait.complete)reveal();
 }
 function pointageScreen(tab,account){
   var doc=tab?tab.document:document;
   if(tab){
     var style=doc.createElement("link");
-    style.rel="stylesheet";style.href=new URL("./modules/collaboration/attendance.css?v=pointage-avatar",window.location.href).href;
+    style.rel="stylesheet";style.href=new URL("./modules/collaboration/attendance.css?v=pointage-portrait-2",window.location.href).href;
     doc.head.appendChild(style);
     doc.title="Pointage AfriFlow";
   }
   var screen=doc.createElement("div");
   screen.className="af-pointage-screen";
-  screen.innerHTML='<div class="af-pointage-card"><div class="af-pointage-portrait" aria-hidden="true"><span class="af-pointage-initials"></span><canvas hidden width="224" height="224"></canvas></div><p role="status">Pointage en cours…</p><time hidden></time></div>';
+  screen.innerHTML='<div class="af-pointage-card"><div class="af-pointage-portrait" aria-hidden="true"><span class="af-pointage-initials"></span><img class="af-pointage-photo" hidden alt="" referrerpolicy="no-referrer"></div><p role="status">Pointage en cours…</p><div class="af-pointage-stamp" hidden><span>Heure du pointage</span><time></time></div></div>';
   screen.querySelector(".af-pointage-initials").textContent=(String(window.USER_NAME||account).trim().match(/\S+/g)||[]).slice(0,2).map(function(part){return part[0]}).join("").toUpperCase();
   paintPointageAvatar(screen,account);
   doc.body.appendChild(screen);
@@ -206,11 +206,11 @@ async function joinMeeting(id,options){
     var at=new Date(result.record.at),time=screen.querySelector("time");
     if(Number.isFinite(at.getTime())){
       time.dateTime=at.toISOString();
-      time.textContent="Pointage à "+at.toLocaleTimeString("fr-FR",{hour:"2-digit",minute:"2-digit",second:"2-digit"});
-      time.hidden=false;
+      time.textContent=at.toLocaleTimeString("fr-FR",{hour:"2-digit",minute:"2-digit",second:"2-digit"});
+      screen.querySelector(".af-pointage-stamp").hidden=false;
     }
     screen.classList.add("confirmed");
-    await new Promise(function(resolve){setTimeout(resolve,1400)});
+    await new Promise(function(resolve){setTimeout(resolve,2100)});
     if(account!==me())throw new Error("La session a changé. Reconnectez-vous avant de rejoindre la réunion.");
     if(tab&&tab.closed)throw new Error("L’onglet de la réunion a été fermé.");
     if(nativeOpen){
