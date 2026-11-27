@@ -61,7 +61,7 @@
     }
     function fallback() {
       release();
-      if (!signal.aborted) source.srcset = devicePixelRatio >= 1.5 ? 'afriflow-accueil-mobile-hd.webp' : 'afriflow-accueil-mobile.webp';
+      if (!signal.aborted) source.srcset = devicePixelRatio >= 1.5 ? 'afriflow-accueil-mobile-hd.webp?v=bords2' : 'afriflow-accueil-mobile.webp?v=bords2';
     }
     signal.addEventListener('abort', release, { once: true });
     try {
@@ -70,7 +70,7 @@
         alpha: true, antialias: false, depth: false, stencil: false, premultipliedAlpha: false
       });
       const draw = createRenderer(gl);
-      const response = await fetch('afriflow-accueil-mobile-24.mp4', { signal });
+      const response = await fetch('afriflow-accueil-mobile-24.mp4?v=bords2', { signal });
       if (!response.ok) throw new Error('Video unavailable');
       const blob = await response.blob();
       if (signal.aborted) return;
