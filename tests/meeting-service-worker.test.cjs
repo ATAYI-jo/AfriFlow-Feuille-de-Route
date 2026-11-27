@@ -30,7 +30,8 @@ function worker(options = {}) {
     }
   }
   const context = {
-    URL, Promise, Date, MessageChannel: options.noChannel ? undefined : MessageChannel,
+    URL, Promise, Date, Response, crypto:require('node:crypto').webcrypto,
+    caches:{open:async()=>({keys:async()=>[],put:async key=>options.receipts.push(key)})}, MessageChannel: options.noChannel ? undefined : MessageChannel,
     setTimeout(fn, ms) { const timer = { fn, ms, active: true }; timers.push(timer); return timer; },
     clearTimeout(timer) { if (timer) timer.active = false; },
     self: {
@@ -97,4 +98,16 @@ test('closed apps open the meeting preview; forged and legacy external targets a
 test('dismiss closes the notification without navigating, previewing or recording attendance', async () => {
   const h = worker(); await h.click({ meetingId: ID }, 'dismiss');
   assert.equal(h.closed, 1); assert.equal(h.opened.length, 0); assert.equal(h.posted.length, 0); assert.equal(h.focused, 0);
+});
+
+test('a start notification tap opens a one-use acceptance link even without action buttons',async()=>{
+  for(const action of ['', 'accept']){
+    const receipts=[],h=worker({noClient:true,receipts});
+    await h.click({meetingId:ID,kind:'meeting',stage:'start',expiresAt:Date.now()+60000},action);
+    const opened=new URL(h.opened[0]), receipt=new URL(receipts[0]);
+    assert.equal(opened.origin,ORIGIN.slice(0,-1));
+    assert.equal(opened.searchParams.get('meeting'),ID);
+    assert.equal(new URLSearchParams(opened.hash.slice(1)).get('accept'),receipt.searchParams.get('tap'));
+    assert.equal(receipt.searchParams.get('meeting'),ID);
+  }
 });
