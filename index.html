@@ -275,12 +275,13 @@ window.ic=function(n,s){return '<svg class="ic"'+(s?' style="width:'+s+';height:
     </button>
     <span class="logo-img" id="afHomeLogoPlayer">
       <picture>
-        <source media="(max-width: 640px) and (prefers-reduced-motion: no-preference), (pointer: coarse) and (prefers-reduced-motion: no-preference)" type="image/webp" id="afMobileLogo" srcset="afriflow-accueil-premiere-image.webp?v=bords2">
+        <source media="(max-width: 640px) and (prefers-reduced-motion: no-preference), (pointer: coarse) and (prefers-reduced-motion: no-preference)" type="image/webp" id="afMobileLogo" srcset="afriflow-accueil-mobile.webp?v=natif24 336w, afriflow-accueil-mobile-hd.webp?v=natif24 560w" sizes="(max-width: 640px) min(280px, 76vw), min(350px, 80vw)">
         <source media="(prefers-reduced-motion: no-preference)" type="image/webp" srcset="afriflow-accueil-anime.webp?v=pause3">
         <img src="logo.svg?v=2" width="744" height="612" alt="AfriFlow" onerror="if(this.previousElementSibling){this.previousElementSibling.remove();this.src='logo.svg?v=2'}">
       </picture>
+      <button type="button" id="afLogoMotionToggle" hidden>Animer le logo</button>
     </span>
-    <script defer src="./afriflow-home-animation.js?v=bords2"></script>
+    <script defer src="./afriflow-home-animation.js?v=natif24"></script>
     <div>
       <h1>Afri<span>FloW</span> · Journal de Bord & Feuille de Route</h1>
       <p class="sub">Cliquez sur un cadran pour consulter les articles détaillés au format journal.</p>
@@ -2950,9 +2951,7 @@ if ('serviceWorker' in navigator) {
 #view-home .brand>div:not(.logo-img){display:none!important}
 @media(max-width:640px),(pointer:coarse){#view-home .brand>#afHomeLogoPlayer{filter:none!important}}
 #afHomeLogoPlayer picture{display:block}
-#afHomeLogoPlayer canvas,#afHomeLogoPlayer video{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
-#afHomeLogoPlayer video,#afHomeLogoPlayer canvas,#afHomeLogoPlayer.is-playing img{opacity:0}
-#afHomeLogoPlayer.is-playing canvas{opacity:1}
+#afLogoMotionToggle:not([hidden]){display:block;margin:4px auto 0;padding:6px 12px;border:1px solid currentColor;border-radius:16px;background:#fff;color:#205e33;font:inherit;font-size:.85rem;cursor:pointer}
 #view-home .brand #afHomeLogoPlayer img{display:block;width:100%;height:auto;aspect-ratio:744/612;object-fit:contain}
 #view-home .brand>.logo-img{width:min(350px,80vw)!important;height:auto!important;max-height:350px!important;margin:0 auto!important;padding:0!important;border-radius:0!important;background:transparent!important;box-shadow:none!important;filter:drop-shadow(0 4px 12px rgba(0,0,0,.16));mix-blend-mode:normal}
 #auth-screen .auth-wizard-actions #authNext{background:var(--green)!important;color:#fff!important;border-color:var(--green)!important}
