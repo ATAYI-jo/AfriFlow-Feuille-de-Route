@@ -56,6 +56,10 @@ function harness(options = {}) {
       isReviewing: () => false, decorateCensor() {} },
     AfriFlowAlerts: { enabled: () => true, showMeeting(meeting, opts) { shown.push({ meeting, options: opts }); return state.showResult; } },
   });
+  if(options.tap){
+    location.href += '#accept=12345678-abcd-4000-8000-123456789abc&until='+(NOW+60000);
+    window.caches={open:async()=>({delete:async key=>options.tap==='valid' && key===location.href.split('#')[0]+'&until='+(NOW+60000)+'&tap=12345678-abcd-4000-8000-123456789abc'})};
+  }
   if (options.platform === 'native') window.AfriFlowNative = { async openTeams(url) { events.push('native'); nativeOpens.push(url); return state.nativeResult; } };
   if (options.platform === 'android') window.AfriFlowAndroid = { postMessage() { throw new Error('Android join must use the authenticated URL handoff'); } };
   const serviceWorker = target();
@@ -250,4 +254,19 @@ test('a late load response from the previous account cannot overwrite the curren
   delayed.release(); await settle(); h.draw();
   assert.match(h.card.innerHTML, /Réunion du nouveau compte/);
   assert.doesNotMatch(h.card.innerHTML, /Réunion enregistrée/);
+});
+
+test('a one-use notification tap checks in and opens Teams in its own window',async()=>{
+  const h=harness({deepLink:true,tap:'valid'});
+  await h.fire('load');
+  assert.equal(h.invocations.length,1);
+  assert.equal(h.tabs.length,0);
+  h.invocations[0].resolve(reply());await settle();
+  assert.deepEqual(h.assigned,[SERVER_LINK]);
+});
+test('an unrecognized tap falls back to preview without checking in',async()=>{
+  const h=harness({deepLink:true,tap:'unknown'});
+  await h.fire('load');
+  assert.equal(h.invocations.length,0);
+  assert.equal(h.shown.length,1);
 });
