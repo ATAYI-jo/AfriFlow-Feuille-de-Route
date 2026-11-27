@@ -21,20 +21,9 @@ function inviteeAvatar(u){
   var value=String(u.avatar_value||""),src="";
   if(u.avatar_kind==="photo"&&/^data:image\/(png|jpe?g|webp);base64,[a-z0-9+/=]+$/i.test(value))src=value;
   else{
-    var c={seed:value||u.user_id||u.email||"afriflow"};
-    try{var obj=JSON.parse(value);if(obj&&typeof obj.seed==="string")c=obj}catch(e){}
-    var q=new URLSearchParams();q.set("seed",String(c.seed||"afriflow"));
-    if(c.v===1){
-      if(/^variant\d{2}$/.test(c.hairVariant||""))q.set("hairVariant",c.hairVariant);
-      ["hairColor","skinColor","backgroundColor"].forEach(function(k){
-        if(/^[0-9a-f]{6}$/i.test(String(c[k]||"")))q.set(k,c[k]);
-      });
-      if(c.glasses){q.set("glassesProbability","100");q.set("glassesVariant","variant01")}
-      if(c.earrings){q.set("earringsProbability","100");q.set("earringsVariant","variant01")}
-      if(c.flowers){q.set("hairAccessoriesProbability","100");q.set("hairAccessoriesVariant","flowers")}
-      if(c.flip)q.set("flip","horizontal");
-    }
-    src="https://api.dicebear.com/10.x/lorelei/svg?"+q.toString();
+    var label=String(u.name||u.display_name||u.first_name||u.email||"").trim();
+    var initials=label.split(/\s+/).slice(0,2).map(function(part){return part.charAt(0)}).join("").toUpperCase();
+    return '<span aria-hidden="true" style="width:48px;height:48px;border-radius:50%;display:grid;place-items:center;flex:none;background:#e8f2ec;color:#17462e;font-weight:700">'+esc(initials)+'</span>';
   }
   return '<img src="'+esc(src)+'" alt="" loading="lazy" referrerpolicy="no-referrer" style="width:48px;height:48px;border-radius:50%;object-fit:cover;flex:none;background:#e8f2ec;border:1px solid rgba(20,75,51,.18)">';
 }
@@ -162,6 +151,21 @@ function drawCard(){
 }
 // Every AfriFlow entry point uses the same authenticated, server-timed join.
 // Opening an invitation never creates an attendance record.
+function pointageScreen(tab){
+  var doc=tab?tab.document:document;
+  if(tab){
+    var style=doc.createElement("link");
+    style.rel="stylesheet";style.href=new URL("./modules/collaboration/attendance.css?v=pointage-avatar",window.location.href).href;
+    doc.head.appendChild(style);
+    doc.title="Pointage AfriFlow";
+  }
+  var screen=doc.createElement("div");
+  screen.className="af-pointage-screen";
+  screen.innerHTML='<div class="af-pointage-card"><img alt="" width="112" height="112"><p role="status">Pointage en cours…</p></div>';
+  screen.querySelector("img").src=new URL("./avatar.jpg",window.location.href).href;
+  doc.body.appendChild(screen);
+  return screen;
+}
 async function joinMeeting(id,options){
   options=options||{};
   if(!validId(id)||!me()||!SB())return {ok:false,error:"Connectez-vous pour rejoindre cette réunion."};
@@ -172,15 +176,22 @@ async function joinMeeting(id,options){
   if(!nativeOpen&&!android&&!options.sameWindow){
     tab=window.open("about:blank","_blank");
     if(!tab)return {ok:false,error:"Autorisez l’ouverture d’un onglet pour rejoindre Teams, puis réessayez."};
-    try{tab.opener=null;tab.document.title="Ouverture de la réunion";tab.document.body.textContent="Enregistrement du pointage AfriFlow…"}catch(ignore){}
+    try{tab.opener=null}catch(ignore){}
   }
   joining.add(id);
+  var screen;
   try{
+    screen=pointageScreen(tab);
     var result=await mark(id,options.source||"home");
     if(account!==me())throw new Error("La session a changé. Reconnectez-vous avant de rejoindre la réunion.");
     drawCard();
     var target=result.meeting&&result.meeting.link;
     if(!okUrl(target))throw new Error("Le lien Teams de cette réunion est indisponible.");
+    screen.querySelector("p").textContent="Vous êtes connecté";
+    screen.classList.add("confirmed");
+    await new Promise(function(resolve){setTimeout(resolve,1400)});
+    if(account!==me())throw new Error("La session a changé. Reconnectez-vous avant de rejoindre la réunion.");
+    if(tab&&tab.closed)throw new Error("L’onglet de la réunion a été fermé.");
     if(nativeOpen){
       var opened=await window.AfriFlowNative.openTeams(target);
       if(!opened||!opened.ok)throw new Error("Pointage conservé, mais Teams n’a pas pu s’ouvrir. Réessayez.");
@@ -193,7 +204,7 @@ async function joinMeeting(id,options){
   }catch(error){
     if(tab)try{tab.close()}catch(ignore){}
     return {ok:false,error:error.message||"Pointage indisponible. Réessayez."};
-  }finally{joining.delete(id);}
+  }finally{if(screen&&(!tab||!tab.closed))screen.remove();joining.delete(id);}
 }
 async function mark(id,source){
   var email=me();
