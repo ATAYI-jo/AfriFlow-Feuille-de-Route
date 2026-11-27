@@ -1,7 +1,7 @@
 
 (function(){
 "use strict";
-var CFG="pub:meetcfg", PRE="meet:", ATT="att:", OPEN_BEFORE=15*6e4;
+var CFG="pub:meetcfg", PRE="meet:", ATT="att:";
 var cfg={link:"",censeurs:[]},cfgFor="", meets=[], atts={}, active=false,pageGeneration=0;
 var attendanceData=null,loadError="",loadSequence=0,dataFor="",roster=[],joining=new Set(),pendingMeeting="",pendingSource="push",previewBusy=false;
 
@@ -101,7 +101,7 @@ async function readPointages(pattern){
 /* ---------- Réunion en cours / prochaine ---------- */
 function pick(){
   var n=Date.now();
-  var cur=meets.filter(function(m){return n>=m.start-OPEN_BEFORE&&n<=m.start+m.dur*6e4});
+  var cur=meets.filter(function(m){return n>=m.start&&n<Number(m.start)+m.dur*6e4});
   if(cur.length)return {m:cur[0],live:true};
   var nx=meets.filter(function(m){return m.start>n})[0];
   return nx?{m:nx,live:false}:null;
@@ -114,19 +114,51 @@ function statut(m,rec,email){
 
 /* ---------- Carte « Réunion » sur l'accueil ---------- */
 var ICON='<svg viewBox="0 0 48 48" width="54" height="54" aria-hidden="true"><defs><linearGradient id="mtg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#7b83eb"/><stop offset="1" stop-color="#4b53bc"/></linearGradient></defs><rect width="48" height="48" rx="13" fill="url(#mtg)"/><rect x="8" y="15" width="21" height="18" rx="4" fill="#fff"/><path d="M31 21.5l9-5v15l-9-5z" fill="#fff" opacity=".92"/><circle cx="18.5" cy="21.4" r="2.7" fill="#5b5fc7"/><path d="M13 30a5.5 5.5 0 0 1 11 0z" fill="#5b5fc7"/></svg>';
+var cardDeadline=0, countdownStart=0;
+function countdownValues(start){
+  var seconds=Math.max(0,Math.ceil((start-Date.now())/1000));
+  return [Math.floor(seconds/3600),Math.floor(seconds/60)%60,seconds%60].map(function(v){return String(v).padStart(2,"0")});
+}
+function countdownMarkup(start){
+  var labels=["heures","minutes","secondes"];
+  return '<span class="mt-countdown" role="timer" aria-label="Temps avant la réunion">'+countdownValues(start).map(function(value,i){
+    return '<span class="mt-unit"><strong id="mtDigit'+i+'">'+value+'</strong><small>'+labels[i]+'</small></span>';
+  }).join("")+'</span>';
+}
+function tickCard(){
+  if(!cardDeadline||document.hidden)return;
+  if(!me()||Date.now()>=cardDeadline){drawCard();return;}
+  if(!countdownStart)return;
+  countdownValues(countdownStart).forEach(function(value,i){
+    var digit=$("mtDigit"+i);
+    if(!digit||digit.textContent===value)return;
+    digit.textContent=value;
+    if(digit.animate&&window.matchMedia&&!window.matchMedia("(prefers-reduced-motion: reduce)").matches)
+      digit.animate([{opacity:.55,transform:"translateY(-3px)"},{opacity:1,transform:"translateY(0)"}],{duration:200,easing:"ease-out"});
+  });
+}
 function drawCard(){
   var host=$("meetCard");
   if(!host){
     var br=document.querySelector("#view-home .brand");if(!br)return;
     host=document.createElement("div");host.id="meetCard";br.after(host);
   }
+  cardDeadline=0;countdownStart=0;
   if(!me()){host.innerHTML="";return}
-  var p=pick(),link=(p&&p.m.link)||cfg.link,sub;
-  if(p&&p.live)sub='<span class="mt-dot"></span>'+(Date.now()<p.m.start?'Ouverture du pointage : ':'En cours : ')+esc(p.m.title)+' · '+fh(p.m.start)+' – '+fh(p.m.start+p.m.dur*6e4)+(atts[ATT+p.m.id+":"+me()]?' · pointage enregistré':'');
-  else if(p)sub='Prochaine réunion : '+esc(p.m.title)+' · '+fdt(p.m.start);
-  else sub=cfg.link?'Aucune réunion programmée · lien disponible':'Aucune réunion programmée';
-  host.innerHTML='<a class="mt-card'+(p&&p.live?' live':'')+'" id="meetGo" data-meeting="'+(p?esc(p.m.id):'')+'" href="'+(p?'?meeting='+encodeURIComponent(p.m.id):'#')+'">'
-    +ICON+'<span class="mt-txt"><b>Réunion en ligne</b><small>'+sub+'</small></span><span class="mt-btn">Rejoindre</span></a>';
+  var p=pick(),sub="Aucune réunion programmée",action="";
+  if(p){
+    var start=Number(p.m.start);
+    if(p.live){
+      cardDeadline=start+p.m.dur*60000;
+      sub='<span class="mt-dot"></span>En cours : '+esc(p.m.title)+' · '+fh(start)+' – '+fh(cardDeadline)+(atts[ATT+p.m.id+":"+me()]?' · pointage enregistré':'');
+      action='<a class="mt-btn" id="meetGo" data-meeting="'+esc(p.m.id)+'" href="?meeting='+encodeURIComponent(p.m.id)+'">Rejoindre</a>';
+    }else{
+      cardDeadline=countdownStart=start;
+      sub='Prochaine réunion : '+esc(p.m.title)+' · '+fdt(start);
+      action=countdownMarkup(start);
+    }
+  }
+  host.innerHTML='<div class="mt-card'+(p&&p.live?' live':'')+'">'+ICON+'<span class="mt-txt"><b>Réunion en ligne</b><small>'+sub+'</small></span>'+action+'</div>';
 }
 // Every AfriFlow entry point uses the same authenticated, server-timed join.
 // Opening an invitation never creates an attendance record.
@@ -146,6 +178,7 @@ async function joinMeeting(id,options){
   try{
     var result=await mark(id,options.source||"home");
     if(account!==me())throw new Error("La session a changé. Reconnectez-vous avant de rejoindre la réunion.");
+    drawCard();
     var target=result.meeting&&result.meeting.link;
     if(!okUrl(target))throw new Error("Le lien Teams de cette réunion est indisponible.");
     if(nativeOpen){
@@ -155,7 +188,7 @@ async function joinMeeting(id,options){
       // The Android WebView intercepts this external URL and launches Teams.
       window.location.assign(target);
     }else{tab.location.replace(target);}
-    drawCard();toast("Pointage enregistré à "+fh(result.record.at)+". La participation à Teams reste à vérifier séparément.");
+    toast("Pointage enregistré à "+fh(result.record.at)+". La participation à Teams reste à vérifier séparément.");
     return {ok:true,record:result.record};
   }catch(error){
     if(tab)try{tab.close()}catch(ignore){}
@@ -445,6 +478,7 @@ window.addEventListener("afriflow:attendance-changed",refresh);
 var prev=window.onRole;
 window.onRole=function(){if(prev)prev();setTimeout(refresh,1300)};
 setInterval(function(){if(me())refresh();else drawCard()},60000);
-setInterval(function(){if(me())drawCard()},30000);
+setInterval(tickCard,1000);
+document.addEventListener("visibilitychange",tickCard);
 if(me())setTimeout(refresh,1500);
 })();
