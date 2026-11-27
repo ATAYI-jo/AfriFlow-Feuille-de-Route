@@ -33,6 +33,7 @@
     activate.disabled = state.busy || !alerts || typeof alerts.enable !== "function"
       || kind === "browser" && (!supported() || permission() === "denied")
       || kind === "android" && (!push || typeof push.registerAndroidNative !== "function");
+    state.node.querySelector("#afNotifSound").disabled = state.busy || !enabled || typeof alerts.testSound !== "function";
     verify.hidden = kind !== "browser";
     verify.disabled = state.busy || !supported() || !push || typeof push.diagnostics !== "function";
     test.hidden = kind !== "browser";
@@ -110,7 +111,7 @@
     node.className = "af-att-overlay af-notif-overlay";
     node.innerHTML = '<section class="af-att-dialog af-notif-dialog" role="dialog" aria-modal="true" aria-labelledby="afNotifTitle"><header><h2 id="afNotifTitle" tabindex="-1">Notifications sur cet appareil</h2><button type="button" id="afNotifClose">Fermer</button></header>'
       + '<p class="af-notif-account">Compte : ' + esc(owner) + '<br><b id="afNotifDevice"></b></p><dl id="afNotifStatus"></dl><p id="afNotifGuide"></p><p id="afNotifMessage" role="status" aria-live="polite"></p>'
-      + '<div class="af-att-actions"><button type="button" id="afNotifVerify">Vérifier</button><button type="button" id="afNotifTest">Tester une notification</button><button type="button" class="p" id="afNotifActivate">Activer les notifications</button></div></section>';
+      + '<div class="af-att-actions"><button type="button" id="afNotifSound">Tester la sonnerie</button><button type="button" id="afNotifVerify">Vérifier</button><button type="button" id="afNotifTest">Tester une notification</button><button type="button" class="p" id="afNotifActivate">Activer les notifications</button></div></section>';
     document.body.appendChild(node);
     var state = { node: node, owner: owner, busy: false, message: "", subscription: "", close: function () {
       document.removeEventListener("keydown", keys, true); node.remove(); if (panel === state) panel = null;
@@ -129,6 +130,12 @@
     }
     panel = state;
     node.querySelector("#afNotifClose").onclick = state.close;
+    node.querySelector("#afNotifSound").onclick = async function () {
+      var played = await window.AfriFlowAlerts.testSound();
+      if (!current(state)) return;
+      state.message = played ? "Sonnerie de test lancée sur cet appareil. Si vous ne l’entendez pas, vérifiez le volume multimédia et la sortie audio." : "Le navigateur n’a pas démarré le son sur cet appareil.";
+      update(state);
+    };
     node.querySelector("#afNotifActivate").onclick = function () { return activate(state); };
     node.querySelector("#afNotifVerify").onclick = function () { return verify(state); };
     node.querySelector("#afNotifTest").onclick = function () { return testNotification(state); };
