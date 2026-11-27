@@ -6,7 +6,7 @@
   var sb = null, account = '', firstMessages = true, known = new Set();
   var knownMeetings = new Set(), firstMeetings = true;
   var knownDecisions = new Map(), firstDecisions = true;
-  var audio = null, ringTimer = null, ringStopTimer = null, expiryTimer = null, playing = [];
+  var audio = null, ringTimer = null, expiryTimer = null, playing = [];
   var activeMeeting = null, previousFocus = null, previousOverflow = '', inertElements = [], joining = false;
   var lastToast = 0, busy = false, nextMeetingTimer = null;
   var ring = null, toast = null;
@@ -194,7 +194,7 @@
     return false;
   }
   function stopRinging(){
-    clearInterval(ringTimer);clearTimeout(ringStopTimer);ringTimer=null;ringStopTimer=null;
+    clearInterval(ringTimer);ringTimer=null;
     playing.forEach(function(node){try{node.stop();}catch(e){}});playing=[];
     try{if(navigator.vibrate)navigator.vibrate(0);}catch(e){}
   }
@@ -282,13 +282,13 @@
     document.getElementById('af-meet-accept').focus({preventScroll:true});
     expiryTimer=setTimeout(function(){if(activeMeeting===record)endCall();},Math.min(expires-now,2147483647));
     if(options.automatic&&start<=now){
-      tone('call');
+      if(audio&&audio.state!=='running')unlockAudio();
+      if(!tone('call'))document.getElementById('af-meet-info').textContent='Touchez l’écran pour activer le son, ou acceptez pour rejoindre Teams.';
       ringTimer=setInterval(function(){
         if(activeMeeting!==record||record.owner!==currentAccount()||meetingNow(record)>=record.expiresAt){endCall();return;}
-        if(document.hidden){stopRinging();return;}
-        tone('call');
+        if(document.hidden)return;
+        if(tone('call'))document.getElementById('af-meet-info').textContent='Votre réunion peut être rejointe dans Microsoft Teams.';
       },2400);
-      ringStopTimer=setTimeout(stopRinging,30000);
     }
     return true;
   }
@@ -422,7 +422,7 @@
     build();
     window.dispatchEvent(new Event('afriflow:alerts-ready'));
     setInterval(poll,60000);
-    document.addEventListener('visibilitychange',function(){if(!document.hidden)poll()});
+    document.addEventListener('visibilitychange',function(){if(!document.hidden){if(ringTimer&&audio&&audio.state!=='running')unlockAudio();poll()}});
     window.addEventListener('online',poll);
     window.addEventListener('afriflow:refresh',poll);
     poll();
