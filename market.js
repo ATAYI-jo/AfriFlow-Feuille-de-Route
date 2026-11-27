@@ -1499,10 +1499,10 @@
     ];
     var photoHtml = photos.map(function (p, index) {
       var href = 'https://commons.wikimedia.org/wiki/File:' + encodeURIComponent(p.file).replace(/%20/g, '_');
-      var src = 'https://commons.wikimedia.org/wiki/Special:FilePath/' + encodeURIComponent(p.file).replace(/%20/g, '_') + '?width=640';
+      var src = 'https://commons.wikimedia.org/wiki/Special:FilePath/' + encodeURIComponent(p.file).replace(/%20/g, '_') + '?width=960';
       return '<figure class="af-africa-frame' + (index === 0 ? ' is-active' : '') + '" data-country="' + esc(p.code) + '">' +
-        '<img src="' + esc(src) + '" loading="' + (index === 0 ? 'eager' : 'lazy') + '" decoding="async" alt="' + esc(p.place) + '">' +
-        '<div class="af-country-map" data-country-map="' + esc(p.code) + '" aria-hidden="true"></div>' +
+        '<div class="af-africa-photo"><img src="' + esc(src) + '" loading="' + (index === 0 ? 'eager' : 'lazy') + '" decoding="async" alt="' + esc(p.place) + '">' +
+        '<div class="af-country-map" data-country-map="' + esc(p.code) + '" aria-hidden="true"></div></div>' +
         '<figcaption><strong>' + esc(p.country) + ' · ' + esc(p.strength) + '</strong><span>' + esc(p.detail) + '</span>' +
         '<small>' + esc(p.place) + '</small></figcaption></figure>';
     }).join('');

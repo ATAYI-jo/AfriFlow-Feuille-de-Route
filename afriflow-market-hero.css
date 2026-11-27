@@ -1,4 +1,4 @@
-﻿/* Marketplace welcome banner only: preserve product slides and carousel behavior. */
+/* Marketplace welcome banner only: preserve product slides and carousel behavior. */
 #market-view #afHero{border-radius:24px;box-shadow:0 14px 36px rgba(17,66,35,.15),inset 0 1px 0 rgba(255,255,255,.72)}
 #market-view #afHero::after{display:none}
 #market-view #afHero>.af-slide:not(.af-product-slide){isolation:isolate;display:grid;grid-template-columns:minmax(0,1.45fr) minmax(0,1fr);align-items:center;gap:clamp(12px,2vw,28px);padding:40px clamp(22px,4vw,48px) 52px;background:linear-gradient(105deg,rgba(251,255,246,.92),rgba(237,250,226,.74) 55%,rgba(222,246,207,.26));}
@@ -21,3 +21,23 @@
 @media(max-width:520px){#market-view #afHero{min-height:310px;height:310px;max-height:none}#market-view #afHero>.af-slide:not(.af-product-slide){grid-template-columns:minmax(0,1fr);grid-template-rows:minmax(0,1fr) auto;gap:7px;padding:28px 16px 42px}#market-view #afHero>.af-slide:not(.af-product-slide) .af-hero-watermark{grid-column:1;grid-row:1;align-self:start;width:78px;max-height:65px}#market-view #afHero>.af-slide:not(.af-product-slide) .af-slide-text{grid-row:2;text-align:center}#market-view #afHero>.af-slide:not(.af-product-slide) h1{font-size:clamp(1.35rem,5.4vw,1.85rem);margin-bottom:13px}#market-view #afHero>.af-slide:not(.af-product-slide) .af-actions{justify-content:center;gap:7px}#market-view #afHero>.af-slide:not(.af-product-slide) .af-actions button{flex:1 1 115px;max-width:190px}}
 @media(prefers-reduced-motion:no-preference){#market-view #afHero>.af-slide.on:not(.af-product-slide) .af-hero-watermark{animation:afWelcomeLogoIn .65s ease-out both}@keyframes afWelcomeLogoIn{from{opacity:0;transform:translateY(7px)}to{opacity:1;transform:translateY(0)}}}
 @media(prefers-reduced-transparency:reduce){#market-view #afHero>.af-slide:not(.af-product-slide){background:#f0f8eb}}
+
+/* Regards d'Afrique: full-width editorial gallery, captions outside the photo. */
+#market-view .af-market-showcase{grid-template-columns:repeat(2,minmax(0,1fr))}
+#market-view .af-market-showcase>.af-showcase-main{grid-column:span 2}
+#market-view .af-market-showcase>.af-africa-gallery{grid-column:1/-1;display:flex;flex-direction:column;align-items:stretch;gap:14px;padding:clamp(15px,2.3vw,28px);min-height:0}
+@media(min-width:1200px){#market-view .af-market-showcase{grid-template-columns:repeat(4,minmax(0,1fr))}}
+#market-view .af-africa-gallery .af-africa-heading h3{font-size:clamp(1.4rem,2.4vw,2rem);line-height:1.2;margin:9px 0 5px}
+#market-view .af-africa-gallery .af-africa-heading p{font-size:clamp(.95rem,1.4vw,1.1rem);line-height:1.5;margin:0}
+#market-view .af-africa-gallery .af-africa-images{display:grid;grid-template-columns:minmax(0,1fr);grid-template-rows:auto;height:auto;min-height:0;flex:none;overflow:hidden;border:1px solid rgba(116,151,119,.28);border-radius:18px;background:#173e2b}
+#market-view .af-africa-gallery .af-africa-frame{position:relative;inset:auto;grid-area:1/1;display:grid;grid-template-columns:minmax(0,1.65fr) minmax(0,1fr);grid-template-rows:1fr;min-width:0;align-items:stretch;overflow:hidden}
+#market-view .af-africa-gallery .af-africa-photo{position:relative;min-width:0;min-height:0;aspect-ratio:16/10;overflow:hidden;background:#dce8da}
+#market-view .af-africa-gallery .af-africa-photo img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;filter:none}
+#market-view .af-africa-gallery .af-country-map{top:12px;right:12px;width:clamp(56px,7vw,94px);height:clamp(56px,7vw,94px)}
+#market-view .af-africa-gallery .af-africa-frame figcaption{position:relative;inset:auto;display:flex;flex-direction:column;justify-content:center;gap:12px;min-width:0;padding:clamp(18px,3vw,38px);background:linear-gradient(135deg,#173e2b,#1e512e);border-inline-start:3px solid #f58200;color:#fff!important;text-shadow:none;line-height:1.5;overflow-wrap:anywhere}
+#market-view .af-africa-gallery .af-africa-frame figcaption strong{display:block;font-size:clamp(1.3rem,2.35vw,2rem);font-weight:800;line-height:1.2;color:#fff!important}
+#market-view .af-africa-gallery .af-africa-frame figcaption span{font-size:clamp(1rem,1.45vw,1.15rem);font-weight:500;color:#f1f7ed!important;line-height:1.5}
+#market-view .af-africa-gallery .af-africa-frame figcaption small{font-size:.95rem;color:#ffce80!important;font-weight:600;opacity:1;line-height:1.4}
+#market-view .af-africa-gallery .af-africa-credits{max-height:none;overflow:visible;font-size:.85rem;line-height:1.65;color:var(--af-glass-muted,var(--ink));margin:0;overflow-wrap:anywhere}
+#market-view .af-africa-gallery .af-africa-credits a{color:var(--af-glass-accent,var(--green));font-weight:650;text-underline-offset:3px}
+@media(max-width:760px){#market-view .af-africa-gallery .af-africa-frame{grid-template-columns:minmax(0,1fr);grid-template-rows:auto 1fr}#market-view .af-africa-gallery .af-africa-photo{aspect-ratio:16/10}#market-view .af-africa-gallery .af-africa-frame figcaption{border-inline-start:0;border-top:3px solid #f58200;gap:7px;padding:17px}#market-view .af-africa-gallery .af-africa-frame figcaption strong{font-size:1.35rem}#market-view .af-africa-gallery .af-africa-frame figcaption span{font-size:1rem}#market-view .af-africa-gallery .af-africa-frame figcaption small{font-size:.9rem}}
