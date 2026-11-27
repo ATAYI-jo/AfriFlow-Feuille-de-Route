@@ -273,7 +273,10 @@ window.ic=function(n,s){return '<svg class="ic"'+(s?' style="width:'+s+';height:
       <span id="afHomeUrgentLabel" aria-live="polite"></span>
       <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="m9 18 6-6-6-6"/></svg>
     </button>
-    <img class="logo-img" src="afriflow-home-logo-cycle-v5.webp?v=5" alt="Logo AfriFlow" onerror="this.onerror=null;this.src='logo.svg?v=2'">
+    <picture class="logo-img">
+      <source media="(prefers-reduced-motion: no-preference)" type="image/webp" srcset="afriflow-accueil-anime.webp">
+      <img src="logo.svg?v=2" width="744" height="612" alt="AfriFlow" onerror="if(this.previousElementSibling){this.previousElementSibling.remove();this.src='logo.svg?v=2'}">
+    </picture>
     <div>
       <h1>Afri<span>FloW</span> · Journal de Bord & Feuille de Route</h1>
       <p class="sub">Cliquez sur un cadran pour consulter les articles détaillés au format journal.</p>
@@ -2941,6 +2944,7 @@ if ('serviceWorker' in navigator) {
 /* Accueil : le logo centré est conservé ; le bandeau titre illustré est retiré. */
 #view-home .brand{justify-content:center!important;padding:30px 20px!important;gap:0!important}
 #view-home .brand>div:not(.logo-img){display:none!important}
+#view-home .brand picture.logo-img img{display:block;width:100%;height:auto;aspect-ratio:744/612;object-fit:contain}
 #view-home .brand>.logo-img{width:min(350px,80vw)!important;height:auto!important;max-height:350px!important;margin:0 auto!important;padding:0!important;border-radius:0!important;background:transparent!important;box-shadow:none!important;filter:drop-shadow(0 4px 12px rgba(0,0,0,.16));mix-blend-mode:normal}
 #auth-screen .auth-wizard-actions #authNext{background:var(--green)!important;color:#fff!important;border-color:var(--green)!important}
 #auth-screen .auth-wizard-actions .auth-wizard-back{background:transparent!important;color:var(--green)!important;border-color:color-mix(in srgb,var(--green) 55%,transparent)!important}
