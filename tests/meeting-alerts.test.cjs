@@ -275,3 +275,17 @@ test('Alert approval is separate for browser, installed PWA, Electron and Androi
   app.navigator.standalone = false;
   assert.equal(alerts.enabled(), false, 'The Android WebView refusal is preserved independently');
 });
+
+test('A touch click resumes interrupted audio without creating another context', () => {
+  const app = harness();
+  let created = 0, resumed = 0, audio;
+  app.window.AudioContext = class {
+    constructor() { created++; audio = this; this.state = 'suspended'; }
+    resume() { resumed++; this.state = 'running'; return Promise.resolve(); }
+  };
+  app.window.AfriFlowAlerts.enable();
+  audio.state = 'interrupted';
+  app.document.dispatchEvent({ type: 'click' });
+  assert.equal(created, 1);
+  assert.equal(resumed, 2);
+});
