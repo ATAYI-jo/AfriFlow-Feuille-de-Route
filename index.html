@@ -2949,7 +2949,7 @@ if ('serviceWorker' in navigator) {
 /* Accueil : le logo centré est conservé ; le bandeau titre illustré est retiré. */
 #view-home .brand{justify-content:center!important;padding:30px 20px!important;gap:0!important}
 #view-home .brand>div:not(.logo-img){display:none!important}
-@media(max-width:640px),(pointer:coarse){#view-home .brand>#afHomeLogoPlayer{filter:none!important}}
+@media(max-width:640px),(pointer:coarse){#view-home .brand>#afHomeLogoPlayer{filter:none!important;will-change:transform}}
 #afHomeLogoPlayer picture{display:block}
 #afLogoMotionToggle:not([hidden]){display:block;margin:4px auto 0;padding:6px 12px;border:1px solid currentColor;border-radius:16px;background:#fff;color:#205e33;font:inherit;font-size:.85rem;cursor:pointer}
 #view-home .brand #afHomeLogoPlayer img{display:block;width:100%;height:auto;aspect-ratio:744/612;object-fit:contain}
