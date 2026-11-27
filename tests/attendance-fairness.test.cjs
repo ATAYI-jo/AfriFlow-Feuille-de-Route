@@ -279,7 +279,7 @@ test('A legacy justification awaiting its current decision does not open a paral
   }
 });
 
-test('The real Censeur page applies the same accepted, pending and unresolved request rules to its own attendance row', async () => {
+test('The roster shows a single status badge and keeps review eligibility intact', async () => {
   const legacy = { mid: meeting.id, email: member, at: 100 };
   const scenarios = [
     { name: 'accepted justification', options: { justifications: [legacy], decisions: [{ ...legacy, ok: true, at: 101 }] }, requestable: false, text: /Justificatif accepté/ },
@@ -295,8 +295,8 @@ test('The real Censeur page applies the same accepted, pending and unresolved re
     const app = harness({ ...scenario.options, meetings: [{ ...meeting, invitees: [member] }],
       records: [{ key: 'att:' + meeting.id + ':' + member, meet: meeting.id, email: member, at: start + 660000 }] });
     await app.censor();
-    assert.equal(!!app.host.querySelector('[data-att-request]'), scenario.requestable, scenario.name);
-    assert.match(app.host.innerHTML, scenario.text, scenario.name);
+    assert.equal(app.host.querySelector('[data-att-request]') == null, true, scenario.name);
+    assert.match(app.host.innerHTML, /<td data-label="Statut"><span class="mt-pill mt-[^"]+">[^<]+<\/span><\/td>/, scenario.name);
     if (!scenario.requestable) assert.equal(app.model.request(meeting.id), false, 'A stale control cannot reopen ' + scenario.name);
     assert.equal(app.calls.length, 0);
   }
