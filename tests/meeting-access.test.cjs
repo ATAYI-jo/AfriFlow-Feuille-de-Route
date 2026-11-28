@@ -132,6 +132,18 @@ test('browser confirms in AfriFlow and navigates only to the server-confirmed Te
   assert.deepEqual(h.assigned, [SERVER_LINK]);
 });
 
+test('browser with popups blocked still joins Teams after successful check-in', async () => {
+  const h = harness({ blockPopup: true });
+  const joined = h.window.AfriMeetings.join(ID);
+  assert.deepEqual(h.events, ['invoke']);
+  assert.deepEqual(h.assigned, []);
+  h.invocations[0].resolve(reply());
+  assert.equal((await joined).ok, true);
+  assert.deepEqual(h.events, ['invoke', 'assign']);
+  assert.deepEqual(h.assigned, [SERVER_LINK]);
+  assert.equal(h.tabs.length, 0);
+});
+
 test('a duplicate join while check-in is pending creates neither another tab nor another request', async () => {
   const h = harness(); const first = h.window.AfriMeetings.join(ID);
   assert.equal((await h.window.AfriMeetings.join(ID)).ok, false);
@@ -258,7 +270,7 @@ test('a late load response from the previous account cannot overwrite the curren
   assert.doesNotMatch(h.card.innerHTML, /Réunion enregistrée/);
 });
 
-test('a one-use notification tap checks in and opens Teams in its own window',async()=>{
+test('a one-use notification tap checks in and navigates the existing window to Teams',async()=>{
   const h=harness({deepLink:true,tap:'valid'});
   await h.fire('load');
   assert.equal(h.invocations.length,1);
@@ -299,7 +311,7 @@ test('check-in uses the active profile portrait and the server pointage timestam
 
 test('mobile web check-in stays inside AfriFlow until Teams opens',async()=>{
   for(const device of [{userAgent:'iPhone'}, {userAgent:'Android'}, {platform:'MacIntel',maxTouchPoints:5}]){
-    const h=harness({device});
+    const h=harness({device,blockPopup:true});
     const joined=h.window.AfriMeetings.join(ID);
     assert.equal(h.tabs.length,0);
     assert.deepEqual(h.assigned,[]);

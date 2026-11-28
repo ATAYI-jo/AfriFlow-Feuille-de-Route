@@ -35,13 +35,18 @@ test('Server validates identity and delegates its receipt time to the protected 
  assert.match(sql,/drop policy if exists af_meet_att_insert_own/);
 });
 
-test('Teams opens its tab before awaiting check-in, preventing mobile popup blocking',()=>{
+test('Teams stays in AfriFlow for check-in and navigates only after server confirmation, without popups',()=>{
  const entry=meetings.indexOf('async function joinMeeting(id,options)');
- const opener=meetings.indexOf('window.open("about:blank","_blank")',entry);
- const checkin=meetings.indexOf('var result=await mark(id,options.source||"home")',entry);
- assert.ok(entry>=0&&opener>entry&&checkin>opener,'the shared join flow must open the browser placeholder before its first await');
- assert.match(meetings,/if\(tab\)try\{tab\.close\(\)\}/);
- assert.match(meetings,/tab\.location\.replace\(target\)/);
+ const end=meetings.indexOf('async function mark(id,source)',entry);
+ assert.ok(entry>=0&&end>entry);
+ const join=meetings.slice(entry,end);
+ const screen=join.indexOf('screen=pointageScreen(account)');
+ const checkin=join.indexOf('var result=await mark(id,options.source||"home")');
+ const validation=join.indexOf('if(!okUrl(target))');
+ const navigation=join.indexOf('window.location.assign(target)');
+ assert.ok(screen>=0&&checkin>screen&&validation>checkin&&navigation>validation);
+ assert.doesNotMatch(join,/window\.open\s*\(/);
+ assert.match(join,/finally\{if\(screen\)screen\.remove\(\);joining\.delete\(id\);\}/);
  assert.match(meetings,/window\.AfriMeetings=\{join:joinMeeting,preview:previewMeeting\}/);
 });
 

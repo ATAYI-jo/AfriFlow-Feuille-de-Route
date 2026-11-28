@@ -1,0 +1,2 @@
+# Keep the deployed HTML byte budget identical across Windows and Linux checkouts.
+/index.html text eol=lf

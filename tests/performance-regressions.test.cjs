@@ -29,7 +29,9 @@ test('Inline JavaScript blocks parse successfully', () => {
 });
 
 test('HTML shell stays below the agreed refactor regression budget', () => {
-  const bytes = Buffer.byteLength(html);
+  // Measure the canonical LF deployment payload, not Windows checkout CRLF overhead.
+  // .gitattributes also keeps fresh checkouts of index.html in LF format.
+  const bytes = Buffer.byteLength(html.replace(/\r\n/g, '\n'), 'utf8');
   assert.ok(bytes < 225_000,
     'index.html size exceeded 225 KB: ' + bytes + ' bytes. Extract logic rather than inlining it.');
 });
