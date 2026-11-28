@@ -1,6 +1,6 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 
-const fallbackOrigins = new Set(["https://afriflow.pages.dev","https://afriflow-africa.onrender.com", "https://atayi-jo.github.io"]);
+const fallbackOrigins = new Set(["https://afriflow.pages.dev","https://atayi-jo.github.io"]);
 function cors(req: Request) {
   const configured = (Deno.env.get("AFRIFLOW_ALLOWED_ORIGINS") || "").split(",").map((value) => value.trim()).filter(Boolean);
   const origin = req.headers.get("origin") || "";

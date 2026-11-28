@@ -1,6 +1,6 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 
-const fallbackOrigins = new Set(["https://afriflow.pages.dev","https://afriflow-africa.onrender.com", "https://atayi-jo.github.io"]);
+const fallbackOrigins = new Set(["https://afriflow.pages.dev","https://atayi-jo.github.io"]);
 function cors(req: Request) {
   const origins = (Deno.env.get("AFRIFLOW_ALLOWED_ORIGINS") || "").split(",").map((value) => value.trim()).filter(Boolean);
   const origin = req.headers.get("origin") || "";
@@ -30,7 +30,7 @@ async function savedRefresh(service: ReturnType<typeof createClient>) { return s
 async function saveRefresh(service: ReturnType<typeof createClient>, refresh: string) { return saveValue(service, "dropbox_refresh_token", refresh); }
 function b64url(bytes: Uint8Array) { return bytesToB64(bytes).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, ""); }
 async function codeChallenge(value: string) { return b64url(new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(value)))); }
-function redirectUri() { return Deno.env.get("AFRIFLOW_DROPBOX_REDIRECT_URI") || "https://afriflow-africa.onrender.com"; }
+function redirectUri() { return Deno.env.get("AFRIFLOW_DROPBOX_REDIRECT_URI") || "https://afriflow.pages.dev"; }
 async function token(service: ReturnType<typeof createClient>) {
   const key = DROPBOX_MARKET_APP_KEY, refresh = await savedRefresh(service) || Deno.env.get("DROPBOX_REFRESH_TOKEN") || "";
   if (!key || !refresh) throw new Error("Dropbox serveur non configurée");

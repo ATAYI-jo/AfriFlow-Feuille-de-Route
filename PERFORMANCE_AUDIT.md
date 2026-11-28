@@ -33,7 +33,7 @@ Date : 21 novembre 2026. Périmètre : branche `refactor/modularisation-et-tests
 4. **Premier candidat de lazy-loading** : l'éditeur Word et les dépendances de prévisualisation, uniquement après tests de parcours et avec fallback de téléchargement.
 5. **Deuxième candidat** : ressources lourdes de l'assistant (voix, mathématiques, avatar), au premier usage après vérification des événements.
 6. **Market** : garder son initialisation différée actuelle jusqu'à ce que le routage d'entrée (nouveau visiteur, client, collaborateur) soit testé.
-7. **Déploiement** : rendre le check CI obligatoire pour les PR; configurer Render pour ne déployer qu'un commit validé. Le workflow actuel ne suffit pas à bloquer Render.
+7. **Déploiement** : rendre le check CI obligatoire pour les PR; publier sur Cloudflare Pages après validation du commit.
 
 ## Critères de non-régression
 

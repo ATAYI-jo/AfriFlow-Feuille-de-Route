@@ -10,7 +10,6 @@ const sb = createClient(SUPABASE_URL, SERVICE_KEY, {
 });
 const ALLOWED_ORIGINS = new Set([
   "https://afriflow.pages.dev",
-  "https://afriflow-africa.onrender.com",
   "https://atayi-jo.github.io",
 ]);
 const ownSite = SITE_URL;
