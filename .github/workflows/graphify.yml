@@ -1,0 +1,55 @@
+name: Graphify - Code index
+on:
+  workflow_dispatch:
+  pull_request:
+    branches: [main]
+    paths:
+      - '**.js'
+      - '**.cjs'
+      - '**.mjs'
+      - '**.ts'
+      - '**.tsx'
+      - '**.java'
+      - '**.kt'
+      - '**.py'
+      - '**.sql'
+      - '**.gradle'
+      - '.graphifyignore'
+      - 'tools/requirements-graphify.txt'
+      - '.github/workflows/graphify.yml'
+  push:
+    branches: [main]
+    paths:
+      - '**.js'
+      - '**.cjs'
+      - '**.mjs'
+      - '**.ts'
+      - '**.tsx'
+      - '**.java'
+      - '**.kt'
+      - '**.py'
+      - '**.sql'
+      - '**.gradle'
+      - '.graphifyignore'
+      - 'tools/requirements-graphify.txt'
+      - '.github/workflows/graphify.yml'
+permissions:
+  contents: read
+concurrency:
+  group: graphify-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  code-index:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+      - run: python -m pip install -r tools/requirements-graphify.txt
+      - run: graphify extract . --code-only
+      - name: Validate generated graph
+        run: python -c "import json; from pathlib import Path; g=json.loads(Path('graphify-out/graph.json').read_text(encoding='utf-8')); assert g.get('nodes'), 'Empty graph'; print('Nodes:', len(g['nodes']))"
