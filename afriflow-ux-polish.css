@@ -261,3 +261,31 @@ html[data-theme="dark"]:has(body:not(.af-off)>#afBg){background-color:color-mix(
 }
 /* Preserve the existing fixed viewport layer, including on installed iOS PWAs. */
 body:not(.af-off)>#afBg{inset:0;width:auto;height:auto}
+
+/* Keep editable controls readable before focus so the native keyboard opens at the current scale. */
+@layer mobile-inputs {
+  @media (any-pointer: coarse) {
+    :where(input:not([type="checkbox"], [type="radio"], [type="range"], [type="color"],
+                     [type="file"], [type="hidden"], [type="button"], [type="submit"], [type="reset"], [type="image"]),
+           textarea, select, [contenteditable="true"], [contenteditable=""], [contenteditable="plaintext-only"]) {
+      font-size: max(16px, 1rem) !important;
+    }
+  }
+}
+
+@media (max-width: 640px) {
+  .mt-box .mt-grid:has(> label > #csT) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .mt-box .mt-grid > label,
+  .mt-box .mt-grid > label > :is(input, select) {
+    min-width: 0;
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+}
+@media (max-width: 420px) {
+  .mt-box .mt-grid:has(> label > #csT) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
