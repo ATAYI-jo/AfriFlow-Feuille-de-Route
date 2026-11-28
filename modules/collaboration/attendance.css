@@ -8,7 +8,7 @@ body:has(> .af-att-overlay){overflow:hidden}
 .af-att-overlay{position:fixed;inset:0;z-index:22000;display:grid;place-items:center;padding:16px;background:rgba(10,30,20,.65);box-sizing:border-box}
 .af-att-dialog{box-sizing:border-box;width:min(620px,100%);max-height:calc(100dvh - 32px);overflow:auto;border-radius:20px;padding:22px;background:var(--card,#fff);color:var(--ink,#193024);box-shadow:0 18px 54px rgba(0,0,0,.28)}
 .af-att-dialog header{display:flex;align-items:flex-start;justify-content:space-between;gap:14px}.af-att-dialog h2{margin:0;font-size:1.25rem}.af-att-dialog header button{flex:none}.af-att-dialog form{display:grid;gap:9px}.af-att-dialog label{font-size:.91rem;font-weight:700;margin-top:8px}.af-att-dialog input,.af-att-dialog textarea,.af-att-dialog select{box-sizing:border-box;width:100%;min-height:44px;max-width:100%;font:inherit;padding:10px;border:1px solid var(--line,#ccdace);border-radius:9px;background:var(--card,#fff);color:inherit}.af-att-dialog textarea{resize:vertical}.af-att-dialog button{min-height:44px}.af-att-dialog #afAttError{color:#a32222;margin:0;min-height:1.4em}.af-att-dialog #afAttError:empty{min-height:0}.af-att-actions{display:flex;justify-content:flex-end;gap:10px;flex-wrap:wrap}.af-att-claim{padding:12px;border-radius:10px;border:1px solid var(--line,#d8e1db)}
-@media(max-width:560px){.af-att-overlay{padding:8px}.af-att-dialog{padding:16px;max-height:calc(100dvh - 16px)}.af-att-dialog header{flex-wrap:wrap}.af-att-dialog form .af-att-actions{display:grid;grid-template-columns:1fr 1fr}.af-att-table table{min-width:670px}.af-att-review{padding:12px}}
+@media(max-width:560px){.af-att-overlay{padding:8px}.af-att-dialog{padding:16px;max-height:calc(100dvh - 16px)}.af-att-dialog header{flex-wrap:wrap}.af-att-dialog form .af-att-actions{display:grid;grid-template-columns:1fr 1fr}.af-att-review{padding:12px}}
 
 /* Restore the original translucent landscape: enough tint to keep attendance legible,
    never the opaque white panels of the discarded redesign. */
@@ -57,8 +57,22 @@ body:has(> .af-att-overlay){overflow:hidden}
 }
 @media(max-width:760px) {
   .af-att-personal { padding:12px; border-radius:13px; }
-  .af-att-personal .af-att-table table { min-width:650px; }
-  .af-att-personal .af-att-table { overflow-x:auto; -webkit-overflow-scrolling:touch; }
+  .af-att-personal .af-att-table { overflow:visible; }
+  .af-att-personal .af-att-table table { display:block; width:100%; min-width:0; }
+  .af-att-personal .af-att-table thead {
+    position:absolute; width:1px; height:1px; overflow:hidden; clip-path:inset(50%);
+  }
+  .af-att-personal .af-att-table tbody { display:grid; gap:12px; }
+  .af-att-personal .af-att-table tbody tr {
+    display:grid; grid-template-columns:minmax(0,1fr); gap:8px; padding:12px;
+    background:rgba(240,252,241,.28); border:1px solid rgba(244,255,246,.42); border-radius:12px;
+  }
+  .af-att-personal .af-att-table td {
+    display:block; min-width:0; padding:0; border:0; white-space:normal; overflow-wrap:anywhere;
+  }
+  .af-att-personal .af-att-table td:empty { display:none; }
+  .af-att-personal .af-att-table summary { padding-block:8px; }
+  .af-att-personal .af-att-table small { margin-top:2px; }
 }
 @media(prefers-reduced-motion:reduce) {
   .af-att-personal .mt-pill,.mt-m .mt-attendance .mt-pill {
