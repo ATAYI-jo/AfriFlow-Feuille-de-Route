@@ -77,3 +77,50 @@ body #viewHost .af-partners-overview .af-market-summary-stats :is(button,span){
  body #market-view .af-market-admin .af-market-admin-card,
  body #market-view .af-market-admin-row,body .af-modal .af-detail-order{background:var(--af-glass-base)!important}
 }
+
+/* Keep each reading surface and its text on the same theme palette. */
+body .af-modal .af-announcement-detail,
+body #profilePanel .pf-certificates,
+#roadStepsList .step-card {
+  background:color-mix(in srgb,var(--af-glass-base) 94%,transparent)!important;
+  color:var(--af-glass-ink)!important;
+  --af-text:var(--af-glass-ink);
+  --af-secondary:var(--af-glass-muted);
+}
+body .af-modal .af-announcement-detail .af-detail-body,
+body .af-modal .af-announcement-detail .af-detail-body h2,
+body #profilePanel .pf-certificates :is(h3,strong,b,code),
+#roadStepsList .step-card b {color:var(--af-glass-ink)!important}
+body .af-modal .af-announcement-detail .af-detail-body p,
+body #profilePanel .pf-certificates :is(p,small),
+#roadStepsList .step-card small {color:var(--af-glass-muted)!important}
+body .af-modal .af-announcement-detail :is(a,.af-product-cat) {color:var(--af-glass-accent)!important}
+#roadStepsList .step-card .date-badge {
+  background:var(--af-glass-base)!important;color:var(--af-glass-ink)!important;
+  border-inline-start:4px solid var(--c);padding-inline:10px;
+}
+#profilePanel #pfIdentity code {display:inline-block;white-space:nowrap}
+
+@media (max-width:700px) {
+  #viewHost .mt-box .mt-grid :is(#csD,#csH) {
+    appearance:none;-webkit-appearance:none;
+    display:block;width:100%!important;min-width:0!important;max-width:100%!important;
+    box-sizing:border-box!important;min-height:44px;text-align:start;
+  }
+  #viewHost .mt-box .mt-grid :is(#csD,#csH)::-webkit-date-and-time-value {text-align:start;margin:0}
+  #profilePanel:not(.member-hub-mode) .profile-top {
+    flex:none;height:auto;box-sizing:border-box;background:var(--af-glass-base)!important;
+  }
+  /* Put these shortcuts after the content while keeping their original actions. */
+  body:has(#csT,#view-home:not([style*="none"]) .step-card):not(.af-market-mode)
+  :is(#aiBtn,#memberHub,#afIntroAdminPreviewBtn) {
+    position:relative!important;inset:auto!important;vertical-align:middle;
+    margin:6px 4px max(12px,env(safe-area-inset-bottom));
+  }
+}
+@media (display-mode:standalone) and (max-width:700px) {
+  body:has(#csT)::after {
+    content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);
+    background:var(--af-glass-base);pointer-events:none;z-index:1500;
+  }
+}
