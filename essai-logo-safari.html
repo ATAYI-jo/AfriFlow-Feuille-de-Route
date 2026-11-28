@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Essai du logo AfriFlow</title>
+  <style>
+    body { margin:0; min-height:100dvh; display:grid; place-items:center; background:#f4f8f4; color:#19492c; font:16px system-ui,sans-serif }
+    main { width:min(90vw,480px); text-align:center }
+    h1 { font-size:1.25rem }
+    .stage { width:min(76vw,280px); aspect-ratio:16/9; margin:28px auto; position:relative; overflow:hidden }
+    .poster { width:100%; height:100%; object-fit:contain }
+    .strip { display:none; position:absolute; left:0; top:0; width:400%; height:200%; max-width:none; will-change:transform }
+    #status { min-height:3em; color:#365a43; line-height:1.5 }
+  </style>
+</head>
+<body>
+<main>
+  <h1>Essai de fluidité du logo</h1>
+  <div class="stage" aria-label="Logo AfriFlow animé">
+    <img class="poster" src="afriflow-accueil-premiere-image.webp" alt="">
+    <img class="strip" alt="">
+    <img class="strip" alt="">
+  </div>
+  <p id="status" role="status">Chargement des images…</p>
+</main>
+<script>
+(async () => {
+  const status = document.querySelector('#status');
+  const poster = document.querySelector('.poster');
+  const images = [...document.querySelectorAll('.strip')];
+  const blobs = new Array(27);
+  const urls = [];
+  let nextDownload = 0;
+  let completed = 0;
+  let raf;
+  let disposed = false;
+  const controller = new AbortController();
+
+  async function download() {
+    while (nextDownload < blobs.length) {
+      const index = nextDownload++;
+      const response = await fetch('essai-logo-safari/logo-' + String(index).padStart(2,'0') + '.webp', {signal:controller.signal});
+      if (!response.ok) throw new Error('Échec du chargement');
+      blobs[index] = await response.blob();
+      status.textContent = 'Chargement des images… ' + Math.round(++completed / blobs.length * 100) + ' %';
+    }
+  }
+
+  async function prepare(image, index) {
+    image.src = urls[index];
+    if (image.decode) await image.decode();
+    else if (!image.complete) await new Promise((resolve, reject) => { image.onload = resolve; image.onerror = reject; });
+  }
+
+  try {
+    await Promise.all(Array.from({length:3}, download));
+    for (const blob of blobs) urls.push(URL.createObjectURL(blob));
+    await Promise.all([prepare(images[0],0),prepare(images[1],1)]);
+    if (disposed) return;
+
+    let active = 0;
+    let group = 0;
+    let readyGroup = 1;
+    let start;
+    let pausedAt;
+    let lastFrame = -1;
+    poster.style.visibility = 'hidden';
+    images[0].style.display = 'block';
+    status.textContent = 'L’animation est prête. Observe sa fluidité pendant plusieurs boucles.';
+
+    async function prepareNext(index) {
+      readyGroup = -1;
+      try {
+        await prepare(images[1-active],index);
+        readyGroup = index;
+      } catch {
+        if (!disposed) status.textContent = 'La lecture a été interrompue. Actualise la page pour réessayer.';
+      }
+    }
+
+    function tick(now) {
+      if (disposed || document.hidden) return;
+      if (start === undefined) start = now;
+      let frame = Math.floor((now-start)*24/1000)%212;
+      const wanted = Math.floor(frame/8);
+      if (wanted !== group) {
+        if (wanted !== readyGroup) {
+          if (pausedAt === undefined) pausedAt = now;
+          frame = Math.min(group*8+7,211);
+        } else {
+          if (pausedAt !== undefined) { start += now-pausedAt; pausedAt = undefined; frame = Math.floor((now-start)*24/1000)%212; }
+          images[active].style.display = 'none';
+          active = 1-active;
+          group = wanted;
+          images[active].style.display = 'block';
+          prepareNext((group+1)%27);
+        }
+      }
+      if (frame !== lastFrame) {
+        const offset = frame%8;
+        images[active].style.transform = 'translate3d(' + (-25*(offset%4)) + '%,' + (-50*Math.floor(offset/4)) + '%,0)';
+        lastFrame = frame;
+      }
+      raf = requestAnimationFrame(tick);
+    }
+
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) { cancelAnimationFrame(raf); pausedAt = performance.now(); }
+      else { if (pausedAt !== undefined) {start += performance.now()-pausedAt; pausedAt=undefined;} raf=requestAnimationFrame(tick); }
+    });
+    raf = requestAnimationFrame(tick);
+  } catch (error) {
+    controller.abort();
+    status.textContent = 'Le chargement a échoué. Actualise la page pour réessayer.';
+    console.warn(error);
+  }
+  addEventListener('pagehide', () => { disposed=true; controller.abort(); cancelAnimationFrame(raf); urls.forEach(url=>URL.revokeObjectURL(url)); }, {once:true});
+})();
+</script>
+</body>
+</html>
