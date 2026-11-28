@@ -44,7 +44,7 @@ public class MainActivity extends Activity {
     try{
       Uri u=Uri.parse(raw);
       return "https".equals(u.getScheme()) &&
-        ("afriflow.pages.dev".equals(u.getHost()) || "afriflow-africa.onrender.com".equals(u.getHost()) || "atayi-jo.github.io".equals(u.getHost()));
+        ("afriflow.pages.dev".equals(u.getHost()) || "atayi-jo.github.io".equals(u.getHost()));
     }catch(Exception e){return false;}
   }
   private String pendingAuthToken;
@@ -201,7 +201,6 @@ public class MainActivity extends Activity {
     if(WebViewFeature.isFeatureSupported(WebViewFeature.WEB_MESSAGE_LISTENER)){
       java.util.Set<String> origins=new java.util.HashSet<>();
       origins.add("https://afriflow.pages.dev");
-      origins.add("https://afriflow-africa.onrender.com");
       origins.add("https://atayi-jo.github.io");
       WebViewCompat.addWebMessageListener(web,"AfriFlowAndroid",origins,
         (view,message,sourceOrigin,isMainFrame,replyProxy)->{
@@ -223,7 +222,7 @@ public class MainActivity extends Activity {
       @Override public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
         Uri uri = request.getUrl();
         String host = uri.getHost();
-        if ("https".equals(uri.getScheme()) && ("afriflow.pages.dev".equals(host) || "afriflow-africa.onrender.com".equals(host) || "atayi-jo.github.io".equals(host))) return false;
+        if ("https".equals(uri.getScheme()) && ("afriflow.pages.dev".equals(host) || "atayi-jo.github.io".equals(host))) return false;
         if ("https".equals(uri.getScheme())) {
           try { startActivity(new Intent(Intent.ACTION_VIEW, uri)); } catch (Exception ignored) {}
         }

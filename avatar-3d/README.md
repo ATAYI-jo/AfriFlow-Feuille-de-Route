@@ -12,7 +12,7 @@ Les images restent **à la racine** du dépôt :
 La page principale du site reste `/index.html`. Le chatbot existant ouvre cette page dans une iframe via `avatar-3d/index.html`.
 
 ## Vérification
-Ouvrir `/avatar-3d/index.html`. Si le site héberge seulement la racine et renvoie Not Found, il faut configurer le serveur Render pour rendre les fichiers statiques du sous-dossier accessibles. Les chemins GitHub ne suffisent pas si Render ne les sert pas.
+Ouvrir `/avatar-3d/index.html`. En cas d’erreur 404, vérifier que le dossier publié sur Cloudflare Pages contient `avatar-3d/` et ses fichiers statiques.
 
 La création WebGL demande l'accélération graphique. Si elle échoue, la démo 3D peut rester vide ; la conversation Live doit être indépendante de cette démo.
 

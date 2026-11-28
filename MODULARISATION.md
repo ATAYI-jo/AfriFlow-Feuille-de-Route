@@ -31,8 +31,8 @@ Objectif : séparer les fonctionnalités sans rompre les usages existants (colla
 - Le déploiement ne s'effectue qu'après vérifications vertes et validation manuelle.
 
 ## Important : véritable blocage avant déploiement
-Ce workflow GitHub Actions **ne bloque pas à lui seul** le déploiement automatique Render.
-Configurer Render pour déployer uniquement après une CI verte, ou gérer le déploiement par GitHub Actions avec un job `needs: [static-and-regression, e2e]`. Protéger également la branche main en exigeant le check `JavaScript syntax and architecture` avant fusion. Les tests actuels sont structurels et ne remplacent pas les tests de navigation ni les tests Supabase/Dropbox.
+Ce workflow GitHub Actions **ne bloque pas à lui seul** le déploiement automatique sur Cloudflare Pages.
+Pour publier uniquement après une CI verte, gérer le déploiement par GitHub Actions avec un job `needs: [static-and-regression, e2e]`. Protéger également la branche main en exigeant le check `JavaScript syntax and architecture` avant fusion. Les tests actuels sont structurels et ne remplacent pas les tests de navigation ni les tests Supabase/Dropbox.
 
 ## Étape 2 — Extraction conservatrice (en cours)
 - `modules/messaging/internal-messaging.js` : bloc interne de messagerie extrait depuis `index.html`.

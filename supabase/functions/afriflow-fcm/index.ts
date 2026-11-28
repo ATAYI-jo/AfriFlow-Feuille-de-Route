@@ -2,10 +2,10 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { SITE_URL, canReceiveMeeting, canReceiveNews, canReceiveScheduled, fcmData, loadRecipientDirectory, meetingNotification, normalizeEmail, notificationTtl } from "../_shared/meeting-notifications.ts";
 import type { NotificationEnvelope } from "../_shared/meeting-notifications.ts";
 const sb=createClient(Deno.env.get("SUPABASE_URL")!,Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,{auth:{persistSession:false,autoRefreshToken:false}});
-const CORS=["https://afriflow.pages.dev","https://afriflow-africa.onrender.com","https://atayi-jo.github.io"];
+const CORS=["https://afriflow.pages.dev","https://atayi-jo.github.io"];
 const json=(req:Request,body:unknown,status=200)=>new Response(JSON.stringify(body),{status,headers:{
  "Content-Type":"application/json","Cache-Control":"no-store",
- "Access-Control-Allow-Origin":CORS.includes(req.headers.get("origin")||"")?req.headers.get("origin")!:"https://afriflow-africa.onrender.com",
+ "Access-Control-Allow-Origin":CORS.includes(req.headers.get("origin")||"")?req.headers.get("origin")!:"https://afriflow.pages.dev",
  "Access-Control-Allow-Headers":"authorization,content-type,x-afri-cron",
  "Access-Control-Allow-Methods":"OPTIONS,POST"
 }});

@@ -16,7 +16,6 @@ async function savedRefresh(service: ReturnType<typeof createClient>) {
 
 const fallbackOrigins = new Set([
   "https://afriflow.pages.dev",
-  "https://afriflow-africa.onrender.com",
   "https://atayi-jo.github.io",
 ]);
 function allowedOrigin(req: Request) {
